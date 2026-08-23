@@ -1,76 +1,112 @@
-PERGUNTAS PARA A DESIGNER — RODADA 2 (validações de detalhe)
-As respostas da rodada 1 já foram aplicadas na documentação do site.
-Estes quatro pontos surgiram ao aplicar as decisões — são validações
-rápidas, mas travam o desenho dos componentes se ficarem em aberto.
+PERGUNTAS PARA A DESIGNER — RODADA 3
+As respostas das rodadas 1 e 2 já foram aplicadas na documentação.
+Estas perguntas vêm do novo mockup do avatar (avatar-create.png) e de
+detalhes que apareceram ao aplicar as decisões da rodada 2.
 
 --------------------------------------------------------------------
-1. MENU COMPACTO (TABLET E CELULAR): QUAIS ITENS FICAM VISÍVEIS?
+1. PARA ONDE FOI A ESCOLHA DAS SKILLS INICIAIS?
 --------------------------------------------------------------------
-Contexto: você confirmou o menu com 6 itens — Biblioteca 3D, Projetos,
-Calendário, Aulas, Instagram e Artigos. No desktop cabem todos, mas em
-tablet e celular o menu precisa encolher. A proposta atual deixa
-visíveis só Biblioteca 3D, Projetos e Artigos e esconde Calendário,
-Aulas e Instagram atrás de um botão "Mais" / menu hambúrguer —
-justamente dois itens que você acabou de promover ao menu principal.
+Contexto: o mockup antigo do cadastro tinha o bloco "ESCOLHA SUAS
+SKILLS INICIAIS" (Modelagem 3D, Corte a Laser, Impressão 3D,
+Eletrônica, Design). O novo mockup do avatar não tem esse bloco.
 
 Perguntas:
-a) Em tablet, quais itens podem ficar escondidos no "Mais"/hambúrguer,
-   e em que ordem os visíveis aparecem?
-b) No celular, se usarmos uma barra fixa no rodapé com 5 espaços,
-   quais 5 entram? (proposta atual: Home, Biblioteca 3D, Projetos,
-   Aulas, Perfil — sem Calendário)
+a) A escolha de skills vai para outro passo do cadastro, para o
+   perfil depois do cadastro, ou sai do fluxo?
+b) Quantas skills o usuário pode marcar (mínimo/máximo)?
 
-Por que importa: a maioria dos acessos será pelo celular; essa é a
-navegação que a maior parte das pessoas vai ver.
+Por que importa: as skills alimentam níveis, missões e o ranking —
+o fluxo de cadastro não fecha sem saber onde isso acontece.
 
 --------------------------------------------------------------------
-2. PÁGINAS DE FUNDO BRANCO: COMO FICAM A FAIXA TEAL E OS CARDS?
+2. QUANTOS PASSOS TEM O CADASTRO AGORA?
 --------------------------------------------------------------------
-Contexto: você decidiu fundo branco para Biblioteca 3D e Aulas. Os
-mockups dessas páginas foram desenhados sobre navy: a Biblioteca tem
-sidebar teal à esquerda e cards escuros; Aulas tem faixa de topo teal
-e cards escuros.
+Contexto: o mockup antigo mostrava "CRIAR CONTA" com indicador de
+passos 1-2-3. No novo mockup o indicador sumiu, mas o botão diz
+"SALVAR E CONTINUAR", indicando que existe um próximo passo.
 
 Perguntas:
-a) A faixa/sidebar teal permanece como está, vira apenas um detalhe,
-   ou sai nessas duas páginas?
-b) Como ficam os cards sobre o fundo branco: fundo branco com contorno
-   navy? Com sombra? As thumbnails dos modelos 3D continuam com fundo
-   navy dentro do card?
-
-Por que importa: são as duas páginas que mudaram de fundo; sem essa
-definição os componentes delas não entram no design system.
+a) Quantos passos o fluxo tem, e o indicador de passos volta?
+b) O que vem depois do avatar: dados pessoais? vínculo com a UNESP?
+   confirmação por e-mail?
 
 --------------------------------------------------------------------
-3. COR OFICIAL DO CHIP DO LOGO NO TOPO DO SITE
+3. "NOME DO AVATAR" É O MESMO QUE O @USUARIO?
 --------------------------------------------------------------------
-Contexto: nos mockups o chip do logo no header aparece de dois jeitos —
-laranja com o cubo entre "FAB" e "LAB", e rosa com o cubo à esquerda
-de "FAB LAB".
+Contexto: o novo mockup tem o campo "NOME DO AVATAR" (até 20
+caracteres). Nas outras telas os autores aparecem como @handle
+(ex.: @laser.nick) com nível.
 
-Pergunta: qual é a versão canônica do chip no header do site (cor e
-posição do cubo)? As demais cores da prancha seguem valendo para
-posters e materiais.
-
-Por que importa: o header se repete em todas as páginas do site.
+Pergunta: o nome do avatar é o @handle público, um nome de exibição,
+ou só um apelido do boneco (com o @handle criado em outro passo)?
 
 --------------------------------------------------------------------
-4. ROSA SOBRE BRANCO: CONTRASTE / ACESSIBILIDADE
+4. SELETOR "XX OU XY": CONFIRMAR RÓTULOS E IMPACTO NOS SPRITES
 --------------------------------------------------------------------
-Contexto: o rosa #EE9DC4 é usado em numeração de cards, corações de
-curtida, item ativo do menu e chips. Sobre o fundo navy funciona bem;
-sobre o novo fundo branco de Biblioteca 3D e Aulas o contraste fica
-baixo e reprova no critério de acessibilidade (WCAG AA) para textos
-pequenos.
+Contexto: o novo mockup introduz a escolha de base do corpo com as
+opções "XX" e "XY" (no lugar dos 4 tipos de corpo e da altura,
+removidos na rodada 1).
 
-Pergunta: nas páginas de fundo branco, podemos usar uma variação mais
-escura do rosa (ou trocar para navy/laranja) nos textos pequenos?
-Prefere definir o tom você mesma, ou propomos e você aprova?
+Perguntas:
+a) Confirmar que "XX OU XY" é o rótulo final dessa escolha.
+b) As roupas (partes de cima/baixo) variam por base? Se sim, cada
+   item de roupa precisa de sprite nas duas bases — dobra a produção
+   de arte. As 4 direções de rotação multiplicam isso também.
 
-Por que importa: legibilidade e acessibilidade nas duas páginas claras.
+Por que importa: define o tamanho real do pacote de sprites que você
+vai produzir.
 
 --------------------------------------------------------------------
-LEMBRETE
+5. CATÁLOGO DO ROSTO E CONTAGENS OFICIAIS
 --------------------------------------------------------------------
-Seguimos aguardando o arquivo da fonte "Square Font" (e o webfont da
-Aldo the Apache, se tiver) para fechar a tipografia do site.
+Contexto: no mockup, OLHOS mostra 9 opções visíveis, NARIZ 5 e BOCA 5,
+todos com "Ver mais". E os rótulos nem sempre batem com a arte:
+CABELO diz "30 opções" mas o render mostra 32; PARTE DE CIMA diz
+"10 opções" com 9 visíveis; SAPATOS diz "10" com 11 visíveis.
+
+Perguntas:
+a) Quantas opções terão OLHOS, NARIZ e BOCA no total?
+b) Vale o número dos rótulos (20 pele / 10 cores de cabelo / 30
+   cabelos / 10+10+10 roupas / 5+5 acessórios) e a arte é ilustrativa?
+
+--------------------------------------------------------------------
+6. BARRA COMPACTA: A ORDEM AULAS/CALENDÁRIO INVERTIDA É INTENCIONAL?
+--------------------------------------------------------------------
+Contexto: no desktop a ordem decidida é ... CALENDÁRIO · AULAS ...;
+na barra compacta você respondeu "projetos, aulas, calendário,
+artigos" — Aulas antes de Calendário, invertido em relação ao desktop.
+
+Pergunta: a inversão é intencional ou as barras compactas devem
+seguir a mesma ordem relativa do desktop (Calendário antes de Aulas)?
+Aplicamos a sua resposta literal; é só confirmar.
+
+--------------------------------------------------------------------
+7. ITEM "PERFIL" DA BARRA INFERIOR PARA QUEM NÃO ESTÁ LOGADO
+--------------------------------------------------------------------
+Contexto: a barra inferior do celular tem PERFIL na 5ª posição.
+Visitante sem conta não tem perfil.
+
+Pergunta: para o visitante deslogado, o PERFIL vira "ENTRAR"/"CRIAR
+CONTA", abre a tela de login, ou some da barra?
+
+--------------------------------------------------------------------
+8. ONDE FICAM BIBLIOTECA 3D E INSTAGRAM FORA DA BARRA?
+--------------------------------------------------------------------
+Contexto: você decidiu tirar Biblioteca 3D e Instagram das barras de
+tablet e celular. Eles precisam continuar acessíveis.
+
+Perguntas:
+a) Ficam num menu (hambúrguer/drawer)? Onde fica o botão desse menu?
+b) Confirmar que tocar no logo leva à Home no celular.
+c) A Biblioteca 3D é uma seção importante — tudo bem ela ficar a dois
+   toques de distância no celular, ou merece um atalho em outro lugar
+   (ex.: card na Home)?
+
+--------------------------------------------------------------------
+LEMBRETE — LICENÇA DAS FONTES
+--------------------------------------------------------------------
+Os arquivos chegaram (obrigado!). Comfortaa é OFL, ok. Aldo the
+Apache e SquareFont vieram sem arquivo de licença — você consegue
+confirmar (ou enviar) a licença que permite uso em site
+institucional? Fontes desses acervos costumam ser "free for personal
+use", e precisamos disso resolvido antes do lançamento.

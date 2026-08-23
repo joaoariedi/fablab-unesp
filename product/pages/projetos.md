@@ -19,9 +19,12 @@ curtidas reforçam a reputação do maker.
 ### Header (faixa navy no topo)
 
 - Logo-chip extrudado laranja "FAB ● LAB / CITE BAURU" à esquerda (hachura de sombra 3D).
+  - **Decidido (rodada 2, 2026-08-23):** o chip **laranja**, com o cubo isométrico entre
+    `FAB` e `LAB` (como em `design/avatar-create.png`), é a versão **canônica** do header em
+    todas as páginas; a variante rosa fica como registro de mockup (`visual-identity.md`).
 - Navegação em caps display, na ordem do mockup:
   `BIBLIOTECA 3D` · `PROJETOS` · `INSTAGRAM` · `ARTIGOS` · `AULAS`
-  - **Decidido (2026-08-23):** a navegação canônica de todas as páginas é
+  - **Decidido (2026-08-23):** a navegação canônica **desktop** de todas as páginas é
     `BIBLIOTECA 3D` · `PROJETOS` · `CALENDÁRIO` · `AULAS` · `INSTAGRAM` · `ARTIGOS`
     (`concept.md` / `visual-identity.md`) — a ordem do mockup acima fica como registro
     histórico e é superada.
@@ -89,10 +92,17 @@ curtidas reforçam a reputação do maker.
 
 ## Adaptação tablet (768–1279px)
 
-Todas as decisões desta seção são **(proposta)** — o mockup mostra apenas desktop.
+Salvo onde indicado como decidido, as decisões desta seção são **(proposta)** — o mockup
+mostra apenas desktop.
 
-- **Header (proposta)**: logo-chip reduzido; navegação colapsa em menu **hambúrguer** à
-  direita, mantendo visível apenas o bloco de avatar + `MAKER_X` / `NÍVEL 3`.
+- **Header**: logo-chip laranja reduzido + bloco de avatar + `MAKER_X` / `NÍVEL 3`.
+  ~~navegação colapsa em menu **hambúrguer** à direita, sem itens visíveis~~ —
+  **Decidido (rodada 2, 2026-08-23):** a barra do tablet **mantém quatro itens visíveis**,
+  nesta ordem: `PROJETOS` · `AULAS` · `CALENDÁRIO` · `ARTIGOS` (item ativo `PROJETOS` em
+  rosa). `BIBLIOTECA 3D` e `INSTAGRAM` **saem da barra** e ficam acessíveis por
+  **menu** — o mecanismo (menu/drawer) segue **(proposta)**, assim como voltar à Home pelo
+  logo **(proposta)**. *(Nota: a ordem compacta inverte Aulas/Calendário em relação à
+  desktop — é a resposta literal da designer, registrada como decidida.)*
 - **Hero (proposta)**: título e parágrafo mantêm-se à esquerda; a composição isométrica
   reduz para ~35% da largura; chevrons `»` ocultos.
 - **Filtros (proposta)**: tabs viram **chips horizontais roláveis** (scroll-x, sem barra
@@ -104,11 +114,18 @@ Todas as decisões desta seção são **(proposta)** — o mockup mostra apenas 
 
 ## Adaptação mobile (<768px)
 
-Todas as decisões desta seção são **(proposta)**.
+Salvo onde indicado como decidido, as decisões desta seção são **(proposta)**.
 
-- **Header (proposta)**: logo-chip + avatar; navegação em **hambúrguer** abrindo drawer de
-  tela cheia com os itens em display caps. Alternativa avaliada: **bottom navigation** com
-  Home / Biblioteca 3D / Projetos / Aulas / Perfil.
+- **Header**: logo-chip laranja + avatar no topo. ~~navegação em **hambúrguer** abrindo
+  drawer de tela cheia com os itens em display caps; alternativa avaliada: **bottom
+  navigation** com Home / Biblioteca 3D / Projetos / Aulas / Perfil~~ —
+  **Decidido (rodada 2, 2026-08-23):** a navegação do mobile é uma **barra inferior de 5
+  posições**, nesta ordem: `PROJETOS` · `AULAS` · `CALENDÁRIO` · `ARTIGOS` · `PERFIL`
+  (item ativo `PROJETOS` em rosa) — supera tanto o hambúrguer quanto a alternativa
+  Home/Biblioteca 3D/Projetos/Aulas/Perfil. `BIBLIOTECA 3D` e `INSTAGRAM` permanecem
+  acessíveis **fora da barra**, por menu — o mecanismo (menu/drawer) segue **(proposta)**,
+  assim como voltar à Home pelo logo **(proposta)**. *(Nota: a ordem compacta inverte
+  Aulas/Calendário em relação à desktop — resposta literal da designer.)*
 - **Hero (proposta)**: empilhado — título, parágrafo e, abaixo, a arte isométrica centralizada
   e reduzida (ou omitida em telas <390px para preservar leitura).
 - **Filtros (proposta)**: chips horizontais roláveis fixos abaixo do hero; busca em campo de
@@ -237,5 +254,6 @@ Todas as decisões desta seção são **(proposta)**.
    (economia completa em `gamification.md`: 5 XP por nível, nível máximo 10).
 8. Filtro combinado (categoria + busca + skill/máquina) faz parte do escopo?
 9. ~~`CALENDÁRIO` entra no header desta página, conforme o `concept.md`?~~
-   **Decidido (2026-08-23):** sim — navegação canônica
-   `BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS`, todos alinhados.
+   **Decidido (2026-08-23):** sim — navegação canônica **desktop**
+   `BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS`, todos alinhados
+   (nas versões compactas vale a barra da rodada 2 — ver Adaptação tablet/mobile).

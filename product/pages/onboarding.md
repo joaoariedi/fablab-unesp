@@ -2,290 +2,289 @@
 
 ## Propósito
 
-Converter o visitante em **maker** cadastrado por meio de um fluxo curto de **3 passos**,
-começando pela criação do **avatar em pixel art** e pela escolha das **5 skills iniciais**.
-O passo 1 é deliberadamente lúdico: o usuário monta seu personagem antes de preencher
-dados, reforçando a promessa gamificada ("Seu personagem maker, do seu jeito!").
+Converter o visitante em **maker** cadastrado por um fluxo curto de passos, começando pela
+criação do **avatar em pixel art**. O primeiro passo é deliberadamente lúdico: o usuário
+monta seu personagem antes de preencher dados, reforçando a promessa gamificada
+("Personalize seu personagem maker do seu jeito!").
 
 ## Fonte de design
 
-- `design/ChatGPT Image 18 de ago. de 2026, 11_19_16.png` — **metade direita** da imagem
-  (a metade esquerda é a home e não pertence a esta página). Mostra o **passo 1 de 3**
-  em desktop.
-- Apoio: `visual-identity.md` (paleta, tipografia, botões, pips) e `gamification.md`
-  (skills iniciais, avatar, XP).
-- **Passos 2 e 3 não possuem mockup** — toda a especificação deles é **(proposta)**.
+- **`design/avatar-create.png`** (2026-08-23) — **fonte primária** da tela de criação de
+  avatar, desktop. **Substitui** a metade direita de
+  `design/ChatGPT Image 18 de ago. de 2026, 11_19_16.png`, que fica como **registro
+  histórico** (era o "passo 1 de 3" com abas, tipos de corpo, altura e skills).
+- Apoio: `visual-identity.md` (paleta, tipografia, botões) e `gamification.md` (avatar,
+  skills, XP).
+- **Demais passos do fluxo não possuem mockup** — especificação **(proposta)**.
 
 ## Estrutura da página — desktop (≥1280px)
 
-Fundo geral **claro** (cinza muito claro; token exato **(proposta)**, ver `visual-identity.md`),
-diferente das demais páginas (navy). Layout centralizado em coluna única com largura
-máxima **(proposta)** de 1120px.
+Fundo geral **claro** (cinza muito claro/quase branco; token exato **(proposta)**), com
+texto navy. Conteúdo em duas colunas: trilho esquerdo (~1/4) e painéis de customização
+(~3/4).
 
-> **Decidido (2026-08-23):** os hexes da prancha de identidade são os **tokens web
-> definitivos** (navy `#191C37`, azul `#3760AA`, teal `#74B7A5`, amarelo `#F8C810`, laranja
-> `#EE703E`, rosa `#EE9DC4`); divergências de tom nos renders dos mockups são artefato e
-> devem ser ignoradas. O tom exato do cinza de fundo desta página segue **(proposta)**.
+### 1. Header (barra navy, padrão do site)
 
-### 1. Header do onboarding (barra navy, full-width)
+O novo mockup usa o **header padrão do site**, não mais um header de fluxo focado:
 
-- **Logo-chip rosa** extrudado à esquerda: ícone de cubo + `FAB LAB` / `CITE BAURU`.
-- À direita: rótulo **`CRIAR CONTA`** seguido do **indicador de passos**: quadrados
-  `1` `2` `3`; o passo atual (`1`) em **amarelo com texto navy**, os demais em outline claro.
-- **Não há navegação principal** (Biblioteca 3D, Projetos, etc.) nesta tela — o fluxo é
-  focado, sem escape pela nav.
-  > **Decidido (2026-08-23):** a navegação canônica do site é
-  > `BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS` (nesta ordem, todos
-  > os itens alinhados). Ela **não** aparece no onboarding — o header desta página segue sem
-  > nav, por decisão de fluxo focado.
+- **Logo-chip laranja** extrudado à esquerda, cubo isométrico entre `FAB` e `LAB`
+  (`FAB ◆ LAB` / `CITE BAURU`). **Decidido (rodada 2, 2026-08-23):** a versão **laranja** é
+  o **chip canônico do header** em todo o site — este mockup (`design/avatar-create.png`) é
+  a referência; a variante rosa fica como registro de mockup.
+- **Navegação canônica completa e alinhada**: `BIBLIOTECA 3D` · `PROJETOS` · `CALENDÁRIO` ·
+  `AULAS` · `INSTAGRAM` · `ARTIGOS` — primeiro mockup que já renderiza a ordem decidida em
+  2026-08-23.
+- À direita: avatar pixel em moldura + `MAKER_X` / `NÍVEL 3` + chevron `⌄`.
+  - O estado **logado** no header sugere que esta tela também serve como **`Editar avatar`**
+    do perfil; para o cadastro de visitante, o bloco de conta vira `ENTRAR`/`CRIAR CONTA`
+    **(proposta)**.
+
+> **Superado pelo novo mockup:** o header anterior (chip rosa, rótulo `CRIAR CONTA`,
+> indicador de passos `1 2 3`, sem navegação) era do mockup antigo. O **indicador de passos
+> não aparece** no novo mockup — ver Questões em aberto.
 
 ### 2. Cabeçalho da etapa
 
-- Título display: **`CRIE SEU AVATAR`**.
-- Subtítulo: **`Seu personagem maker, do seu jeito!`**.
+- Título display navy: **`CRIE SEU AVATAR`**.
+- Subtítulo: **`Personalize seu personagem maker do seu jeito!`** (copy nova; a antiga era
+  "Seu personagem maker, do seu jeito!").
 
-### 3. Bloco de criação de avatar — duas colunas
+### 3. Trilho esquerdo (de cima para baixo)
 
-**Coluna esquerda — Preview do avatar (~1/3 da largura)**
+1. **Preview do avatar** — cartão claro com fundo de **grade quadriculada**; avatar pixel
+   art de corpo inteiro sobre **plataforma isométrica teal**; **botão de rotação** (⟳) no
+   canto inferior direito — **4 direções** (decidido 2026-08-23).
+2. **Card `XX OU XY`** — seletor da **base do corpo** com duas opções, `XX` e `XY`, cada
+   uma com silhueta; `XX` selecionada com **contorno amarelo**. É um elemento **novo**: a
+   base binária substitui os 4 tipos de corpo e o slider de altura removidos em 2026-08-23.
+3. **`NOME DO AVATAR`** — campo de texto com placeholder `Digite um nome...` e contador
+   **`0/20`** (máximo 20 caracteres).
+4. **Botões**: secundário **`VOLTAR`** (navy, texto claro) e primário
+   **`SALVAR E CONTINUAR →`** (rosa preenchido, texto navy, sombra dura — estilo canônico
+   decidido em 2026-08-23; o rótulo mudou de `CONTINUAR` para `SALVAR E CONTINUAR`).
 
-- Cartão claro com **fundo de grade quadriculada** (papel milimetrado).
-- **Avatar em pixel art** de corpo inteiro sobre **plataforma isométrica teal**.
-- **Botão de rotação** (ícone de duas setas circulares ⟳) no canto inferior **direito** do
-  cartão, para girar o personagem — **decidido (2026-08-23): 4 direções** de rotação
-  (ciclo de 4 frames isométricos).
+### 4. Painéis de customização (área direita)
 
-**Coluna direita — Painel de customização (~2/3 da largura)**
+O novo mockup **abandona as abas** (`CORPO/CABELO/ROSTO/ROUPAS/ACESSÓRIOS`) — todos os
+painéis ficam **visíveis simultaneamente** dentro de **um único cartão-contêiner**: a
+fileira `TONS DE CABELO` no topo, abaixo uma linha de três cards
+(`TONS DE PELE` · `CABELO` · `ROSTO`) e outra de dois (`ROUPAS` · `ACESSÓRIOS`); a nota em
+itálico fica **fora** do contêiner, no rodapé da página:
 
-- **Abas com ícone + rótulo**, na ordem: **`CORPO`** (ativa: ícone amarelo, rótulo em
-  azul/navy com sublinhado), **`CABELO`**, **`ROSTO`**, **`ROUPAS`**, **`ACESSÓRIOS`**.
-- Conteúdo da aba `CORPO` (única visível no mockup):
-  - **`TOM DE PELE`** — 6 swatches quadrados em fileira, do mais claro ao mais escuro;
-    o 4º está **selecionado** (contorno navy grosso + marcador circular no canto superior
-    direito).
-  - ~~**`CORPO`** — 4 miniaturas de silhueta (tipos de corpo); a 1ª selecionada com
-    **contorno amarelo**.~~ — **REMOVIDO. Decidido (2026-08-23):** a seleção de **tipo de
-    corpo** sai da customização (registro do mockup mantido acima).
-  - ~~**`ALTURA`** — slider horizontal com **trilho azul**, **thumb amarelo** e botões
-    **`‹`** e **`›`** nas extremidades para ajuste fino.~~ — **REMOVIDO. Decidido
-    (2026-08-23):** o **slider de altura** sai da customização (registro do mockup mantido
-    acima).
+- **`TONS DE CABELO`** — fileira de **10 swatches** no topo: preto, quatro castanhos,
+  bege/loiro, rosa, laranja, ciano e vermelho. **Cor de cabelo é separada do corte** —
+  elemento novo.
+- **Card `TONS DE PELE`** — grade **4×5** de swatches, do mais claro ao mais escuro;
+  legenda **`20 opções`** (eram 6 no mockup antigo — superado).
+- **Card `CABELO`** — grade de miniaturas de cortes; legenda **`30 opções`** (o render
+  mostra 8×4 = 32 miniaturas; vale o rótulo — arte é ilustrativa).
+- **Card `ROSTO`** — três fileiras com **`Ver mais ⌄`** cada:
+  - **`OLHOS`** — duas fileiras, **5 + 4 = 9 opções visíveis** (a última célula da segunda
+    fileira fica vazia) + `Ver mais ⌄`;
+  - **`NARIZ`** — 5 opções visíveis + `Ver mais ⌄`;
+  - **`BOCA`** — 5 opções visíveis + `Ver mais ⌄`.
+  - Totais dos catálogos de rosto **não visíveis** — ver Questões em aberto.
+- **Card `ROUPAS`** — três slots independentes:
+  - **`PARTE DE CIMA` `(10 opções)`** — camisetas, moletons, jaqueta, regata e croppeds
+    listrados (o render mostra apenas **9** miniaturas; vale o rótulo);
+  - **`PARTE DE BAIXO` `(10 opções)`** — calças, bermudas, shorts e saias (10 miniaturas
+    visíveis);
+  - **`SAPATOS` `(10 opções)`** — chinelo, botas, tênis variados (o render mostra **11**
+    miniaturas; vale o rótulo).
+- **Card `ACESSÓRIOS`** — dois slots:
+  - **`ÓCULOS` `(5 opções)`** — redondo de aro fino preto, óculos escuros pretos, armação
+    quadrada rosa, redondo marrom, redondo de aro marrom com **lente azul**;
+  - **`CHAPÉUS` `(5 opções)`** — gorro preto com pompom, bucket navy, boné azul, touca
+    rosa com pompom, chapéu (fedora) preto.
+- Nota de rodapé em itálico: **`As opções podem ser combinadas livremente. Solte sua
+  criatividade!`** — combinação livre entre todos os slots.
 
-> **Decidido (2026-08-23):** sem tipo de corpo e sem altura, a aba `CORPO` fica reduzida ao
-> **tom de pele (6 opções)**. As abas **`CABELO`**, **`ROSTO`**, **`ROUPAS`** e
-> **`ACESSÓRIOS`** têm **10 itens cada**, todos **itens fixos** — **sem cosméticos de
-> recompensa** por enquanto (mecânica de desbloqueio adiada). Os sprites (roupas, cabelos
-> etc.) serão produzidos pela **própria designer**.
+### 5. Bloco de skills — fora desta tela
 
-### 4. Bloco "Escolha suas skills iniciais"
+~~Bloco `ESCOLHA SUAS SKILLS INICIAIS` com 5 cards (nome, ícone, `NÍVEL 1`, pips,
+checkbox).~~ **O novo mockup não contém a escolha de skills** — o bloco existia no mockup
+antigo e deve viver em **outro passo do fluxo** (ou sair do cadastro); ver Questões em
+aberto. As especificações do card de skill (pips de 10 níveis, `NÍVEL 1`) permanecem
+válidas em `gamification.md` para onde quer que o bloco vá.
 
-- Cartão navy full-width com título **`ESCOLHA SUAS SKILLS INICIAIS`** e subtítulo
-  **`Você poderá evoluir todas com o tempo!`**.
-- **Grid de 5 cards claros** em uma linha, cada um com:
-  - Nome em caps: **`MODELAGEM 3D`**, **`CORTE A LASER`**, **`IMPRESSÃO 3D`**,
-    **`ELETRÔNICA`**, **`DESIGN`**.
-  - **Ícone outline** (cubo isométrico; laser; extrusora; trilhas de circuito; caneta/pen tool).
-  - Rótulo **`NÍVEL 1`**.
-  - **Barra de pips** com **6 segmentos**, o 1º preenchido. — **Decidido (2026-08-23):** a
-    barra representa **10 níveis**, ou seja **10 pips** (o 1º preenchido); o mockup de 6
-    segmentos fica como registro **superado**.
-  - **Checkbox** quadrado vazio no rodapé do card (seleção da skill).
+### 6. Demais passos do fluxo — (proposta), sem mockup
 
-### 5. Rodapé de navegação do passo
-
-- Botão secundário à esquerda: **`VOLTAR`** (navy, texto claro).
-- Botão primário à direita: **`CONTINUAR →`** (rosa, texto navy, sombra dura deslocada) —
-  **decidido (2026-08-23):** é exatamente o **estilo primário canônico do site** (rosa
-  preenchido, texto navy, sombra dura deslocada); a variante navy com contorno rosa foi
-  descartada.
-- **Não há footer institucional** (três pilares) nesta página no mockup.
-
-### 6. Passos 2 e 3 — (proposta), sem mockup
-
-- **Passo 2 — `SEUS DADOS`** (proposta): `Nome completo`, `@handle` (com verificação de
+- **Passo seguinte — `SEUS DADOS`** (proposta): `Nome completo`, `@handle` (verificação de
   disponibilidade), `E-mail`, `Senha` + `Confirmar senha`, aceite de
   `Termos de uso e política de privacidade`.
-- **Passo 3 — `VÍNCULO UNESP`** (proposta): tipo de vínculo (`Aluno`, `Servidor`,
-  `Voluntário externo`), `Curso/Unidade`, `RA/matrícula` (opcional para externos),
-  `E-mail institucional` (opcional), e **tela de confirmação** com resumo do avatar +
-  skills escolhidas e CTA **`COMEÇAR A CRIAR`** (proposta).
+- **Passo final — `VÍNCULO UNESP`** (proposta): tipo de vínculo (`Aluno`, `Servidor`,
+  `Voluntário externo`), `Curso/Unidade`, `RA/matrícula` (opcional), e confirmação com
+  resumo do avatar (+ skills, se mantidas no fluxo) e CTA `COMEÇAR A CRIAR` (proposta).
 
 ## Adaptação tablet (768–1279px)
 
-Todas as decisões abaixo são **(proposta)** — o mockup é desktop.
+Todas as decisões abaixo são **(proposta)** — o mockup é desktop —, **exceto a composição da
+barra de navegação**, decidida na rodada 2.
 
-- Header mantém logo + `CRIAR CONTA` + passos `1 2 3`; se faltar espaço, oculta o rótulo
-  textual e mantém apenas os quadrados numerados.
-- Bloco de avatar passa a **empilhado**: preview no topo (largura total, altura ~380px),
-  painel de customização abaixo.
-- Abas `CORPO/CABELO/ROSTO/ROUPAS/ACESSÓRIOS` viram **chips horizontais roláveis** com
-  ícone + rótulo, mantendo o item ativo sublinhado.
-- Grid de skills **5 → 3 colunas** (2 linhas: 3 + 2).
-- Botões `VOLTAR` / `CONTINUAR` permanecem lado a lado no rodapé do conteúdo.
-- Alvos de toque mínimos de **44×44px** (swatches, checkbox). *(O slider de altura foi
-  removido — ver decisão de 2026-08-23.)*
+- Header padrão colapsa como nas demais páginas. **Decidido (rodada 2, 2026-08-23):** a barra
+  do tablet perde `BIBLIOTECA 3D` e `INSTAGRAM` e fica, nesta ordem: `PROJETOS` · `AULAS` ·
+  `CALENDÁRIO` · `ARTIGOS`. Biblioteca 3D e Instagram continuam acessíveis fora da barra
+  (menu/drawer **(proposta)**); Home pelo logo **(proposta)**. *(Nota: a ordem compacta
+  inverte Aulas/Calendário em relação à desktop — resposta literal da designer, registrada
+  como decidida.)*
+- Trilho esquerdo vira **linha superior**: preview + (`XX OU XY` e `NOME DO AVATAR`
+  empilhados ao lado); painéis de customização abaixo, em largura total.
+- Painéis em 2 colunas (`TONS DE PELE` + `ROSTO`; `CABELO` largura total; `ROUPAS` e
+  `ACESSÓRIOS` empilhados).
+- `VOLTAR` / `SALVAR E CONTINUAR` permanecem ao final do conteúdo.
+- Alvos de toque mínimos de **44×44px** (swatches e miniaturas).
 
 ## Adaptação mobile (<768px)
 
-Todas as decisões abaixo são **(proposta)**.
+Todas as decisões abaixo são **(proposta)**, **exceto a composição da barra inferior**,
+decidida na rodada 2.
 
-- Header compacto (56px): logo-chip reduzido + indicador de passos `1 2 3`; o rótulo
-  `CRIAR CONTA` é omitido. **Sem hambúrguer** — fluxo focado, sem navegação.
-- Preview do avatar vira faixa **sticky no topo** (~260px) para permanecer visível
-  enquanto o usuário customiza; botão de rotação sobreposto no canto.
-- Abas de customização como **chips horizontais roláveis** fixos abaixo do preview.
-- `TOM DE PELE`: 6 swatches em grid 6 colunas (mínimo 44×44px).
-  ~~`CORPO`: 4 miniaturas em grid 2×2. `ALTURA`: slider full-width, botões `‹` `›` com 44px.~~
-  **Decidido (2026-08-23):** tipo de corpo e altura **removidos**; as abas `CABELO`, `ROSTO`,
-  `ROUPAS` e `ACESSÓRIOS` mostram seus **10 itens** em grid de miniaturas (mínimo 44×44px).
-- Skills: **1 coluna** (cards empilhados) ou carrossel horizontal; alternativa aceitável é
-  lista compacta com ícone à esquerda, `NÍVEL 1` + pips à direita e checkbox na borda.
-- `VOLTAR` / `CONTINUAR` numa **barra fixa inferior** (safe-area), `CONTINUAR` em destaque
-  ocupando ~65% da largura.
+- **Decidido (rodada 2, 2026-08-23):** a barra inferior do mobile tem **5 posições** —
+  `PROJETOS` · `AULAS` · `CALENDÁRIO` · `ARTIGOS` · `PERFIL`; `BIBLIOTECA 3D` e `INSTAGRAM`
+  saem da barra e ficam acessíveis pelo menu/drawer **(proposta)**; Home pelo logo
+  **(proposta)**. *(Nota: a ordem compacta inverte Aulas/Calendário em relação à desktop —
+  resposta literal da designer, registrada como decidida.)* Se o fluxo de cadastro
+  **suprimir a barra inferior** (para não competir com `VOLTAR` / `SALVAR E CONTINUAR` da
+  barra fixa de ação), isso segue **(proposta)** — ver Questões em aberto.
+- Preview do avatar em faixa **sticky no topo** (~240px) com o botão ⟳ sobreposto, para o
+  resultado ficar visível durante a customização.
+- `XX OU XY` e `NOME DO AVATAR` logo abaixo do preview, empilhados.
+- Painéis empilhados em **acordeão** (ou navegação por âncoras/chips: Pele · Cabelo ·
+  Rosto · Roupas · Acessórios); swatches e miniaturas em grade com células ≥44×44px;
+  fileiras longas (30 cabelos, 20 tons) com rolagem vertical dentro da seção.
+- `Ver mais` do rosto expande inline.
+- `VOLTAR` / `SALVAR E CONTINUAR` em **barra fixa inferior** (safe-area), primário com
+  ~65% da largura.
 
 ## Componentes
 
 | Componente | Descrição | Origem |
 |---|---|---|
-| `OnboardingHeader` | Barra navy com logo-chip e rótulo `CRIAR CONTA` | mockup |
-| `StepIndicator` | Quadrados `1` `2` `3`, ativo amarelo | mockup |
-| `AvatarPreview` | Canvas pixel art sobre grade + base isométrica + botão ⟳ (**4 direções**, decidido 2026-08-23) | mockup + decisão |
-| `CustomizationTabs` | 5 abas com ícone: Corpo/Cabelo/Rosto/Roupas/Acessórios — **10 itens por aba** em Cabelo/Rosto/Roupas/Acessórios (decidido 2026-08-23) | mockup + decisão |
-| `SwatchRow` | 6 amostras de tom de pele, seleção com contorno + marcador | mockup |
-| ~~`VariantGrid`~~ | ~~4 miniaturas de tipo de corpo, seleção em amarelo~~ — **REMOVIDO (decidido 2026-08-23)** | mockup (superado) |
-| ~~`RangeSlider`~~ | ~~Altura, trilho azul + thumb amarelo + botões `‹` `›`~~ — **REMOVIDO (decidido 2026-08-23)** | mockup (superado) |
-| `ItemGrid` | Grade de miniaturas dos **10 itens** da aba (cabelo/rosto/roupas/acessórios), seleção com contorno | decisão 2026-08-23 |
-| `SkillCard` | Nome, ícone, `NÍVEL 1`, pips (**10**, decidido 2026-08-23 — mockup mostrava 6) e checkbox | mockup + decisão |
-| `ButtonSecondary` / `ButtonPrimary` | `VOLTAR` / `CONTINUAR →` (primário canônico: rosa preenchido, texto navy, sombra dura) | mockup + decisão |
-| `FormField`, `PasswordField`, `SelectField` | Passos 2 e 3 | **(proposta)** |
+| `HeaderPrincipal` | Header padrão do site com navegação canônica completa no desktop; compacto (decidido rodada 2): tablet `PROJETOS · AULAS · CALENDÁRIO · ARTIGOS`, mobile em barra inferior de 5 posições `PROJETOS · AULAS · CALENDÁRIO · ARTIGOS · PERFIL`, com `BIBLIOTECA 3D` e `INSTAGRAM` fora da barra **(proposta: menu/drawer)** | mockup novo + decisão |
+| `AvatarPreview` | Pixel art sobre grade + base isométrica teal + botão ⟳ (**4 direções**) | mockup + decisão |
+| `SeletorBase` | Card `XX OU XY` com 2 silhuetas, seleção em contorno amarelo | mockup novo |
+| `CampoNomeAvatar` | Input com placeholder `Digite um nome...` e contador `0/20` | mockup novo |
+| `SwatchRow` | Swatches de cor (tons de pele 20, tons de cabelo 10); seleção por contorno **(proposta — nenhum swatch aparece selecionado no mockup)** | mockup novo |
+| `PainelCatalogo` | Card claro com título caps + grade de miniaturas + legenda `(n opções)` | mockup novo |
+| `LinhaVerMais` | Fileira de opções + link `Ver mais ⌄` (olhos, nariz, boca) | mockup novo |
+| ~~`CustomizationTabs`~~ | ~~5 abas Corpo/Cabelo/Rosto/Roupas/Acessórios~~ — **superado**: painéis simultâneos | mockup antigo |
+| ~~`StepIndicator`~~ | ~~Quadrados `1 2 3`~~ — ausente no mockup novo; ver questão 11 | mockup antigo |
+| `SkillCard` | Nome, ícone, `NÍVEL 1`, pips (10) e checkbox — **fora desta tela** no mockup novo | mockup antigo + decisão |
+| `ButtonSecondary` / `ButtonPrimary` | `VOLTAR` / `SALVAR E CONTINUAR →` (primário canônico) | mockup novo |
+| `FormField`, `PasswordField`, `SelectField` | Passos seguintes | **(proposta)** |
 | `ToastError` / `InlineError` | Feedback de validação | **(proposta)** |
 
 ## Modelo de conteúdo (CMS)
 
 ### `skill` (coleção — dados de referência)
 
-| Campo | Tipo | Obrigatório | Observações |
-|---|---|---|---|
-| `nome` | texto | sim | `Modelagem 3D`, `Corte a Laser`, `Impressão 3D`, `Eletrônica`, `Design` |
-| `slug` | texto único | sim | — |
-| `icone` | mídia | sim | `.svg`, `.png` (outline, monocromático) |
-| `descricao` | texto longo | não | tooltip **(proposta)** |
-| `niveis_max` | número | sim | **10** (decidido 2026-08-23; o mockup mostrava 6 pips — superado) |
-| `xp_por_nivel` | número | não | **5 XP por nível** (decidido 2026-08-23), ver `gamification.md` |
-| `inicial` | booleano | sim | se aparece no passo 1 **(proposta)** |
-| `ativa` | booleano | sim | **(proposta)** — Serigrafia/Bordado Digital futuros |
+Inalterada (ver versão anterior/`gamification.md`): `nome`, `slug`, `icone`, `descricao`,
+`niveis_max` = **10**, `xp_por_nivel` = **5**, `inicial`, `ativa`. A **tela** onde as
+skills iniciais são escolhidas está em aberto (questão 10).
 
 ### `avatar_item` (coleção — peças cosméticas)
 
-> **Decidido (2026-08-23):** somente **itens fixos** — **10 por aba** (`cabelo`, `rosto`,
-> `roupas`, `acessorios`). Sem cosméticos de recompensa por enquanto; os campos de
-> desbloqueio ficam **adiados**. Sprites produzidos pela designer.
+> Somente **itens fixos** (decidido 2026-08-23) — sem campos de desbloqueio. Sprites
+> produzidos pela designer. Catálogo por categoria conforme o novo mockup:
 
 | Campo | Tipo | Obrigatório | Observações |
 |---|---|---|---|
-| `categoria` | enum | sim | `cabelo`, `rosto`, `roupas`, `acessorios` — **10 itens cada** (o valor `corpo` cai com a remoção de tipo de corpo/altura) |
+| `categoria` | enum | sim | `cabelo` (30), `olhos`, `nariz`, `boca` (totais a confirmar), `roupa_cima` (10), `roupa_baixo` (10), `sapatos` (10), `oculos` (5), `chapeus` (5) |
 | `nome` | texto | sim | — |
-| `sprite` | mídia | sim | `.png` (pixel art, sem interpolação), `.webp` |
-| `sprite_folhas` | mídia | não | spritesheet de rotação `.png` + JSON de frames — **4 direções** (decidido 2026-08-23) |
+| `sprite` | mídia | sim | `.png` pixel art (sem interpolação), `.webp` |
+| `sprite_folhas` | mídia | não | spritesheet de rotação (.png + JSON) — **4 direções** |
+| `compativel_base` | enum | não | `xx`, `xy`, `ambas` **(proposta — depende de como os sprites serão produzidos por base)** |
 | `camada_z` | número | sim | ordem de composição **(proposta)** |
-| ~~`desbloqueio`~~ | enum | — | ~~`inicial`, `nivel`, `missao`, `recompensa_lab`~~ — **ADIADO (2026-08-23)**: todos os itens são fixos/iniciais |
-| ~~`nivel_minimo`~~ | número | — | **ADIADO (2026-08-23)** junto com a mecânica de desbloqueio |
+| `pintavel` | booleano | não | se aceita `tom_de_cabelo` (cortes de cabelo) **(proposta)** |
 
-### `tom_de_pele` (coleção — 6 registros)
+### `tom_de_pele` (coleção — **20 registros**)
+
+`nome` (texto, sim), `hex` (cor, sim), `ordem` (número, sim). *(Eram 6 — superado pelo
+novo mockup.)*
+
+### `tom_de_cabelo` (coleção — **10 registros**) — nova
 
 `nome` (texto, sim), `hex` (cor, sim), `ordem` (número, sim).
-
-### ~~`tipo_corpo` (coleção — 4 registros)~~ — REMOVIDA
-
-~~`nome` (texto, sim), `miniatura` (mídia `.png`/`.svg`, sim), `ordem` (número, sim).~~
-
-**Decidido (2026-08-23):** a seleção de tipo de corpo foi removida do avatar; a coleção não
-existe. (Não há coleção equivalente para altura — o slider também foi removido.)
 
 ### `usuario` / `perfil_maker` (coleção)
 
 | Campo | Tipo | Obrigatório | Observações |
 |---|---|---|---|
 | `handle` | texto único | sim | exibido como `@handle` |
-| `nome_completo` | texto | sim | **(proposta)** passo 2 |
-| `email` | e-mail único | sim | **(proposta)** passo 2 |
-| `senha_hash` | texto | sim | **(proposta)** |
-| `vinculo_unesp` | enum | sim | `aluno`/`servidor`/`voluntario_externo` **(proposta)** passo 3 |
-| `curso_unidade` | texto | não | **(proposta)** |
-| `ra_matricula` | texto | não | **(proposta)** |
-| `avatar_config` | JSON | sim | tom de pele + itens por categoria (cabelo, rosto, roupas, acessórios) + direção do preview. ~~tipo de corpo, altura~~ **removidos (2026-08-23)** |
-| `avatar_render` | mídia | não | PNG gerado para uso em cards/ranking **(proposta)** |
+| `nome_avatar` | texto (≤20) | sim | campo `NOME DO AVATAR` do mockup — relação com `@handle` em aberto (questão 12) |
+| `nome_completo` / `email` / `senha_hash` | — | sim | **(proposta)** passos seguintes |
+| `vinculo_unesp` / `curso_unidade` / `ra_matricula` | — | — | **(proposta)** |
+| `avatar_config` | JSON | sim | `base` (`xx`/`xy`), `tom_pele`, `tom_cabelo`, e um item por slot: `cabelo`, `olhos`, `nariz`, `boca`, `roupa_cima`, `roupa_baixo`, `sapatos`, `oculos?`, `chapeu?` + direção do preview |
+| `avatar_render` | mídia | não | PNG composto para cards/ranking (mesmo rosto — decidido 2026-08-23) **(proposta)** |
 | `skills` | relação N:N → `skill` | sim | com `nivel` e `xp` por skill |
 | `xp_total` / `nivel` | número | sim | derivados |
 | `aceite_termos_em` | data/hora | sim | **(proposta)** |
 
-> Uploads de projeto (imagens, PDF, STL, 3MF, OBJ, GLTF/GLB, ZIP) **não** ocorrem nesta
-> página; pertencem às páginas de Projetos e Biblioteca 3D.
+> Uploads de projeto não ocorrem nesta página; pertencem a Projetos e Biblioteca 3D.
 
 ## Ganchos de gamificação
 
-- **Skills iniciais**: as skills selecionadas (checkbox) são criadas no perfil em
-  **`NÍVEL 1`** com a barra de **10 pips** (um por nível, decidido 2026-08-23 — o mockup
-  mostrava 6) com 1 pip preenchido — estado inicial visível já no cadastro. Cada nível custa
-  **5 XP**; o teto é o **nível 10** (ver `gamification.md`).
-- **Avatar**: a configuração escolhida alimenta o avatar pixel art usado em toda a
-  plataforma (header, rodapé dos cards, `RANKING MAKERS`) — cards e ranking usam **o mesmo
-  rosto do boneco** em miniatura (decidido 2026-08-23).
-- **XP de boas-vindas (proposta)**: concluir o cadastro concede XP inicial e contribui para
-  o **Nível do Lab** coletivo (`1250 / 2000 XP` na home — **Decidido (2026-08-23):** os
-  números de XP dos mockups são **ilustrativos**; a economia real é 1 XP por ação e 5 XP por
-  nível, ver `gamification.md`).
-- **Missões (proposta)**: ao final do passo 3, sugerir a primeira missão correspondente à
-  skill escolhida (ex.: `Desafio Corte Laser`).
-- ~~**Recompensas cosméticas (proposta)**: itens de `avatar_item` bloqueados aparecem no
-  painel com cadeado e o texto do nível necessário.~~ **Adiado (2026-08-23):** somente itens
-  fixos por enquanto — **nenhum item aparece bloqueado/com cadeado** no painel.
+- **Avatar**: a configuração alimenta o avatar usado em toda a plataforma (header, cards,
+  `RANKING MAKERS`) — miniatura com **o mesmo rosto do boneco** (decidido 2026-08-23).
+- **Itens fixos, sem recompensa**: nenhum item aparece bloqueado/com cadeado (decidido
+  2026-08-23 — mecânica de desbloqueio adiada). "As opções podem ser combinadas
+  livremente."
+- **Skills iniciais**: criadas em `NÍVEL 1` (pips de 10; 5 XP por nível, teto 10) — em
+  **qual passo** isso acontece está em aberto (questão 10).
+- **XP de boas-vindas (proposta)**: concluir o cadastro concede XP e conta para o Nível do
+  Lab (números dos mockups são ilustrativos — economia real em `gamification.md`).
 - Curtidas (♥) não têm papel nesta página.
 
 ## Estados e interações
 
-- **Hover/foco (proposta)** — nenhum estado de hover é visível no mockup estático: abas
-  ganham sublinhado; swatches/miniaturas ganham contorno de foco visível (2px) navegável
-  por teclado (`Tab`/setas); `CONTINUAR` desloca a sombra dura.
-- **Seleção**: tom de pele = contorno navy grosso + marcador; ~~tipo de corpo = contorno
-  amarelo~~ (**removido em 2026-08-23**; reaproveitar o contorno amarelo para os itens das
-  abas `CABELO`/`ROSTO`/`ROUPAS`/`ACESSÓRIOS` é **(proposta)** — a designer não definiu o
-  estilo de seleção dos itens); skill = checkbox marcado **(proposta** — no
-  mockup os 5 checkboxes estão vazios**)**.
-  Toda mudança **atualiza o preview em tempo real (proposta)**.
-- **Limite de skills (proposta)**: mínimo 1 e máximo 3 selecionadas; ao atingir o máximo,
-  as demais ficam esmaecidas com aviso `Você já escolheu 3 skills`. **Regra a confirmar.**
-- **Loading**: skeleton no cartão de preview enquanto sprites carregam; `CONTINUAR` entra
-  em estado ocupado com spinner e fica desabilitado durante o envio **(proposta)**.
-- **Vazio**: se o catálogo de itens de uma aba estiver vazio, mostrar
-  `Nenhum item disponível ainda` **(proposta)**.
-- **Erro**: falha ao carregar sprites → aviso com ação `Tentar novamente`; erros de
-  validação dos passos 2/3 em mensagem inline abaixo do campo; e-mail/handle já usados →
-  `Este @handle já está em uso` **(proposta)**.
-- **Deslogado (padrão)**: fluxo completo disponível; `VOLTAR` no passo 1 retorna à home
-  **(proposta)**.
-- **Logado**: acesso a `/criar-conta` redireciona para o perfil; a edição do avatar reusa
-  o mesmo painel em `Editar avatar`, sem indicador de passos e com botão `SALVAR`
-  **(proposta)**.
-- **Persistência (proposta)**: rascunho do avatar guardado localmente entre passos, para
-  que `VOLTAR` no passo 2 não perca a customização.
+- **Hover/foco (proposta)** — nenhum estado visível no mockup: swatches/miniaturas ganham
+  contorno de foco (2px) navegável por teclado; `SALVAR E CONTINUAR` desloca a sombra dura.
+- **Seleção**: o **único** estado selecionado visível no mockup é o card `XX` do
+  `XX OU XY`, com **contorno amarelo** (~`#F7CA62`). Nenhum swatch ou miniatura de
+  catálogo aparece marcado — as células de `SAPATOS`, inclusive a do chinelo, têm todas o
+  mesmo contorno cinza-azulado neutro. Que os demais slots adotem esse mesmo padrão de
+  seleção é **(proposta)**. Toda mudança atualiza o preview em tempo real **(proposta)**.
+- **`Ver mais`**: expande o catálogo completo da fileira (olhos/nariz/boca) inline ou em
+  modal **(proposta)**.
+- **`NOME DO AVATAR`**: contador `n/20` em tempo real; validação de conteúdo (palavrões,
+  unicidade?) **(proposta — ver questão 12)**.
+- **Loading**: skeleton no preview enquanto sprites carregam; `SALVAR E CONTINUAR` com
+  spinner e desabilitado durante o envio **(proposta)**.
+- **Vazio/Erro**: catálogo vazio → `Nenhum item disponível ainda`; falha de sprites →
+  `Tentar novamente` **(proposta)**.
+- **Deslogado (cadastro)**: header troca o bloco de conta por `ENTRAR`/`CRIAR CONTA`
+  **(proposta)**; `VOLTAR` retorna à home **(proposta)**.
+- **Logado (edição)**: o mockup mostra usuário logado — a tela reusada como
+  `Editar avatar` do perfil, com `SALVAR` no lugar de `SALVAR E CONTINUAR` **(proposta)**.
+- **Persistência (proposta)**: rascunho do avatar guardado localmente entre passos.
 
 ## Questões em aberto
 
-1. Quantas skills o usuário pode marcar no passo 1 (o mockup mostra checkboxes, sem regra visível)?
-2. Conteúdo definitivo dos passos 2 e 3 — dados pessoais, vínculo UNESP, confirmação por e-mail?
+1. Quantas skills o usuário pode marcar (o bloco de skills saiu desta tela — regra segue
+   indefinida)?
+2. Conteúdo definitivo dos passos seguintes — dados pessoais, vínculo UNESP, confirmação?
 3. O cadastro exige e-mail institucional UNESP ou aceita externos/comunidade?
-4. ~~Quais opções existem em `CABELO`, `ROSTO`, `ROUPAS` e `ACESSÓRIOS` (o mockup só abre `CORPO`)?~~
-   **Decidido (2026-08-23):** **10 itens por aba**, todos fixos (sem cosméticos de
-   recompensa); a arte dos sprites será produzida pela designer.
-5. ~~A rotação do avatar tem quantas direções (2, 4 ou 8 frames)?~~
-   **Decidido (2026-08-23):** **4 direções**.
-6. ~~`ALTURA` altera de fato o sprite ou é apenas escala? Faixa de valores?~~
-   **Decidido (2026-08-23):** pergunta sem objeto — o **slider de altura foi removido**
-   (assim como a seleção de tipo de corpo).
+4. ~~Quais opções existem em `CABELO`, `ROSTO`, `ROUPAS` e `ACESSÓRIOS`?~~
+   **Superado pelo novo mockup (2026-08-23):** cabelo 30 + 10 cores; roupas 3×10;
+   acessórios 5+5; pele 20. Restam os **totais de `OLHOS`/`NARIZ`/`BOCA`** (o `Ver mais`
+   indica mais que os visíveis — 9 olhos, 5 narizes, 5 bocas) — ver questão 13.
+5. ~~Rotação: 2, 4 ou 8 direções?~~ **Decidido (2026-08-23): 4 direções.**
+6. ~~Altura/tipo de corpo?~~ **Removidos (2026-08-23)**; o novo mockup introduz a base
+   `XX OU XY` no lugar — ver questão 14.
 7. Cadastro concede XP inicial? Quanto, e conta para o Nível do Lab?
 8. Há login social/SSO da UNESP como alternativa ao formulário?
-9. Onde o `VOLTAR` do passo 1 leva — home ou tela de escolha entrar/cadastrar?
-10. ~~A barra mostra **6 pips** — o nível máximo por skill é 6, ou a barra é apenas uma janela
-    de progresso? (`gamification.md` registra "8 segmentos nos mockups" — divergência a corrigir.)~~
-    **Decidido (2026-08-23):** a barra representa **os 10 níveis** — 10 pips, nível máximo 10,
-    5 XP por nível. A divergência com `gamification.md` já foi corrigida a montante.
+9. Onde o `VOLTAR` leva — home ou tela de escolha entrar/cadastrar?
+10. **Nova:** para onde foi a **escolha de skills iniciais** — outro passo do fluxo, o
+    perfil pós-cadastro, ou saiu do onboarding?
+11. **Nova:** o fluxo continua em passos (o botão diz `SALVAR E CONTINUAR`), mas o
+    **indicador `1 2 3` sumiu** — quantos passos existem e o indicador volta?
+12. **Nova:** `NOME DO AVATAR` (≤20) é o mesmo que o `@handle` público, um apelido
+    separado do boneco, ou vira o nome de exibição?
+13. **Nova:** totais dos catálogos de `OLHOS`, `NARIZ` e `BOCA` (o mockup mostra 9 olhos
+    em duas fileiras, 5 narizes e 5 bocas, cada bloco com `Ver mais`).
+14. **Nova:** a base `XX OU XY` — confirmar nomenclatura/rótulos dessa escolha e se os
+    itens de roupa variam por base (impacta a produção de sprites em 2 versões).
+15. **Nova (rodada 2):** durante o fluxo de cadastro em mobile, a **barra inferior de
+    navegação** (`PROJETOS · AULAS · CALENDÁRIO · ARTIGOS · PERFIL`) fica visível ou é
+    suprimida em favor da barra fixa de ação (`VOLTAR` / `SALVAR E CONTINUAR`)? A
+    composição da barra já está decidida; só o comportamento dentro do fluxo está em aberto.

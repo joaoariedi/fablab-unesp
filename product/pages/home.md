@@ -22,6 +22,9 @@ missões em destaque, nível coletivo do lab, ranking e últimos projetos.
 - Logo-chip extrudado à esquerda, sempre com letras navy: no v1 chip laranja e cubo isométrico
   **entre** as palavras ("FAB [cubo] LAB / CITE BAURU"); no v2 chip rosa e cubo (aresta teal)
   **à esquerda** de "FAB LAB / CITE BAURU".
+  **Decidido (rodada 2, 2026-08-23):** o chip **canônico do header** é o **laranja com o cubo
+  isométrico entre `FAB` e `LAB`** (como em `design/avatar-create.png`). A descrição do chip
+  rosa com cubo à esquerda (mockup v2) fica como **registro histórico**.
 - Navegação em caps display:
   - **Canônica (decidido 2026-08-23):** `BIBLIOTECA 3D` · `PROJETOS` · `CALENDÁRIO` · `AULAS` ·
     `INSTAGRAM` · `ARTIGOS`, nesta ordem e com todos os itens **alinhados** (o `AULAS` torto
@@ -114,10 +117,16 @@ da página.
 
 ## Adaptação tablet (768–1279px)
 
-Todas as decisões abaixo são **(proposta)** — o mockup só cobre desktop.
+Salvo onde indicado como decidido, as decisões abaixo são **(proposta)** — o mockup só cobre
+desktop.
 
-- Header: logo + nav reduzida a `BIBLIOTECA 3D`, `PROJETOS`, `ARTIGOS`; demais itens
-  (`CALENDÁRIO`, `AULAS`, `INSTAGRAM`) em menu "⋯ MAIS"; avatar mantém nome e nível.
+- ~~Header: logo + nav reduzida a `BIBLIOTECA 3D`, `PROJETOS`, `ARTIGOS`; demais itens
+  (`CALENDÁRIO`, `AULAS`, `INSTAGRAM`) em menu "⋯ MAIS".~~
+  **Decidido (rodada 2, 2026-08-23):** a barra do tablet é `PROJETOS` · `AULAS` ·
+  `CALENDÁRIO` · `ARTIGOS`, nesta ordem; `BIBLIOTECA 3D` e `INSTAGRAM` **saem da barra** e
+  permanecem acessíveis **fora dela**, pelo menu (mecanismo **(proposta)**); Home pelo logo
+  **(proposta)**. Avatar mantém nome e nível. *(A ordem compacta inverte Aulas/Calendário em
+  relação à desktop — é a resposta literal da designer, registrada como decidida.)*
 - Hero (v2, oficial): mapa recortado no centro de interesse (contêineres), altura ~70vh, texto
   sobreposto com painel de contraste navy 60%. Se a designer entregar arte dedicada de tablet,
   ela substitui o recorte.
@@ -131,10 +140,13 @@ Todas as decisões abaixo são **(proposta)** — o mockup só cobre desktop.
 
 ## Adaptação mobile (<768px)
 
-Todas as decisões abaixo são **(proposta)**.
+Salvo onde indicado como decidido, as decisões abaixo são **(proposta)**.
 
-- Header: logo-chip + avatar; navegação colapsa em **menu hambúrguer** que abre drawer
-  full-screen com os itens em lista display; `INSTAGRAM` marcado como link externo.
+- Header: logo-chip + avatar. **Decidido (rodada 2, 2026-08-23):** a navegação principal do
+  mobile é a **barra inferior fixa** (ver abaixo); `BIBLIOTECA 3D` e `INSTAGRAM` ficam **fora
+  da barra**, acessíveis por menu/drawer (mecanismo **(proposta)**); Home pelo logo
+  **(proposta)**. O **menu hambúrguer** com drawer full-screen (itens em lista display,
+  `INSTAGRAM` marcado como link externo) pode permanecer como acesso ao restante.
 - Hero (v2, oficial) — **decidido (2026-08-23):** mobile recebe **arte nova dedicada**
   produzida pela designer (não é recorte automático do mapa desktop nem fallback para o v1).
   Sobre ela: título display reduzido (mantendo as 3 linhas), parágrafo e botão
@@ -149,14 +161,17 @@ Todas as decisões abaixo são **(proposta)**.
 - Cards `NÍVEL DO LAB` / `RANKING MAKERS` / `ÚLTIMOS PROJETOS`: empilhados em 1 coluna,
   nesta ordem; ranking mostra top-3 com "Ver ranking completo" expandindo os demais.
 - Footer: pilares empilhados em 1 coluna, ícone à esquerda do texto.
-- Barra de navegação inferior fixa **(proposta, alternativa ao hambúrguer)**: Home, Projetos,
-  Biblioteca 3D, Perfil.
+- ~~Barra de navegação inferior fixa **(proposta, alternativa ao hambúrguer)**: Home, Projetos,
+  Biblioteca 3D, Perfil.~~
+  **Decidido (rodada 2, 2026-08-23):** a barra inferior fixa é a navegação do mobile, com
+  **5 posições**: `PROJETOS` · `AULAS` · `CALENDÁRIO` · `ARTIGOS` · `PERFIL`. Home pelo logo
+  **(proposta)**; `BIBLIOTECA 3D` e `INSTAGRAM` via menu/drawer **(proposta)**.
 
 ## Componentes
 
 | Componente | Uso na Home | Observações |
 |---|---|---|
-| `HeaderNav` | topo | logo-chip, itens caps na ordem canônica `BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS` (decidido 2026-08-23, todos alinhados), `UserChip` (avatar + nome + nível + chevron) |
+| `HeaderNav` | topo | logo-chip **laranja com cubo entre `FAB` e `LAB`** (canônico, decidido rodada 2), itens caps na ordem canônica desktop `BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS` (decidido 2026-08-23, todos alinhados), `UserChip` (avatar + nome + nível + chevron). Compacto (decidido rodada 2): tablet `PROJETOS · AULAS · CALENDÁRIO · ARTIGOS`; mobile em `BottomNav` de 5 posições `PROJETOS · AULAS · CALENDÁRIO · ARTIGOS · PERFIL`; `BIBLIOTECA 3D` e `INSTAGRAM` fora da barra, via menu **(proposta)** |
 | ~~`HeroBanner` (v1)~~ | ~~faixa teal~~ | **descartado (2026-08-23)** — registro do mockup v1 |
 | `HeroPixelMap` | hero oficial, tela cheia | cena pixel art + hotspots **(proposta)**; arte mobile dedicada da designer |
 | `ButtonPrimary` | `COMECE A CRIAR →` | estilo único: **rosa preenchido, texto navy, sombra dura deslocada** (decidido 2026-08-23). O estilo navy com contorno rosa existiu no mockup v1 e foi **descartado** |
@@ -267,8 +282,10 @@ o hero v2 é o único, não há variante a escolher · `hero_titulo` · `hero_te
    alternativas ou v2 é hero de campanha/sazonal?~~
    **Decidido (2026-08-23):** o v2 (mapa pixel art) é o hero oficial e **substitui** o v1.
 2. ~~A navegação final inclui `CALENDÁRIO` e `AULAS` (v2) ou é a lista curta do v1?~~
-   **Decidido (2026-08-23):** navegação canônica em todas as páginas —
+   **Decidido (2026-08-23):** navegação canônica **desktop** em todas as páginas —
    `BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS`, itens alinhados.
+   **Rodada 2 (2026-08-23):** nas versões compactas `BIBLIOTECA 3D` e `INSTAGRAM` saem da
+   barra — ver "Adaptação tablet" e "Adaptação mobile".
 3. ~~O typo `VER MAIS PROPLETOS` deve ser corrigido para `VER MAIS PROJETOS` — confirmar.~~
    **Decidido (2026-08-23):** é typo do mockup; usar `VER MAIS PROJETOS`.
 4. ~~O card `ÚLTIMOS PROJETOS` mostra 1 projeto ou é carrossel de vários?~~

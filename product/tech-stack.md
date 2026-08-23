@@ -72,6 +72,110 @@ Incorporar à spec da feature correspondente — não são opcionais:
 7. **Exclusão LGPD purga versões**: drafts/versions do Payload guardam valores antigos —
    a anonimização deve varrer o histórico de versões e o storage, senão a exclusão é falsa.
 
+## Multi-tenancy (requisito de 2026-08-23)
+
+> Requisito: a plataforma poderá ser fornecida a outros fablabs/makerspaces — usuários
+> **master** criam/gerenciam organizações e seus admins; **org admins** gerenciam perfil e
+> usuários da própria organização. Analisado por painel adversarial (2 desenhos + juiz).
+> **A decisão da arquitetura A não muda**: Directus perde pelas mesmas lentes do painel
+> original (e BSL 1.1 piora ao redistribuir a plataforma); stack custom piora com tenancy
+> (superfície de auth multi-org); Strapi trava multi-tenancy em enterprise.
+
+### Modelo escolhido
+
+- **Row-level em banco compartilhado** com o plugin oficial
+  `@payloadcms/plugin-multi-tenant` (MIT), instalado **antes da primeira collection de
+  conteúdo** — o plugin define nome/forma do campo `tenant`, composição do access,
+  `tenantsArrayField` no usuário e o seletor de tenant no admin; adotá-lo depois de
+  collections hand-rolled é migração cara. DB-por-tenant rejeitado com mecanismo: o
+  Payload inicializa **um** adapter de banco por processo, então "DB por tenant" viraria
+  processo por tenant (~1 GB por stack) — morre com 2 labs na VM.
+- **Princípio central: tenancy é propriedade dos DADOS, nunca modo de deploy.** Não
+  existe `TENANCY_MODE` nem ramo condicional: uma instância soberana (lab que se hospeda
+  sozinho) é um deploy multi-tenant com **exatamente uma org e nenhum usuário master** —
+  o middleware host→org resolve para a org única. Um caminho de código, um runbook, uma
+  matriz de testes; a porta "distribuir para self-host" fica aberta de graça.
+- **Identidade global, papel por organização**: um e-mail = um `usuario`;
+  `usuarios.orgs[]: {org, papel: admin|staff|maker}`; `master` é papel global. Convite por
+  org admin com e-mail já existente **adiciona membership** — nunca cria conta nem revela
+  a existência da conta em outra org.
+- **Painéis**: o admin do Payload já é o painel — master vê tudo + collection
+  `organizacoes`; org admin usa o mesmo `/admin` com seletor travado nas suas orgs e
+  collections globais ocultas por papel. O requisito fica atendido **em substância desde a
+  fundação**; o que se adia é a ergonomia (wizard de org, tema, quotas).
+- **Roteamento por subdomínio** (`bauru.plataforma.br`) canônico; path-based proibido
+  (cookies, isolamento, percepção de site próprio); custom domain como upgrade. TLS:
+  `on_demand_tls` do Caddy (HTTP-01 por subdomínio, sem imagem custom nem chave de DNS);
+  wildcard DNS-01 apenas como otimização futura.
+- **Storage**: bucket único com prefixo `org/<slug>/…` e **um único construtor de chave**;
+  quota por org validada **na emissão da URL pré-assinada**, com job periódico de
+  reconciliação contra o prefixo (contador denormalizado sofre drift). O **número** da
+  quota por org ainda não existe — decidir (os 10/100/200 MB são limites por arquivo).
+- **Gamificação por org**: ledger, ranking, nível do lab e `regrasXp` escopados;
+  `idempotencyKey = (tenant, user, ação, ref)`; `packages/game` recebe `tenantId` como
+  argumento explícito. `regrasXp` é **semeada por cópia** na criação da org (sem
+  herança/fallback global — ambiguidade escondida).
+- **Branding: v1 = co-branding, não white-label** — cor, logo, tipografia e hero por org
+  via CSS custom properties (regra da feature 001: **zero literal hexadecimal em
+  componente**); a pixel art (avatar, ícones, estações) é compartilhada — identidade
+  própria completa exigiria designer por lab.
+- Reserva barata: `modelos3d.visibilidade: 'privada' | 'rede'` declarado com **apenas
+  `privada` implementada** — features de rede (biblioteca compartilhada, ranking
+  cross-lab) só após decisão de produto.
+
+### O risco nº 1: vazamento cross-tenant silencioso
+
+Na **Local API do Payload o access control é pulado por padrão** — o vazamento típico é um
+`payload.find()` "limpo" dentro de um RSC ou hook, sem flag suspeita nenhuma, devolvendo
+dados do vizinho com HTTP 200. Defesas obrigatórias na fundação, antes de existir a 2ª org:
+
+1. **Choke point único**: nada fora de `lib/tenancy/` chama
+   `payload.find/findByID/create/update/delete` nem Drizzle cru; tudo passa por
+   `getTenantScopedPayload(req)`; lint pelo **nome do método** (o bug real não contém a
+   string `overrideAccess`).
+2. **Access de collection scoped retorna query constraint, nunca booleano.**
+3. **Validator compartilhado de mesmo-tenant** em todo relationship — o plugin **não**
+   valida relationship cruzando tenants.
+4. **Registro versionado de escopo** por collection (`scoped`/`global`, com justificativa)
+   e teste de CI que falha para collection fora do registro.
+5. **Harness de teste de vazamento no CI**: fixture com 2 orgs; usuário da org A recebe 0
+   linhas/403 em toda superfície da B (REST, Local API/RSC, admin, endpoints custom) —
+   demonstrado vermelho→verde.
+
+### Sequenciamento
+
+- **Feature 000 (nova, curta, antes/junto da 002)**: plugin + `organizacoes` + papéis +
+  seed do CITe + middleware host→slug com fallback de org única + choke point + validator
+  + harness de vazamento + fluxo de convite. Roda em paralelo com a 001 e **não atrasa o
+  lançamento do CITe**.
+- **Features 001–006**: escopo inalterado; toda collection nasce com `tenant`; a 004 cria
+  membership pela org resolvida do host; a 005 usa a chave idempotente com tenant; LGPD
+  opera por `(tenant, user)` incluindo purga de versions e do prefixo de storage.
+- **Feature 007 (nova) — onboarding de organizações**: wizard de org, tema/co-branding,
+  quotas, TLS multi-host. **Gatilho explícito**: convênio jurídico assinado **e** segundo
+  lab real com responsável nomeado — antes disso é gastar meses de voluntário para zero
+  usuário (o mesmo relógio de semestre que derrotou a arquitetura C).
+- **Nunca no v1**: billing/planos (é convênio universitário, não SaaS); editor de tema com
+  preview ao vivo; RLS do Postgres antes de os testes de isolamento existirem e passarem.
+
+### Gates de governança (bloqueiam o 1º tenant externo — não são backlog)
+
+- **Instrumento jurídico assinado** definindo controlador/operador LGPD, DPO, notificação
+  de incidente, responsabilidade pelo conteúdo publicado e política explícita de ausência
+  de SLA ("best-effort").
+- **Conteúdo de terceiros**: "moderação humana como antivírus" **quebra** quando o
+  moderador é de outra instituição — ou ClamAV entra na verificação pós-upload, ou o
+  convênio transfere a responsabilidade por escrito.
+- **Decisão de negócio precedente**: a UNESP **hospeda** labs de terceiros (SaaS
+  institucional) ou **distribui** o software para self-host? O modelo mantém as duas
+  portas abertas até a 007; convênio, LGPD e suporte dependem da resposta.
+- Demais questões de produto para o brainstorm da 007: quem paga a infra e sob que
+  instrumento; portabilidade/saída de um lab (o que leva, o que é apagado); marca
+  "powered by" no rodapé; features de rede; barra mínima para aceitar um lab (responsável
+  nomeado, compromisso de moderação); licença do código; SSO institucional; número da
+  quota de storage por org; gatilho de saída da VM (R2 primeiro → Postgres gerenciado →
+  app por último).
+
 ## Camada de experiência do jogo (frontend)
 
 Como o design gamificado se materializa — decidido junto com a arquitetura A:
@@ -84,11 +188,13 @@ Como o design gamificado se materializa — decidido junto com a arquitetura A:
 - **Avatar pixel art por composição de camadas**: cada cosmético é um PNG por slot
   (corpo/cabelo/rosto/roupas/acessórios) empilhado por z-index no construtor; um composite
   server-side (`sharp`) gera a miniatura cacheada usada em cards e ranking.
-  **Decidido (2026-08-23):** a designer produz os sprites (roupas, cabelos); rotação em
-  **4 direções**; **10 itens por aba**; sem slider de altura nem tipo de corpo; somente
-  **itens fixos** no v1 (cosméticos de recompensa adiados); cards/ranking usam o mesmo
-  rosto do boneco em miniatura. Resta definir o template/grade técnico dos sprites no
-  brainstorm da feature 004.
+  **Decidido (2026-08-23):** a designer produz os sprites; rotação em **4 direções**;
+  catálogo conforme o mockup `design/avatar-create.png` — base `XX OU XY`, 20 tons de
+  pele, 10 tons de cabelo, 30 cabelos, rosto por olhos/nariz/boca, roupas em 3 slots de
+  10, óculos e chapéus com 5 cada; somente **itens fixos** no v1 (cosméticos de recompensa
+  adiados); cards/ranking usam o mesmo rosto do boneco em miniatura. Resta definir o
+  template/grade técnico dos sprites (e se roupas variam por base XX/XY) no brainstorm da
+  feature 004.
 - **Hero v2 (mapa isométrico)** como arte pré-renderizada com *art direction*, não mundo
   renderizado — **decidido (2026-08-23):** o v2 é o hero oficial da home (substitui o v1)
   e o mobile recebe **arte dedicada** produzida pela designer; `<picture>` seleciona a

@@ -20,6 +20,9 @@ o loop de gamificação — **escrever artigos gera XP**, conforme regra central
 ### Header (faixa navy no topo)
 
 - Logo-chip extrudado **laranja** "FAB ● LAB / CITE BAURU" à esquerda, com hachura de sombra 3D.
+  - **Decidido (rodada 2, 2026-08-23):** o chip **laranja**, com o cubo isométrico entre `FAB`
+    e `LAB` (como em `design/avatar-create.png`), é a versão **canônica do header** em todas as
+    páginas; a variante rosa fica como registro de mockup.
 - Navegação em caps display; a ordem do mockup abaixo fica como **registro histórico** e é
   **superada** pela navegação canônica (ver decisão nos itens seguintes):
   `BIBLIOTECA 3D` · `PROJETOS` · `INSTAGRAM` · `ARTIGOS` · `AULAS`
@@ -27,8 +30,9 @@ o loop de gamificação — **escrever artigos gera XP**, conforme regra central
   - `AULAS` aparece levemente deslocado/rotacionado no render — **Decidido (2026-08-23):**
     é ruído de render, não intenção de design; todos os itens ficam **alinhados**.
   - `CALENDÁRIO` não aparece neste mockup — **Decidido (2026-08-23):** vale a navegação
-    canônica em todas as páginas, nesta ordem:
+    canônica **desktop** em todas as páginas, nesta ordem:
     `BIBLIOTECA 3D` · `PROJETOS` · `CALENDÁRIO` · `AULAS` · `INSTAGRAM` · `ARTIGOS`.
+    Em tablet e mobile valem as barras compactas decididas na rodada 2 (ver adaptações).
   - `INSTAGRAM` abre em nova aba (link externo) **(proposta)**.
 - À direita: avatar pixel em moldura clara + `MAKER_X` / `NÍVEL 3` + chevron `⌄` (menu da conta).
 
@@ -107,11 +111,19 @@ o loop de gamificação — **escrever artigos gera XP**, conforme regra central
 
 ## Adaptação tablet (768–1279px)
 
-Todas as decisões desta seção são **(proposta)** — o mockup cobre apenas desktop.
+Salvo onde marcado como decidido, as decisões desta seção são **(proposta)** — o mockup cobre
+apenas desktop.
 
-- **Header (proposta)**: logo-chip reduzido; navegação colapsa em menu **hambúrguer** à direita
-  do logo, abrindo drawer lateral; bloco de avatar mantém-se visível, mas exibe só o avatar e o
-  chevron (esconde `MAKER_X` / `NÍVEL 3`).
+- **Header**: logo-chip laranja reduzido; bloco de avatar mantém-se visível, mas exibe só o
+  avatar e o chevron (esconde `MAKER_X` / `NÍVEL 3`) **(proposta)**.
+  - **Decidido (rodada 2, 2026-08-23):** a barra do tablet exibe, nesta ordem —
+    `PROJETOS` · `AULAS` · `CALENDÁRIO` · `ARTIGOS`. `BIBLIOTECA 3D` e `INSTAGRAM` **saem da
+    barra** e permanecem acessíveis fora dela; o mecanismo (menu/drawer) segue **(proposta)**,
+    assim como o acesso à Home pelo logo **(proposta)**. Item ativo: `ARTIGOS`.
+  - *Nota:* a ordem compacta inverte `AULAS`/`CALENDÁRIO` em relação à desktop — é a resposta
+    literal da designer, registrada como decidida.
+  - ~~Navegação colapsa inteira em menu **hambúrguer** à direita do logo~~ — **superado** pela
+    decisão acima (a barra permanece com os 4 itens).
 - **Hero (proposta)**: mantém teal e título; composição isométrica reduz para ~35% da largura;
   parágrafo passa a até 3 linhas; chevrons `»` mantidos.
 - **Tabs (proposta)**: viram **chips horizontais roláveis** (scroll-x, sem barra visível), com
@@ -124,11 +136,18 @@ Todas as decisões desta seção são **(proposta)** — o mockup cobre apenas d
 
 ## Adaptação mobile (<768px)
 
-Todas as decisões desta seção são **(proposta)**.
+Salvo onde marcado como decidido, as decisões desta seção são **(proposta)**.
 
-- **Header (proposta)**: logo-chip + hambúrguer; **navegação inferior fixa (bottom navigation)**
-  com 5 itens (Home, Biblioteca 3D, Projetos, Artigos, Perfil) e o restante no drawer do
-  hambúrguer; avatar/nível acessível pelo item Perfil.
+- **Header**: logo-chip laranja + acesso ao menu; avatar/nível acessível pelo item `PERFIL`
+  **(proposta)**.
+- **Navegação inferior fixa (bottom navigation)** — **Decidido (rodada 2, 2026-08-23):** 5
+  posições, nesta ordem: `PROJETOS` · `AULAS` · `CALENDÁRIO` · `ARTIGOS` · `PERFIL`.
+  - ~~5 itens (Home, Biblioteca 3D, Projetos, Artigos, Perfil)~~ — proposta **superada** pela
+    barra decidida acima.
+  - `BIBLIOTECA 3D` e `INSTAGRAM` saem da barra e permanecem acessíveis fora dela; o mecanismo
+    (menu/drawer) segue **(proposta)**, assim como o acesso à Home pelo logo **(proposta)**.
+  - *Nota:* a ordem compacta inverte `AULAS`/`CALENDÁRIO` em relação à desktop — resposta
+    literal da designer, registrada como decidida.
 - **Hero (proposta)**: composição isométrica vira faixa decorativa reduzida ou é omitida abaixo
   de 390px; título `ARTIGOS` e parágrafo centralizados/à esquerda em bloco único.
 - **Tabs (proposta)**: chips horizontais roláveis fixos abaixo do hero (sticky ao rolar);

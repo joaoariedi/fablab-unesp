@@ -41,13 +41,16 @@ Navegação principal (header, com logo-chip à esquerda e avatar do usuário à
 | **Aulas** | Cursos/tutoriais em vídeo para assistir | [pages/aulas.md](pages/aulas.md) |
 | **Artigos** | Conteúdos, reflexões e referências | [pages/artigos.md](pages/artigos.md) |
 | **Instagram** | Link externo, abre em nova aba | — |
-| **Criar conta** | Onboarding em 3 passos com criação de avatar | [pages/onboarding.md](pages/onboarding.md) |
+| **Criar conta** | Onboarding com criação de avatar (nº de passos em aberto — o novo mockup removeu o indicador `1 2 3`) | [pages/onboarding.md](pages/onboarding.md) |
 
-> **Decidido (2026-08-23, designer):** navegação canônica em todas as páginas, nesta
-> ordem: `BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS` —
-> Calendário e Aulas confirmados no menu principal. O item `AULAS` desalinhado em alguns
-> mockups é ruído de render; tudo alinhado. A página Calendário segue sem mockup (spec
-> marcada como proposta).
+> **Decidido (2026-08-23, designer):** navegação canônica **desktop** em todas as
+> páginas, nesta ordem: `BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM ·
+> ARTIGOS` — Calendário e Aulas confirmados no menu principal. O item `AULAS` desalinhado
+> em alguns mockups é ruído de render; tudo alinhado. **Rodada 2:** nas versões
+> compactas, `BIBLIOTECA 3D` e `INSTAGRAM` saem da barra — **tablet**: `PROJETOS · AULAS
+> · CALENDÁRIO · ARTIGOS`; **mobile (barra inferior)**: `PROJETOS · AULAS · CALENDÁRIO ·
+> ARTIGOS · PERFIL` (Biblioteca 3D e Instagram acessíveis pelo menu). A página Calendário
+> segue sem mockup (spec marcada como proposta).
 
 ## Gamificação
 
@@ -75,6 +78,10 @@ Duas camadas visuais complementares (detalhes em [visual-identity.md](visual-ide
   ganha XP, evolui avatar e skills.
 - **Equipe do lab (admin/moderação)** — gerencia conteúdo via CMS, valida publicações,
   cria missões, aulas e eventos do calendário.
+- **Admin da organização** *(requisito multi-tenant, 2026-08-23)* — gerencia o perfil da
+  sua organização (fablab/makerspace) e os usuários dela.
+- **Master (plataforma)** *(requisito multi-tenant, 2026-08-23)* — cria e gerencia as
+  contas de organizações e seus usuários admin, em painel master.
 
 ## Requisitos de plataforma
 
@@ -86,3 +93,7 @@ Duas camadas visuais complementares (detalhes em [visual-identity.md](visual-ide
 - Conteúdo público indexável (SEO) em PT-BR; área logada gamificada.
 - Armazenamento de objetos e banco intercambiáveis entre self-hosted e serviços
   gerenciados (ex.: MinIO ↔ S3). Análise em [tech-stack.md](tech-stack.md).
+- **Multi-tenant** *(requisito de 2026-08-23)*: a plataforma poderá ser fornecida a
+  outros fablabs/makerspaces. Usuários **master** criam e gerenciam contas de
+  organizações e seus admins; **admins de organização** gerenciam o perfil e os usuários
+  da própria organização. Estratégia técnica em [tech-stack.md](tech-stack.md).

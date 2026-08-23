@@ -15,8 +15,9 @@ uma **skill** e uma **máquina**, e é o candidato natural para conceder **XP po
 >
 > **Decidido (2026-08-23):** a *existência da seção no menu* deixou de ser proposta —
 > `CALENDÁRIO` está **confirmado** na navegação canônica de todas as páginas, na ordem
-> `BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS`. O que segue como
-> proposta é apenas o **conteúdo/layout** desta página, ainda sem mockup dedicado.
+> `BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS` (desktop; nas
+> versões compactas vale a barra decidida na rodada 2 — ver Adaptação tablet/mobile). O que
+> segue como proposta é apenas o **conteúdo/layout** desta página, ainda sem mockup dedicado.
 
 ## Fonte de design
 
@@ -25,8 +26,10 @@ uma **skill** e uma **máquina**, e é o candidato natural para conceder **XP po
 - `design/ChatGPT Image 18 de ago. de 2026, 12_43_11.png` — mockup da home v2 (mapa
   isométrico pixel art), **única imagem** onde `CALENDÁRIO` aparece no header; dela vêm o
   rótulo de navegação e o padrão de header (o footer **não** aparece nessa imagem).
-  **Decidido (2026-08-23):** esse header v2 é o canônico — o `CALENDÁRIO` aparecer só nele
-  não é divergência entre mockups, e sim a versão oficial da navegação.
+  **Decidido (2026-08-23):** esse header v2 é o canônico **quanto à navegação** — o
+  `CALENDÁRIO` aparecer só nele não é divergência entre mockups, e sim a versão oficial da
+  navegação. **Rodada 2 (2026-08-23):** o **logo-chip** desse mockup (rosa) **não** é o
+  canônico — vale o chip **laranja** (ver Header).
 - Padrões visuais herdados (hero teal, lista de cards escuros, chips de filtro, busca, footer
   de pilares): `visual-identity.md` e os mockups descritos em `pages/aulas.md`,
   `pages/projetos.md`.
@@ -36,11 +39,17 @@ uma **skill** e uma **máquina**, e é o candidato natural para conceder **XP po
 
 Toda a estrutura abaixo é **(proposta)**, derivada dos padrões das demais telas.
 
+> **Decidido (rodada 2, 2026-08-23):** o fundo desta página **permanece navy** `#191C37` —
+> a exceção de fundo branco vale só para Biblioteca 3D e Aulas.
+
 ### Header (faixa navy no topo)
 
 - Logo-chip extrudado à esquerda — no mockup do mapa (v2) o chip é **rosa**, com o cubo
   isométrico **à esquerda** de `FAB LAB` / `CITE BAURU` (no v1 o chip é laranja e o cubo fica
   entre as palavras; ver `pages/home.md`).
+  - **Decidido (rodada 2, 2026-08-23):** o chip canônico do header é a versão **laranja**,
+    com o cubo isométrico **entre** `FAB` e `LAB` (como em `design/avatar-create.png`). O
+    chip rosa do mockup do mapa fica como **registro de mockup**, não é o header oficial.
 - Navegação canônica em caps display (v2 do mockup do mapa) — **confirmada pela designer em
   2026-08-23**, nesta ordem e com todos os itens **alinhados**:
   `BIBLIOTECA 3D` · `PROJETOS` · `CALENDÁRIO` · `AULAS` · `INSTAGRAM` · `ARTIGOS`
@@ -130,8 +139,14 @@ acionado a partir da grade).
 
 Todas **(proposta)**.
 
-- **Header**: nav colapsa em hambúrguer quando os 6 itens não couberem; bloco de conta reduz
-  a avatar + `NÍVEL 3`.
+- **Header**: ~~nav colapsa em hambúrguer quando os 6 itens não couberem~~; bloco de conta
+  reduz a avatar + `NÍVEL 3`.
+  - **Decidido (rodada 2, 2026-08-23):** a barra do tablet mostra 4 itens, nesta ordem —
+    `PROJETOS` · `AULAS` · `CALENDÁRIO` · `ARTIGOS`, com `CALENDÁRIO` ativo em rosa.
+    `BIBLIOTECA 3D` e `INSTAGRAM` **saem da barra** e ficam acessíveis por menu/drawer
+    **(proposta)**; Home pelo logo **(proposta)**. A ordem compacta inverte
+    Aulas/Calendário em relação à desktop — é a resposta literal da designer e fica assim.
+  - Logo-chip **laranja** canônico (ver Header desktop).
 - **Hero**: composição isométrica reduz ~40%; parágrafo em 2 linhas.
 - **Barra de controle**: quebra em duas linhas — linha 1: `MÊS`/`LISTA` + navegação de mês +
   `HOJE`; linha 2: chips de tipo em faixa **rolável horizontalmente** + busca a ~50%.
@@ -146,9 +161,13 @@ Todas **(proposta)**.
 
 Todas **(proposta)**.
 
-- **Header**: logo-chip + avatar; navegação em **barra inferior fixa** (Home · Biblioteca ·
-  Projetos · Calendário · Perfil), item ativo em rosa; `Artigos`/`Instagram`/`Aulas` em
-  drawer "Mais".
+- **Header**: logo-chip **laranja** + avatar; navegação em **barra inferior fixa**.
+  ~~(Home · Biblioteca · Projetos · Calendário · Perfil), item ativo em rosa;
+  `Artigos`/`Instagram`/`Aulas` em drawer "Mais".~~
+  - **Decidido (rodada 2, 2026-08-23):** a barra inferior tem 5 posições, nesta ordem —
+    `PROJETOS` · `AULAS` · `CALENDÁRIO` · `ARTIGOS` · `PERFIL`, com `CALENDÁRIO` ativo em
+    rosa. `BIBLIOTECA 3D` e `INSTAGRAM` **saem da barra** e ficam acessíveis por
+    menu/drawer **(proposta)**; Home pelo logo **(proposta)**.
 - **Hero**: composição isométrica omitida; título menor; parágrafo em até 4 linhas.
 - **Visão padrão**: **`LISTA`** passa a ser a visão inicial (grade mensal é pouco legível em
   390px); `MÊS` fica disponível como faixa compacta de **7 dias roláveis** (strip semanal)
@@ -166,7 +185,7 @@ Todas **(proposta)**.
 
 | Componente | Descrição | Reuso |
 |---|---|---|
-| `HeaderPrincipal` | Logo-chip, nav em caps, bloco de conta | Todas as páginas |
+| `HeaderPrincipal` | Logo-chip **laranja** (canônico, decidido rodada 2), nav em caps na ordem desktop `BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS`; compacta (decidido rodada 2) — tablet `PROJETOS · AULAS · CALENDÁRIO · ARTIGOS`, mobile em barra inferior de 5 posições `PROJETOS · AULAS · CALENDÁRIO · ARTIGOS · PERFIL`, com `BIBLIOTECA 3D` e `INSTAGRAM` fora da barra **(proposta: menu/drawer)**; bloco de conta | Todas as páginas |
 | `HeroSecao` | Faixa teal, título display, parágrafo, chevrons, composição isométrica | Todas as seções |
 | `AlternadorVisao` **(proposta)** | Chips `MÊS` / `LISTA` | Exclusivo |
 | `NavegadorMes` **(proposta)** | `‹` `AGOSTO 2026` `›` + `HOJE` | Exclusivo |

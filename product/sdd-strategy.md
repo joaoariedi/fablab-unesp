@@ -22,6 +22,10 @@ gates humanos onde o processo exige julgamento.
    - responsivo mobile-first em três tamanhos (390 / 834 / 1440 como alvos de design);
    - fidelidade à identidade visual (tokens derivados de visual-identity.md);
    - LGPD para contas de usuário;
+   - **princípios de multi-tenancy** (tech-stack.md → seção Multi-tenancy): tenancy é
+     propriedade dos dados (sem `TENANCY_MODE`); registro de escopo por collection; access
+     como query constraint; choke point único de leitura; identidade global com papel por
+     org; nenhum tenant externo antes de instrumento jurídico; v1 = co-branding;
    - limites de qualidade do framework (funções <50 linhas, arquivos <500 LOC, testes).
 
 ## Passo 1 — Fatiamento em features
@@ -30,12 +34,14 @@ Uma feature = um ciclo SDD completo. Ordem proposta (dependências entre parênt
 
 | # | Feature | Escopo | Fonte |
 |---|---|---|---|
-| 001 | `design-system-shell` | Tokens (cores, tipografia, shapes), componentes base (card, botão, chip, barra de progresso, pips), header/footer responsivos, grid | visual-identity.md, pages/* |
+| 000 | `fundacao-multi-tenant` (paralela à 001) | Plugin multi-tenant, coleção `organizacoes`, papéis (master/org admin/staff/maker), seed CITe, middleware host→org com fallback de org única, choke point `getTenantScopedPayload`, validator de mesmo-tenant, harness de vazamento no CI, fluxo de convite | tech-stack.md → Multi-tenancy |
+| 001 | `design-system-shell` | Tokens (cores, tipografia, shapes) como **CSS custom properties — zero hex literal em componente** (porta do co-branding), componentes base (card, botão, chip, barra de progresso, pips), header/footer responsivos, grid | visual-identity.md, pages/* |
 | 002 | `cms-conteudo` | Coleções (projetos, modelos 3D, aulas, artigos, eventos, usuários), upload multi-formato para storage S3-compatível, admin/moderação | pages/*/Modelo de conteúdo |
 | 003 | `paginas-publicas` (001, 002) | Home v1, Projetos, Artigos, Aulas, Biblioteca 3D (com preview 3D), Calendário | pages/*.md |
 | 004 | `contas-avatar` (001, 002) | Cadastro 3 passos, login, perfil, construtor de avatar pixel art, LGPD | pages/onboarding.md |
 | 005 | `gamificacao` (004) | Ledger de XP, skills/níveis, missões + validação, ranking, nível do lab, recompensas cosméticas | gamification.md |
 | 006 | `home-gamificada` (003, 005) | Home logada com missões em destaque, ranking, nível do lab; hero v2 (mapa pixel art) se aprovado | pages/home.md |
+| 007 | `onboarding-de-orgs` — **gatilho: convênio assinado + 2º lab real** | Wizard de organização, tema/co-branding, quotas de storage, TLS multi-host | tech-stack.md → Multi-tenancy |
 
 Fatias pequenas mantêm cada espec/plan/tasks dentro de uma janela de contexto saudável
 (ver regra de context-management: reset decisivo a ~40%).
@@ -75,9 +81,10 @@ Fatias pequenas mantêm cada espec/plan/tasks dentro de uma janela de contexto s
 - **Design só desktop:** as adaptações tablet/mobile seguem como propostas — validar com
   a designer antes da feature 001 virar spec. Exceção já decidida (2026-08-23): o hero da
   home terá **arte mobile dedicada** produzida pela designer.
-- **Fontes:** confirmadas em 2026-08-23 (Aldo the Apache com arquivo; Comfortaa; "Square
-  Font" com **arquivo pendente de envio** pela designer) — conferir a licença web ao
-  receber; só bloqueia a feature 001 até o arquivo chegar.
+- **Fontes:** arquivos recebidos em `product/fonts/` (2026-08-23): Aldo the Apache,
+  SquareFont (Bou Fonts) e Comfortaa variável (OFL). Pendência restante: **confirmar a
+  licença web** de Aldo the Apache e SquareFont (vieram sem arquivo de licença); não
+  bloqueia mais a feature 001, mas a confirmação deve chegar antes do lançamento.
 - **Gamificação:** números fechados em 2026-08-23 (1 XP por ação; 5 XP por nível; máximo
   10; curtidas sem XP; cosméticos de recompensa adiados). O brainstorm da 005 foca no que
   restou: moderação/anti-farm, check-in presencial e a recompensa coletiva do Nível do Lab.

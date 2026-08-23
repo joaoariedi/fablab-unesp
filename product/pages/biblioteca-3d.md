@@ -20,6 +20,9 @@ visibilidade autoral aos alunos (avatar + @handle + nível) e alimenta o ciclo d
 
 - Logo-chip extrudado **laranja** `FAB LAB` / `CITE BAURU` à esquerda, com **cubo isométrico**
   navy entre `FAB` e `LAB` e sombra hachurada.
+  - > **Decidido (rodada 2, 2026-08-23):** o chip **laranja** com o cubo isométrico entre
+    > `FAB` e `LAB` é a versão **canônica do header** em todas as páginas — o mockup desta
+    > página já está correto. A variante rosa vista em outros mockups fica só como registro.
 - Navegação em caps display (mockup): `BIBLIOTECA 3D` · `PROJETOS` · `AULAS` · `INSTAGRAM` ·
   `ARTIGOS`.
   - `BIBLIOTECA 3D` é o item **ativo**: rosa com sublinhado rosa.
@@ -39,9 +42,12 @@ visibilidade autoral aos alunos (avatar + @handle + nível) e alimenta o ciclo d
 > escuro (~`#419189`).
 > **Decidido (2026-08-23):** valem os hexes da prancha de identidade oficial como **tokens web
 > definitivos** — a divergência do render é artefato e deve ser ignorada (usar `#74B7A5`).
-> Como a área de conteúdo desta página passa a ter **fundo branco**, o tratamento exato da
+> ~~Como a área de conteúdo desta página passa a ter **fundo branco**, o tratamento exato da
 > faixa teal (manter coluna teal, reduzir a acento ou substituir) será detalhado com a
-> designer **(proposta)**.
+> designer **(proposta)**.~~
+> **Decidido (rodada 2, 2026-08-23):** a **faixa/sidebar teal permanece** (coluna teal ao
+> lado do conteúdo branco) — a proposta acima está resolvida. Além disso, os itens do bloco
+> `CATEGORIAS` funcionam como **tags de tema que filtram o conteúdo** da lista de modelos.
 
 - Título display navy em duas linhas: `BIBLIOTECA` / `3D`.
 - Descrição: `Explore, baixe e imprima modelos 3D criados pela comunidade maker.`
@@ -54,13 +60,23 @@ visibilidade autoral aos alunos (avatar + @handle + nível) e alimenta o ciclo d
   - `ACESSÓRIOS` `236` (bolsa) · `ANIMAIS` `184` (gato) · `VEÍCULOS` `142` (carro)
   - `DECORAÇÃO` `198` (vaso/planta) · `EDUCAÇÃO` `123` (cubo) · `UTILIDADES` `351` (caixa)
 
+  > **Decidido (rodada 2, 2026-08-23):** esses itens são **tags de tema** e o clique
+  > **filtra a lista de modelos** da área principal (o item ativo permanece em rosa, e
+  > `TODOS` limpa o filtro). Se "categoria" e "tag de tema" são exatamente a mesma entidade
+  > — e se as tags são administráveis pelo CMS ou fixas no código — fica **(proposta)**
+  > fina a confirmar (ver Modelo de conteúdo, coleção `categoria`).
+
 ### Área principal (fundo branco)
 
 > **Decidido (2026-08-23):** a Biblioteca 3D (com Aulas) usa **fundo branco** na área de
 > conteúdo, com **texto navy**. O mockup em navy fica como registro histórico; toda descrição
 > de "fundo navy" abaixo se refere ao mockup. Cards, busca, filtros e numeração passam a ser
-> desenhados sobre claro — o tratamento exato desses componentes sobre fundo branco
-> (contornos, sombras, thumbnails, contraste) fica **(proposta)** a detalhar com a designer.
+> desenhados sobre claro.
+> **Decidido (rodada 2, 2026-08-23):** sobre o fundo branco, os **cards são brancos com
+> contorno azul navy escuro e sombra**; as **thumbnails dos modelos 3D mantêm o fundo navy**
+> dentro do card; e **todo texto sobre branco usa azul navy escuro** (nada de rosa em texto
+> pequeno sobre branco — resolve a pendência de contraste WCAG). Segue **(proposta)** apenas
+> a versão clara de busca e filtros (contorno/sombra do input e dos dropdowns).
 
 **Barra de busca e filtros** (no mockup, card navy com contorno claro):
 
@@ -71,19 +87,28 @@ visibilidade autoral aos alunos (avatar + @handle + nível) e alimenta o ciclo d
   3. `Todos os formatos`
 
 **Lista de modelos** — grid de **2 colunas × 5 linhas** (10 cards por página), numerados
-`01`–`10` em caixa com contorno rosa no canto superior esquerdo de cada card. A numeração
+`01`–`10` em caixa com contorno no canto superior esquerdo de cada card (rosa no mockup;
+sobre o fundo branco, **azul navy escuro** — ver anatomia). A numeração
 corre **na vertical**: `01`–`05` na coluna esquerda, `06`–`10` na coluna direita.
 
-Anatomia do card (linha horizontal; no mockup, contorno claro sobre navy — sobre o **fundo
-branco** decidido, contorno e thumbnail a definir com a designer **(proposta)**):
+Anatomia do card (linha horizontal; no mockup, contorno claro sobre navy). **Decidido
+(rodada 2, 2026-08-23):** sobre o fundo branco o card é **branco, com contorno azul navy
+escuro e sombra**:
 
-1. **Número** `01`… `10` em display rosa dentro de caixa com contorno rosa.
-2. **Thumbnail** — render 3D do modelo sobre fundo navy.
-3. **Bloco de texto** — título display em caps (claro) + descrição curta (2 linhas).
+1. **Número** `01`… `10` em display dentro de caixa com contorno — no mockup, rosa sobre
+   navy; sobre o fundo branco, **azul navy escuro** (decidido rodada 2: texto sobre branco
+   é navy).
+2. **Thumbnail** — render 3D do modelo sobre **fundo navy**, que **permanece navy dentro do
+   card branco** (**decidido rodada 2**).
+3. **Bloco de texto** — título display em caps + descrição curta (2 linhas); no mockup em
+   claro sobre navy, **sobre o fundo branco em azul navy escuro** (**decidido rodada 2** —
+   a inversão de cor de texto está confirmada).
 4. **Rodapé de autoria** — avatar pixel + `@handle` + `NÍVEL n`.
 5. **Coluna de ações** (à direita, separada por divisória): botão **download** (ícone de seta
    para baixo em moldura teal, com micro-rótulo ilegível no mockup — texto a definir
-   **(proposta)**) e contador de curtidas `♥ n` em rosa.
+   **(proposta)**) e contador de curtidas `♥ n` — rosa no mockup; sobre o fundo branco o
+   **número** vai em **azul navy escuro** (decidido rodada 2: nada de rosa em texto pequeno
+   sobre branco), ficando o ícone `♥` em rosa como acento **(proposta)**.
 
 Conteúdo exato dos 10 cards do mockup:
 
@@ -124,47 +149,60 @@ Três pilares com ícone outline, separados por divisórias verticais:
 
 ## Adaptação tablet (768–1279px)
 
-Todas as decisões abaixo são **(proposta)** — o mockup mostra apenas desktop —, exceto o
-fundo: **decidido (2026-08-23)** que a área de conteúdo é **branca com texto navy** também em
-tablet.
+Todas as decisões abaixo são **(proposta)** — o mockup mostra apenas desktop —, exceto: o
+fundo (**decidido 2026-08-23**: área de conteúdo **branca com texto navy** também em tablet),
+o **conteúdo da barra de navegação**, a **permanência da faixa teal** e o **tratamento dos
+cards** (**decididos na rodada 2, 2026-08-23**).
 
-- **Header (proposta)**: logo-chip + avatar permanecem; a navegação canônica
-  (`BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS`) colapsa em botão
-  **hambúrguer** que abre painel lateral (drawer) da direita.
-- **Sidebar teal (proposta)**: deixa de ser coluna. O título `BIBLIOTECA 3D` + descrição viram
-  uma **faixa hero teal horizontal** no topo (composição isométrica reduzida à direita), e
-  `CATEGORIAS` vira **faixa horizontal de chips roláveis** (`TODOS 1234`, `ACESSÓRIOS 236`, …)
-  logo abaixo da faixa, com o contador dentro do chip.
+- **Header**: logo-chip + avatar permanecem. **Decidido (rodada 2, 2026-08-23):** a barra do
+  tablet é `PROJETOS · AULAS · CALENDÁRIO · ARTIGOS` — **`BIBLIOTECA 3D` sai da barra**
+  (junto com `INSTAGRAM`), de modo que **esta própria página não tem item de menu nesta
+  largura**: chega-se a ela pelo menu/drawer. Não há item ativo na barra quando a Biblioteca
+  3D está aberta **(proposta)** de como sinalizar isso. O mecanismo que dá acesso a
+  Biblioteca 3D e Instagram (hambúrguer → drawer lateral) segue **(proposta)**.
+- **Sidebar teal (proposta)**: deixa de ser coluna — mas **permanece** como elemento (a faixa
+  teal é decidida, rodada 2; só o arranjo compacto é proposta). O título `BIBLIOTECA 3D` +
+  descrição viram uma **faixa hero teal horizontal** no topo (composição isométrica reduzida à
+  direita), e as **tags de tema** (`CATEGORIAS`) viram **faixa horizontal de chips roláveis**
+  (`TODOS 1234`, `ACESSÓRIOS 236`, …) logo abaixo da faixa, com o contador dentro do chip,
+  filtrando a lista.
 - **Busca e filtros (proposta)**: input em largura total na primeira linha; os três dropdowns
   em segunda linha, distribuídos em 3 colunas iguais; o rótulo `FILTRAR POR:` é omitido.
 - **Lista (proposta)**: grid de **2 → 1 coluna** de cards horizontais em largura total
-  (thumbnail à esquerda, texto ao centro, ações à direita).
+  (thumbnail à esquerda, texto ao centro, ações à direita) — card branco com contorno navy e
+  sombra, thumbnail com fundo navy (**decidido rodada 2**, vale em todas as larguras).
 - **Paginação (proposta)**: mantém formato, reduz para `‹ 1 2 3 ... 124 ›`.
 - **Alvos de toque (proposta)**: mínimo 44×44px em chips, dropdowns, download e curtida.
 - **Footer (proposta)**: três pilares em uma linha; composição isométrica reduzida.
 
 ## Adaptação mobile (<768px)
 
-Todas as decisões abaixo são **(proposta)**, exceto o fundo: **decidido (2026-08-23)** que a
-área de conteúdo é **branca com texto navy** também em mobile.
+Todas as decisões abaixo são **(proposta)**, exceto: o fundo (**decidido 2026-08-23**: área de
+conteúdo **branca com texto navy** também em mobile), o **conteúdo da barra inferior**, a
+**permanência da faixa teal** e o **tratamento dos cards** (**decididos na rodada 2,
+2026-08-23**).
 
-- **Header (proposta)**: logo-chip compacto + avatar; navegação em **barra inferior fixa
-  (bottom navigation)**; a ordem canônica completa
-  (`BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS`) fica no menu/drawer,
-  com os destinos prioritários na barra (Biblioteca 3D, Projetos, Calendário, Aulas, Perfil);
-  Instagram e Artigos ficam no menu/footer **(proposta)**.
-- **Hero (proposta)**: faixa teal compacta com `BIBLIOTECA 3D` + descrição sobre o conteúdo
-  branco (tratamento da faixa sobre fundo claro a detalhar com a designer); ilustração
-  isométrica oculta abaixo de 390px.
-- **Categorias (proposta)**: chips horizontais com rolagem lateral (scroll-snap), contador
-  entre parênteses — ex.: `TODOS (1234)`. Alternativa: botão `CATEGORIAS` abrindo **drawer**
-  inferior com a lista completa.
+- **Header**: logo-chip compacto + avatar; navegação em **barra inferior fixa (bottom
+  navigation)**. **Decidido (rodada 2, 2026-08-23):** a barra inferior tem 5 posições —
+  `PROJETOS · AULAS · CALENDÁRIO · ARTIGOS · PERFIL`. **`BIBLIOTECA 3D` sai da barra** (junto
+  com `INSTAGRAM`) e **esta página fica acessível apenas pelo menu/drawer** nesta largura;
+  Home pelo logo e o mecanismo exato do menu seguem **(proposta)**. *(A ordem compacta inverte
+  Aulas/Calendário em relação à desktop — é a resposta literal da designer, registrada como
+  decidida.)*
+- **Hero (proposta de arranjo)**: faixa teal compacta com `BIBLIOTECA 3D` + descrição sobre o
+  conteúdo branco — a **permanência da faixa teal é decidida (rodada 2)**, só o formato
+  compacto é proposta; ilustração isométrica oculta abaixo de 390px.
+- **Categorias / tags de tema (proposta de arranjo)**: chips horizontais com rolagem lateral
+  (scroll-snap), contador entre parênteses — ex.: `TODOS (1234)`. Alternativa: botão
+  `CATEGORIAS` abrindo **drawer** inferior com a lista completa. Em qualquer arranjo, o clique
+  **filtra a lista** (**decidido rodada 2**).
 - **Busca e filtros (proposta)**: input de busca fixo no topo do conteúdo; botão
   `FILTRAR` abre bottom sheet com os três seletores (`Mais recentes`, `Todos os níveis`,
   `Todos os formatos`) e ação `APLICAR`.
 - **Lista (proposta)**: **1 coluna**, card empilhado vertical — thumbnail em largura total
   (proporção 4:3), número `01` sobreposto no canto, título, descrição, linha de autoria e
-  linha de ações (botão `BAIXAR` em largura total + `♥ n`).
+  linha de ações (botão `BAIXAR` em largura total + `♥ n`). Card branco com contorno navy e
+  sombra; thumbnail com fundo navy (**decidido rodada 2**).
 - **Paginação (proposta)**: substituída por **carregar mais** / rolagem infinita, mantendo
   indicador textual `Página 1 de 124`.
 - **Alvos de toque (proposta)**: mínimo 44×44px; espaçamento vertical de 12px entre cards.
@@ -176,20 +214,26 @@ Todos observados no mockup, salvo indicação contrária.
 
 > **Decidido (2026-08-23):** todos os componentes desta página são renderizados sobre **fundo
 > branco com texto navy** (a página é uma das duas de fundo claro, com Aulas). As descrições
-> "escuro/sobre navy" abaixo descrevem o mockup; a variante clara de cada componente
-> (contorno, sombra, contraste) fica **(proposta)** a detalhar com a designer.
+> "escuro/sobre navy" abaixo descrevem o mockup.
+> **Decidido (rodada 2, 2026-08-23):** card branco com **contorno azul navy escuro + sombra**,
+> **thumbnail 3D com fundo navy** e **texto em azul navy escuro**. Resta **(proposta)** só a
+> variante clara de `CampoBusca` e `SeletorFiltro`.
 
-- `HeaderPrincipal` — logo-chip, nav caps na ordem canônica (`BIBLIOTECA 3D · PROJETOS ·
-  CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS`, itens alinhados), item ativo rosa sublinhado,
-  bloco de conta.
-- `SidebarPagina` (hero teal lateral) — título display, descrição, arte isométrica; convivência
-  da faixa teal com o conteúdo branco **(proposta)**.
-- `ListaCategorias` — item = ícone + rótulo caps + contador; estado ativo rosa.
+- `HeaderPrincipal` — logo-chip **laranja canônico** (decidido rodada 2), nav caps na ordem
+  canônica desktop (`BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS`,
+  itens alinhados), item ativo rosa sublinhado, bloco de conta. Em **tablet/mobile** a barra
+  compacta **não inclui `BIBLIOTECA 3D`** (decidido rodada 2).
+- `SidebarPagina` (hero teal lateral) — título display, descrição, arte isométrica; a faixa
+  teal **permanece** convivendo com o conteúdo branco (**decidido rodada 2**).
+- `ListaCategorias` — item = ícone + rótulo caps + contador; funciona como **tag de tema que
+  filtra a lista** (**decidido rodada 2**); estado ativo rosa.
 - `CampoBusca` — input arredondado (escuro no mockup; versão clara sobre fundo branco
   **(proposta)**), ícone lupa, placeholder.
 - `SeletorFiltro` (dropdown, 3 instâncias) — rótulo + chevron `⌄`.
-- `CardModelo3D` — número, thumb, título, descrição, `SeloAutor`, `BotaoDownload`,
-  `ContadorCurtidas` (♥ rosa + número; clicável **(proposta)**).
+- `CardModelo3D` — número, thumb (fundo navy), título, descrição, `SeloAutor`, `BotaoDownload`,
+  `ContadorCurtidas` (ícone ♥ rosa + número em **azul navy escuro** sobre branco; clicável
+  **(proposta)**); sobre branco, card branco com
+  contorno navy escuro e sombra (**decidido rodada 2**).
 - `SeloAutor` — avatar pixel + @handle + `NÍVEL n`.
 - `Paginacao` — setas, páginas, reticências, última página.
 - `FooterPilares` — três pilares + arte isométrica.
@@ -327,5 +371,16 @@ derivado do XP) · `skills` (relação n:n) — definida em `pages/onboarding.md
     de design?~~ **Decidido (2026-08-23):** sim — ordem canônica
     `BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS`; o destaque/
     desalinhamento de `AULAS` é ruído de render e todos os itens ficam alinhados.
-12. Tratamento da faixa/sidebar teal e dos cards sobre o **fundo branco** decidido para esta
-    página (contornos, sombras, versão clara de busca e filtros) — a detalhar com a designer.
+12. ~~Tratamento da faixa/sidebar teal e dos cards sobre o **fundo branco** decidido para esta
+    página (contornos, sombras, versão clara de busca e filtros) — a detalhar com a designer.~~
+    **Decidido (rodada 2, 2026-08-23):** a faixa/sidebar teal **permanece** e seus itens são
+    **tags de tema que filtram o conteúdo**; os cards sobre branco são **brancos com contorno
+    azul navy escuro e sombra**, com as **thumbnails 3D mantendo fundo navy**; texto sobre
+    branco em **azul navy escuro**. Continua em aberto apenas a versão clara de **busca e
+    filtros**.
+13. **Descoberta da Biblioteca 3D em mobile/tablet** *(nota de acompanhamento — a decisão da
+    designer está tomada)*: com `BIBLIOTECA 3D` fora da barra compacta (rodada 2), a página
+    fica acessível só pelo menu/drawer. Acompanhar se o acervo perde tráfego nessas larguras e
+    se vale um ponto de entrada extra (bloco na Home, link no hero ou atalho no perfil).
+14. As **tags de tema** da faixa teal são exatamente a coleção `categoria` (1 por modelo) ou
+    uma taxonomia própria n:n administrável pelo CMS? **(proposta)** — relacionado à questão 6.

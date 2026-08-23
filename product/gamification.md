@@ -26,17 +26,28 @@ um jogo. Ao **assistir aulas**, **postar projetos** e **escrever artigos**, ganh
 - A barra de pips das skills representa os **10 níveis** — o mockup mostra 6 segmentos,
   **superado** por esta decisão.
 
-## Avatar — atualizado em 2026-08-23
+## Avatar — atualizado em 2026-08-23 (novo mockup `design/avatar-create.png`)
 
-- Pixel art em base isométrica com **4 direções de rotação**.
-- Personalização no cadastro (passo 1 de 3): **Tom de pele (6 opções)**, **Cabelo**,
-  **Rosto**, **Roupas**, **Acessórios** — **10 itens por aba**.
-- O **slider de altura** e a **seleção de tipo de corpo** que aparecem no mockup foram
-  **removidos por decisão da designer**.
+- Pixel art em base isométrica com **4 direções de rotação** (botão ⟳ no preview).
+- **Catálogo do novo mockup** (supera a resposta genérica "6 tons / 10 itens por aba" e o
+  layout de abas do mockup antigo — agora é uma tela única com painéis simultâneos):
+  - **Base do corpo `XX OU XY`** (2 opções) — no lugar dos 4 tipos de corpo e do slider
+    de altura, removidos;
+  - **Tons de pele: 20 opções**; **Tons de cabelo: 10 opções** (cor separada do corte);
+  - **Cabelo: 30 opções** de corte;
+  - **Rosto**: `OLHOS`, `NARIZ` e `BOCA` escolhidos separadamente (cada fileira tem
+    `Ver mais` — totais a confirmar);
+  - **Roupas** em 3 slots: `PARTE DE CIMA` (10), `PARTE DE BAIXO` (10), `SAPATOS` (10);
+  - **Acessórios**: `ÓCULOS` (5) e `CHAPÉUS` (5).
+- **`NOME DO AVATAR`** próprio, até **20 caracteres** (relação com o `@handle` em aberto).
+- Combinação livre entre slots: "As opções podem ser combinadas livremente. Solte sua
+  criatividade!"
 - **Somente itens fixos por enquanto** — sem cosméticos de recompensa; a mecânica de
   desbloqueio fica para uma versão futura.
 - Cards, ranking e header usam **o mesmo rosto do boneco** como miniatura.
 - Produção dos sprites (roupas, cabelos etc.): **a própria designer**.
+- A **escolha das skills iniciais saiu desta tela** no novo mockup — em qual passo ela
+  acontece está em aberto (`pages/onboarding.md`, questão 10).
 
 ## Skills
 
@@ -60,6 +71,10 @@ podem virar skills futuras.
   junto com os cosméticos de recompensa — definir recompensa alternativa **(em aberto)**.
 - **Ranking Makers**: top makers por XP total (ex. ilustrativo do mockup: 01 @laser.nick …
   05 @projeto_ana), com link "Ver ranking completo".
+- **Multi-tenant (2026-08-23)**: toda a gamificação é **por organização** — ledger de XP,
+  ranking, nível do lab e a tabela `regrasXp` são escopados por org (a tabela é copiada do
+  padrão CITe ao criar cada organização). XP **não soma** entre labs; features de rede
+  (ranking cross-lab etc.) dependem de decisão de produto (tech-stack.md → Multi-tenancy).
 
 ## Missões
 

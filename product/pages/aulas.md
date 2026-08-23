@@ -21,12 +21,23 @@ geram pontos — **1 XP** por aula assistida (`gamification.md`).
 > **Decidido (2026-08-23):** a página **Aulas usa fundo branco na área de conteúdo**, com
 > texto em navy `#191C37` (mesma regra da Biblioteca 3D). O mockup, todo sobre navy, fica
 > como **registro histórico**: onde as descrições abaixo dizem "sobre navy" / "fundo navy",
-> vale o fundo branco. O tratamento exato da sidebar/faixa teal e o ajuste dos contornos,
-> chips e contrastes sobre o fundo claro serão detalhados com a designer **(proposta)**.
+> vale o fundo branco.
+>
+> **Decidido (rodada 2, 2026-08-23):** a **faixa teal permanece** nesta página (nada de
+> removê-la por causa do fundo branco); os **cards sobre o fundo branco são brancos, com
+> contorno azul navy escuro e com sombra**; e **todo texto sobre branco usa azul navy
+> escuro** — rosa não é usado em texto pequeno sobre branco (resolve a pendência de
+> contraste WCAG das páginas claras). Nas páginas em que a faixa/sidebar teal tem itens,
+> esses itens funcionam como **tags de tema que filtram o conteúdo** — na Aulas o hero não
+> tem itens de filtro, mas essa é a direção decidida para os filtros da página (ver questão
+> 5). Segue **(proposta)** apenas o acabamento do campo de busca sobre o fundo claro.
 
 ### Header (faixa navy no topo)
 
 - Logo-chip extrudado laranja `FAB ● LAB` / `CITE BAURU` à esquerda, com hachura de sombra 3D.
+  **Decidido (rodada 2, 2026-08-23):** o chip **laranja**, com cubo isométrico entre `FAB` e
+  `LAB` (como em `design/avatar-create.png`), é a versão **canônica** do header; a variante
+  rosa fica como registro de mockup.
 - Navegação em caps display, na ordem exata do mockup:
   `BIBLIOTECA 3D` · `PROJETOS` · `AULAS` · `INSTAGRAM` · `ARTIGOS`
   - **Decidido (2026-08-23):** navegação canônica em todas as páginas, nesta ordem —
@@ -57,20 +68,26 @@ geram pontos — **1 XP** por aula assistida (`gamification.md`).
   e a lupa permanecem — acabamento exato **(proposta)** a validar com a designer.
 - Não há tabs/filtros de categoria neste mockup (diferente de Projetos e Biblioteca 3D).
   **(proposta)** Avaliar filtros futuros por skill e por nível — ver "Questões em aberto".
+  **Decidido (rodada 2, 2026-08-23):** quando existirem filtros nesta página, a **direção é
+  filtrar por tags de tema** (mesmo mecanismo dos itens da faixa/sidebar teal nas páginas de
+  fundo branco). Quais tags, onde ficam e como se apresentam seguem **(proposta)** — sem UI
+  definida até o detalhamento com a designer.
 
 ### Lista de aulas
 
 - **Lista numerada em 2 colunas**, ordem de leitura em coluna (esquerda `01`–`04`, direita
   `05`–`08`); 8 cards visíveis no mockup.
 - Card de aula (retângulo horizontal, contorno fino claro, cantos levemente arredondados,
-  fundo navy no mockup — **decidido (2026-08-23):** sobre a área de conteúdo branca o card é
-  claro com texto navy e contorno navy/rosa; acabamento exato **(proposta)** com a designer):
+  fundo navy no mockup — **decidido (rodada 2, 2026-08-23):** sobre a área de conteúdo branca
+  o card é **branco, com contorno azul navy escuro e com sombra**, texto em navy; supera a
+  nota anterior de "claro com contorno navy/rosa **(proposta)**"):
   1. **Número de ordem** em chip retangular com borda rosa, canto superior esquerdo, dígitos
      com zero à esquerda: `01`, `02`, `03`, `04`, `05`, `06`, `07`, `08`.
   2. **Thumbnail ilustrada** (proporção ~5:3, ≈16:10 — medida no mockup) à esquerda, com fundo
      colorido por aula, repetindo cores entre cards: `01` teal, `02` rosa, `03` teal, `04` bege,
      `05` azul, `06` rosa, `07` verde-quadro, `08` madeira.
-  3. **Título** em display claro caps, 1–2 linhas:
+  3. **Título** em display claro caps (mockup) — **decidido (rodada 2, 2026-08-23):** sobre o
+     card branco o título vai em **azul navy escuro**, não em rosa; 1–2 linhas:
      `PRIMEIROS PASSOS IMPRESSÃO 3D`, `PRIMEIROS PASSOS CORTE A LASER`,
      `PRIMEIROS PASSOS SERIGRAFIA`, `O QUE É CULTURA MAKER`,
      `COMO TROCAR O BICO DE UMA IMPRESSORA BAMBU`, `COMO CONSERTAR CORTE A LASER`,
@@ -117,11 +134,16 @@ geram pontos — **1 XP** por aula assistida (`gamification.md`).
 
 ## Adaptação tablet (768–1279px)
 
-Todas as decisões abaixo são **(proposta)** — o mockup cobre apenas desktop.
+Salvo onde marcado **Decidido**, as decisões abaixo são **(proposta)** — o mockup cobre
+apenas desktop.
 
-- **Header (proposta)**: logo-chip reduzido; navegação colapsa em menu "hambúrguer" à direita
-  quando os 6 itens da nav canônica não couberem; bloco de conta reduz para avatar +
-  `NÍVEL 3` (esconde `MAKER_X`).
+- **Header** — **Decidido (rodada 2, 2026-08-23):** a barra do tablet tem 4 itens, nesta
+  ordem: `PROJETOS · AULAS · CALENDÁRIO · ARTIGOS`; `BIBLIOTECA 3D` e `INSTAGRAM` **saem da
+  barra** e permanecem acessíveis fora dela (menu/drawer **(proposta)**), assim como Home
+  pelo logo **(proposta)**. `AULAS` é o item **ativo** nesta página. *(Nota: a ordem compacta
+  inverte Aulas/Calendário em relação à desktop — resposta literal da designer, registrada
+  como decidida.)* Segue **(proposta)**: logo-chip reduzido e bloco de conta reduzido para
+  avatar + `NÍVEL 3` (esconde `MAKER_X`).
 - **Hero (proposta)**: mantém faixa teal; composição isométrica reduz ~40% e o texto ocupa
   ~60% da largura; parágrafo reflui em 2 linhas.
 - **Barra de seção (proposta)**: `TODAS AS AULAS` e busca permanecem na mesma linha; a busca
@@ -135,11 +157,16 @@ Todas as decisões abaixo são **(proposta)** — o mockup cobre apenas desktop.
 
 ## Adaptação mobile (<768px)
 
-Todas as decisões abaixo são **(proposta)** — o mockup cobre apenas desktop.
+Salvo onde marcado **Decidido**, as decisões abaixo são **(proposta)** — o mockup cobre
+apenas desktop.
 
-- **Header (proposta)**: logo-chip + avatar apenas; navegação em **barra inferior fixa**
-  (Home · Biblioteca · Projetos · Aulas · Perfil) com item ativo em rosa; itens secundários
-  (Artigos, Instagram, Calendário) em drawer aberto pelo item "Mais".
+- **Header** — **Decidido (rodada 2, 2026-08-23):** navegação em **barra inferior fixa de 5
+  posições**, nesta ordem: `PROJETOS · AULAS · CALENDÁRIO · ARTIGOS · PERFIL`, com item ativo
+  em rosa (`AULAS` nesta página). `BIBLIOTECA 3D` e `INSTAGRAM` **saem da barra** e ficam
+  acessíveis fora dela (menu/drawer **(proposta)**); Home pelo logo **(proposta)**. A
+  composição anterior (Home · Biblioteca · Projetos · Aulas · Perfil, com Artigos/Instagram/
+  Calendário em "Mais") fica como registro histórico. Segue **(proposta)**: no topo, apenas
+  logo-chip + avatar.
 - **Hero (proposta)**: composição isométrica reduzida abaixo do texto ou omitida; título
   `AULAS` em tamanho menor; parágrafo com no máximo 4 linhas.
 - **Busca (proposta)**: campo em largura total abaixo do título `TODAS AS AULAS`; opção de
@@ -158,15 +185,18 @@ Todas as decisões abaixo são **(proposta)** — o mockup cobre apenas desktop.
 > **Decidido (2026-08-23):** esta página tem **área de conteúdo em fundo branco** (texto
 > navy), então os componentes reusáveis abaixo precisam de variante clara — as descrições
 > "navy" vêm do mockup. Os botões primários seguem o **estilo canônico** (rosa preenchido,
-> texto navy, sombra dura deslocada). O acabamento das variantes claras (contornos, sidebar/
-> faixa teal, busca) fica **(proposta)** até o detalhamento com a designer.
+> texto navy, sombra dura deslocada).
+>
+> **Decidido (rodada 2, 2026-08-23):** a variante clara dos **cards** é **branca, com
+> contorno azul navy escuro e sombra**, com **texto em azul navy escuro**; a **faixa teal
+> permanece**. Fica **(proposta)** apenas o acabamento do `CampoBusca` sobre o fundo claro.
 
 | Componente | Descrição | Reuso |
 |---|---|---|
-| `HeaderPrincipal` | Logo-chip, nav canônica em caps (`BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS`, itens alinhados), bloco de conta com avatar/nível | Todas as páginas |
+| `HeaderPrincipal` | Logo-chip **laranja** (canônico), nav canônica em caps (`BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS`, itens alinhados); compacta — tablet `PROJETOS · AULAS · CALENDÁRIO · ARTIGOS`, mobile `PROJETOS · AULAS · CALENDÁRIO · ARTIGOS · PERFIL`; bloco de conta com avatar/nível | Todas as páginas |
 | `HeroSecao` | Faixa teal com título display, parágrafo, chevrons e composição isométrica | Projetos, Artigos, Calendário (na Biblioteca 3D o teal é sidebar, não faixa) |
 | `CampoBusca` | Input arredondado navy, borda rosa, lupa; placeholder `Buscar aulas...`; **variante clara** para o fundo branco desta página | Todas as listagens |
-| `CardAula` | Card horizontal: número, thumbnail, título, descrição, metadados, `ASSISTIR`; sobre **fundo branco** (texto navy) | Exclusivo desta página |
+| `CardAula` | Card horizontal: número, thumbnail, título, descrição, metadados, `ASSISTIR`; sobre **fundo branco** — card **branco com contorno azul navy escuro e sombra**, texto navy | Exclusivo desta página |
 | `ChipNumero` | Chip retangular com borda rosa e número `01`–`08` | **(proposta)** listas ordenadas |
 | `AutorInline` | Avatar pixel + `@handle` + `NÍVEL n` | Projetos, Biblioteca 3D, Artigos |
 | `MetaDuracao` | Ícone de relógio + `n min` | **(proposta)** Calendário |
@@ -228,7 +258,10 @@ Todas as decisões abaixo são **(proposta)** — o mockup cobre apenas desktop.
 ## Estados e interações
 
 - **Hover/focus (proposta)**: card eleva-se levemente e o contorno passa a rosa; título muda
-  para rosa; `ASSISTIR` inverte para preenchimento teal com texto navy; coração preenche em
+  para rosa — **ressalva (rodada 2, 2026-08-23):** sobre o fundo branco o título permanece em
+  **azul navy escuro** (rosa não é usado em texto pequeno sobre branco), então o hover deve se
+  apoiar em elevação/sombra e no contorno, não na cor do texto **(proposta)**;
+  `ASSISTIR` inverte para preenchimento teal com texto navy; coração preenche em
   rosa. Foco de teclado com anel visível de 2px (contraste AA) em card, busca e botões; card
   inteiro navegável por `Tab` e acionável por `Enter`.
 - **Busca (proposta)**: filtragem incremental com debounce de ~300ms sobre título, descrição e
@@ -262,6 +295,10 @@ Todas as decisões abaixo são **(proposta)** — o mockup cobre apenas desktop.
 4. A numeração `01`–`08` é ordem fixa de trilha (curso sequencial) ou apenas ordenação da
    listagem? Se trilha, há bloqueio de aulas seguintes?
 5. Faltam filtros por skill/nível/duração — devem existir, como em Projetos e Biblioteca 3D?
+   **Decidido em parte (rodada 2, 2026-08-23):** a **direção de filtro é por tags de tema**
+   (nas páginas de fundo branco os itens da faixa/sidebar teal funcionam como essas tags).
+   **Segue em aberto**: se a Aulas terá filtros, quais tags/eixos (skill? nível? duração?) e
+   qual a UI — o hero desta página não tem itens de filtro hoje.
 6. Onde vive a página de detalhe da aula (player, materiais, comentários) e qual seu layout?
 7. Aulas têm autor único ou podem ter coautores/instrutor externo?
 8. Há aulas presenciais no catálogo (ligadas ao Calendário) ou apenas vídeo?
@@ -269,5 +306,9 @@ Todas as decisões abaixo são **(proposta)** — o mockup cobre apenas desktop.
 10. ~~`CALENDÁRIO` entra na navegação desta página, conforme `concept.md`?~~
     **Decidido (2026-08-23):** sim. Navegação canônica em todas as páginas:
     `BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS`, itens alinhados.
-11. Tratamento exato da faixa hero teal, da busca e dos contornos de card sobre o **fundo
-    branco** desta página (detalhamento com a designer).
+11. ~~Tratamento exato da faixa hero teal, da busca e dos contornos de card sobre o **fundo
+    branco** desta página (detalhamento com a designer).~~
+    **Decidido (rodada 2, 2026-08-23):** a **faixa teal permanece**; os **cards são brancos
+    com contorno azul navy escuro e sombra**; o **texto sobre branco é azul navy escuro**.
+    **Segue em aberto** apenas o acabamento do **campo de busca** sobre o fundo claro
+    (borda rosa/lupa) — a validar com a designer.

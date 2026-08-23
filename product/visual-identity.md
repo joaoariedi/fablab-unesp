@@ -20,13 +20,19 @@
 > aparecendo ~`#478E90`) são artefato de render e devem ser ignoradas.
 
 **Fundos de página (decidido 2026-08-23):** base navy `#191C37` no site em geral;
-**Biblioteca 3D e Aulas usam fundo branco** na área de conteúdo — texto em navy; o
-tratamento exato de sidebar/faixa teal nessas páginas será detalhado com a designer na
-feature de design system **(proposta)**.
+**Biblioteca 3D e Aulas usam fundo branco** na área de conteúdo — texto em navy. A tela de
+criação de avatar (onboarding) também usa fundo claro, conforme seus dois mockups (token
+exato **(proposta)**).
+**Rodada 2 (decidido):** a **faixa/sidebar teal permanece** nessas páginas, e seus itens
+funcionam como **tags de tema que filtram o conteúdo**; sobre o fundo branco os **cards
+são brancos com contorno azul navy escuro e sombra**, e as **thumbnails dos modelos 3D
+mantêm o fundo navy** dentro do card.
 
 Pares de contraste recorrentes: texto navy sobre teal/claro; texto claro sobre navy; rosa e
-amarelo como acento sobre navy. Validar contraste WCAG AA nos tokens (especialmente rosa
-sobre navy em texto pequeno e os textos sobre o fundo branco das páginas claras).
+amarelo como acento sobre navy. **Rodada 2 (decidido):** sobre **fundo branco, os textos
+usam azul navy escuro** (não usar rosa em texto pequeno sobre branco) — resolve o risco
+WCAG das páginas claras. Validar contraste WCAG AA restante (rosa sobre navy em texto
+pequeno).
 
 ## Tipografia
 
@@ -36,13 +42,16 @@ sobre navy em texto pequeno e os textos sobre o fundo branco das páginas claras
 | **Square Font** | Logotipo ("CITE BAURU"); pode ser usada em títulos e subtítulos |
 | **Comfortaa** | Corpo de texto |
 
-Notas para web (atualizado 2026-08-23):
-- **Aldo the Apache** — confirmada; a designer possui o arquivo da fonte.
-- **"Square Font"** — confirmada; o arquivo será enviado pela designer
-  **(pendente de recebimento — guardar em `product/fonts/` quando chegar)**.
-- **Comfortaa** — confirmada para corpo (disponível no Google Fonts).
-- Definir fallbacks: display → sans condensada; corpo → `system-ui, sans-serif`.
-- Conferir a licença web dos arquivos quando recebidos.
+Notas para web (arquivos **recebidos em 2026-08-23**, em `product/fonts/`):
+- **Aldo the Apache** (`AldotheApache.ttf`) — Regular, de AJ Paglia.
+- **SquareFont** (`Square.ttf`) — Regular, © Bou Fonts 2011 — é a "Square Font" da prancha.
+- **Comfortaa** (`Comfortaa-VariableFont_wght.ttf`) — variável (Light–Bold), licença OFL
+  (Google Fonts) — uso web liberado.
+- Na implementação: converter para WOFF2, `font-display: swap`, e definir fallbacks
+  (display → sans condensada; corpo → `system-ui, sans-serif`).
+- **Licenças pendentes:** Aldo the Apache e SquareFont vieram **sem arquivo de licença** —
+  confirmar permissão de uso web/institucional (fontes desses acervos costumam ser
+  "free for personal use"); Comfortaa está ok.
 
 ## Logo
 
@@ -50,7 +59,10 @@ Notas para web (atualizado 2026-08-23):
 - Versões em **chip retangular extrudado** (sombra 3D hachurada) sobre cada cor da paleta:
   azul, verde, amarelo, laranja, rosa e claro/outline.
 - Versão monocromática navy para fundos claros.
-- No header do site o chip aparece inclinado/extrudado (laranja ou rosa nos mockups).
+- **Chip canônico do header (decidido na rodada 2):** a versão **laranja**, com o cubo
+  isométrico entre `FAB` e `LAB` (como em `design/avatar-create.png`). A variante rosa do
+  mockup do mapa fica como registro; as demais cores do chip seguem valendo para
+  pôsteres/materiais.
 
 ## Elementos gráficos (shapes)
 
@@ -85,9 +97,17 @@ Vocabulário isométrico da prancha, usado como ornamento e ícone:
 - **Chips/tabs de filtro**: texto display em caps, item ativo sublinhado/rosa.
 - **Busca**: input arredondado com ícone de lupa (escuro sobre navy; claro nas páginas de
   fundo branco **(proposta)**).
-- **Navegação (decidido 2026-08-23)**: itens do menu nesta ordem — `BIBLIOTECA 3D ·
-  PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS` — todos **alinhados**; o item
-  `AULAS` torto em alguns mockups é ruído de render, não intenção de design.
+- **Navegação (decidido 2026-08-23)**: itens do menu **desktop** nesta ordem —
+  `BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS` — todos
+  **alinhados**; o item `AULAS` torto em alguns mockups é ruído de render. O mockup
+  `design/avatar-create.png` já renderiza essa navegação canônica alinhada.
+- **Navegação compacta (decidido na rodada 2)**: `BIBLIOTECA 3D` e `INSTAGRAM` **saem da
+  barra** em tablet e mobile. Barra do **tablet**, nesta ordem: `PROJETOS · AULAS ·
+  CALENDÁRIO · ARTIGOS`. Barra inferior do **mobile** (5 posições): `PROJETOS · AULAS ·
+  CALENDÁRIO · ARTIGOS · PERFIL`. Biblioteca 3D e Instagram permanecem acessíveis fora da
+  barra (menu/drawer **(proposta)**); Home pelo logo **(proposta)**. *(Nota registrada: a
+  ordem compacta inverte Aulas/Calendário em relação à desktop — resposta literal da
+  designer.)*
 - **Footer institucional**: três pilares com ícones outline (Aprenda fazendo / Compartilhe
   conhecimento / Desenvolva projetos reais) + composição isométrica no canto.
 - **Pixel art**: avatares dos usuários em pixel art isométrico com **4 direções**; o hero
@@ -97,4 +117,5 @@ Vocabulário isométrico da prancha, usado como ornamento e ícone:
 
 PT-BR, imperativo e convidativo, frases curtas em caps para display
 ("CRIE. EXPERIMENTE. TRANSFORME."), microcopy amigável e gamificada
-("Seu personagem maker, do seu jeito!", "Você poderá evoluir todas com o tempo!").
+("Personalize seu personagem maker do seu jeito!", "Você poderá evoluir todas com o
+tempo!", "As opções podem ser combinadas livremente. Solte sua criatividade!").
