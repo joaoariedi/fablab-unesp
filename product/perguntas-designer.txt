@@ -1,0 +1,76 @@
+PERGUNTAS PARA A DESIGNER — RODADA 2 (validações de detalhe)
+As respostas da rodada 1 já foram aplicadas na documentação do site.
+Estes quatro pontos surgiram ao aplicar as decisões — são validações
+rápidas, mas travam o desenho dos componentes se ficarem em aberto.
+
+--------------------------------------------------------------------
+1. MENU COMPACTO (TABLET E CELULAR): QUAIS ITENS FICAM VISÍVEIS?
+--------------------------------------------------------------------
+Contexto: você confirmou o menu com 6 itens — Biblioteca 3D, Projetos,
+Calendário, Aulas, Instagram e Artigos. No desktop cabem todos, mas em
+tablet e celular o menu precisa encolher. A proposta atual deixa
+visíveis só Biblioteca 3D, Projetos e Artigos e esconde Calendário,
+Aulas e Instagram atrás de um botão "Mais" / menu hambúrguer —
+justamente dois itens que você acabou de promover ao menu principal.
+
+Perguntas:
+a) Em tablet, quais itens podem ficar escondidos no "Mais"/hambúrguer,
+   e em que ordem os visíveis aparecem?
+b) No celular, se usarmos uma barra fixa no rodapé com 5 espaços,
+   quais 5 entram? (proposta atual: Home, Biblioteca 3D, Projetos,
+   Aulas, Perfil — sem Calendário)
+
+Por que importa: a maioria dos acessos será pelo celular; essa é a
+navegação que a maior parte das pessoas vai ver.
+
+--------------------------------------------------------------------
+2. PÁGINAS DE FUNDO BRANCO: COMO FICAM A FAIXA TEAL E OS CARDS?
+--------------------------------------------------------------------
+Contexto: você decidiu fundo branco para Biblioteca 3D e Aulas. Os
+mockups dessas páginas foram desenhados sobre navy: a Biblioteca tem
+sidebar teal à esquerda e cards escuros; Aulas tem faixa de topo teal
+e cards escuros.
+
+Perguntas:
+a) A faixa/sidebar teal permanece como está, vira apenas um detalhe,
+   ou sai nessas duas páginas?
+b) Como ficam os cards sobre o fundo branco: fundo branco com contorno
+   navy? Com sombra? As thumbnails dos modelos 3D continuam com fundo
+   navy dentro do card?
+
+Por que importa: são as duas páginas que mudaram de fundo; sem essa
+definição os componentes delas não entram no design system.
+
+--------------------------------------------------------------------
+3. COR OFICIAL DO CHIP DO LOGO NO TOPO DO SITE
+--------------------------------------------------------------------
+Contexto: nos mockups o chip do logo no header aparece de dois jeitos —
+laranja com o cubo entre "FAB" e "LAB", e rosa com o cubo à esquerda
+de "FAB LAB".
+
+Pergunta: qual é a versão canônica do chip no header do site (cor e
+posição do cubo)? As demais cores da prancha seguem valendo para
+posters e materiais.
+
+Por que importa: o header se repete em todas as páginas do site.
+
+--------------------------------------------------------------------
+4. ROSA SOBRE BRANCO: CONTRASTE / ACESSIBILIDADE
+--------------------------------------------------------------------
+Contexto: o rosa #EE9DC4 é usado em numeração de cards, corações de
+curtida, item ativo do menu e chips. Sobre o fundo navy funciona bem;
+sobre o novo fundo branco de Biblioteca 3D e Aulas o contraste fica
+baixo e reprova no critério de acessibilidade (WCAG AA) para textos
+pequenos.
+
+Pergunta: nas páginas de fundo branco, podemos usar uma variação mais
+escura do rosa (ou trocar para navy/laranja) nos textos pequenos?
+Prefere definir o tom você mesma, ou propomos e você aprova?
+
+Por que importa: legibilidade e acessibilidade nas duas páginas claras.
+
+--------------------------------------------------------------------
+LEMBRETE
+--------------------------------------------------------------------
+Seguimos aguardando o arquivo da fonte "Square Font" (e o webfont da
+Aldo the Apache, se tiver) para fechar a tipografia do site.
