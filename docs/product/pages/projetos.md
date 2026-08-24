@@ -92,6 +92,9 @@ gera XP e curtidas reforçam a reputação do maker.
      **Decidido (rodada 4, 2026-08-24):** os **handles** `@laser.nick`, `@print.lu` e
      `@maker_jv` também são **ilustrativos/superados** — o rodapé exibe o **nome da pessoa**
      e o identificador no modelo **`@nomesobrenome`**.
+     **Decidido (PO, 2026-08-24):** o bloco de autor é **clicável** e leva ao **perfil
+     público do maker** (versão enxuta: avatar, nome, skills e conteúdos publicados —
+     spec futura junto das features 004/005; ver `concept.md`).
      À direita, ícone de coração
      outline rosa + contador de curtidas (`32`, `28`, `19`) e, após divisória vertical, seta
      `→` rosa (ação principal do card; o destino — página de detalhe do projeto — é
@@ -114,7 +117,8 @@ gera XP e curtidas reforçam a reputação do maker.
 Salvo onde indicado como decidido, as decisões desta seção são **(proposta)** — o mockup
 mostra apenas desktop.
 
-- **Header**: logo-chip laranja reduzido + bloco de avatar + `MAKER_X` / `NÍVEL 3`.
+- **Header**: logo-chip laranja reduzido **à esquerda** + bloco de avatar + `MAKER_X` /
+  `NÍVEL 3`; botão de menu **à direita** (rodada 5).
   ~~navegação colapsa em menu **hambúrguer** à direita, sem itens visíveis~~ —
   **Decidido (rodada 2, 2026-08-23):** a barra do tablet **mantém quatro itens visíveis**
   (item ativo `PROJETOS` em rosa). `BIBLIOTECA 3D` e `INSTAGRAM` **saem da barra** e ficam
@@ -125,12 +129,16 @@ mostra apenas desktop.
     relativa do **desktop**). ~~*(Nota: a ordem compacta inverte Aulas/Calendário em
     relação à desktop — é a resposta literal da designer.)*~~ — nota **superada** pela
     rodada 3.
-  - **Decidido (rodada 3, 2026-08-23):** o **botão de menu fica no topo, na extremidade
-    esquerda da barra**, e contém **todas as abas** (inclusive `BIBLIOTECA 3D` e
+  - ~~**Decidido (rodada 3, 2026-08-23):** o **botão de menu fica no topo, na extremidade
+    esquerda da barra**~~ — posição **superada** pela rodada 5; ele contém **todas as abas**
+    (inclusive `BIBLIOTECA 3D` e
     `INSTAGRAM`); a Biblioteca 3D fica **só no menu**, sem atalho extra. Tocar no **logo
     leva à Home** (não é mais proposta). **Confirmado (rodada 4, 2026-08-24):** o botão de
     menu existe **só nas versões compactas** (tablet/mobile) — no desktop não há botão de
     menu.
+  - **Decidido (rodada 5, 2026-08-24):** o botão de menu fica no **topo, à direita** da
+    barra, com o **logo do Fab Lab à esquerda** — supera a "extremidade esquerda" da
+    rodada 3 e confirma a arte `design/home-mobile.png`.
 - **Hero (proposta)**: título e parágrafo mantêm-se à esquerda; a composição isométrica
   reduz para ~35% da largura; chevrons `»` ocultos.
 - **Filtros (proposta)**: tabs viram **chips horizontais roláveis** (scroll-x, sem barra
@@ -144,7 +152,10 @@ mostra apenas desktop.
 
 Salvo onde indicado como decidido, as decisões desta seção são **(proposta)**.
 
-- **Header**: logo-chip laranja + avatar no topo. ~~navegação em **hambúrguer** abrindo
+- **Header**: logo-chip laranja **à esquerda** + botão de menu **à direita** (rodada 5).
+  **Decidido (rodada 5, 2026-08-24):** com o usuário logado, o **avatar entra bem pequeno
+  no header mobile**, além do item `PERFIL` da barra inferior — os dois acessos ao perfil
+  coexistem por decisão. ~~navegação em **hambúrguer** abrindo
   drawer de tela cheia com os itens em display caps; alternativa avaliada: **bottom
   navigation** com Home / Biblioteca 3D / Projetos / Aulas / Perfil~~ —
   **Decidido (rodada 2, 2026-08-23):** a navegação do mobile é uma **barra inferior de 5
@@ -156,12 +167,18 @@ Salvo onde indicado como decidido, as decisões desta seção são **(proposta)*
     `ARTIGOS` · `PERFIL` ("mantenha a ordem das abas da página inicial" — segue a ordem
     relativa do **desktop**). ~~*(Nota: a ordem compacta inverte Aulas/Calendário em
     relação à desktop — resposta literal da designer.)*~~ — nota **superada** pela rodada 3.
-  - **Decidido (rodada 3, 2026-08-23):** o **botão de menu fica no topo, na extremidade
-    esquerda da barra superior** (não na barra inferior), com **todas as abas** dentro
+  - ~~**Decidido (rodada 3, 2026-08-23):** o **botão de menu fica no topo, na extremidade
+    esquerda da barra superior**~~ — posição **superada** pela rodada 5; ele fica na barra
+    superior (não na barra inferior), com **todas as abas** dentro
     (inclusive `BIBLIOTECA 3D` e `INSTAGRAM`); a Biblioteca 3D fica **só no menu**, sem
     atalho extra. Tocar no **logo
     leva à Home** (não é mais proposta). **Confirmado (rodada 4, 2026-08-24):** o botão de
     menu é exclusivo das **versões compactas**; o desktop não o tem.
+  - **Decidido (rodada 5, 2026-08-24):** o botão de menu fica no **topo, à direita** da
+    barra superior, com o **logo à esquerda** (arte `design/home-mobile.png`).
+  - **Decidido (rodada 5, 2026-08-24):** a **barra inferior aparece ao rolar** a página —
+    ela não fica fixa sobre o hero desde o primeiro paint; a ausência dela na arte da home
+    é apenas uma **omissão do desenho**, não a remoção do componente.
   - **Decidido (rodada 3, 2026-08-23):** com o usuário **deslogado**, o item `PERFIL` da
     barra inferior **abre a tela de login** (resolve a lacuna anotada em *Estados e
     interações* → Deslogado). **Decidido (rodada 4, 2026-08-24):** o login é por
@@ -182,14 +199,14 @@ Salvo onde indicado como decidido, as decisões desta seção são **(proposta)*
 
 | Componente | Descrição | Reuso |
 |---|---|---|
-| `HeaderPrincipal` | Logo-chip (→ Home), nav caps, bloco de conta (avatar/nome/`@nomesobrenome`/nível/chevron → Minha Conta; deslogado → login por e-mail + senha); botão de menu com **todas as abas** **só nas versões compactas** (tablet/mobile) — no desktop as 6 abas ficam na barra, sem botão de menu (decidido rodadas 3–4) | Todas as páginas |
+| `HeaderPrincipal` | Logo-chip (→ Home), nav caps, bloco de conta (avatar/nome/`@nomesobrenome`/nível/chevron → Minha Conta; deslogado → login por e-mail + senha); botão de menu com **todas as abas** **só nas versões compactas** (tablet/mobile), no **topo à direita** da barra, com o logo à esquerda (rodada 5) — no desktop as 6 abas ficam na barra, sem botão de menu (decidido rodadas 3–5). No **mobile logado**, o avatar aparece **bem pequeno** no header (rodada 5) | Todas as páginas |
 | `HeroFaixa` | Faixa teal com título display, parágrafo, arte isométrica | Projetos, Biblioteca 3D, Aulas, Artigos |
 | `TabsFiltro` | Tabs caps com ativo em rosa sublinhado; vira chips roláveis em telas menores **(proposta)** | Listagens |
 | `CampoBusca` | Input arredondado navy, borda rosa, placeholder + ícone de lupa | Listagens |
 | `CardProjeto` | Foto, chip de categoria, título, descrição, rodapé de autor, curtidas, seta | Projetos, Home |
 | `ChipCategoria` | Chip rosa, texto navy caps | Projetos, Biblioteca 3D |
-| `AutorInline` | Avatar pixel + nome da pessoa + `@nomesobrenome` + `NÍVEL n` (rodada 4; handles dos mockups são ilustrativos) | Cards e listas |
-| `BotaoCurtir` | Coração outline rosa + contador | Projetos, Modelos, Artigos, Aulas |
+| `AutorInline` | Avatar pixel + nome da pessoa + `@nomesobrenome` + `NÍVEL n` (rodada 4; handles dos mockups são ilustrativos). **Clicável → perfil público do maker** (PO, 2026-08-24) | Cards e listas |
+| `BotaoCurtir` | Coração outline rosa + contador. **Exige login** — deslogado abre convite de cadastro/login (PO, 2026-08-24) | Projetos, Modelos, Artigos, Aulas |
 | `FooterPilares` | Três pilares + ornamento isométrico | Todas as páginas |
 | `BotaoCarregarMais` | **(proposta)** paginação incremental | Listagens |
 
@@ -214,12 +231,12 @@ Salvo onde indicado como decidido, as decisões desta seção são **(proposta)*
 | `categoria` | relação → `categoria_projeto` | sim | alimenta o chip e as tabs |
 | `autor` | relação → `maker` | sim | avatar + nome + `@nomesobrenome` + nível (rodada 4) |
 | `curtidas` | inteiro (derivado de `curtida`) | sim | contador exibido no card |
-| `arquivos` | lista de arquivos (`.stl`, `.3mf`, `.obj`, `.gltf`, `.glb`, `.zip`, `.pdf`, `.svg`, `.dxf`) | não **(proposta)** | downloads do projeto |
+| `arquivos` | lista de arquivos (`.stl`, `.3mf`, `.obj`, `.gltf`, `.glb`, `.zip`, `.pdf`, `.svg`, `.dxf`) | não **(proposta)** | downloads do projeto — **abertos, sem conta** (PO, 2026-08-24); downloads anônimos são contados |
 | `materiais` | lista de texto | não **(proposta)** | ex.: MDF 6mm, PLA |
 | `maquinas_utilizadas` | relação múltipla → `estacao` | não **(proposta)** | ex.: Corte a Laser |
 | `skills_relacionadas` | relação múltipla → `skill` | não **(proposta)** | concede XP na skill |
 | `missao_relacionada` | relação → `missao` | não **(proposta)** | projeto entregue como missão |
-| `status` | enum `rascunho` / `em_revisao` / `publicado` | sim **(proposta)** | moderação da equipe |
+| `status` | enum `rascunho` / `em_revisao` / `publicado` | sim | **Decidido (PO, 2026-08-24):** fila de revisão — qualquer maker logado envia; a equipe aprova e publica; o 1 XP credita **na aprovação** |
 | `data_publicacao` | data/hora | sim | ordenação padrão (mais recentes) **(proposta)** |
 | `destaque` | booleano | não **(proposta)** | replica na Home |
 
@@ -238,7 +255,8 @@ Salvo onde indicado como decidido, as decisões desta seção são **(proposta)*
 - `maker` — `nome` (até **60 caracteres** — rodada 4), `handle` no modelo `@nomesobrenome`
   (derivado do nome; `@laser.nick` do mockup é ilustrativo), `avatar` (pixel art, `.png`),
   `nivel`, `xp`. Normalização e colisão de homônimos: **(proposta)**.
-- `curtida` — relação `maker` × `projeto`, única por par **(proposta)**.
+- `curtida` — relação `maker` × `projeto`, única por par **(proposta)**. Toda curtida tem
+  um `maker` — **curtir exige login** (PO, 2026-08-24); não existe curtida anônima.
 - `skill`, `missao`, `estacao` — ver `gamification.md`.
 
 ## Ganchos de gamificação
@@ -246,17 +264,27 @@ Salvo onde indicado como decidido, as decisões desta seção são **(proposta)*
 - **Publicar projeto concede XP** ao autor — regra central do `gamification.md` ("postar
   projetos" gera pontos). **Decidido (2026-08-23):** publicar projeto vale **1 XP**;
   subir de nível custa **5 XP** e o nível máximo é **10** (economia em `gamification.md`).
+  **Decidido (PO, 2026-08-24):** o crédito acontece **na aprovação** pela equipe
+  (`status = publicado`), não no envio.
+- **Fluxo de publicação — decidido (PO, 2026-08-24):** **qualquer maker logado publica**,
+  via **fila de revisão** — `rascunho` → `em_revisao` → `publicado` pela equipe do lab.
+  Anti-farm: **idempotência por conteúdo** (o mesmo projeto credita XP uma única vez, mesmo
+  se voltar à revisão e for reaprovado); **sem limite diário no v1**.
 - **(proposta)** O XP é creditado na(s) `skills_relacionadas` do projeto (ex.: projeto de
-  serigrafia evolui a skill correspondente), e apenas quando `status = publicado` — evitando
-  farm por rascunhos.
+  serigrafia evolui a skill correspondente). ~~e apenas quando `status = publicado` —
+  evitando farm por rascunhos~~ — a condição deixa de ser proposta: é a regra decidida
+  acima (crédito na aprovação).
 - **Exibição de nível**: cada card mostra `NÍVEL 7` / `NÍVEL 6` / `NÍVEL 5` junto ao autor,
   reforçando a progressão pública do autor (valores **ilustrativos**; escala real de 1 a 10).
 - **Curtidas (♥)**: contador visível por card (`32`, `28`, `19`). **Decidido (2026-08-23):**
   curtidas **não geram XP** para o autor — são apenas sinal social/reputação.
+  **Decidido (PO, 2026-08-24):** curtir **exige login** — não há curtida anônima; a
+  atribuição é sempre a uma conta (`curtida` = par `maker` × `projeto`).
 - **(proposta)** Projeto vinculado a uma `missao` marca progresso da missão na Home ao ser
   aprovado pela equipe do lab.
 - **(proposta)** CTA para maker logado sem projetos: botão `PUBLICAR PROJETO` na barra de
-  filtros, com microcopy gamificada ("Publique e ganhe XP" — 1 XP por projeto publicado).
+  filtros, com microcopy gamificada ("Publique e ganhe XP" — 1 XP por projeto publicado,
+  **creditado quando a equipe aprovar**).
   **Decidido (2026-08-23):** quando existir, usa o **estilo primário canônico** — rosa
   preenchido, texto navy, sombra dura deslocada (`visual-identity.md`).
 
@@ -266,8 +294,10 @@ Salvo onde indicado como decidido, as decisões desta seção são **(proposta)*
   para a direita; tabs inativas passam a rosa no hover e mostram o sublinhado no focus;
   campo de busca intensifica a borda rosa no focus. Foco sempre visível via `outline` de 2px
   (navegação por teclado, WCAG AA).
-- **Curtir (proposta)**: coração preenche em rosa com micro-animação e o contador incrementa
-  otimisticamente; falha de rede reverte e exibe toast.
+- **Curtir**: **decidido (PO, 2026-08-24):** a ação **exige login** — deslogado, o coração
+  abre o convite de cadastro/login (ver *Deslogado*). Logado, **(proposta)**: coração
+  preenche em rosa com micro-animação e o contador incrementa otimisticamente; falha de
+  rede reverte e exibe toast.
 - **Loading (proposta)**: skeletons de card (retângulo de foto + duas linhas de texto),
   mantendo o grid de 3/2/1 colunas; busca com debounce de 300ms.
 - **Vazio (proposta)**: quando um filtro ou busca não retorna resultados —
@@ -278,15 +308,23 @@ Salvo onde indicado como decidido, as decisões desta seção são **(proposta)*
   `CRIAR CONTA`; grid, filtros e busca permanecem públicos (SEO); clicar no coração abre
   convite ao cadastro (~~"Crie sua conta para curtir e ganhar XP"~~ — **decidido
   (2026-08-23):** curtidas **não geram XP**, então a microcopy passa a
-  "Crie sua conta para curtir e evoluir como maker"); download de arquivos pode
-  exigir conta (ver questão 6 de `gamification.md`). **Decidido (rodada 3, 2026-08-23):**
+  "Crie sua conta para curtir e evoluir como maker"); ~~download de arquivos pode
+  exigir conta (ver questão 6 de `gamification.md`)~~ — **decidido (PO, 2026-08-24):
+  acesso aberto** — ler o projeto e **baixar os arquivos anexos não exigem conta**
+  (downloads anônimos são contados); a conta serve para **publicar, curtir e pontuar**.
+  O **coração exige login** e abre o convite acima. **Decidido (rodada 3, 2026-08-23):**
   no **mobile**, deslogado, o item `PERFIL` da barra inferior **abre a tela de login**.
   **Decidido (rodada 4, 2026-08-24):** o login é por **e-mail + senha** (a senha é definida
   no passo 2 do cadastro — ver [onboarding.md](onboarding.md)); o **design da tela de login
   está definido** — reuso do passo 2, trocando o formulário (decisão do PO, 2026-08-24) —
-  ver [login.md](login.md).
+  ver [login.md](login.md). **Decidido (PO, 2026-08-24):** após entrar, o maker **retorna
+  à página de origem** — quem sai de Projetos (ex.: pelo coração) volta para Projetos; quem
+  abre o login **diretamente** (inclusive pelo item `PERFIL` da barra inferior) cai na
+  [Minha Conta](minha-conta.md).
 - **Logado (proposta)**: coração reflete o estado do maker (curtido/não curtido); aparece o
-  CTA `PUBLICAR PROJETO`; projetos próprios em revisão exibem selo `EM REVISÃO`.
+  CTA `PUBLICAR PROJETO`; projetos próprios em revisão exibem selo `EM REVISÃO` —
+  **confirmado (PO, 2026-08-24):** o selo se mantém, é a materialização do estado
+  `em_revisao` da fila de revisão (o XP só entra na aprovação).
   **Decidido (rodada 4, 2026-08-24):** o bloco de conta do header (e o `PERFIL` da barra
   inferior no mobile) leva a **Minha Conta** — avatar (miniatura + skills), meus projetos,
   meus modelos 3D, meus artigos e cursos assistidos (ver [minha-conta.md](minha-conta.md));
@@ -300,7 +338,11 @@ Salvo onde indicado como decidido, as decisões desta seção são **(proposta)*
 4. Existe página de detalhe do projeto (destino da seta `→`)? Qual seu layout?
 5. Projeto permite anexar arquivos fabricáveis (STL/DXF/SVG) ou isso é exclusivo da
    Biblioteca 3D?
-6. Quem publica: qualquer maker logado com moderação posterior, ou só a equipe do lab?
+6. ~~Quem publica: qualquer maker logado com moderação posterior, ou só a equipe do lab?~~
+   **Decidido (PO, 2026-08-24):** **qualquer maker logado** publica, através de uma **fila
+   de revisão** — `rascunho` → `em_revisao` → `publicado` pela equipe. O **1 XP credita na
+   aprovação**; anti-farm por **idempotência de conteúdo**, sem limite diário no v1
+   (ver `gamification.md`, questão 2).
 7. ~~Quanto XP vale publicar um projeto, e curtidas creditam XP ao autor?~~
    **Decidido (2026-08-23):** publicar projeto = **1 XP**; **curtidas não creditam XP**
    (economia completa em `gamification.md`: 5 XP por nível, nível máximo 10).

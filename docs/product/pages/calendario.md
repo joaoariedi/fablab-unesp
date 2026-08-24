@@ -6,12 +6,19 @@ Reunir em um só lugar a **agenda de atividades do Fab Lab CITe Bauru** — ofic
 presenciais, mutirões, manutenções de máquina, prazos de missão e eventos abertos —
 respondendo "o que acontece no lab, quando, onde e com quais máquinas". A página conecta a
 agenda ao resto do sistema: cada evento pode exigir inscrição, apontar para uma **missão**,
-uma **skill** e uma **máquina**, e é o candidato natural para conceder **XP por presença**
-(check-in), questão 4 em aberto do `gamification.md`.
+uma **skill** e uma **máquina**, e ~~é o candidato natural para conceder **XP por presença**
+(check-in), questão 4 em aberto do `gamification.md`~~.
+**Decidido (PO, 2026-08-24):** o **check-in presencial fica fora do v1** — o calendário
+**não concede XP** (questão 4 do `gamification.md`, encerrada). Os campos `xp_presenca` e a
+coleção `presenca` ficam **reservados** no modelo de conteúdo, marcados como fora do
+escopo v1, para revisitar com o jogo rodando.
+**Decidido (PO, 2026-08-24) — acesso aberto:** a agenda, o detalhe do evento e o `.ics` são
+**públicos**; conta é para publicar, curtir e pontuar.
 
 > **A página inteira é (proposta).** Não existe mockup dedicado a Calendário; ela aparece
 > apenas como item de navegação `CALENDÁRIO` no mockup do mapa isométrico da home e como
-> linha "Calendário (calendário com atividades do fab lab)" na `ESTRUTURA SITE.docx`.
+> linha "Calendário (calendário com atividades do fab lab)" no documento de estrutura
+> original (docx removido em 2026-08-24; transcrição em `concept.md`).
 >
 > **Decidido (2026-08-23):** a *existência da seção no menu* deixou de ser proposta —
 > `CALENDÁRIO` está **confirmado** na navegação canônica de todas as páginas, na ordem
@@ -22,8 +29,8 @@ uma **skill** e uma **máquina**, e é o candidato natural para conceder **XP po
 
 ## Fonte de design
 
-- `ESTRUTURA SITE.docx` — única fonte textual: item de menu "Calendário" e descrição
-  "calendário com atividades do fab lab".
+- Documento de estrutura original (docx removido; transcrito em `concept.md`) — única fonte
+  textual: item de menu "Calendário" e descrição "calendário com atividades do fab lab".
 - `design/home-desktop.png` — mockup da home v2 (mapa
   isométrico pixel art), **única imagem** onde `CALENDÁRIO` aparece no header; dela vêm o
   rótulo de navegação e o padrão de header (o footer **não** aparece nessa imagem).
@@ -137,15 +144,17 @@ acionado a partir da grade).
 - Corpo: capa, descrição longa (rich text), `O QUE VOCÊ VAI FAZER`, `PRÉ-REQUISITOS`
   (aulas/skills), `O QUE LEVAR`, `MÁQUINAS ENVOLVIDAS`.
 - Barra lateral: card de inscrição (vagas, prazo, `INSCREVER-SE` no estilo primário
-  canônico), XP previsto (ex.: `+80 XP em Corte a Laser`), missão relacionada,
+  canônico), ~~XP previsto (ex.: `+80 XP em Corte a Laser`)~~, missão relacionada,
   `ADICIONAR AO MEU CALENDÁRIO (.ICS)`, `COMPARTILHAR`.
   - **Decidido (2026-08-23):** a economia de XP é **1 XP por ação**, 5 XP por nível, teto
-    de nível 10. O exemplo `+80 XP` é ilustrativo e está **superado**; se o check-in vier a
-    conceder XP (questão 1 abaixo, ainda em aberto), o rótulo seria `+1 XP em Corte a
-    Laser`.
+    de nível 10. O exemplo `+80 XP` é ilustrativo e está **superado**.
+  - **Decidido (PO, 2026-08-24):** sem check-in no v1, **não há XP previsto** — o bloco de
+    XP previsto **não aparece** na barra lateral do v1 (registro de mockup/proposta
+    anterior; volta quando o check-in for aprovado).
 - Rodapé: `MATERIAIS DE APOIO` (downloads), `QUEM VAI` (avatares dos inscritos) e, após o
   evento, `REGISTRO DA ATIVIDADE` com fotos e projetos gerados. Para a equipe do lab, bloco
-  `CHECK-IN` com QR code e lista de presença.
+  `CHECK-IN` com QR code e lista de presença — **fora do escopo v1 (PO, 2026-08-24)**,
+  registrado aqui para a versão futura.
 
 ### Footer (faixa navy mais clara)
 
@@ -166,14 +175,19 @@ Todas **(proposta)**.
   - **Decidido (rodada 3, 2026-08-23):** a ordem segue a do desktop ("mantenha a ordem das
     abas da página inicial") — barra do tablet:
     `PROJETOS` · `CALENDÁRIO` · `AULAS` · `ARTIGOS`. `BIBLIOTECA 3D` e `INSTAGRAM` ficam
-    **dentro do menu**, cujo botão fica **no topo, na extremidade esquerda da barra**, e
+    **dentro do menu**, cujo botão fica ~~no topo, na extremidade esquerda da barra~~
+    (**superado na rodada 5** — ver abaixo), e
     que contém **todas as abas** (a Biblioteca 3D fica **só no menu**, sem atalho extra).
     Home pelo logo (decidido).
   - **Decidido (rodada 4, 2026-08-24):** esse botão de menu existe **só nas versões
-    compactas** (tablet/mobile) — confirma a interpretação anterior. *Observação de design
+    compactas** (tablet/mobile) — confirma a interpretação anterior. ~~*Observação de design
     para o mockup futuro:* logo e botão de menu disputam a **extremidade esquerda**; o
     arranjo exato (logo à esquerda + menu ao lado, ou menu à esquerda + logo centralizado)
-    fica para o mockup das versões compactas.
+    fica para o mockup das versões compactas.~~ **Superado na rodada 5** — não há conflito
+    posicional: logo à esquerda, botão de menu à direita.
+  - **Decidido (rodada 5, 2026-08-24):** o botão de menu fica **no topo, à direita** da
+    barra, com o **logo-chip laranja à esquerda** — supera a "extremidade esquerda" da
+    rodada 3 e confirma a arte `design/home-mobile.png`.
   - Logo-chip **laranja** canônico (ver Header desktop).
 - **Hero**: composição isométrica reduz ~40%; parágrafo em 2 linhas.
 - **Barra de controle**: quebra em duas linhas — linha 1: `MÊS`/`LISTA` + navegação de mês +
@@ -189,7 +203,9 @@ Todas **(proposta)**.
 
 Todas **(proposta)**.
 
-- **Header**: logo-chip **laranja** + avatar; navegação em **barra inferior fixa**.
+- **Header**: logo-chip **laranja à esquerda** + **botão de menu à direita** (rodada 5) +
+  avatar (**bem pequeno** quando logado — rodada 5); navegação em ~~**barra inferior fixa**~~
+  **barra inferior que aparece ao rolar** (rodada 5 — ver abaixo).
   ~~(Home · Biblioteca · Projetos · Calendário · Perfil), item ativo em rosa;
   `Artigos`/`Instagram`/`Aulas` em drawer "Mais".~~
   - **Decidido (rodada 2, 2026-08-23):** a barra inferior tem 5 posições, com `CALENDÁRIO`
@@ -197,13 +213,23 @@ Todas **(proposta)**.
     ~~Ordem `PROJETOS · AULAS · CALENDÁRIO · ARTIGOS · PERFIL`.~~ **Superado na rodada 3.**
   - **Decidido (rodada 3, 2026-08-23):** a ordem segue a do desktop — barra inferior:
     `PROJETOS` · `CALENDÁRIO` · `AULAS` · `ARTIGOS` · `PERFIL`. `BIBLIOTECA 3D` e
-    `INSTAGRAM` ficam **dentro do menu**, com botão **no topo, na extremidade esquerda da
-    barra**, contendo **todas as abas** (Biblioteca 3D só no menu). Home pelo logo
+    `INSTAGRAM` ficam **dentro do menu**, com botão ~~no topo, na extremidade esquerda da
+    barra~~ (**superado na rodada 5** — ver abaixo), contendo **todas as abas**
+    (Biblioteca 3D só no menu). Home pelo logo
     (decidido). **`PERFIL` deslogado abre a tela de login.**
   - **Decidido (rodada 4, 2026-08-24):** o login é por **e-mail + senha** (design da tela
     de login definido — ver `login.md`); **`PERFIL` logado abre a Minha Conta**
     (`pages/minha-conta.md`). O botão de menu segue existindo **só nas compactas** —
-    mesma observação posicional (logo × menu na extremidade esquerda) do tablet.
+    ~~mesma observação posicional (logo × menu na extremidade esquerda) do tablet.~~
+    **Superado na rodada 5.**
+  - **Decidido (rodada 5, 2026-08-24):** botão de menu **no topo, à direita** da barra, com
+    o **logo à esquerda** — confirma `design/home-mobile.png` e encerra o suposto conflito
+    posicional entre logo e menu.
+  - **Decidido (rodada 5, 2026-08-24):** a **barra inferior aparece ao rolar** a página —
+    ela foi apenas **omitida** da arte da home, e **não** fica fixa sobre o hero desde o
+    primeiro paint.
+  - **Decidido (rodada 5, 2026-08-24):** logado, o **avatar do usuário entra bem pequeno no
+    header mobile**, além do item `PERFIL` na barra inferior.
 - **Hero**: composição isométrica omitida; título menor; parágrafo em até 4 linhas.
 - **Visão padrão**: **`LISTA`** passa a ser a visão inicial (grade mensal é pouco legível em
   390px); `MÊS` fica disponível como faixa compacta de **7 dias roláveis** (strip semanal)
@@ -212,8 +238,8 @@ Todas **(proposta)**.
   um **bottom sheet** `FILTROS` com contador de filtros ativos.
 - **Card de evento**: empilhado — chip de tipo + data/hora no topo, título, descrição
   (2 linhas), metadados em duas linhas com ícones, botão `INSCREVER-SE` em largura total.
-- **Detalhe**: página inteira rolável; capa 16:9; barra fixa inferior com `INSCREVER-SE` e
-  XP previsto.
+- **Detalhe**: página inteira rolável; capa 16:9; barra fixa inferior com `INSCREVER-SE`
+  ~~e XP previsto~~ (**sem XP previsto no v1** — PO, 2026-08-24).
 - **Alvos de toque**: mínimo 44×44px, espaçamento vertical mínimo de 8px; `CARREGAR MAIS` em
   largura total (alternativa: scroll infinito por mês).
 
@@ -221,7 +247,7 @@ Todas **(proposta)**.
 
 | Componente | Descrição | Reuso |
 |---|---|---|
-| `HeaderPrincipal` | Logo-chip **laranja** (canônico, decidido rodada 2) com **logo → Home** (rodada 3), nav em caps na ordem desktop `BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS`; compacta (ordem corrigida na rodada 3) — tablet `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS`, mobile em barra inferior de 5 posições `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS · PERFIL` (`PERFIL` deslogado → login por **e-mail + senha**; logado → **Minha Conta**, rodada 4), com `BIBLIOTECA 3D` e `INSTAGRAM` **no menu** (botão no topo, à esquerda, com todas as abas) — botão de menu **só nas compactas**, sem menu no desktop (rodada 4); bloco de conta com **nome da pessoa** + `@nomesobrenome` (rodada 4) | Todas as páginas |
+| `HeaderPrincipal` | Logo-chip **laranja** (canônico, decidido rodada 2) com **logo → Home** (rodada 3), nav em caps na ordem desktop `BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS`; compacta (ordem corrigida na rodada 3) — tablet `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS`, mobile em barra inferior de 5 posições `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS · PERFIL` (`PERFIL` deslogado → login por **e-mail + senha**; logado → **Minha Conta**, rodada 4) que **aparece ao rolar** (rodada 5), com `BIBLIOTECA 3D` e `INSTAGRAM` **no menu** (botão no topo, **à direita**, com o logo à esquerda — rodada 5, supera "à esquerda" da rodada 3 —, com todas as abas) — botão de menu **só nas compactas**, sem menu no desktop (rodada 4); bloco de conta com **nome da pessoa** + `@nomesobrenome` (rodada 4); no mobile logado, **avatar bem pequeno no header** (rodada 5) | Todas as páginas |
 | `HeroSecao` | Faixa teal, título display, parágrafo, chevrons, composição isométrica | Todas as seções |
 | `AlternadorVisao` **(proposta)** | Chips `MÊS` / `LISTA` | Exclusivo |
 | `NavegadorMes` **(proposta)** | `‹` `AGOSTO 2026` `›` + `HOJE` | Exclusivo |
@@ -235,7 +261,7 @@ Todas **(proposta)**.
 | `ChipMissao` **(proposta)** | Chip amarelo com ícone de missão | Home, Projetos |
 | `AutorInline` | Avatar pixel + **nome da pessoa** + identificador `@nomesobrenome` + `NÍVEL n` (rodada 4; os `@handle` fictícios dos mockups são ilustrativos/superados) | Aulas, Projetos, Artigos |
 | `BotaoCurtida` | Coração outline rosa + contador | Todas as listagens |
-| `CheckinQR` **(proposta)** | QR code do evento + lista de presença (equipe do lab) | Exclusivo |
+| `CheckinQR` **(proposta — fora do v1, PO 2026-08-24)** | QR code do evento + lista de presença (equipe do lab) | Exclusivo |
 | `FooterPilares` | Três pilares + composição isométrica | Todas as páginas |
 
 ## Modelo de conteúdo (CMS)
@@ -258,12 +284,12 @@ Todas **(proposta)**.
 | `local` | relação → `local` | sim | sala/estação do lab ou externo |
 | `maquinas` | relação múltipla → `maquina` | não | Impressoras 3D, Corte a Laser, Serigrafia, Bordado Digital |
 | `responsavel` | relação → `usuario` | sim | avatar, **nome** (≤60 car.) + identificador `@nomesobrenome`, `NÍVEL n` (rodada 4) |
-| `skill` | relação → `skill` | não | destino do XP |
+| `skill` | relação → `skill` | não | ~~destino do XP~~ classificação/filtro do evento — **sem XP no v1 (PO, 2026-08-24)**; volta a ser destino de XP só se o check-in for aprovado |
 | `missao_relacionada` | relação → `missao` | não | chip amarelo no card |
 | `aulas_prerequisito` | relação múltipla → `aula` | não | pré-requisitos |
 | `vagas_total` | inteiro | não | vazio = sem limite; alimenta `12/20 vagas` |
 | `inscricao_obrigatoria` / `prazo_inscricao` | booleano / data-hora | sim / não | controlam `BotaoInscricao` |
-| `xp_presenca` | inteiro | não | XP concedido no check-in |
+| `xp_presenca` | inteiro | não | **Reservado — fora do escopo v1 (PO, 2026-08-24):** o calendário não concede XP; campo fica no modelo, sem uso na UI do v1 |
 | `materiais` | lista de arquivos | não | `.pdf` `.zip` `.stl` `.3mf` `.obj` `.gltf` `.glb` `.svg` `.dxf` |
 | `galeria_pos_evento` | lista de imagens | não | `.jpg` `.png` `.webp` |
 | `projetos_gerados` | relação múltipla → `projeto` | não | registro da atividade |
@@ -277,34 +303,43 @@ Todas **(proposta)**.
 - `inscricao` — `usuario` × `evento` (única por par), `status` (inscrito · lista de espera ·
   cancelado), `inscrito_em`.
 - `presenca` — `usuario` × `evento`, `checkin_em`, `metodo` (QR code · manual pela equipe),
-  `xp_creditado` (booleano, anti-farm).
+  `xp_creditado` (booleano, anti-farm). **Reservada — fora do escopo v1 (PO, 2026-08-24):**
+  sem check-in presencial no v1; a coleção fica especificada para a versão futura.
 - `curtida` — `usuario` × `evento`, alimenta o contador de interesse.
 
 ## Ganchos de gamificação
 
 Todos **(proposta)**, alinhados ao `gamification.md`.
 
-- **XP por presença** — check-in no evento credita `xp_presenca` na `skill` do evento.
-  Responde à questão 4 em aberto do `gamification.md` ("XP por atividades presenciais
-  (check-in via calendário? QR code no lab?)"), que **segue em aberto**. **(proposta)** Se
-  aprovado, o valor é **1 XP**, pela economia decidida em 2026-08-23 (1 XP por ação); o
-  exemplo `+80 XP` acima é ilustrativo e está superado. Regra anti-farm: um crédito por par
-  `usuario`×`evento`, validado por `presenca.xp_creditado`.
-- **Skills** — o XP evolui a barra segmentada em pips da skill correspondente; Serigrafia e
+- **XP por presença** — ~~check-in no evento credita `xp_presenca` na `skill` do evento~~
+  **Decidido (PO, 2026-08-24): fora do v1** — a questão 4 do `gamification.md` está
+  encerrada: o calendário **não concede XP**. Registro para a versão futura: se o check-in
+  for aprovado, o valor é **1 XP** (economia de 2026-08-23) creditado na `skill` do evento,
+  com anti-farm de um crédito por par `usuario`×`evento`, validado por
+  `presenca.xp_creditado`; o exemplo `+80 XP` acima é ilustrativo e está superado.
+- **Skills** — o XP evolui a barra segmentada em pips da skill correspondente (o XP aqui é
+  o de presença: **sem efeito no v1**, PO 2026-08-24); Serigrafia e
   Bordado Digital aparecem como tipo de evento antes de virarem skills.
 - **Níveis** — nível do responsável no card; nível do usuário no header (**nome da pessoa** /
-  `NÍVEL n`; o `MAKER_X` / `NÍVEL 3` do mockup é registro superado — rodada 4); XP de
-  presença soma ao **Nível do Lab** coletivo.
-- **Missões** — evento com `missao_relacionada` mostra chip amarelo e participar avança a
-  barra de progresso; eventos `PRAZO DE MISSÃO` marcam o fim da janela.
+  `NÍVEL n`; o `MAKER_X` / `NÍVEL 3` do mockup é registro superado — rodada 4); ~~XP de
+  presença soma ao **Nível do Lab** coletivo~~ — **sem XP de presença no v1 (PO,
+  2026-08-24)**; no v1 o Nível do Lab recebe apenas o XP das ações já decididas.
+- **Missões** — evento com `missao_relacionada` mostra chip amarelo e ~~participar avança a
+  barra de progresso~~; eventos `PRAZO DE MISSÃO` marcam o fim da janela.
+  **Decidido (PO, 2026-08-24):** sem check-in no v1 não há registro de participação, então
+  o evento **não avança sozinho** a barra da missão — o chip apenas aponta a missão
+  relacionada; o avanço automático volta com o check-in.
 - **Curtidas** — ♥ com contador funciona como "tenho interesse" e ordena os destaques na home.
 - **Recompensas** — ~~sequência de presenças (ex.: 4 atividades no mês) desbloqueia item
   cosmético de avatar.~~ **Decidido (2026-08-23):** os cosméticos de recompensa foram
-  **adiados** (só itens fixos de avatar por enquanto); qual recompensa substitui o item
-  cosmético segue **em aberto** — ver [gamification.md](../gamification.md).
-- **Exibição** — XP previsto aparece **antes** da participação; toast `+1 XP em Corte a
-  Laser` após o check-in confirmado (**decidido 2026-08-23:** 1 XP por ação; o `+80 XP` dos
-  exemplos anteriores é ilustrativo).
+  **adiados** (só itens fixos de avatar por enquanto); ~~qual recompensa substitui o item
+  cosmético segue **em aberto**~~ **Decidido (PO, 2026-08-24): sem recompensa no v1** — a
+  recompensa chega junto com os cosméticos (v2), e a sequência de presenças depende do
+  check-in, que está fora do v1 — ver [gamification.md](../gamification.md).
+- **Exibição** — ~~XP previsto aparece **antes** da participação; toast `+1 XP em Corte a
+  Laser` após o check-in confirmado~~ **Decidido (PO, 2026-08-24):** sem check-in no v1,
+  **não há XP previsto nem toast de XP** no calendário; o padrão fica registrado para a
+  versão futura (1 XP por ação, decidido em 2026-08-23; o `+80 XP` é ilustrativo).
 
 ## Estados e interações
 
@@ -323,28 +358,37 @@ Todos **(proposta)**.
 - **Erro**: "Não foi possível carregar a agenda." + `TENTAR NOVAMENTE`; falha de inscrição →
   toast "Não foi possível concluir sua inscrição.", botão volta ao estado anterior.
 - **Deslogado**: agenda, filtros, busca e detalhe visíveis (conteúdo público indexável);
-  `INSCREVER-SE` e ♥ abrem modal "Crie sua conta para participar e ganhar XP" com CTA
-  `COMECE A CRIAR`; XP previsto exibido como convite; `.ICS` continua disponível. No
+  `INSCREVER-SE` e ♥ abrem modal ~~"Crie sua conta para participar e ganhar XP"~~ **"Crie
+  sua conta para participar"** (sem promessa de XP — o calendário não concede XP no v1, PO
+  2026-08-24) com CTA
+  `COMECE A CRIAR`; ~~XP previsto exibido como convite~~ (**sem XP previsto no v1** — PO,
+  2026-08-24, decisão de check-in fora do v1); `.ICS` continua disponível. No
   mobile, o item `PERFIL` da barra inferior **abre a tela de login** (decidido na
   rodada 3). **Decidido (rodada 4, 2026-08-24):** o login é por **e-mail + senha** (o
   passo 2 do cadastro ganha campo de senha); design da tela de login **definido** — ver `login.md`.
 - **Logado**: botões refletem o estado real (`INSCRITO ✓`, `LISTA DE ESPERA`, `LOTADO`);
-  filtro extra `MINHAS INSCRIÇÕES`; badge de presença nos eventos já frequentados; lembrete
+  filtro extra `MINHAS INSCRIÇÕES`; ~~badge de presença nos eventos já frequentados~~
+  (**fora do v1** — sem check-in no v1, PO 2026-08-24); lembrete
   de evento próximo no topo da página. **Decidido (rodada 4, 2026-08-24):** logado, o
   destino do `PERFIL` (mobile) e do bloco de conta (desktop/tablet) é a **Minha Conta** —
   ver [pages/minha-conta.md](minha-conta.md).
-- **Equipe do lab**: ações inline de editar/cancelar evento, abrir `CHECK-IN` com QR code e
-  marcar presença manualmente; evento `CANCELADO` aparece tachado com aviso a todos.
+- **Equipe do lab**: ações inline de editar/cancelar evento, ~~abrir `CHECK-IN` com QR code e
+  marcar presença manualmente~~ (**fora do v1** — PO, 2026-08-24; especificação mantida para
+  a versão futura); evento `CANCELADO` aparece tachado com aviso a todos.
 
 ## Questões em aberto
 
-1. Check-in presencial concede XP? E por QR code no lab, código do responsável ou
-   confirmação manual? (Questão 4 do `gamification.md` — **segue em aberto**.)
-   **(proposta)** O *quanto* já não é mais dúvida: pela economia decidida em 2026-08-23
-   (1 XP por ação), se aprovado o check-in valeria **1 XP**.
+1. ~~Check-in presencial concede XP? E por QR code no lab, código do responsável ou
+   confirmação manual? (Questão 4 do `gamification.md` — segue em aberto.)~~
+   **Decidido (PO, 2026-08-24): check-in presencial fica fora do v1** — o calendário **não
+   concede XP** e não há fluxo de check-in (QR code, código do responsável ou marcação
+   manual) na primeira versão. Os campos `xp_presenca` e a coleção `presenca` permanecem
+   **reservados** no modelo de conteúdo. Encerra a questão 4 do `gamification.md`; o
+   *quanto* (1 XP, pela economia de 2026-08-23) e o *como* (QR code · manual) ficam como
+   registro para quando o tema voltar, com o jogo rodando.
 2. Inscrição é obrigatória para todos os eventos ou só para os de vaga limitada? Há lista de
    espera e política de no-show?
-3. Visão inicial no desktop é `MÊS` ou `LISTA`? A `ESTRUTURA SITE.docx` diz apenas
+3. Visão inicial no desktop é `MÊS` ou `LISTA`? O documento de estrutura original diz apenas
    "calendário".
 4. Os tipos de evento propostos são os corretos? Faltam categorias (visita escolar,
    residência, feira)?

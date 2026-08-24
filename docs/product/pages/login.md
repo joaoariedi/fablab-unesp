@@ -24,42 +24,43 @@ Herdada do passo 2 (`criar-conta-passo-2.jpg`), com o formulário trocado:
 
 - **Header padrão** (chip laranja, nav canônica desktop, sem botão de menu). Estado
   deslogado do bloco de conta: `ENTRAR`/`CRIAR CONTA` **(proposta)**.
-- **Trilho esquerdo**: no passo 2 há o preview do avatar — **não se aplica ao visitante
-  do login**. O que ocupa o espaço (ornamento isométrico, mascote pixel art, ou card
-  centralizado sem trilho) é **(proposta)** — ver questão 3.
+- **Sem trilho esquerdo** — **decidido (rodada 5, 2026-08-24): card centralizado, sem
+  coluna** (o preview do avatar do passo 2 não se aplica ao visitante).
 - **Card central** (mesmo estilo do passo 2):
-  - Título display navy — copy **(proposta)**: `FAZER LOGIN` ou `ENTRAR` (o título da
-    tela-mãe é `CRIAR CONTA`); subtítulo **(proposta)**.
+  - Título display navy — **decidido (PO, 2026-08-24): `ENTRAR`**; botão `ENTRAR →`.
+    Subtítulo **(proposta)**.
   - **`EMAIL`** — ícone de envelope — `Digite seu e-mail`.
   - **`SENHA`** — ícone de cadeado — placeholder **(proposta)**: `Digite sua senha` —
     com **ícone de olho** (mostrar/ocultar), herdado do passo 2.
-  - **Botão de submit** — herda o estilo do formulário da tela-mãe (**navy preenchido**
-    no mockup; a divergência com o primário rosa canônico é a **questão 17 de
-    `onboarding.md`** — vale para as duas telas); rótulo **(proposta)**: `ENTRAR →`.
+  - **Botão de submit** — **decidido (rodada 5, 2026-08-24): rosa canônico** (rosa
+    preenchido, texto navy, sombra dura); o navy do mockup do passo 2 é registro
+    superado (resolve a questão 17 de `onboarding.md` para as duas telas). Rótulo
+    **(proposta)**: `ENTRAR →` — a resposta da rodada 5 sobre a copy foi ambígua
+    ("não") e o PO decidiu: **`ENTRAR`** (questão 1 fechada).
   - Link inverso **(proposta)**, espelhando a tela-mãe: `Não tem uma conta?`
     `Criar conta` → passo 1 do cadastro.
-  - **`Esqueci minha senha`** **(proposta)** — link para recuperação por e-mail;
-    fluxo de recuperação inteiro **(proposta)**.
+  - **`Esqueci minha senha`** — **decidido (rodada 5, 2026-08-24): o link entra**; o
+    fluxo de recuperação (e-mail, tela de redefinição) segue **(proposta)** — questão 4.
 
 ## Adaptação tablet (768–1279px)
 
 **(proposta)** Herda o comportamento do passo 2: card central em largura maior; barra
-compacta do tablet + botão de menu no topo (lado: questão 10 de `home.md`).
+compacta do tablet + botão de menu no topo **à direita** (rodada 5; logo à esquerda).
 
 ## Adaptação mobile (<768px)
 
-**(proposta)** Card em largura total com margens; barra inferior visível (política do
-cadastro, rodada 4); chegando pelo `PERFIL`, o retorno pós-login vai a **Minha Conta**;
-chegando por outra origem, retorna à página de origem **(proposta)** — ver questão 2.
+**(proposta)** Card em largura total com margens; barra inferior visível (aparece ao
+rolar — rodada 5). **Decidido (PO, 2026-08-24) — pós-login:** retorna à **página de
+origem**; quem abriu o login diretamente (ou pelo `PERFIL`) cai na **Minha Conta**.
 
 ## Componentes
 
 | Componente | Descrição | Origem |
 |---|---|---|
 | `FormField` (`EMAIL`) / `PasswordField` (`SENHA` + olho) | Reuso direto do passo 2 | `onboarding.md` §6 |
-| `BotaoFormulario` | Submit — mesmo estilo da tela-mãe (questão 17 de `onboarding.md`) | herdado |
+| `BotaoFormulario` | Submit — **rosa canônico** (decidido rodada 5; navy do mockup superado) | decidido |
 | `LinkCadastro` | `Não tem uma conta?` `Criar conta` (espelho do `LinkLogin`) | **(proposta)** |
-| `LinkEsqueciSenha` | Recuperação de senha | **(proposta)** |
+| `LinkEsqueciSenha` | Recuperação de senha — link decidido (rodada 5); fluxo **(proposta)** | decidido + proposta |
 
 ## Modelo de conteúdo (CMS)
 
@@ -75,18 +76,19 @@ Nenhum — login não concede XP (só as ações da economia pontuam, decidido 2
 
 - **Erro de credencial** **(proposta)**: mensagem inline neutra (`E-mail ou senha
   incorretos`) — sem revelar qual dos dois falhou nem se o e-mail existe (consistente
-  com a regra de convite multi-tenant de não revelar contas — `tech-stack.md`).
+  com a regra de convite multi-tenant de não revelar contas — `docs/tech-stack.md`).
 - **(proposta)** Rate limit de tentativas; loading no botão durante o submit; foco
   inicial no campo de e-mail; `Enter` submete.
 - **Logado** acessando o login: redireciona para **Minha Conta** **(proposta)**.
 
 ## Questões em aberto
 
-1. Copy do título/subtítulo e rótulo do botão (`ENTRAR`? `FAZER LOGIN`?) — definir com a
-   designer junto da questão 17 de `onboarding.md` (estilo do botão de formulário).
-2. Destino pós-login: sempre Minha Conta, ou retorna à página de origem?
-3. O que ocupa o trilho esquerdo no lugar do preview do avatar (ornamento, mascote, ou
-   card centralizado sem trilho)?
-4. Fluxo de **recuperação de senha** (link, e-mail, tela de redefinição) — precisa de
-   definição antes da feature 004.
+1. ~~Copy do título/botão?~~ **Decidido (PO, 2026-08-24): `ENTRAR` / `ENTRAR →`**
+   (resolve a ambiguidade da rodada 5). Subtítulo segue **(proposta)**.
+2. ~~Destino pós-login?~~ **Decidido (PO, 2026-08-24):** retorna à **página de
+   origem**; acesso direto ao login leva à **Minha Conta**.
+3. ~~O que ocupa o trilho esquerdo?~~ **Decidido (rodada 5): card centralizado, sem
+   coluna.**
+4. Fluxo de **recuperação de senha** — o **link está decidido** (rodada 5); o fluxo
+   (e-mail, tela de redefinição) precisa de definição antes da feature 004.
 5. "Lembrar de mim"/duração de sessão — política **(proposta técnica)**.

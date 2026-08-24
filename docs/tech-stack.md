@@ -111,10 +111,14 @@ Incorporar à spec da feature correspondente — não são opcionais:
   quota por org validada **na emissão da URL pré-assinada**, com job periódico de
   reconciliação contra o prefixo (contador denormalizado sofre drift). O **número** da
   quota por org ainda não existe — decidir (os 10/100/200 MB são limites por arquivo).
-- **Gamificação por org**: ledger, ranking, nível do lab e `regrasXp` escopados;
-  `idempotencyKey = (tenant, user, ação, ref)`; `packages/game` recebe `tenantId` como
-  argumento explícito. `regrasXp` é **semeada por cópia** na criação da org (sem
-  herança/fallback global — ambiguidade escondida).
+- **Gamificação por org**: ledger, ranking, nível do lab, `regrasXp` **e o catálogo de
+  `skills`** escopados — **PO (2026-08-24):** o admin da organização **adiciona/remove
+  skills**; remover é **desativar** (`ativa: false`): o ledger é **imutável** e o
+  `xp_total` dos makers **não muda** (skill reativada → progresso reaparece; skill nova →
+  nível 0 para todos). `idempotencyKey = (tenant, user, ação, ref)`; `packages/game`
+  recebe `tenantId` como argumento explícito. `regrasXp` **e `skills`** são **semeados
+  por cópia** na criação da org (sem herança/fallback global). *(Supera a classificação
+  anterior de `skills` como coleção global.)*
 - **Branding: v1 = co-branding, não white-label** — cor, logo, tipografia e hero por org
   via CSS custom properties (regra da feature 001: **zero literal hexadecimal em
   componente**); a pixel art (avatar, ícones, estações) é compartilhada — identidade
@@ -181,7 +185,7 @@ dados do vizinho com HTTP 200. Defesas obrigatórias na fundação, antes de exi
 Como o design gamificado se materializa — decidido junto com a arquitetura A:
 
 - **UI gamificada em DOM + CSS, não em engine de jogo.** Cards, pips, barras de progresso,
-  missões e ranking são UI comum com pele de jogo: tokens de `visual-identity.md`,
+  missões e ranking são UI comum com pele de jogo: tokens de `product/visual-identity.md`,
   **Tailwind CSS** como sistema responsivo e `image-rendering: pixelated` para nitidez dos
   sprites. Engines de canvas (Phaser/PixiJS) foram descartadas para essas superfícies:
   destruiriam SEO, acessibilidade e texto responsivo sem ganho em telas estáticas.
@@ -189,7 +193,7 @@ Como o design gamificado se materializa — decidido junto com a arquitetura A:
   (corpo/cabelo/rosto/roupas/acessórios) empilhado por z-index no construtor; um composite
   server-side (`sharp`) gera a miniatura cacheada usada em cards e ranking.
   **Decidido (2026-08-23, rodadas 1–3):** a designer produz os sprites; rotação em
-  **4 direções**; catálogo conforme `design/criar-conta-passo-1.png` atualizado pela rodada 3 —
+  **4 direções**; catálogo conforme `product/design/criar-conta-passo-1.png` atualizado pela rodada 3 —
   base **`F`/`M`** (rótulos trocados de XX/XY), 20 tons de pele, 10 tons de cabelo, 30
   cabelos, rosto com **4 olhos + 4 narizes + 4 bocas**, roupas em 3 slots de 10 (**apenas
   a parte de cima varia por base** — F com peitos, M sem), óculos e chapéus com 5 cada;
@@ -204,11 +208,11 @@ Como o design gamificado se materializa — decidido junto com a arquitetura A:
 - **Preview 3D** (Biblioteca 3D): `@google/model-viewer` para GLB/GLTF e loaders do
   `three` (STL/OBJ/3MF) carregados lazy, client-only, apenas na página de detalhe.
 - **Aulas**: embeds do YouTube — ação do botão `ASSISTIR` é reproduzir online
-  (decidido em 2026-08-23, ver `pages/aulas.md`).
+  (decidido em 2026-08-23, ver `product/pages/aulas.md`).
 - **Responsivo mobile-first em três layouts nomeados**: mobile <768px (alvo 390),
   tablet 768–1279px (alvo 834), desktop ≥1280px (alvo 1440). As adaptações por componente
   (grid 3→2→1, header → hambúrguer/bottom-nav, sidebar → chips/drawer, alvos de toque
-  44px) estão especificadas por página em `pages/*.md`, marcadas `(proposta)` até
+  44px) estão especificadas por página em `product/pages/*.md`, marcadas `(proposta)` até
   validação com a designer.
 
 ## Banco: Postgres, não Mongo

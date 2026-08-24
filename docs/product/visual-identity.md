@@ -45,7 +45,7 @@ pequeno).
 | **Square Font** | Logotipo ("CITE BAURU"); pode ser usada em títulos e subtítulos |
 | **Comfortaa** | Corpo de texto |
 
-Notas para web (arquivos **recebidos em 2026-08-23**, em `product/fonts/`):
+Notas para web (arquivos **recebidos em 2026-08-23**, em `fonts/`):
 - **Aldo the Apache** (`AldotheApache.ttf`) — Regular, de AJ Paglia.
 - **SquareFont** (`Square.ttf`) — Regular, © Bou Fonts 2011 — é a "Square Font" da prancha.
 - **Comfortaa** (`Comfortaa-VariableFont_wght.ttf`) — variável (Light–Bold), licença OFL
@@ -54,7 +54,7 @@ Notas para web (arquivos **recebidos em 2026-08-23**, em `product/fonts/`):
   (display → sans condensada; corpo → `system-ui, sans-serif`).
 - **Licenças:** Aldo the Apache e SquareFont vieram **sem arquivo de licença**; a
   confirmação está **em espera** (decisão do PO, 2026-08-24) — rastreada como **ISS-001**
-  em [backlog.md](backlog.md), com gate antes do lançamento público. Comfortaa está ok
+  em [backlog.md](../backlog.md), com gate antes do lançamento público. Comfortaa está ok
   (OFL).
 
 ## Logo
@@ -96,10 +96,14 @@ Vocabulário isométrico da prancha, usado como ornamento e ícone:
 - **Botões (decidido 2026-08-23)**: primário canônico = **rosa preenchido, texto navy,
   sombra dura deslocada** (estilo do hero v2); a variante navy com contorno rosa do mockup
   v1 foi **descartada**. Secundário: outline claro sobre navy; sobre fundo branco, outline
-  navy **(proposta)**.
+  navy **(proposta)**. **Rodada 5 (2026-08-24):** botões de **formulário** (criar conta,
+  login) também usam o **rosa canônico** — o navy preenchido do mockup do passo 2 fica
+  como registro superado.
 - **Barras de progresso**: pips das skills representam **10 níveis** (decidido; o mockup
   mostra 6 segmentos — superado); contínuas com % para missões e XP.
-- **Chips/tabs de filtro**: texto display em caps, item ativo sublinhado/rosa.
+- **Chips/tabs de filtro**: texto display em caps, item ativo sublinhado/rosa. Chips de
+  **status** (ex.: `Público` na Minha Conta): **teal `#74B7A5`** da paleta — **rodada 5:**
+  o verde saturado fora da paleta do mockup foi trocado pelo teal.
 - **Busca**: input arredondado com ícone de lupa (escuro sobre navy; claro nas páginas de
   fundo branco **(proposta)**).
 - **Navegação (decidido 2026-08-23)**: itens do menu **desktop** nesta ordem —
@@ -111,13 +115,17 @@ Vocabulário isométrico da prancha, usado como ornamento e ícone:
   página inicial" — segue a ordem relativa do desktop): barra do **tablet**
   `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS`; barra inferior do **mobile** (5 posições)
   `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS · PERFIL`.
-- **Menu (decidido na rodada 3)**: botão de menu **no topo, na extremidade esquerda da
-  barra**, contendo **todas as abas** (inclusive Biblioteca 3D e Instagram — a Biblioteca
-  fica **só no menu**, sem atalho extra). Tocar no **logo leva à Home**. `PERFIL`
-  deslogado **abre a tela de login** (login por **e-mail + senha**, rodada 4); logado,
-  abre **Minha Conta** *(ver `pages/minha-conta.md`)*. **Decidido (rodada 4,
-  2026-08-24):** o botão de menu existe **só nas versões compactas** (tablet/mobile) —
-  no desktop as 6 abas ficam na barra, sem botão de menu.
+- **Menu (rodadas 3–5)**: botão de menu no **topo, à direita** da barra, com o **logo à
+  esquerda** — **decidido na rodada 5 (2026-08-24)**, superando a "extremidade esquerda"
+  da rodada 3 e confirmando a arte `design/home-mobile.png`. Contém **todas as abas**
+  (inclusive Biblioteca 3D e Instagram — a Biblioteca fica **só no menu**, sem atalho
+  extra). Tocar no **logo leva à Home**. `PERFIL` deslogado **abre a tela de login**
+  (login por **e-mail + senha**, rodada 4); logado, abre **Minha Conta** *(ver
+  `pages/minha-conta.md`)*. **Decidido (rodada 4, 2026-08-24):** o botão de menu existe
+  **só nas versões compactas** (tablet/mobile) — no desktop as 6 abas ficam na barra, sem
+  botão de menu. **Rodada 5:** no mobile, a **barra inferior aparece ao rolar a página**
+  (a arte da home apenas a omitiu) e o **avatar do usuário entra bem pequeno no header**
+  quando logado.
 - **Footer institucional**: três pilares com ícones outline (Aprenda fazendo / Compartilhe
   conhecimento / Desenvolva projetos reais) + composição isométrica no canto.
 - **Pixel art**: avatares dos usuários em pixel art isométrico com **4 direções**; o hero

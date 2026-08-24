@@ -1,9 +1,11 @@
 # Fab Lab CITe Bauru — Conceito do Site
 
 > Transposição do material de produto/design para documentação de referência.
-> Fontes: `ESTRUTURA SITE.docx`, mockups em `design/`, proposta de identidade visual
-> (`identidade-visual-2.jpg` e `identidade-visual-3.jpg`) e pôsteres da cultura FabLab
-> (`references/FabLab Posters.pdf` — Makers' Guide for Making, WeFab/Estúdio Arnold, 2016).
+> Fontes: o documento de estrutura original (docx — **transcrito integralmente** aqui e
+> em `gamification.md`; arquivo removido em 2026-08-24), mockups em `design/`, proposta
+> de identidade visual (`identidade-visual-2.jpg` e `identidade-visual-3.jpg`) e pôsteres
+> da cultura FabLab (`../references/FabLab Posters.pdf` — Makers' Guide for Making,
+> WeFab/Estúdio Arnold, 2016).
 
 ## Visão
 
@@ -32,7 +34,7 @@ novo. Mude mais uma vez.").
 
 Navegação principal (header, com logo-chip à esquerda e avatar do usuário à direita):
 
-| Seção | Descrição (origem: ESTRUTURA SITE.docx) | Página |
+| Seção | Descrição (origem: documento de estrutura original) | Página |
 |---|---|---|
 | **Home** | Hero + missões em destaque + nível do lab + ranking + últimos projetos | [pages/home.md](pages/home.md) |
 | **Biblioteca 3D** | Modelos 3D desenvolvidos por alunos, para explorar, baixar e imprimir | [pages/biblioteca-3d.md](pages/biblioteca-3d.md) |
@@ -42,19 +44,21 @@ Navegação principal (header, com logo-chip à esquerda e avatar do usuário à
 | **Artigos** | Conteúdos, reflexões e referências | [pages/artigos.md](pages/artigos.md) |
 | **Instagram** | Link externo, abre em nova aba | — |
 | **Criar conta** | Onboarding em **2 passos** (1: criar avatar — `design/criar-conta-passo-1.png`; 2: dados pessoais — `design/criar-conta-passo-2.jpg`) | [pages/onboarding.md](pages/onboarding.md) |
-| **Minha Conta** | Perfil do maker: avatar + skills, meus projetos, meus modelos 3D, artigos (card de **leitura/recomendação**, não "meus artigos") e cursos assistidos — mockup `design/minha-conta.jpg` (2026-08-24) | [pages/minha-conta.md](pages/minha-conta.md) |
+| **Minha Conta** | Perfil do maker: avatar + skills, meus projetos, meus modelos 3D, **meus artigos** (rodada 5: a Minha Conta mostra sempre as "minhas coisas") e cursos assistidos — mockup `design/minha-conta.jpg` (2026-08-24) | [pages/minha-conta.md](pages/minha-conta.md) |
 | **Login** | Entrada por e-mail + senha — **reusa o design do passo 2 do cadastro, trocando o formulário** (decisão do PO, 2026-08-24) | [pages/login.md](pages/login.md) |
+| **Perfil do maker (público)** | Versão enxuta: avatar, nome, skills e conteúdos publicados — **decidido (PO, 2026-08-24)**; reusa componentes da Minha Conta | *(spec futura, junto das features 004/005)* |
 
 > **Decidido (2026-08-23, designer):** navegação canônica **desktop** em todas as
 > páginas, nesta ordem: `BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM ·
 > ARTIGOS` — Calendário e Aulas confirmados no menu principal. O item `AULAS` desalinhado
 > em alguns mockups é ruído de render; tudo alinhado. **Rodadas 2–3:** nas versões
 > compactas, `BIBLIOTECA 3D` e `INSTAGRAM` saem da barra e vivem no **menu** (botão no
-> topo, à esquerda, com todas as abas) — **tablet**: `PROJETOS · CALENDÁRIO · AULAS ·
-> ARTIGOS`; **mobile (barra inferior)**: `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS ·
-> PERFIL` (ordem corrigida na rodada 3 para seguir a do desktop; logo → Home; `PERFIL`
-> deslogado abre o login). A página Calendário segue sem mockup (spec marcada como
-> proposta).
+> topo, **à direita** — rodada 5, com o logo à esquerda —, com todas as abas) —
+> **tablet**: `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS`; **mobile (barra inferior)**:
+> `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS · PERFIL` (ordem corrigida na rodada 3 para
+> seguir a do desktop; logo → Home; `PERFIL` deslogado abre o login; a barra inferior
+> **aparece ao rolar** a página — rodada 5). A página Calendário segue sem mockup (spec
+> marcada como proposta).
 
 ## Gamificação
 
@@ -84,7 +88,8 @@ Duas camadas visuais complementares (detalhes em [visual-identity.md](visual-ide
 - **Equipe do lab (admin/moderação)** — gerencia conteúdo via CMS, valida publicações,
   cria missões, aulas e eventos do calendário.
 - **Admin da organização** *(requisito multi-tenant, 2026-08-23)* — gerencia o perfil da
-  sua organização (fablab/makerspace) e os usuários dela.
+  sua organização (fablab/makerspace), os usuários dela e o **catálogo de skills** da
+  org (adicionar/remover — PO, 2026-08-24; remover **não altera o XP** dos makers).
 - **Master (plataforma)** *(requisito multi-tenant, 2026-08-23)* — cria e gerencia as
   contas de organizações e seus usuários admin, em painel master.
 
@@ -95,10 +100,12 @@ Duas camadas visuais complementares (detalhes em [visual-identity.md](visual-ide
 - **Responsivo em três tamanhos de tela** — mobile (<768px), tablet (768–1279px),
   desktop (≥1280px); mobile-first. Alvos de design: 390px, 834px, 1440px.
 - **Frontend e backend separados no mesmo repositório** (monorepo).
-- Conteúdo público indexável (SEO) em PT-BR; área logada gamificada.
+- Conteúdo público indexável (SEO) em PT-BR; área logada gamificada. **Acesso aberto
+  (PO, 2026-08-24):** ler, assistir aulas e baixar modelos 3D **não exigem conta**;
+  conta é para publicar, curtir e pontuar.
 - Armazenamento de objetos e banco intercambiáveis entre self-hosted e serviços
-  gerenciados (ex.: MinIO ↔ S3). Análise em [tech-stack.md](tech-stack.md).
+  gerenciados (ex.: MinIO ↔ S3). Análise em [tech-stack.md](../tech-stack.md).
 - **Multi-tenant** *(requisito de 2026-08-23)*: a plataforma poderá ser fornecida a
   outros fablabs/makerspaces. Usuários **master** criam e gerenciam contas de
   organizações e seus admins; **admins de organização** gerenciam o perfil e os usuários
-  da própria organização. Estratégia técnica em [tech-stack.md](tech-stack.md).
+  da própria organização. Estratégia técnica em [tech-stack.md](../tech-stack.md).

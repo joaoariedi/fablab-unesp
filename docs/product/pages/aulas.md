@@ -11,6 +11,12 @@ e iniciar o consumo pelo botão `ASSISTIR`. É um dos ganchos de XP do sistema: 
 aulas assistidas aparecem em **Cursos assistidos** na Minha Conta
 (`pages/minha-conta.md`, rodada 4).
 
+> **Decidido (PO, 2026-08-24) — acesso aberto:** as aulas são **públicas**; **assistir não
+> exige conta** (decisão geral de acesso aberto — `concept.md`, `gamification.md` questão 6).
+> A conta serve para **publicar, curtir e pontuar**: o **1 XP** por aula (creditado ao
+> assistir o vídeo inteiro — rodada 5) e o **registro em Cursos assistidos** valem apenas
+> para o maker **logado**; o visitante assiste sem trilha de progresso nem XP.
+
 ## Fonte de design
 
 - `design/aulas.png` — tela completa de Aulas (header,
@@ -49,9 +55,12 @@ aulas assistidas aparecem em **Cursos assistidos** na Minha Conta
   - Item ativo `AULAS` em **rosa** com sublinhado rosa curto; demais em branco.
   - `INSTAGRAM` abre em nova aba **(proposta)**.
 - **Decidido (rodada 3, 2026-08-23):** tocar/clicar no **logo leva à Home** (não é mais
-  proposta). Nas versões compactas existe um **botão de menu no topo, na extremidade
-  esquerda da barra** — ou seja, **à esquerda do logo-chip** —, contendo **todas as abas**
+  proposta). Nas versões compactas existe um **botão de menu** ~~no topo, na extremidade
+  esquerda da barra — ou seja, à esquerda do logo-chip~~, contendo **todas as abas**
   — inclusive `BIBLIOTECA 3D` (que fica **só no menu**, sem atalho extra) e `INSTAGRAM`.
+  **Decidido (rodada 5, 2026-08-24):** o botão de menu fica no **topo, à direita** da
+  barra, com o **logo do Fab Lab à esquerda** (confirma a arte `design/home-mobile.png`);
+  a posição "extremidade esquerda" da rodada 3 fica **superada**.
   **Decidido (rodada 4, 2026-08-24):** o botão de menu existe **só nas versões compactas**
   (tablet/mobile) — **no desktop as 6 abas ficam na barra, sem botão de menu**. Isso
   confirma a leitura da rodada 3 e supera qualquer menção a botão de menu no header
@@ -136,6 +145,9 @@ aulas assistidas aparecem em **Cursos assistidos** na Minha Conta
      - **Decidido (2026-08-23):** a ação é **assistir online** (reproduzir o vídeo); não há
        download. O ícone de download do mockup fica a critério da designer trocar por ícone
        de play (ver questão 1, já resolvida).
+     - **Decidido (PO, 2026-08-24):** `ASSISTIR` **não pede login** — o botão reproduz o
+       vídeo também para o visitante (acesso aberto); o convite a criar conta aparece
+       apenas em torno do **XP** e da **curtida**.
 - **Paginação**: não visível no mockup. Adotar botão `CARREGAR MAIS` centralizado abaixo da
   lista, com scroll infinito como alternativa **(proposta)**.
   **Decidido (2026-08-23):** botões primários da página (`CARREGAR MAIS`, `LIMPAR BUSCA`,
@@ -164,8 +176,10 @@ apenas desktop.
   ~~a nota de que "a ordem compacta inverte Aulas/Calendário em relação à desktop — resposta
   literal da designer"~~ ficam **superadas** pela rodada 3.
   `BIBLIOTECA 3D` e `INSTAGRAM` **saem da barra** e vivem **dentro do menu** —
-  **decidido (rodada 3, 2026-08-23):** o botão de menu fica **no topo, na extremidade
-  esquerda da barra**, e contém **todas as abas** (inclusive `BIBLIOTECA 3D` e `INSTAGRAM`);
+  ~~**decidido (rodada 3, 2026-08-23):** o botão de menu fica **no topo, na extremidade
+  esquerda da barra**~~ — **decidido (rodada 5, 2026-08-24):** o botão de menu fica no
+  **topo, à direita** da barra, com o **logo à esquerda** —, e contém **todas as abas**
+  (inclusive `BIBLIOTECA 3D` e `INSTAGRAM`);
   a Biblioteca 3D fica **só no menu**, sem atalho extra. Tocar no **logo leva à Home**
   (decidido — não é mais proposta). Segue **(proposta)**: logo-chip reduzido e bloco de
   conta reduzido para avatar + `NÍVEL 3` (esconde `MAKER_X`).
@@ -186,19 +200,25 @@ Salvo onde marcado **Decidido**, as decisões abaixo são **(proposta)** — o m
 apenas desktop.
 
 - **Header** — **Decidido (rodada 3, 2026-08-23):** navegação em **barra inferior fixa de 5
-  posições**, nesta ordem: `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS · PERFIL`, com item ativo
-  em rosa (`AULAS` nesta página) — a ordem segue a do desktop ("mantenha a ordem das abas da
+  posições** — **precisão (rodada 5, 2026-08-24):** a barra inferior **aparece ao rolar a
+  página** (não fica fixa sobre o hero desde o primeiro paint); ela foi apenas **omitida**
+  da arte da home, mas existe —, nesta ordem:
+  `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS · PERFIL`, com item ativo em rosa (`AULAS` nesta
+  página) — a ordem segue a do desktop ("mantenha a ordem das abas da
   página inicial"). ~~`PROJETOS · AULAS · CALENDÁRIO · ARTIGOS · PERFIL` (rodada 2, com a
   nota de inversão Aulas/Calendário)~~ fica **superada**. `BIBLIOTECA 3D` e `INSTAGRAM`
-  **saem da barra** e vivem **dentro do menu** — botão de menu **no topo, na extremidade
-  esquerda da barra**, com **todas as abas** (a Biblioteca 3D fica **só no menu**, sem
-  atalho extra); tocar no **logo leva à Home** (decidido). **`PERFIL` deslogado abre a tela
-  de login** (decidido, rodada 3) — **decidido (rodada 4, 2026-08-24):** o login é por
-  **e-mail + senha**; logado, `PERFIL` abre **Minha Conta**. A composição anterior (Home ·
-  Biblioteca · Projetos · Aulas · Perfil, com Artigos/Instagram/Calendário em "Mais") fica
-  como registro histórico.
-  Segue **(proposta)**: no topo, apenas botão de menu (na extremidade esquerda, à esquerda
-  do logo) + logo-chip + avatar.
+  **saem da barra** e vivem **dentro do menu** — ~~botão de menu **no topo, na extremidade
+  esquerda da barra**~~ — **decidido (rodada 5, 2026-08-24):** botão de menu **no topo, à
+  direita** da barra (logo à esquerda) —, com **todas as abas** (a Biblioteca 3D fica **só
+  no menu**, sem atalho extra); tocar no **logo leva à Home** (decidido). **`PERFIL`
+  deslogado abre a tela de login** (decidido, rodada 3) — **decidido (rodada 4,
+  2026-08-24):** o login é por **e-mail + senha**; logado, `PERFIL` abre **Minha Conta**.
+  A composição anterior (Home · Biblioteca · Projetos · Aulas · Perfil, com
+  Artigos/Instagram/Calendário em "Mais") fica como registro histórico.
+  **Decidido (rodada 5, 2026-08-24):** no topo ficam **logo-chip à esquerda** e **botão de
+  menu à direita**; o **avatar do usuário logado entra bem pequeno no header mobile**
+  (além do `PERFIL` na barra inferior). ~~Segue (proposta): no topo, apenas botão de menu
+  (na extremidade esquerda, à esquerda do logo) + logo-chip + avatar.~~
 - **Hero (proposta)**: composição isométrica reduzida abaixo do texto ou omitida; título
   `AULAS` em tamanho menor; parágrafo com no máximo 4 linhas.
 - **Busca (proposta)**: campo em largura total abaixo do título `TODAS AS AULAS`; opção de
@@ -225,7 +245,7 @@ apenas desktop.
 
 | Componente | Descrição | Reuso |
 |---|---|---|
-| `HeaderPrincipal` | Logo-chip **laranja** (canônico), nav canônica em caps (`BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS`, itens alinhados); compacta (rodada 3, na ordem do desktop) — tablet `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS`, mobile `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS · PERFIL`; botão de **menu no topo à esquerda** com todas as abas (inclui `BIBLIOTECA 3D` e `INSTAGRAM`) — **só nas versões compactas**, no desktop não há botão de menu (rodada 4); logo → Home; `PERFIL` deslogado → login por **e-mail + senha** (rodada 4), logado → Minha Conta; bloco de conta com avatar/nome/nível | Todas as páginas |
+| `HeaderPrincipal` | Logo-chip **laranja** (canônico), nav canônica em caps (`BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS`, itens alinhados); compacta (rodada 3, na ordem do desktop) — tablet `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS`, mobile `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS · PERFIL`; botão de **menu no topo à direita**, com o **logo à esquerda** (rodada 5; supera a "extremidade esquerda" da rodada 3), com todas as abas (inclui `BIBLIOTECA 3D` e `INSTAGRAM`) — **só nas versões compactas**, no desktop não há botão de menu (rodada 4); no mobile a **barra inferior aparece ao rolar** e o **avatar entra bem pequeno no header** (rodada 5); logo → Home; `PERFIL` deslogado → login por **e-mail + senha** (rodada 4), logado → Minha Conta; bloco de conta com avatar/nome/nível | Todas as páginas |
 | `HeroSecao` | Faixa teal com título display, parágrafo, chevrons e composição isométrica | Projetos, Artigos, Calendário (na Biblioteca 3D o teal é sidebar, não faixa) |
 | `CampoBusca` | Input arredondado navy, borda rosa, lupa; placeholder `Buscar aulas...`; **variante clara** para o fundo branco desta página | Todas as listagens |
 | `CardAula` | Card horizontal: número, thumbnail, título, descrição, metadados, `ASSISTIR`; sobre **fundo branco** — card **branco com contorno azul navy escuro e sombra**, texto navy | Exclusivo desta página |
@@ -252,12 +272,12 @@ apenas desktop.
 | `ordem` | inteiro | sim | numeração `01`–`08` da lista |
 | `autor` | relação → `usuario` | sim | fornece avatar, **nome** (≤60 car.), identificador `@nomesobrenome` e `NÍVEL n` (rodada 4) |
 | `skill` | relação → `skill` | **(proposta)** sim | Modelagem 3D, Corte a Laser, Impressão 3D, Eletrônica, Design |
-| `nivel_dificuldade` | enum **(proposta)** | não | Iniciante · Intermediário · Avançado |
+| `nivel_dificuldade` | enum | não | **Decidido (rodada 5, 2026-08-24):** `Básico · Intermediário · Avançado` (exibido em `Cursos Assistidos` da Minha Conta, ex.: `25:30 \| Básico`); ~~Iniciante~~ fica **superado** |
 | `xp_recompensa` | inteiro | sim | XP concedido ao concluir — **decidido (2026-08-23):** valor fixo **1 XP** por aula assistida; campo mantido só para exceções futuras |
-| `materiais` | lista de arquivos **(proposta)** | não | `.pdf` `.zip` `.stl` `.3mf` `.obj` `.gltf` `.glb` `.svg` `.dxf` |
+| `materiais` | lista de arquivos **(proposta)** | não | `.pdf` `.zip` `.stl` `.3mf` `.obj` `.gltf` `.glb` `.svg` `.dxf` — **decidido (PO, 2026-08-24)**: download **aberto, sem conta** (acesso aberto), como os anexos de Projetos e Artigos |
 | `transcricao` | texto longo **(proposta)** | não | acessibilidade e SEO |
 | `publicado_em` | data | sim | ordenação alternativa **(proposta)** |
-| `status` | enum **(proposta)** | sim | rascunho · em revisão · publicado |
+| `status` | enum | sim | `rascunho · em revisão · publicado` — **decidido (PO, 2026-08-24)**: fluxo de moderação por **fila de revisão**, publicação pela equipe (referência: decisão 4, `gamification.md` questão 2). A aula só aparece no catálogo público em `publicado` |
 
 ### Coleções relacionadas
 
@@ -266,17 +286,30 @@ apenas desktop.
   (`.png` `.gif`), `nivel`, `xp`, `skills[]`.
 - `skill` — `nome`, `icone` (`.svg`), `nivel_usuario` (via progressão).
 - `curtida` **(proposta)** — relação `usuario` × `aula`, única por par, alimenta o contador.
-- `progresso_aula` **(proposta)** — `usuario`, `aula`, `percentual_assistido`, `concluida_em`.
+  **Decidido (PO, 2026-08-24):** exige `usuario` — **não há curtida anônima**; a modelagem
+  restante segue **(proposta)**.
+- `progresso_aula` — `usuario`, `aula`, `percentual_assistido`, `concluida_em` e
+  **`posicao_reproducao`** (mm:ss, campo novo trazido pelo mockup da Minha Conta,
+  2026-08-24). **Decidido (rodada 5, 2026-08-24):** `concluida_em` é preenchido ao
+  **assistir o vídeo inteiro** (100%); o rastreio de posição continua servindo para
+  **retomar a reprodução** (ver `pages/minha-conta.md`). Modelagem fina do campo segue
+  **(proposta)**. **Decidido (PO, 2026-08-24):** a coleção só existe para **usuário
+  logado** — visitante assiste sem gerar `progresso_aula` (nem XP). Contagem anônima de
+  audiência (análoga aos downloads anônimos da Biblioteca 3D) segue **(proposta)**.
 
 ## Ganchos de gamificação
 
 - **XP por assistir aula** — ação central do `gamification.md` ("ao assistir aulas … ganham
   pontos"). **Decidido (2026-08-23):** assistir uma aula concede **1 XP** (economia: 1 XP por
-  ação, 5 XP por nível, nível máximo 10). **(proposta)** XP creditado ao atingir ≥90% do vídeo
-  ou ao marcar `CONCLUIR AULA`, uma vez por aula (anti-farm). Eventual **bônus por
-  trilha/sequência** segue **em aberto**.
+  ação, 5 XP por nível, nível máximo 10). ~~**(proposta)** XP creditado ao atingir ≥90% do vídeo
+  ou ao marcar `CONCLUIR AULA`~~ — **decidido (rodada 5, 2026-08-24):** a aula conta como
+  **assistida** — e credita o **1 XP** — ao **assistir o vídeo inteiro (100%)**; a proposta
+  de ≥90% e o botão `CONCLUIR AULA` ficam **superados**. Crédito **uma vez por aula**
+  (anti-farm). Eventual **bônus por trilha/sequência** segue **em aberto**.
   **Decidido (rodada 4, 2026-08-24):** as aulas assistidas aparecem na seção **Cursos
   assistidos** de **Minha Conta** (`pages/minha-conta.md`).
+  **Decidido (PO, 2026-08-24):** o **XP é só para logados** — assistir é aberto a todos,
+  mas sem conta não há crédito de XP nem registro em `progresso_aula`/Cursos assistidos.
 - **Skills** — **(proposta)** o XP da aula é creditado na skill de `skill` (ex.: `PRIMEIROS
   PASSOS CORTE A LASER` → Corte a Laser), evoluindo a barra segmentada em pips do perfil.
   **Decidido (rodada 4, 2026-08-24):** as skills começam no **nível 0** (barra de pips
@@ -287,7 +320,8 @@ apenas desktop.
   **skills**, porém, começam em **nível 0** (0–10).
 - **Curtidas** — coração + contador por aula (`42`, `38`, `27`, `34`, `31`, `29`, `24`, `26`).
   **Decidido (2026-08-23):** curtidas **não geram XP** — apenas reputação/popularidade.
-  **(proposta)** Curtir exige login.
+  **Decidido (PO, 2026-08-24):** **curtir exige login** — não há curtida anônima; o coração
+  clicado por visitante abre o **convite de cadastro/login** (`gamification.md` → Curtidas).
 - **Missões** — **(proposta)** aulas podem ser pré-requisito de missões da home (ex.: "Desafio
   Corte Laser" exige `PRIMEIROS PASSOS CORTE A LASER`); ao concluir, a barra de progresso da
   missão avança.
@@ -313,9 +347,18 @@ apenas desktop.
 - **Erro (proposta)**: falha de carregamento → mensagem "Não foi possível carregar as aulas."
   + botão `TENTAR NOVAMENTE`; thumbnail quebrada cai em placeholder isométrico da identidade.
 - **Deslogado (proposta)**: header troca o bloco de conta por `CRIAR CONTA` / `ENTRAR`; cards,
-  busca e metadados permanecem visíveis (conteúdo público indexável); clicar em coração ou em
+  busca e metadados permanecem visíveis (conteúdo público indexável); ~~clicar em coração ou em
   `ASSISTIR` abre modal "Crie sua conta para assistir e ganhar XP" com CTA `COMECE A CRIAR`.
-  Se visitante pode assistir sem conta: ver "Questões em aberto".
+  Se visitante pode assistir sem conta: ver "Questões em aberto".~~
+  **Decidido (PO, 2026-08-24):** **assistir é aberto** — `ASSISTIR` reproduz o vídeo sem
+  pedir conta e **não abre modal**; o modal anterior fica **superado**. No conteúdo da
+  página, o convite ao cadastro/login aparece em duas situações (além dos acessos fixos
+  `CRIAR CONTA` / `ENTRAR` do header e do `PERFIL` no mobile): (a) clicar no **coração**
+  (curtir exige login — decisão 2); (b) ao **fim do vídeo**, no lugar do toast de XP, um
+  convite discreto do tipo "Crie sua conta para ganhar XP e registrar suas aulas" com CTA
+  `COMECE A CRIAR`
+  — copy exata e formato (toast, faixa no player ou modal) seguem **(proposta)**.
+  Deslogado não há barra de progresso, selo de concluída nem retomada de posição.
   **Decidido (rodada 3, 2026-08-23):** no mobile, o item `PERFIL` da barra inferior, quando
   deslogado, **abre a tela de login**. **Decidido (rodada 4, 2026-08-24):** o login é por
   **e-mail + senha** (design da tela de login definido — ver `login.md`); `ENTRAR` no desktop leva à mesma
@@ -323,6 +366,9 @@ apenas desktop.
 - **Logado (proposta)**: exibe progresso por aula (barra fina no rodapé do card), estado de
   curtida persistido, selo de concluída e toast de XP ao concluir — **decidido (2026-08-23):**
   a mensagem é **"+1 XP em Impressão 3D"** (o "+50 XP" era placeholder).
+  **Decidido (rodada 5, 2026-08-24):** o toast dispara ao **fim do vídeo (100%)**; a barra
+  fina de progresso no rodapé do card reflete a **posição de reprodução** guardada para
+  retomar (ver `pages/minha-conta.md`).
 
 ## Questões em aberto
 
@@ -330,7 +376,11 @@ apenas desktop.
    material de apoio, ou ambos (botão duplo)?~~ **Decidido (2026-08-23):** a ação é
    **assistir online** (reproduzir o vídeo); não há download. O ícone de download do mockup
    fica a critério da designer trocar por ícone de play.
-2. Visitante não logado pode assistir aulas sem conta? (Repete a questão 6 de `gamification.md`.)
+2. ~~Visitante não logado pode assistir aulas sem conta? (Repete a questão 6 de
+   `gamification.md`.)~~ **Decidido (PO, 2026-08-24): sim — aulas públicas, assistir não
+   exige conta.** A conta é para **publicar, curtir e pontuar**: o **1 XP** (ao assistir o
+   vídeo inteiro) e o registro em **Cursos assistidos** valem só para logados, e **curtir
+   exige login**. Fecha também a questão 6 de `gamification.md`.
 3. ~~Quanto XP cada aula concede e a qual skill? Existe bônus por sequência/trilha?~~
    **Decidido (2026-08-23):** assistir uma aula concede **1 XP** (economia geral: 1 XP por
    ação, 5 XP por nível, nível máximo 10). A skill creditada é a do campo `skill`

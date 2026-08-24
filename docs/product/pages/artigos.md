@@ -36,9 +36,12 @@ o loop de gamificação — **escrever artigos gera XP**, conforme regra central
     Em tablet e mobile valem as barras compactas (ver adaptações), corrigidas na rodada 3.
   - `INSTAGRAM` abre em nova aba (link externo) **(proposta)**.
 - **Decidido (rodada 3, 2026-08-23):** tocar/clicar no **logo leva à Home** (não é mais
-  proposta). Nas versões compactas existe um **botão de menu no topo, na extremidade
-  esquerda da barra**, contendo **todas as abas** — inclusive `BIBLIOTECA 3D` (que fica
+  proposta). Nas versões compactas existe um **botão de menu no topo, ~~na extremidade
+  esquerda da barra~~**, contendo **todas as abas** — inclusive `BIBLIOTECA 3D` (que fica
   **só no menu**, sem atalho extra) e `INSTAGRAM`.
+  - **Decidido (rodada 5, 2026-08-24):** o botão de menu fica no **topo, à direita** da
+    barra, com o **logo à esquerda** — **supera** a "extremidade esquerda" da rodada 3 e
+    confirma a arte `design/home-mobile.png`.
 - **Decidido (rodada 4, 2026-08-24):** o botão de menu existe **só nas versões compactas**
   (tablet/mobile). No **desktop** as **6 abas** ficam na barra, **sem botão de menu** —
   isto confirma a leitura da rodada 3 e **supera** qualquer menção a botão de menu no
@@ -108,6 +111,9 @@ o loop de gamificação — **escrever artigos gera XP**, conforme regra central
      > `@laser.nick`) são **ilustrativos/superados**. A identidade pública exibe o **nome da
      > pessoa** e o identificador no modelo **`@nomesobrenome`** (derivado do nome, ex.:
      > `@mariasilva`). Normalização (acentos/espaços) e colisão de homônimos: **(proposta)**.
+     > **Decidido (PO, 2026-08-24):** o bloco de autor no rodapé do card é **clicável** e
+     > abre o **perfil público do maker** (spec futura, features 004/005) — alvo
+     > independente do link do card e do coração.
 - **Paginação**: não visível no mockup. Adotar botão `CARREGAR MAIS` centralizado abaixo do
   grid, com scroll infinito como alternativa **(proposta)**.
 - **CTA de publicação**: não visível no mockup. Para usuário logado, botão primário
@@ -137,10 +143,12 @@ apenas desktop.
     inicial": a barra compacta segue a **ordem relativa do desktop**). Isto **corrige** a
     ordem registrada na rodada 2 (`PROJETOS · AULAS · CALENDÁRIO · ARTIGOS`).
     `BIBLIOTECA 3D` e `INSTAGRAM` **saem da barra** e ficam no **menu** — botão **no topo,
-    na extremidade esquerda da barra**, com **todas as abas** (a Biblioteca 3D fica **só
-    no menu**). O **logo leva à Home** (decidido). Item ativo: `ARTIGOS`.
+    ~~na extremidade esquerda da barra~~**, com **todas as abas** (a Biblioteca 3D fica
+    **só no menu**). O **logo leva à Home** (decidido). Item ativo: `ARTIGOS`.
     **Rodada 4 (2026-08-24):** confirmado — o botão de menu é exclusivo das versões
     compactas (tablet/mobile); no desktop ele não existe.
+    **Decidido (rodada 5, 2026-08-24):** o botão de menu fica **à direita** da barra, com
+    o **logo à esquerda** — supera a "extremidade esquerda" da rodada 3.
   - ~~*Nota:* a ordem compacta inverte `AULAS`/`CALENDÁRIO` em relação à desktop — é a resposta
     literal da designer, registrada como decidida.~~ — **superado na rodada 3**: não há
     inversão; a ordem compacta acompanha a do desktop.
@@ -160,14 +168,21 @@ apenas desktop.
 
 Salvo onde marcado como decidido, as decisões desta seção são **(proposta)**.
 
-- **Header**: logo-chip laranja + **botão de menu no topo, na extremidade esquerda da barra**
-  (decidido na rodada 3; **rodada 4** confirma que esse botão existe **só** aqui e no
-  tablet), com **todas as abas**; o **logo leva à Home** (decidido).
+- **Header**: logo-chip laranja + **botão de menu no topo, ~~na extremidade esquerda da
+  barra~~** (decidido na rodada 3; **rodada 4** confirma que esse botão existe **só** aqui e
+  no tablet), com **todas as abas**; o **logo leva à Home** (decidido).
   Avatar/nível acessível pelo item `PERFIL` da barra inferior.
-- **Navegação inferior fixa (bottom navigation)** — **Decidido (rodada 3, 2026-08-23):** 5
+  - **Decidido (rodada 5, 2026-08-24):** o botão de menu fica no **topo, à direita** da
+    barra e o **logo à esquerda** (supera a "extremidade esquerda" da rodada 3; confirma
+    `design/home-mobile.png`). Com o usuário **logado**, o **avatar entra bem pequeno no
+    header mobile**, além do item `PERFIL` da barra inferior.
+- **Navegação inferior ~~fixa~~ (bottom navigation)** — **Decidido (rodada 3, 2026-08-23):** 5
   posições, nesta ordem: `PROJETOS` · `CALENDÁRIO` · `AULAS` · `ARTIGOS` · `PERFIL`
   (ordem corrigida para acompanhar a do desktop — supera a lista da rodada 2,
   `PROJETOS · AULAS · CALENDÁRIO · ARTIGOS · PERFIL`).
+  - **Decidido (rodada 5, 2026-08-24):** a barra inferior **aparece ao rolar a página**
+    (não fica fixa sobre o hero desde o primeiro paint) — ela foi apenas **omitida** da
+    arte da home, mas existe.
   - ~~5 itens (Home, Biblioteca 3D, Projetos, Artigos, Perfil)~~ — proposta **superada** pela
     barra decidida acima.
   - `BIBLIOTECA 3D` e `INSTAGRAM` saem da barra e ficam **no menu** (rodada 3) — a
@@ -193,14 +208,14 @@ Salvo onde marcado como decidido, as decisões desta seção são **(proposta)**
 
 | Componente | Descrição | Reuso |
 |---|---|---|
-| `HeaderPrincipal` | Logo-chip (→ Home), nav em caps, bloco de conta (avatar/nome/nível/chevron); botão de menu **só em tablet/mobile**, no topo à esquerda (rodada 3; confirmado rodada 4 — desktop sem botão de menu) | Todas as páginas |
+| `HeaderPrincipal` | Logo-chip à esquerda (→ Home), nav em caps, bloco de conta (avatar/nome/nível/chevron); botão de menu **só em tablet/mobile**, no topo **à direita** (rodada 5 — supera "à esquerda" da rodada 3; desktop sem botão de menu, rodada 4). No mobile logado, **avatar bem pequeno** no header (rodada 5) | Todas as páginas |
 | `MenuCompleto` | Painel com **todas as abas**, incluindo `BIBLIOTECA 3D` e `INSTAGRAM` (decidido rodada 3) — **apenas versões compactas** (rodada 4) | Todas as páginas (tablet/mobile) |
 | `HeroTeal` | Faixa teal, título display, parágrafo, chevrons `»`, arte isométrica | Projetos, Biblioteca 3D, Aulas |
 | `TabsCategoria` | Tabs caps com item ativo rosa sublinhado; chips roláveis em telas menores **(proposta)** | Projetos, Biblioteca 3D |
 | `CampoBusca` | Input arredondado escuro com ícone de lupa e placeholder | Projetos, Biblioteca 3D |
 | `CardArtigo` | Capa + chip categoria + data + título + resumo + rodapé de autor/curtidas/seta | Exclusivo desta página |
-| `AutorInline` | Avatar pixel + **nome da pessoa** + identificador `@nomesobrenome` + `NÍVEL n` (rodada 4; handles do mockup são ilustrativos) | Todos os cards do site |
-| `BotaoCurtir` | Coração outline rosa + contador | Projetos, Aulas, Biblioteca 3D |
+| `AutorInline` | Avatar pixel + **nome da pessoa** + identificador `@nomesobrenome` + `NÍVEL n` (rodada 4; handles do mockup são ilustrativos). **Decidido (PO, 2026-08-24):** é **clicável** — leva ao **perfil público do maker** (versão enxuta: avatar, nome, skills, conteúdos publicados; spec futura junto das features 004/005), e é alvo independente do link do card | Todos os cards do site |
+| `BotaoCurtir` | Coração outline rosa + contador. **Exige login** — deslogado abre convite de cadastro/login (PO, 2026-08-24) | Projetos, Aulas, Biblioteca 3D |
 | `BotaoCarregarMais` **(proposta)** | Botão outline centralizado abaixo do grid | Listagens |
 | `FooterPilares` | Três pilares com ícones + ornamento isométrico | Todas as páginas |
 
@@ -218,13 +233,13 @@ Salvo onde marcado como decidido, as decisões desta seção são **(proposta)**
 | `categoria` | relação → `categoria_artigo` | sim | Uma por artigo |
 | `data_publicacao` | data | sim | Formato exibido `12 MAI 2024` |
 | `autor` | relação → `usuario` | sim | Alimenta avatar + nome + identificador `@nomesobrenome` + nível (rodada 4) |
-| `anexos` | mídia múltipla | não | `.pdf`, `.zip`, `.stl`, `.3mf`, `.obj`, `.gltf`, `.glb` — para publicações e materiais de apoio **(proposta)** |
+| `anexos` | mídia múltipla | não | `.pdf`, `.zip`, `.stl`, `.3mf`, `.obj`, `.gltf`, `.glb` — para publicações e materiais de apoio **(proposta)**. **Decidido (PO, 2026-08-24):** download **aberto**, sem conta; downloads anônimos são contados |
 | `link_externo` | URL | não | Publicações hospedadas fora do site **(proposta)** |
 | `curtidas` | inteiro (derivado) | sim | Contador exibido no card |
 | `tags` | lista de texto | não | Busca e relacionados **(proposta)** |
-| `status` | enum `rascunho`/`em_revisao`/`publicado` | sim | Moderação da equipe do lab **(proposta)** |
+| `status` | enum `rascunho`/`em_revisao`/`publicado` | sim | **Decidido (PO, 2026-08-24):** fila de revisão da equipe do lab — `rascunho` → `em_revisao` → `publicado`; a transição para `publicado` é feita pela equipe |
 | `tempo_leitura` | inteiro (min, derivado) | não | **(proposta)** |
-| `xp_concedido` | inteiro | não | XP creditado ao autor na publicação **(proposta)** |
+| `xp_concedido` | inteiro | não | **Decidido (PO, 2026-08-24):** 1 XP creditado ao autor **na aprovação** (entrada em `publicado`), com **idempotência por conteúdo** — o campo registra que este artigo já creditou, impedindo novo crédito em republicação |
 
 ### Coleção `categoria_artigo`
 
@@ -246,15 +261,19 @@ mockup é ilustrativo), `avatar_pixel` (imagem), `nivel` (inteiro). Normalizaç�
 
 - **XP por escrever artigo** — regra central de `gamification.md`; XP creditado ao autor quando
   o artigo passa a `publicado`. **Decidido (2026-08-23):** publicar artigo vale **1 XP**
-  (subir de nível custa 5 XP; nível máximo 10).
+  (subir de nível custa 5 XP; nível máximo 10). **Decidido (PO, 2026-08-24):** o crédito
+  acontece **na aprovação pela equipe** (fila de revisão `rascunho` → `em_revisao` →
+  `publicado`), não no envio; **idempotência por conteúdo** (um artigo credita XP uma só
+  vez) e **sem limite diário no v1**.
 - **Skill associada** — artigo pode declarar a skill que exercita (Modelagem 3D, Corte a Laser,
   Impressão 3D, Eletrônica, Design), creditando XP naquela skill **(proposta)**.
 - **Exibição de nível** — cada card exibe `NÍVEL n` do autor ao lado do nome/identificador
   `@nomesobrenome` (rodada 4), reforçando a
   progressão pública (níveis 3, 6 e 7 no mockup — **ilustrativos**; o nível máximo real é
   **10**, decidido 2026-08-23).
-- **Curtidas (♥)** — contador por artigo (`24`, `31`, `18`); curtir exige login **(proposta)**.
-  **Decidido (2026-08-23):** curtidas **não geram XP** para o autor.
+- **Curtidas (♥)** — contador por artigo (`24`, `31`, `18`). **Decidido (PO, 2026-08-24):**
+  **curtir exige login** — não há curtida anônima; o coração, para deslogado, abre convite
+  de cadastro/login. **Decidido (2026-08-23):** curtidas **não geram XP** para o autor.
 - **Missões** — missões de conteúdo (ex.: "publique um artigo sobre seu projeto") podem apontar
   para esta página; o card de artigo publicado marca progresso da missão **(proposta)**.
 - ~~**Ler artigo** — micro-XP por leitura concluída de artigo institucional **(proposta)**,
@@ -269,9 +288,11 @@ mockup é ilustrativo), `avatar_pixel` (imagem), `nivel` (inteiro). Normalizaç�
 
 - Tabs: hover clareia o texto; foco por teclado exibe outline rosa de 2px **(proposta)**.
 - Card: hover eleva o card (sombra dura deslocada) e destaca a borda em rosa; a seta `→` desliza
-  levemente à direita **(proposta)**. Card inteiro é link; coração é alvo independente.
-- Coração: hover preenche em rosa; ao curtir, animação de preenchimento e incremento do contador
-  **(proposta)**.
+  levemente à direita **(proposta)**. Card inteiro é link; coração é alvo independente — e o
+  **bloco de autor também** (**decidido, PO, 2026-08-24**: leva ao perfil público do maker).
+- Coração: **decidido (PO, 2026-08-24):** curtir **exige login** — deslogado, o clique abre o
+  convite de cadastro/login. Logado, hover preenche em rosa; ao curtir, animação de
+  preenchimento e incremento do contador **(proposta)**.
 - Foco visível obrigatório em todos os alvos interativos (WCAG AA) **(proposta)**.
 
 ### Carregando
@@ -297,12 +318,14 @@ mockup é ilustrativo), `avatar_pixel` (imagem), `nivel` (inteiro). Normalizaç�
 
 | Aspecto | Visitante (deslogado) | Maker (logado) |
 |---|---|---|
-| Leitura dos artigos | Livre (conteúdo público, indexável) | Livre |
-| Bloco de conta no header | Botão `CRIAR CONTA` no lugar do avatar | Avatar + **nome da pessoa** (`MAKER_X` é ilustrativo) / `NÍVEL 3` + chevron |
-| Item `PERFIL` (barra inferior mobile) | Abre a **tela de login** — **e-mail + senha** (rodada 4; design definido — ver `login.md`) | Leva a **Minha Conta** (`pages/minha-conta.md`) |
-| Curtir | Clique abre convite para criar conta | Curtida registrada, contador atualiza |
-| `ESCREVER ARTIGO` | Não exibido | Exibido, leva ao editor |
-| XP | Não acumula | Acumula por publicação/missões |
+| Leitura dos artigos | Livre (conteúdo público, indexável) — **decidido (PO, 2026-08-24)** | Livre |
+| Download de anexos (PDF/arquivos) | **Livre, sem conta** — **decidido (PO, 2026-08-24)**; downloads anônimos são contados | Livre |
+| Bloco de conta no header | Botão `CRIAR CONTA` no lugar do avatar | Avatar + **nome da pessoa** (`MAKER_X` é ilustrativo) / `NÍVEL 3` + chevron; no **mobile**, apenas o **avatar bem pequeno** (rodada 5) |
+| Item `PERFIL` (barra inferior mobile) | Abre a **tela de login** — **e-mail + senha** (rodada 4; design definido — ver `login.md`) | Leva a **Minha Conta** (`pages/minha-conta.md`) — cujo card `ARTIGOS` é **"meus artigos"**, os artigos que o próprio maker escreveu (rodada 5), não uma lista de recomendação desta página |
+| Curtir | **Exige login** — o clique no coração abre convite de cadastro/login; **não há curtida anônima** (**decidido, PO, 2026-08-24**) | Curtida registrada, contador atualiza |
+| Autor do card (`AutorInline`) | Clicável → perfil público do maker (**decidido, PO, 2026-08-24**) | Clicável → perfil público do maker |
+| `ESCREVER ARTIGO` | Não exibido | Exibido, leva ao editor; o artigo entra na **fila de revisão** e é publicado pela equipe (**decidido, PO, 2026-08-24**) |
+| XP | Não acumula | Acumula por publicação/missões — o **1 XP do artigo credita na aprovação** (**decidido, PO, 2026-08-24**) |
 
 ## Questões em aberto
 
@@ -311,10 +334,18 @@ mockup é ilustrativo), `avatar_pixel` (imagem), `nivel` (inteiro). Normalizaç�
 2. ~~Quanto XP vale publicar um artigo, e existe XP por leitura ou por curtida recebida?~~
    **Decidido (2026-08-23):** publicar artigo vale **1 XP**; **não** há XP por leitura nem por
    curtida recebida.
-3. Fluxo de moderação: quem aprova artigos antes de `publicado` e com quais critérios?
+3. ~~Fluxo de moderação: quem aprova artigos antes de `publicado` e com quais critérios?~~
+   **Decidido (PO, 2026-08-24):** **fila de revisão** — `rascunho` → `em_revisao` →
+   `publicado` **pela equipe do lab** (fila do admin). O **1 XP credita na aprovação**,
+   não no envio. Anti-farm: **idempotência por conteúdo** (um artigo credita XP uma única
+   vez, mesmo se despublicado e republicado); **sem limite diário no v1**. Os critérios
+   editoriais de aprovação seguem **(proposta)**.
 4. Editor de artigos: rich text no próprio site ou submissão via CMS pela equipe?
 5. Artigos podem referenciar projetos, aulas e modelos 3D (relações cruzadas)? Como exibir?
 6. Ordenação padrão do grid — mais recentes, mais curtidos ou curadoria manual?
 7. A busca cobre corpo do texto e tags, ou apenas título e resumo?
 8. Paginação definitiva: `CARREGAR MAIS`, scroll infinito ou páginas numeradas?
-9. Visitante deslogado pode baixar anexos (PDF/arquivos) sem conta?
+9. ~~Visitante deslogado pode baixar anexos (PDF/arquivos) sem conta?~~
+   **Decidido (PO, 2026-08-24): sim, aberto** — ler artigos e **baixar anexos** não exigem
+   conta (acesso aberto; ver `concept.md` → Requisitos de plataforma). Conta é para
+   **publicar, curtir e pontuar**. Downloads anônimos são **contados**.

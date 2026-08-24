@@ -20,6 +20,19 @@ Um item por seção, com ID sequencial; ao resolver, registrar a data e mover pa
 - **Plano B:** substituir por fontes OFL visualmente próximas (display quadrada/condensada
   do Google Fonts) — decisão com a designer se a licença não se confirmar.
 
+## ISS-002 — Redigir Termos de Uso e Política de Privacidade
+
+- **Status:** ABERTO (2026-08-24 — rodada 5: a designer pediu o checkbox de aceite no
+  formulário do cadastro com "termos básicos normalmente usados nesses casos").
+- **O quê:** redigir termos de uso + política de privacidade básicos, cobrindo LGPD:
+  dados coletados no cadastro (nome, data de nascimento, e-mail, vínculo, escolaridade,
+  curso), finalidade, direitos do titular, exclusão/anonimização (ver correção nº 7 de
+  `tech-stack.md`).
+- **Gate:** antes do lançamento; o checkbox de aceite entra na **feature 004** junto com
+  o formulário.
+- **Nota:** recomendável **validação jurídica institucional (UNESP)** — site
+  institucional tratando dados de alunos; um texto "básico" não dispensa revisão.
+
 ## Resolvidos
 
 *(vazio)*

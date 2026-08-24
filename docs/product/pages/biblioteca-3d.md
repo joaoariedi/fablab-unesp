@@ -8,6 +8,10 @@ visibilidade autoral aos alunos (avatar + nome da pessoa + `@nomesobrenome` + n�
 4) e alimenta o ciclo de gamificação (publicar modelo gera XP; baixar/curtir gera sinal
 social).
 
+> **Decidido (PO, 2026-08-24) — acesso aberto:** explorar, filtrar e **baixar** modelos 3D
+> **não exigem conta**. A conta é para **publicar, curtir e pontuar (XP)**. Downloads
+> anônimos **são contados** na métrica de `downloads`.
+
 ## Fonte de design
 
 - `design/biblioteca-3d.png` — mockup único, **desktop**, tela
@@ -111,12 +115,17 @@ escuro e sombra**:
    claro sobre navy, **sobre o fundo branco em azul navy escuro** (**decidido rodada 2** —
    a inversão de cor de texto está confirmada).
 4. **Rodapé de autoria** — avatar pixel + `@handle` + `NÍVEL n`.
+   > **Decidido (PO, 2026-08-24):** o selo de autoria é **clicável** e leva ao **perfil
+   > público do maker** (versão enxuta: avatar, nome, skills e conteúdos publicados) — spec
+   > futura junto das features 004/005 (ver `concept.md`).
    > **Decidido (rodada 4, 2026-08-24):** a autoria exibe o **nome da pessoa**, e o
    > identificador segue o modelo **`@nomesobrenome`** (derivado do nome, ex.: `@mariasilva`).
    > Os handles dos mockups (`@print.lu`, `@maker_jv`, `@laser.nick`…) são **ilustrativos e
    > superados**. Normalização (acentos/espaços/maiúsculas) e colisão de homônimos seguem
    > **(proposta)**.
-5. **Coluna de ações** (à direita, separada por divisória): botão **download** (ícone de seta
+5. **Coluna de ações** (à direita, separada por divisória): botão **download** — **decidido
+   (PO, 2026-08-24): o download não exige conta**, está liberado para visitante deslogado
+   (acesso aberto) — (ícone de seta
    para baixo em moldura teal, com micro-rótulo ilegível no mockup — texto a definir
    **(proposta)**) e contador de curtidas `♥ n` — rosa no mockup; sobre o fundo branco o
    **número** vai em **azul navy escuro** (decidido rodada 2: nada de rosa em texto pequeno
@@ -170,8 +179,8 @@ Todas as decisões abaixo são **(proposta)** — o mockup mostra apenas desktop
 fundo (**decidido 2026-08-23**: área de conteúdo **branca com texto navy** também em tablet),
 o **conteúdo da barra de navegação**, a **permanência da faixa teal** e o **tratamento dos
 cards** (**decididos na rodada 2, 2026-08-23**); e a **ordem da barra compacta**, o **menu**
-(botão no topo, à esquerda, com todas as abas) e **logo → Home** (**decididos na rodada 3,
-2026-08-23**).
+(botão no topo, ~~à esquerda~~ **à direita** — rodada 5, com todas as abas) e
+**logo → Home** (**decididos na rodada 3, 2026-08-23**).
 
 - **Header**: logo-chip + avatar permanecem. ~~**Decidido (rodada 2, 2026-08-23):** a barra do
   tablet é `PROJETOS · AULAS · CALENDÁRIO · ARTIGOS`~~ — **`BIBLIOTECA 3D` sai da barra**
@@ -182,10 +191,13 @@ cards** (**decididos na rodada 2, 2026-08-23**); e a **ordem da barra compacta**
     > inicial (ordem relativa do desktop) — a barra do tablet é
     > `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS`. A inversão Aulas/Calendário registrada na
     > rodada 2 está **superada**.
-  - > **Decidido (rodada 3, 2026-08-23):** o **botão de menu fica no topo, na extremidade
-    > esquerda da barra**, e contém **todas as abas** — inclusive `BIBLIOTECA 3D` e
-    > `INSTAGRAM`. A **Biblioteca 3D vive só no menu**, sem atalho extra. Tocar no **logo
-    > leva à Home**. O mecanismo do menu deixa de ser **(proposta)**.
+  - > **Decidido (rodada 3, 2026-08-23):** o botão de menu fica no topo,
+    > ~~na extremidade esquerda da barra~~, e contém **todas as abas** — inclusive
+    > `BIBLIOTECA 3D` e `INSTAGRAM`. A **Biblioteca 3D vive só no menu**, sem atalho extra.
+    > Tocar no **logo leva à Home**. O mecanismo do menu deixa de ser **(proposta)**.
+  - > **Decidido (rodada 5, 2026-08-24):** o **botão de menu fica no topo, à DIREITA da
+    > barra**, com o **logo do Fab Lab à esquerda** — supera a "extremidade esquerda" da
+    > rodada 3 e confirma a arte `design/home-mobile.png`.
 - **Sidebar teal (proposta)**: deixa de ser coluna — mas **permanece** como elemento (a faixa
   teal é decidida, rodada 2; só o arranjo compacto é proposta). O título `BIBLIOTECA 3D` +
   descrição viram uma **faixa hero teal horizontal** no topo (composição isométrica reduzida à
@@ -206,12 +218,15 @@ cards** (**decididos na rodada 2, 2026-08-23**); e a **ordem da barra compacta**
 Todas as decisões abaixo são **(proposta)**, exceto: o fundo (**decidido 2026-08-23**: área de
 conteúdo **branca com texto navy** também em mobile), o **conteúdo da barra inferior**, a
 **permanência da faixa teal** e o **tratamento dos cards** (**decididos na rodada 2,
-2026-08-23**); e a **ordem da barra inferior**, o **menu** (botão no topo, à esquerda, com
-todas as abas), **logo → Home** e o **`PERFIL` deslogado abrindo o login** (**decididos na
-rodada 3, 2026-08-23**).
+2026-08-23**); e a **ordem da barra inferior**, o **menu** (botão no topo, ~~à esquerda~~
+**à direita** — rodada 5, com todas as abas), **logo → Home** e o **`PERFIL` deslogado
+abrindo o login** (**decididos na rodada 3, 2026-08-23**); e o **comportamento da barra
+inferior** e o **avatar no header** (**decididos na rodada 5, 2026-08-24**).
 
-- **Header**: logo-chip compacto + avatar; navegação em **barra inferior fixa (bottom
-  navigation)**. ~~**Decidido (rodada 2, 2026-08-23):** a barra inferior tem 5 posições —
+- **Header**: logo-chip compacto (à esquerda) + botão de menu (à direita, rodada 5);
+  navegação em ~~**barra inferior fixa (bottom navigation)**~~ **barra inferior que aparece
+  ao rolar a página** (rodada 5); logado, o **avatar aparece bem pequeno no header**
+  (rodada 5). ~~**Decidido (rodada 2, 2026-08-23):** a barra inferior tem 5 posições —
   `PROJETOS · AULAS · CALENDÁRIO · ARTIGOS · PERFIL`.~~ **`BIBLIOTECA 3D` sai da barra** (junto
   com `INSTAGRAM`) e **esta página fica acessível apenas pelo menu** nesta largura.
   ~~*(A ordem compacta inverte Aulas/Calendário em relação à desktop — é a resposta literal
@@ -220,11 +235,19 @@ rodada 3, 2026-08-23**).
     > página inicial (ordem relativa do desktop) — `PROJETOS · CALENDÁRIO · AULAS ·
     > ARTIGOS · PERFIL`. A nota da rodada 2 sobre inversão Aulas/Calendário está
     > **superada**.
-  - > **Decidido (rodada 3, 2026-08-23):** **botão de menu no topo, na extremidade
-    > esquerda da barra**, com **todas as abas** (inclusive `BIBLIOTECA 3D` e `INSTAGRAM`);
-    > a Biblioteca 3D fica **só no menu**, sem atalho extra. Tocar no **logo leva à Home**
-    > (confirmado, não é mais proposta). `PERFIL` **deslogado abre a tela de login**
-    > (ver `pages/minha-conta.md`).
+  - > **Decidido (rodada 3, 2026-08-23):** botão de menu no topo,
+    > ~~na extremidade esquerda da barra~~, com **todas as abas** (inclusive
+    > `BIBLIOTECA 3D` e `INSTAGRAM`); a Biblioteca 3D fica **só no menu**, sem atalho
+    > extra. Tocar no **logo leva à Home** (confirmado, não é mais proposta). `PERFIL`
+    > **deslogado abre a tela de login** (ver `pages/minha-conta.md`).
+  - > **Decidido (rodada 5, 2026-08-24):** o **botão de menu fica no topo, à DIREITA da
+    > barra**, com o **logo à esquerda** — supera a "extremidade esquerda" da rodada 3 e
+    > confirma a arte `design/home-mobile.png`.
+  - > **Decidido (rodada 5, 2026-08-24):** a **barra inferior aparece ao rolar a página** —
+    > ela foi apenas **omitida** da arte da home; existe, mas **não fica fixa sobre o hero
+    > desde o primeiro paint**.
+  - > **Decidido (rodada 5, 2026-08-24):** com o usuário logado, o **avatar entra bem
+    > pequeno no header mobile** — além do item `PERFIL` da barra inferior.
   - > **Decidido (rodada 4, 2026-08-24):** o login é por **e-mail + senha**; **design da
     > tela de login definido** — reuso do passo 2 do cadastro, trocando o formulário
     > (decisão do PO, 2026-08-24) — ver `login.md`.
@@ -265,12 +288,18 @@ Todos observados no mockup, salvo indicação contrária.
   2026-08-23):** barras compactas na ordem da página inicial — tablet
   `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS`; mobile (barra inferior)
   `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS · PERFIL`.
-- `BotaoMenu` — botão de menu **no topo, na extremidade esquerda da barra**, abrindo
-  **todas as abas** (inclusive `BIBLIOTECA 3D` e `INSTAGRAM`); é o **único** ponto de
-  entrada da Biblioteca 3D em tablet/mobile. Logo → Home. **Decidido (rodada 3,
-  2026-08-23)**. **Decidido (rodada 4, 2026-08-24):** este componente existe **só nas
-  versões compactas** (tablet/mobile) — **no desktop não há botão de menu**, as 6 abas
-  ficam na barra.
+- `BotaoMenu` — botão de menu **no topo, à direita da barra** (com o **logo à esquerda**),
+  abrindo **todas as abas** (inclusive `BIBLIOTECA 3D` e `INSTAGRAM`); é o **único** ponto
+  de entrada da Biblioteca 3D em tablet/mobile. Logo → Home. **Decidido (rodada 3,
+  2026-08-23)**; a posição **à esquerda** registrada então foi **superada pela rodada 5
+  (2026-08-24)**, que fixou o botão **à direita**. **Decidido (rodada 4, 2026-08-24):**
+  este componente existe **só nas versões compactas** (tablet/mobile) — **no desktop não
+  há botão de menu**, as 6 abas ficam na barra.
+- `BarraInferiorMobile` — 5 posições (`PROJETOS · CALENDÁRIO · AULAS · ARTIGOS · PERFIL`);
+  **decidido (rodada 5, 2026-08-24):** **aparece ao rolar a página**, não fica fixa sobre o
+  hero desde o primeiro paint.
+- `AvatarHeaderMobile` — **decidido (rodada 5, 2026-08-24):** avatar do usuário logado
+  **bem pequeno** no header mobile, além do `PERFIL` na barra inferior.
 - `SidebarPagina` (hero teal lateral) — título display, descrição, arte isométrica; a faixa
   teal **permanece** convivendo com o conteúdo branco (**decidido rodada 2**).
 - `ListaCategorias` — item = ícone + rótulo caps + contador; funciona como **tag de tema que
@@ -279,11 +308,16 @@ Todos observados no mockup, salvo indicação contrária.
   **(proposta)**), ícone lupa, placeholder.
 - `SeletorFiltro` (dropdown, 3 instâncias) — rótulo + chevron `⌄`.
 - `CardModelo3D` — número, thumb (fundo navy), título, descrição, `SeloAutor`, `BotaoDownload`,
-  `ContadorCurtidas` (ícone ♥ rosa + número em **azul navy escuro** sobre branco; clicável
-  **(proposta)**); sobre branco, card branco com
+  `ContadorCurtidas` (ícone ♥ rosa + número em **azul navy escuro** sobre branco; **clicável
+  — decidido (PO, 2026-08-24)**: curtir exige login, e o clique deslogado abre o convite de
+  cadastro/login); sobre branco, card branco com
   contorno navy escuro e sombra (**decidido rodada 2**).
+- `BotaoDownload` — **decidido (PO, 2026-08-24):** disponível **também deslogado** (acesso
+  aberto); o download anônimo é contado em `downloads`.
 - `SeloAutor` — avatar pixel + **nome da pessoa** + identificador `@nomesobrenome` +
-  `NÍVEL n` (**decidido rodada 4, 2026-08-24**; os `@handle` dos mockups são ilustrativos).
+  `NÍVEL n` (**decidido rodada 4, 2026-08-24**; os `@handle` dos mockups são ilustrativos);
+  **clicável → perfil público do maker** (versão enxuta — **decidido PO, 2026-08-24**; spec
+  futura com as features 004/005).
 - `Paginacao` — setas, páginas, reticências, última página.
 - `FooterPilares` — três pilares + arte isométrica.
 - `EstadoVazio` / `Skeleton` / `Toast` **(proposta)** — ver Estados e interações.
@@ -308,9 +342,9 @@ Todos observados no mockup, salvo indicação contrária.
 | `autor` | relação → `usuario` (n:1) | sim | fornece avatar, **nome**, identificador `@nomesobrenome` e nível (**rodada 4**) |
 | `nivel_dificuldade` | seleção | sim | alimenta o filtro `Todos os níveis` — escala a definir **(proposta)** |
 | `curtidas` | contador (derivado de `curtida`) | sim | exibido como `♥ n` |
-| `downloads` | contador | não | métrica interna **(proposta)** |
+| `downloads` | contador | não | métrica interna; **conta downloads anônimos** (decidido PO, 2026-08-24) |
 | `publicado_em` | data/hora | sim | alimenta a ordenação `Mais recentes` |
-| `status` | seleção (rascunho/em revisão/publicado) | sim | fluxo de moderação **(proposta)** |
+| `status` | seleção (rascunho/em revisão/publicado) | sim | **fila de revisão da equipe** — decidido (PO, 2026-08-24); o 1 XP credita na **aprovação** |
 | `parametros_impressao` | grupo (material, altura de camada, suporte) | não | **(proposta)** |
 | `licenca` | seleção (ex.: CC BY-SA) | não | **(proposta)** |
 
@@ -340,19 +374,32 @@ obrigatório) · `nivel` (número, derivado do XP) · `skills` (relação n:n) �
 `usuario` (relação, obrigatório) · `conteudo` (relação polimórfica → `modelo3d`/`projeto`/
 `artigo`/`aula`, obrigatório) · `criado_em` (data/hora). Chave única (usuário + conteúdo).
 
+> **Decidido (PO, 2026-08-24):** `usuario` é **sempre obrigatório** — não existe curtida
+> anônima (curtir exige login), e a chave única garante a idempotência da curtida.
+
 ## Ganchos de gamificação
 
 - **Autoria visível**: todo card exibe `avatar pixel + nome da pessoa + @nomesobrenome +
   NÍVEL n` (**decidido rodada 4, 2026-08-24**; no mockup, `@handle` ilustrativo) — o nível
-  vem do XP do autor (`gamification.md`), com **máximo 10**.
+  vem do XP do autor (`gamification.md`), com **máximo 10**. **Decidido (PO, 2026-08-24):**
+  o selo leva ao **perfil público do maker** (versão enxuta) — spec futura com as features
+  004/005.
 - **XP por publicar modelo 3D**: publicar um `modelo3d` aprovado concede **1 XP**
   (**decidido 2026-08-23**) na skill **Modelagem 3D**; se também conta para **Impressão 3D**
   quando houver parâmetros de impressão fica **(proposta)** — a economia é de 1 XP por ação,
-  5 XP por nível.
-- **Curtidas** (`♥ n`): visíveis a todos; curtir exige login **(proposta)**.
+  5 XP por nível. **Decidido (PO, 2026-08-24):** o modelo passa por **fila de revisão da
+  equipe** (rascunho → em revisão → publicado) e o **1 XP credita na aprovação**, nunca no
+  envio. Anti-farm: **idempotência por conteúdo** (um crédito por modelo, mesmo em
+  reaprovações); **sem limite diário no v1**.
+- **Curtidas** (`♥ n`): visíveis a todos (inclusive deslogado, somente leitura).
+  **Decidido (PO, 2026-08-24): curtir exige login** — não há curtida anônima; o `♥` clicado
+  por visitante abre o convite de cadastro/login.
   **Decidido (2026-08-23):** curtidas **não geram XP** para o autor (`gamification.md`,
-  questão 5 resolvida) — servem como reputação/popularidade, não como pontuação. Regras
-  anti-farm gerais seguem em aberto (`gamification.md`, questão 2) **(proposta)**.
+  questão 5 resolvida) — servem como reputação/popularidade, não como pontuação.
+  ~~Regras anti-farm gerais seguem em aberto (`gamification.md`, questão 2)~~ —
+  **resolvidas (PO, 2026-08-24)**: ver a anti-farm em *XP por publicar modelo 3D* acima.
+- **Downloads**: liberados a todos (**decidido PO, 2026-08-24**); o contador `downloads`
+  soma também os **downloads anônimos**. Baixar **não concede XP** a ninguém.
 - **Download como progresso de missão (proposta)**: baixar + enviar foto do resultado avança
   missões como `IMPRESSÃO 3D` ("Modele e imprima um suporte para celular").
 - **Filtro `Todos os níveis`**: interpretado como nível de **dificuldade do modelo**, e não
@@ -396,22 +443,29 @@ obrigatório) · `nivel` (número, derivado do XP) · `skills` (relação n:n) �
   **(proposta)**.
 - Falha no download: toast `Falha no download. Tente novamente.` **(proposta)**.
 
-### Deslogado × logado **(proposta, exceto o header do mockup e a linha `PERFIL`, decidida nas rodadas 3–4)**
+### Deslogado × logado **(proposta, exceto o header do mockup e a linha `PERFIL`, decidida nas rodadas 3–4; a linha `Header mobile`, decidida na rodada 5; e as linhas `Curtir`, `Baixar arquivos`, `Publicar modelo` e `Progresso de missão`, decididas pelo PO em 2026-08-24)**
+
+> **Decidido (PO, 2026-08-24):** vale o **acesso aberto** — navegar, buscar, filtrar e
+> **baixar** são livres; **curtir**, **publicar** e **pontuar (XP)** exigem conta.
 
 | Aspecto | Visitante (deslogado) | Maker (logado) |
 |---|---|---|
 | Header direito | botão `CRIAR CONTA` | avatar + **nome da pessoa** / `NÍVEL n` (no mockup, `MAKER_X` / `NÍVEL 3` — ilustrativo, rodada 4) |
+| Header **mobile** | botão de menu (à direita, rodada 5) | botão de menu + **avatar bem pequeno** no header (**decidido rodada 5, 2026-08-24**), além do `PERFIL` na barra inferior |
 | `PERFIL` da barra inferior (mobile) | **abre a tela de login** — **e-mail + senha** (decidido rodadas 3–4; design do login definido — ver `login.md`) | abre **Minha Conta** |
 | Navegar / buscar / filtrar | liberado | liberado |
 | Ver curtidas | sim (somente leitura) | sim |
-| Curtir | bloqueado → modal "Crie sua conta para curtir" | permitido |
-| Baixar arquivos | **em aberto** (ver `gamification.md`, questão 6) | permitido |
-| Publicar modelo | não | sim |
-| Progresso de missão | não | sim |
+| Curtir | **exige login** (decidido PO, 2026-08-24) → o `♥` abre o convite de cadastro/login; sem curtida anônima | permitido |
+| Baixar arquivos | ~~**em aberto** (ver `gamification.md`, questão 6)~~ **liberado, sem conta** (decidido PO, 2026-08-24) — o download é contado como anônimo | permitido (também contado; sem XP) |
+| Publicar modelo | não — exige conta (decidido PO, 2026-08-24) | sim, via **fila de revisão** da equipe; 1 XP **na aprovação** |
+| Progresso de missão | não — missões visíveis, mas **sem % pessoal** (convite ao login) | sim |
 
 ## Questões em aberto
 
-1. Visitante deslogado pode baixar arquivos sem conta? (espelha `gamification.md`, questão 6)
+1. ~~Visitante deslogado pode baixar arquivos sem conta? (espelha `gamification.md`, questão 6)~~
+   **Decidido (PO, 2026-08-24): sim — tudo aberto.** Baixar modelos 3D **não exige conta**, e
+   os **downloads anônimos são contados**. A conta serve para **publicar, curtir e pontuar
+   (XP)**.
 2. O filtro `Todos os níveis` refere-se à dificuldade do modelo ou ao nível do autor?
 3. Quais valores compõem `Todos os formatos` (STL, 3MF, OBJ, GLTF/GLB, ZIP) e o que acontece
    quando um modelo tem vários arquivos?
@@ -422,7 +476,11 @@ obrigatório) · `nivel` (número, derivado do XP) · `skills` (relação n:n) �
 7. ~~Grafia `MINI LOBO GUÁRÁ` no mockup: corrigir para `MINI LOBO GUARÁ`?~~
    **Decidido (2026-08-23):** sim, usar `MINI LOBO GUARÁ`.
 8. Quantos itens por página em tablet/mobile e paginação vs. rolagem infinita.
-9. Quem valida a publicação de um modelo (moderação) e quais formatos são obrigatórios?
+9. ~~Quem valida a publicação de um modelo (moderação)~~ e quais formatos são obrigatórios?
+   **Decidido (PO, 2026-08-24):** a **equipe do lab**, por **fila de revisão** — rascunho →
+   em revisão → publicado (campo `status`); o **1 XP credita na aprovação**, com
+   idempotência por conteúdo e **sem limite diário no v1**. Quais formatos de
+   `arquivos_modelo` são obrigatórios segue **em aberto**.
 10. Licenciamento dos modelos publicados (atribuição, uso comercial).
 11. ~~A navegação desta página traz `CALENDÁRIO`? O destaque em `AULAS` é hover ou intenção
     de design?~~ **Decidido (2026-08-23):** sim — ordem canônica
@@ -438,9 +496,9 @@ obrigatório) · `nivel` (número, derivado do XP) · `skills` (relação n:n) �
 13. ~~**Descoberta da Biblioteca 3D em mobile/tablet**: com `BIBLIOTECA 3D` fora da barra
     compacta (rodada 2), vale um ponto de entrada extra (bloco na Home, link no hero ou
     atalho no perfil)?~~ **Decidido (rodada 3, 2026-08-23):** **não** — a Biblioteca 3D vive
-    **só dentro do menu** (botão no topo, à esquerda, com todas as abas), **sem atalho
-    extra**. Fica apenas a *nota de acompanhamento*: monitorar se o acervo perde tráfego
-    nessas larguras.
+    **só dentro do menu** (botão no topo, ~~à esquerda~~ **à direita** — rodada 5, com
+    todas as abas), **sem atalho extra**. Fica apenas a *nota de acompanhamento*: monitorar
+    se o acervo perde tráfego nessas larguras.
 14. As **tags de tema** da faixa teal são exatamente a coleção `categoria` (1 por modelo) ou
     uma taxonomia própria n:n administrável pelo CMS? **(proposta)** — relacionado à questão 6.
 15. **Nova (rodada 4):** com o identificador no modelo `@nomesobrenome`, como normalizar

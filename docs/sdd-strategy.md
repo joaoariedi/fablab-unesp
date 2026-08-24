@@ -5,10 +5,10 @@ gates humanos onde o processo exige julgamento.
 
 ## Insumos (já produzidos)
 
-- [concept.md](concept.md) — visão, IA, público, requisitos de plataforma
-- [visual-identity.md](visual-identity.md) — paleta, tipografia, componentes, direção de arte
-- [gamification.md](gamification.md) — regras do jogo + questões em aberto
-- `pages/*.md` — especificação por página (desktop fiel ao mockup + adaptações tablet/mobile)
+- [concept.md](product/concept.md) — visão, IA, público, requisitos de plataforma
+- [visual-identity.md](product/visual-identity.md) — paleta, tipografia, componentes, direção de arte
+- [gamification.md](product/gamification.md) — regras do jogo + questões em aberto
+- `product/pages/*.md` — especificação por página (desktop fiel ao mockup + adaptações tablet/mobile)
 - [tech-stack.md](tech-stack.md) — decisão de arquitetura e serviços
 
 ## Passo 0 — Fundação do repositório (uma vez)
@@ -35,12 +35,12 @@ Uma feature = um ciclo SDD completo. Ordem proposta (dependências entre parênt
 | # | Feature | Escopo | Fonte |
 |---|---|---|---|
 | 000 | `fundacao-multi-tenant` (paralela à 001) | Plugin multi-tenant, coleção `organizacoes`, papéis (master/org admin/staff/maker), seed CITe, middleware host→org com fallback de org única, choke point `getTenantScopedPayload`, validator de mesmo-tenant, harness de vazamento no CI, fluxo de convite | tech-stack.md → Multi-tenancy |
-| 001 | `design-system-shell` | Tokens (cores, tipografia, shapes) como **CSS custom properties — zero hex literal em componente** (porta do co-branding), componentes base (card, botão, chip, barra de progresso, pips), header/footer responsivos, grid | visual-identity.md, pages/* |
-| 002 | `cms-conteudo` | Coleções (projetos, modelos 3D, aulas, artigos, eventos, usuários), upload multi-formato para storage S3-compatível, admin/moderação | pages/*/Modelo de conteúdo |
-| 003 | `paginas-publicas` (001, 002) | Home v1, Projetos, Artigos, Aulas, Biblioteca 3D (com preview 3D), Calendário | pages/*.md |
-| 004 | `contas-avatar` (001, 002) | Cadastro em 2 passos (avatar → dados pessoais), login, Minha Conta (avatar + skills), construtor de avatar pixel art, LGPD | pages/onboarding.md, pages/minha-conta.md, pages/login.md |
-| 005 | `gamificacao` (004) | Ledger de XP, skills/níveis, missões + validação, ranking, nível do lab, recompensas cosméticas | gamification.md |
-| 006 | `home-gamificada` (003, 005) | Home logada com missões em destaque, ranking, nível do lab; hero v2 (mapa pixel art) se aprovado | pages/home.md |
+| 001 | `design-system-shell` | Tokens (cores, tipografia, shapes) como **CSS custom properties — zero hex literal em componente** (porta do co-branding), componentes base (card, botão, chip, barra de progresso, pips), header/footer responsivos, grid | product/visual-identity.md, product/pages/* |
+| 002 | `cms-conteudo` | Coleções (projetos, modelos 3D, aulas, artigos, eventos, usuários), upload multi-formato para storage S3-compatível, admin/moderação | product/pages/* → Modelo de conteúdo |
+| 003 | `paginas-publicas` (001, 002) | Home v1, Projetos, Artigos, Aulas, Biblioteca 3D (com preview 3D), Calendário | product/pages/*.md |
+| 004 | `contas-avatar` (001, 002) | Cadastro em 2 passos (avatar → dados pessoais), login, Minha Conta (avatar + skills), construtor de avatar pixel art, LGPD | product/pages/onboarding.md, product/pages/minha-conta.md, product/pages/login.md |
+| 005 | `gamificacao` (004) | Ledger de XP, skills/níveis, **catálogo de skills administrável por org** (add/remove sem alterar XP), missões + validação, ranking, nível do lab | product/gamification.md |
+| 006 | `home-gamificada` (003, 005) | Home logada com missões em destaque, ranking, nível do lab; hero v2 (mapa pixel art) se aprovado | product/pages/home.md |
 | 007 | `onboarding-de-orgs` — **gatilho: convênio assinado + 2º lab real** | Wizard de organização, tema/co-branding, quotas de storage, TLS multi-host | tech-stack.md → Multi-tenancy |
 
 Fatias pequenas mantêm cada espec/plan/tasks dentro de uma janela de contexto saudável
@@ -55,7 +55,7 @@ Fatias pequenas mantêm cada espec/plan/tasks dentro de uma janela de contexto s
 ```
 
 - **`/speckit.brainstorm`** — usar primeiro nas features 005 e 004: as "Questões em aberto"
-  de gamification.md e pages/onboarding.md são exatamente a pauta socrática (tabela de XP,
+  de `product/gamification.md` e `product/pages/onboarding.md` são exatamente a pauta socrática (tabela de XP,
   moderação, passos 2–3 do cadastro, check-in presencial). Para features mecânicas (001),
   pode-se pular direto para specify.
 - **`/speckit.specify`** — apontar explicitamente os arquivos de `product/` como fonte;
@@ -80,7 +80,7 @@ Fatias pequenas mantêm cada espec/plan/tasks dentro de uma janela de contexto s
 
 - **Design só desktop:** as adaptações tablet/mobile seguem como propostas — validar com
   a designer antes da feature 001 virar spec. Exceção já **cumprida (2026-08-24)**: o hero
-  da home tem **arte mobile dedicada** entregue pela designer (`design/home-mobile.png`).
+  da home tem **arte mobile dedicada** entregue pela designer (`product/design/home-mobile.png`).
 - **Fontes:** arquivos recebidos em `product/fonts/` (2026-08-23): Aldo the Apache,
   SquareFont (Bou Fonts) e Comfortaa variável (OFL). A confirmação das licenças de Aldo
   the Apache e SquareFont está **em espera** por decisão do PO (2026-08-24) — rastreada
