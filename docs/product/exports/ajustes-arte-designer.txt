@@ -1,0 +1,57 @@
+AJUSTES DE ARTE — CHECKLIST PARA A DESIGNER
+Não há perguntas em aberto. Este arquivo é a lista consolidada dos
+redesenhos e ajustes que ficaram combinados nas suas respostas
+(rodadas 4–5) — sem pressa; a implementação segue as especificações
+e as artes atualizadas servem de conferência visual.
+
+====================================================================
+AJUSTES DE ARTE COMBINADOS (das suas respostas das rodadas 4–5)
+====================================================================
+
+TELA MINHA CONTA
+[ ] Cards de skill: barra com 10 segmentos e estado inicial vazio
+    (nível 0); remover o checkbox (sobra do desenho antigo).
+[ ] Chip "Público": trocar o verde pelo teal da paleta (#74B7A5).
+[ ] Card ARTIGOS: ajustar descrição/link para "meus artigos"
+    (a página mostra as "minhas coisas" — o conteúdo de recomendação
+    do desenho era ilustrativo).
+
+TELA CRIAR CONTA (PASSO 2)
+[ ] Botão "CRIAR CONTA →" no rosa canônico (rosa preenchido, texto
+    navy) — o navy atual sai.
+[ ] Indicador de passos "1 2" entra na tela.
+[ ] Checkbox de aceite dos termos com link (abre em nova aba) —
+    estamos redigindo os termos básicos.
+[ ] Botão "← Voltar" para retornar ao passo 1.
+
+TELA CRIAR AVATAR (PASSO 1)
+[ ] Rótulos do seletor de base: "F" e "M" (no lugar de XX/XY).
+[ ] Contador do nome: 0/60 (no lugar de 0/20).
+[ ] Rosto: 4 opções de cada (olhos, nariz, boca), sem o "Ver mais".
+[ ] Remover os escritos de quantidade ("20 opções" etc.) — já
+    combinado; só lembrando.
+
+HOME MOBILE
+[ ] Nada a redesenhar: menu à direita confirmado; a barra inferior
+    aparece ao rolar (só foi omitida do desenho); quando mexer no
+    header, o avatar do usuário logado entra bem pequeno.
+
+TELA DE LOGIN (reuso do passo 2)
+[ ] Card centralizado, sem a coluna do avatar; campos E-MAIL e SENHA
+    (com olho); botão rosa "ENTRAR →"; link "Esqueci minha senha";
+    link "Não tem uma conta? Criar conta".
+
+====================================================================
+COPY DO LOGIN — JÁ DEFINIDA (só desenhar)
+====================================================================
+- Título: ENTRAR | Botão: ENTRAR → | Subtítulo:
+  "Bem-vindo de volta, maker!"
+
+====================================================================
+NOTAS COSMÉTICAS — DECIDIDAS (sem pressa, só quando mexer nas artes)
+====================================================================
+- Quadro no gradil: vale a grafia IMPERATIVA
+  ("CRIE./EXPERIMENTE./TRANSFORME.", como na arte mobile) — ajustar a
+  arte desktop quando for retocada.
+- Personagem do banco (celular vs tablet): divergência aceita — não
+  precisa retocar.

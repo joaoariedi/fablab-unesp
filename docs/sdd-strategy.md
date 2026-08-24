@@ -81,6 +81,10 @@ Fatias pequenas mantêm cada espec/plan/tasks dentro de uma janela de contexto s
 - **Design só desktop:** as adaptações tablet/mobile seguem como propostas — validar com
   a designer antes da feature 001 virar spec. Exceção já **cumprida (2026-08-24)**: o hero
   da home tem **arte mobile dedicada** entregue pela designer (`product/design/home-mobile.png`).
+  **PO (2026-08-24):** os **redesenhos combinados** com a designer (pips 10, botões rosa,
+  F/M, checkbox de termos etc.) **não bloqueiam a implementação** — as specs escritas já
+  registram as decisões finais; as artes atualizadas chegam depois como conferência
+  visual. **Features 000/001 podem começar imediatamente.**
 - **Fontes:** arquivos recebidos em `product/fonts/` (2026-08-23): Aldo the Apache,
   SquareFont (Bou Fonts) e Comfortaa variável (OFL). A confirmação das licenças de Aldo
   the Apache e SquareFont está **em espera** por decisão do PO (2026-08-24) — rastreada

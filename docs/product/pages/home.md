@@ -85,9 +85,13 @@ deslogado** — só o **progresso pessoal** das missões (e curtir) exige conta.
   `DEPÓSITO`.
 - Cenário: muro com bicicletas, jardins/canteiros, varal de lâmpadas, personagens pixel art
   (grupo conversando, pessoa soldando eletrônica, pessoa no banco com celular), lixeira de
-  reciclagem, portão rosa, poste.
+  reciclagem, portão rosa, poste. *(PO, 2026-08-24: a divergência celular/tablet do
+  personagem do banco entre as artes desktop/mobile é **aceita** — sem retoque.)*
 - Placas: letreiro "FAB LAB CITE BAURU" no muro, marca no piso "FAB LAB CITE BAURU" com cubo,
-  e placa tríplice `CRIAR` / `EXPERIMENTAR` / `TRANSFORMAR`.
+  e placa tríplice `CRIAR` / `EXPERIMENTAR` / `TRANSFORMAR`. **Decidido (PO,
+  2026-08-24):** a grafia unificada do quadro é a **imperativa**
+  (`CRIE.` / `EXPERIMENTE.` / `TRANSFORME.`, como na arte mobile) — aplicar quando a
+  arte desktop for retocada; até lá, a divergência é registro.
 - Marca-d'água isométrica rosa/teal no canto superior direito.
 - **(proposta)** As estações são hotspots clicáveis → página da estação/skill correspondente.
 

@@ -28,7 +28,7 @@ Herdada do passo 2 (`criar-conta-passo-2.jpg`), com o formulário trocado:
   coluna** (o preview do avatar do passo 2 não se aplica ao visitante).
 - **Card central** (mesmo estilo do passo 2):
   - Título display navy — **decidido (PO, 2026-08-24): `ENTRAR`**; botão `ENTRAR →`.
-    Subtítulo **(proposta)**.
+    Subtítulo — **decidido (PO, 2026-08-24):** `Bem-vindo de volta, maker!`
   - **`EMAIL`** — ícone de envelope — `Digite seu e-mail`.
   - **`SENHA`** — ícone de cadeado — placeholder **(proposta)**: `Digite sua senha` —
     com **ícone de olho** (mostrar/ocultar), herdado do passo 2.
@@ -84,7 +84,8 @@ Nenhum — login não concede XP (só as ações da economia pontuam, decidido 2
 ## Questões em aberto
 
 1. ~~Copy do título/botão?~~ **Decidido (PO, 2026-08-24): `ENTRAR` / `ENTRAR →`**
-   (resolve a ambiguidade da rodada 5). Subtítulo segue **(proposta)**.
+   (resolve a ambiguidade da rodada 5); subtítulo **`Bem-vindo de volta, maker!`**
+   (PO, 2026-08-24). Fechada.
 2. ~~Destino pós-login?~~ **Decidido (PO, 2026-08-24):** retorna à **página de
    origem**; acesso direto ao login leva à **Minha Conta**.
 3. ~~O que ocupa o trilho esquerdo?~~ **Decidido (rodada 5): card centralizado, sem
