@@ -152,14 +152,23 @@ Três pilares com ícone outline, separados por divisórias verticais:
 Todas as decisões abaixo são **(proposta)** — o mockup mostra apenas desktop —, exceto: o
 fundo (**decidido 2026-08-23**: área de conteúdo **branca com texto navy** também em tablet),
 o **conteúdo da barra de navegação**, a **permanência da faixa teal** e o **tratamento dos
-cards** (**decididos na rodada 2, 2026-08-23**).
+cards** (**decididos na rodada 2, 2026-08-23**); e a **ordem da barra compacta**, o **menu**
+(botão no topo, à esquerda, com todas as abas) e **logo → Home** (**decididos na rodada 3,
+2026-08-23**).
 
-- **Header**: logo-chip + avatar permanecem. **Decidido (rodada 2, 2026-08-23):** a barra do
-  tablet é `PROJETOS · AULAS · CALENDÁRIO · ARTIGOS` — **`BIBLIOTECA 3D` sai da barra**
+- **Header**: logo-chip + avatar permanecem. ~~**Decidido (rodada 2, 2026-08-23):** a barra do
+  tablet é `PROJETOS · AULAS · CALENDÁRIO · ARTIGOS`~~ — **`BIBLIOTECA 3D` sai da barra**
   (junto com `INSTAGRAM`), de modo que **esta própria página não tem item de menu nesta
-  largura**: chega-se a ela pelo menu/drawer. Não há item ativo na barra quando a Biblioteca
-  3D está aberta **(proposta)** de como sinalizar isso. O mecanismo que dá acesso a
-  Biblioteca 3D e Instagram (hambúrguer → drawer lateral) segue **(proposta)**.
+  largura**: chega-se a ela pelo **menu**. Não há item ativo na barra quando a Biblioteca
+  3D está aberta **(proposta)** de como sinalizar isso.
+  - > **Decidido (rodada 3, 2026-08-23):** a ordem das abas compactas segue a da página
+    > inicial (ordem relativa do desktop) — a barra do tablet é
+    > `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS`. A inversão Aulas/Calendário registrada na
+    > rodada 2 está **superada**.
+  - > **Decidido (rodada 3, 2026-08-23):** o **botão de menu fica no topo, na extremidade
+    > esquerda da barra**, e contém **todas as abas** — inclusive `BIBLIOTECA 3D` e
+    > `INSTAGRAM`. A **Biblioteca 3D vive só no menu**, sem atalho extra. Tocar no **logo
+    > leva à Home**. O mecanismo do menu deixa de ser **(proposta)**.
 - **Sidebar teal (proposta)**: deixa de ser coluna — mas **permanece** como elemento (a faixa
   teal é decidida, rodada 2; só o arranjo compacto é proposta). O título `BIBLIOTECA 3D` +
   descrição viram uma **faixa hero teal horizontal** no topo (composição isométrica reduzida à
@@ -180,15 +189,25 @@ cards** (**decididos na rodada 2, 2026-08-23**).
 Todas as decisões abaixo são **(proposta)**, exceto: o fundo (**decidido 2026-08-23**: área de
 conteúdo **branca com texto navy** também em mobile), o **conteúdo da barra inferior**, a
 **permanência da faixa teal** e o **tratamento dos cards** (**decididos na rodada 2,
-2026-08-23**).
+2026-08-23**); e a **ordem da barra inferior**, o **menu** (botão no topo, à esquerda, com
+todas as abas), **logo → Home** e o **`PERFIL` deslogado abrindo o login** (**decididos na
+rodada 3, 2026-08-23**).
 
 - **Header**: logo-chip compacto + avatar; navegação em **barra inferior fixa (bottom
-  navigation)**. **Decidido (rodada 2, 2026-08-23):** a barra inferior tem 5 posições —
-  `PROJETOS · AULAS · CALENDÁRIO · ARTIGOS · PERFIL`. **`BIBLIOTECA 3D` sai da barra** (junto
-  com `INSTAGRAM`) e **esta página fica acessível apenas pelo menu/drawer** nesta largura;
-  Home pelo logo e o mecanismo exato do menu seguem **(proposta)**. *(A ordem compacta inverte
-  Aulas/Calendário em relação à desktop — é a resposta literal da designer, registrada como
-  decidida.)*
+  navigation)**. ~~**Decidido (rodada 2, 2026-08-23):** a barra inferior tem 5 posições —
+  `PROJETOS · AULAS · CALENDÁRIO · ARTIGOS · PERFIL`.~~ **`BIBLIOTECA 3D` sai da barra** (junto
+  com `INSTAGRAM`) e **esta página fica acessível apenas pelo menu** nesta largura.
+  ~~*(A ordem compacta inverte Aulas/Calendário em relação à desktop — é a resposta literal
+  da designer, registrada como decidida.)*~~
+  - > **Decidido (rodada 3, 2026-08-23):** a barra inferior tem 5 posições, na ordem da
+    > página inicial (ordem relativa do desktop) — `PROJETOS · CALENDÁRIO · AULAS ·
+    > ARTIGOS · PERFIL`. A nota da rodada 2 sobre inversão Aulas/Calendário está
+    > **superada**.
+  - > **Decidido (rodada 3, 2026-08-23):** **botão de menu no topo, na extremidade
+    > esquerda da barra**, com **todas as abas** (inclusive `BIBLIOTECA 3D` e `INSTAGRAM`);
+    > a Biblioteca 3D fica **só no menu**, sem atalho extra. Tocar no **logo leva à Home**
+    > (confirmado, não é mais proposta). `PERFIL` **deslogado abre a tela de login**
+    > (ver `pages/minha-conta.md`).
 - **Hero (proposta de arranjo)**: faixa teal compacta com `BIBLIOTECA 3D` + descrição sobre o
   conteúdo branco — a **permanência da faixa teal é decidida (rodada 2)**, só o formato
   compacto é proposta; ilustração isométrica oculta abaixo de 390px.
@@ -222,7 +241,14 @@ Todos observados no mockup, salvo indicação contrária.
 - `HeaderPrincipal` — logo-chip **laranja canônico** (decidido rodada 2), nav caps na ordem
   canônica desktop (`BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS`,
   itens alinhados), item ativo rosa sublinhado, bloco de conta. Em **tablet/mobile** a barra
-  compacta **não inclui `BIBLIOTECA 3D`** (decidido rodada 2).
+  compacta **não inclui `BIBLIOTECA 3D`** (decidido rodada 2). **Decidido (rodada 3,
+  2026-08-23):** barras compactas na ordem da página inicial — tablet
+  `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS`; mobile (barra inferior)
+  `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS · PERFIL`.
+- `BotaoMenu` — botão de menu **no topo, na extremidade esquerda da barra**, abrindo
+  **todas as abas** (inclusive `BIBLIOTECA 3D` e `INSTAGRAM`); é o **único** ponto de
+  entrada da Biblioteca 3D em tablet/mobile. Logo → Home. **Decidido (rodada 3,
+  2026-08-23)**.
 - `SidebarPagina` (hero teal lateral) — título display, descrição, arte isométrica; a faixa
   teal **permanece** convivendo com o conteúdo branco (**decidido rodada 2**).
 - `ListaCategorias` — item = ícone + rótulo caps + contador; funciona como **tag de tema que
@@ -340,11 +366,12 @@ derivado do XP) · `skills` (relação n:n) — definida em `pages/onboarding.md
   **(proposta)**.
 - Falha no download: toast `Falha no download. Tente novamente.` **(proposta)**.
 
-### Deslogado × logado **(proposta, exceto o header do mockup)**
+### Deslogado × logado **(proposta, exceto o header do mockup e a linha `PERFIL`, decidida na rodada 3)**
 
 | Aspecto | Visitante (deslogado) | Maker (logado) |
 |---|---|---|
 | Header direito | botão `CRIAR CONTA` | avatar + `MAKER_X` / `NÍVEL 3` (mockup) |
+| `PERFIL` da barra inferior (mobile) | **abre a tela de login** (decidido rodada 3) | abre **Minha Conta** |
 | Navegar / buscar / filtrar | liberado | liberado |
 | Ver curtidas | sim (somente leitura) | sim |
 | Curtir | bloqueado → modal "Crie sua conta para curtir" | permitido |
@@ -378,9 +405,11 @@ derivado do XP) · `skills` (relação n:n) — definida em `pages/onboarding.md
     azul navy escuro e sombra**, com as **thumbnails 3D mantendo fundo navy**; texto sobre
     branco em **azul navy escuro**. Continua em aberto apenas a versão clara de **busca e
     filtros**.
-13. **Descoberta da Biblioteca 3D em mobile/tablet** *(nota de acompanhamento — a decisão da
-    designer está tomada)*: com `BIBLIOTECA 3D` fora da barra compacta (rodada 2), a página
-    fica acessível só pelo menu/drawer. Acompanhar se o acervo perde tráfego nessas larguras e
-    se vale um ponto de entrada extra (bloco na Home, link no hero ou atalho no perfil).
+13. ~~**Descoberta da Biblioteca 3D em mobile/tablet**: com `BIBLIOTECA 3D` fora da barra
+    compacta (rodada 2), vale um ponto de entrada extra (bloco na Home, link no hero ou
+    atalho no perfil)?~~ **Decidido (rodada 3, 2026-08-23):** **não** — a Biblioteca 3D vive
+    **só dentro do menu** (botão no topo, à esquerda, com todas as abas), **sem atalho
+    extra**. Fica apenas a *nota de acompanhamento*: monitorar se o acervo perde tráfego
+    nessas larguras.
 14. As **tags de tema** da faixa teal são exatamente a coleção `categoria` (1 por modelo) ou
     uma taxonomia própria n:n administrável pelo CMS? **(proposta)** — relacionado à questão 6.

@@ -31,28 +31,32 @@ um jogo. Ao **assistir aulas**, **postar projetos** e **escrever artigos**, ganh
 - Pixel art em base isométrica com **4 direções de rotação** (botão ⟳ no preview).
 - **Catálogo do novo mockup** (supera a resposta genérica "6 tons / 10 itens por aba" e o
   layout de abas do mockup antigo — agora é uma tela única com painéis simultâneos):
-  - **Base do corpo `XX OU XY`** (2 opções) — no lugar dos 4 tipos de corpo e do slider
-    de altura, removidos;
+  - **Base do corpo `F` ou `M`** (rodada 3: rótulos trocados — o mockup mostra
+    `XX OU XY`, superado). **Apenas a parte de cima varia por base** (`F` com peitos,
+    `M` sem); os demais slots são únicos;
   - **Tons de pele: 20 opções**; **Tons de cabelo: 10 opções** (cor separada do corte);
   - **Cabelo: 30 opções** de corte;
-  - **Rosto**: `OLHOS`, `NARIZ` e `BOCA` escolhidos separadamente (cada fileira tem
-    `Ver mais` — totais a confirmar);
+  - **Rosto**: `OLHOS`, `NARIZ` e `BOCA` — **4 opções de cada, 12 no total** (rodada 3);
   - **Roupas** em 3 slots: `PARTE DE CIMA` (10), `PARTE DE BAIXO` (10), `SAPATOS` (10);
   - **Acessórios**: `ÓCULOS` (5) e `CHAPÉUS` (5).
-- **`NOME DO AVATAR`** próprio, até **20 caracteres** (relação com o `@handle` em aberto).
+  - **Rodada 3:** os **escritos de quantidade** da interface ("20 opções", "(10 opções)",
+    "30 opções") **saem da UI** — mantém-se o desenho original; os números seguem valendo
+    como tamanho de catálogo no CMS.
+- **`NOME DO AVATAR`** (até 20 caracteres) — **decidido na rodada 3: é o nome da pessoa**
+  informado no cadastro (mesmo valor). Como convive com o `@handle` exibido nos cards
+  segue em aberto.
 - Combinação livre entre slots: "As opções podem ser combinadas livremente. Solte sua
   criatividade!"
 - **Somente itens fixos por enquanto** — sem cosméticos de recompensa; a mecânica de
   desbloqueio fica para uma versão futura.
 - Cards, ranking e header usam **o mesmo rosto do boneco** como miniatura.
 - Produção dos sprites (roupas, cabelos etc.): **a própria designer**.
-- A **escolha das skills iniciais saiu desta tela** no novo mockup — em qual passo ela
-  acontece está em aberto (`pages/onboarding.md`, questão 10).
+- **Rodada 3:** não há escolha de skills em nenhum passo do cadastro — ver a seção
+  Skills e [pages/minha-conta.md](pages/minha-conta.md).
 
-## Skills
+## Skills — atualizado na rodada 3 (2026-08-23)
 
-Cinco skills iniciais escolhidas no cadastro ("Escolha suas skills iniciais — você poderá
-evoluir todas com o tempo!"):
+As cinco skills:
 
 1. **Modelagem 3D**
 2. **Corte a Laser**
@@ -60,9 +64,17 @@ evoluir todas com o tempo!"):
 4. **Eletrônica**
 5. **Design**
 
-Cada skill tem nível próprio (1 a **10**), exibido com barra segmentada em pips.
-**(proposta)** Bordado Digital e Serigrafia aparecem como categorias de missão/conteúdo e
-podem virar skills futuras.
+- **Não há escolha de skills no cadastro** (decidido na rodada 3 — supera o bloco
+  "Escolha suas skills iniciais" do mockup antigo): todo maker evolui as skills **pelo
+  jogo** — publicar modelos 3D, assistir aulas, publicar projetos — 1 ponto por tarefa
+  (economia acima).
+- A **visualização** das skills fica em **Minha Conta**: miniatura do avatar com as
+  skills logo abaixo (ver [pages/minha-conta.md](pages/minha-conta.md)).
+- Cada skill tem nível próprio (1 a **10**), exibido com barra segmentada em pips.
+  Nível inicial de cada skill: **(proposta)** nível 1, como no mockup antigo — confirmar
+  0 × 1 com a equipe.
+- **(proposta)** Bordado Digital e Serigrafia aparecem como categorias de missão/conteúdo
+  e podem virar skills futuras.
 
 ## Nível do Lab e Ranking
 
@@ -103,7 +115,9 @@ lab (anexar foto/arquivo do resultado).
 1. ~~Tabela de XP por ação e curva de níveis (individual e do lab).~~
    **Decidido (2026-08-23):** 1 XP por ação; 5 XP por nível; nível máximo 10.
 2. Quem valida missões e publicações (fluxo de moderação) e regras anti-farm.
-3. Passos 2 e 3 do cadastro (dados pessoais? vínculo UNESP? confirmação?).
+3. ~~Passos 2 e 3 do cadastro (dados pessoais? vínculo UNESP? confirmação?).~~
+   **Decidido (rodada 3, 2026-08-23):** cadastro em **2 passos** — avatar → dados
+   pessoais (nome, data de nascimento, e-mail, vínculo UNESP, escolaridade, curso).
 4. XP por atividades presenciais (check-in via calendário? QR code no lab?).
 5. ~~Curtidas geram XP para o autor? Limites?~~ **Decidido (2026-08-23):** não geram XP.
 6. Visitante não logado pode baixar modelos/assistir aulas sem conta?

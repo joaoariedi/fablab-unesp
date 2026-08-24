@@ -16,7 +16,8 @@ uma **skill** e uma **máquina**, e é o candidato natural para conceder **XP po
 > **Decidido (2026-08-23):** a *existência da seção no menu* deixou de ser proposta —
 > `CALENDÁRIO` está **confirmado** na navegação canônica de todas as páginas, na ordem
 > `BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS` (desktop; nas
-> versões compactas vale a barra decidida na rodada 2 — ver Adaptação tablet/mobile). O que
+> versões compactas vale a barra decidida nas rodadas 2–3, com a **ordem corrigida na
+> rodada 3** — ver Adaptação tablet/mobile). O que
 > segue como proposta é apenas o **conteúdo/layout** desta página, ainda sem mockup dedicado.
 
 ## Fonte de design
@@ -50,6 +51,8 @@ Toda a estrutura abaixo é **(proposta)**, derivada dos padrões das demais tela
   - **Decidido (rodada 2, 2026-08-23):** o chip canônico do header é a versão **laranja**,
     com o cubo isométrico **entre** `FAB` e `LAB` (como em `design/avatar-create.png`). O
     chip rosa do mockup do mapa fica como **registro de mockup**, não é o header oficial.
+  - **Decidido (rodada 3, 2026-08-23):** tocar no **logo leva à Home** (deixa de ser
+    proposta) — vale em todos os tamanhos de tela.
 - Navegação canônica em caps display (v2 do mockup do mapa) — **confirmada pela designer em
   2026-08-23**, nesta ordem e com todos os itens **alinhados**:
   `BIBLIOTECA 3D` · `PROJETOS` · `CALENDÁRIO` · `AULAS` · `INSTAGRAM` · `ARTIGOS`
@@ -141,11 +144,17 @@ Todas **(proposta)**.
 
 - **Header**: ~~nav colapsa em hambúrguer quando os 6 itens não couberem~~; bloco de conta
   reduz a avatar + `NÍVEL 3`.
-  - **Decidido (rodada 2, 2026-08-23):** a barra do tablet mostra 4 itens, nesta ordem —
-    `PROJETOS` · `AULAS` · `CALENDÁRIO` · `ARTIGOS`, com `CALENDÁRIO` ativo em rosa.
-    `BIBLIOTECA 3D` e `INSTAGRAM` **saem da barra** e ficam acessíveis por menu/drawer
-    **(proposta)**; Home pelo logo **(proposta)**. A ordem compacta inverte
-    Aulas/Calendário em relação à desktop — é a resposta literal da designer e fica assim.
+  - **Decidido (rodada 2, 2026-08-23):** a barra do tablet mostra 4 itens, com
+    `CALENDÁRIO` ativo em rosa. `BIBLIOTECA 3D` e `INSTAGRAM` **saem da barra**.
+    ~~Ordem `PROJETOS · AULAS · CALENDÁRIO · ARTIGOS`; a ordem compacta inverte
+    Aulas/Calendário em relação à desktop — é a resposta literal da designer e fica
+    assim.~~ **Superado na rodada 3.**
+  - **Decidido (rodada 3, 2026-08-23):** a ordem segue a do desktop ("mantenha a ordem das
+    abas da página inicial") — barra do tablet:
+    `PROJETOS` · `CALENDÁRIO` · `AULAS` · `ARTIGOS`. `BIBLIOTECA 3D` e `INSTAGRAM` ficam
+    **dentro do menu**, cujo botão fica **no topo, na extremidade esquerda da barra**, e
+    que contém **todas as abas** (a Biblioteca 3D fica **só no menu**, sem atalho extra).
+    Home pelo logo (decidido).
   - Logo-chip **laranja** canônico (ver Header desktop).
 - **Hero**: composição isométrica reduz ~40%; parágrafo em 2 linhas.
 - **Barra de controle**: quebra em duas linhas — linha 1: `MÊS`/`LISTA` + navegação de mês +
@@ -164,10 +173,14 @@ Todas **(proposta)**.
 - **Header**: logo-chip **laranja** + avatar; navegação em **barra inferior fixa**.
   ~~(Home · Biblioteca · Projetos · Calendário · Perfil), item ativo em rosa;
   `Artigos`/`Instagram`/`Aulas` em drawer "Mais".~~
-  - **Decidido (rodada 2, 2026-08-23):** a barra inferior tem 5 posições, nesta ordem —
-    `PROJETOS` · `AULAS` · `CALENDÁRIO` · `ARTIGOS` · `PERFIL`, com `CALENDÁRIO` ativo em
-    rosa. `BIBLIOTECA 3D` e `INSTAGRAM` **saem da barra** e ficam acessíveis por
-    menu/drawer **(proposta)**; Home pelo logo **(proposta)**.
+  - **Decidido (rodada 2, 2026-08-23):** a barra inferior tem 5 posições, com `CALENDÁRIO`
+    ativo em rosa. `BIBLIOTECA 3D` e `INSTAGRAM` **saem da barra**.
+    ~~Ordem `PROJETOS · AULAS · CALENDÁRIO · ARTIGOS · PERFIL`.~~ **Superado na rodada 3.**
+  - **Decidido (rodada 3, 2026-08-23):** a ordem segue a do desktop — barra inferior:
+    `PROJETOS` · `CALENDÁRIO` · `AULAS` · `ARTIGOS` · `PERFIL`. `BIBLIOTECA 3D` e
+    `INSTAGRAM` ficam **dentro do menu**, com botão **no topo, na extremidade esquerda da
+    barra**, contendo **todas as abas** (Biblioteca 3D só no menu). Home pelo logo
+    (decidido). **`PERFIL` deslogado abre a tela de login.**
 - **Hero**: composição isométrica omitida; título menor; parágrafo em até 4 linhas.
 - **Visão padrão**: **`LISTA`** passa a ser a visão inicial (grade mensal é pouco legível em
   390px); `MÊS` fica disponível como faixa compacta de **7 dias roláveis** (strip semanal)
@@ -185,7 +198,7 @@ Todas **(proposta)**.
 
 | Componente | Descrição | Reuso |
 |---|---|---|
-| `HeaderPrincipal` | Logo-chip **laranja** (canônico, decidido rodada 2), nav em caps na ordem desktop `BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS`; compacta (decidido rodada 2) — tablet `PROJETOS · AULAS · CALENDÁRIO · ARTIGOS`, mobile em barra inferior de 5 posições `PROJETOS · AULAS · CALENDÁRIO · ARTIGOS · PERFIL`, com `BIBLIOTECA 3D` e `INSTAGRAM` fora da barra **(proposta: menu/drawer)**; bloco de conta | Todas as páginas |
+| `HeaderPrincipal` | Logo-chip **laranja** (canônico, decidido rodada 2) com **logo → Home** (rodada 3), nav em caps na ordem desktop `BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS`; compacta (ordem corrigida na rodada 3) — tablet `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS`, mobile em barra inferior de 5 posições `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS · PERFIL` (`PERFIL` deslogado → login), com `BIBLIOTECA 3D` e `INSTAGRAM` **no menu** (botão no topo, à esquerda, com todas as abas); bloco de conta | Todas as páginas |
 | `HeroSecao` | Faixa teal, título display, parágrafo, chevrons, composição isométrica | Todas as seções |
 | `AlternadorVisao` **(proposta)** | Chips `MÊS` / `LISTA` | Exclusivo |
 | `NavegadorMes` **(proposta)** | `‹` `AGOSTO 2026` `›` + `HOJE` | Exclusivo |
@@ -287,7 +300,9 @@ Todos **(proposta)**.
   toast "Não foi possível concluir sua inscrição.", botão volta ao estado anterior.
 - **Deslogado**: agenda, filtros, busca e detalhe visíveis (conteúdo público indexável);
   `INSCREVER-SE` e ♥ abrem modal "Crie sua conta para participar e ganhar XP" com CTA
-  `COMECE A CRIAR`; XP previsto exibido como convite; `.ICS` continua disponível.
+  `COMECE A CRIAR`; XP previsto exibido como convite; `.ICS` continua disponível. No
+  mobile, o item `PERFIL` da barra inferior **abre a tela de login** (decidido na
+  rodada 3).
 - **Logado**: botões refletem o estado real (`INSCRITO ✓`, `LISTA DE ESPERA`, `LOTADO`);
   filtro extra `MINHAS INSCRIÇÕES`; badge de presença nos eventos já frequentados; lembrete
   de evento próximo no topo da página.

@@ -32,8 +32,12 @@ o loop de gamificação — **escrever artigos gera XP**, conforme regra central
   - `CALENDÁRIO` não aparece neste mockup — **Decidido (2026-08-23):** vale a navegação
     canônica **desktop** em todas as páginas, nesta ordem:
     `BIBLIOTECA 3D` · `PROJETOS` · `CALENDÁRIO` · `AULAS` · `INSTAGRAM` · `ARTIGOS`.
-    Em tablet e mobile valem as barras compactas decididas na rodada 2 (ver adaptações).
+    Em tablet e mobile valem as barras compactas (ver adaptações), corrigidas na rodada 3.
   - `INSTAGRAM` abre em nova aba (link externo) **(proposta)**.
+- **Decidido (rodada 3, 2026-08-23):** tocar/clicar no **logo leva à Home** (não é mais
+  proposta). Nas versões compactas existe um **botão de menu no topo, na extremidade
+  esquerda da barra**, contendo **todas as abas** — inclusive `BIBLIOTECA 3D` (que fica
+  **só no menu**, sem atalho extra) e `INSTAGRAM`.
 - À direita: avatar pixel em moldura clara + `MAKER_X` / `NÍVEL 3` + chevron `⌄` (menu da conta).
 
 ### Hero (faixa teal — token `#74B7A5`; renderizado ~`#488D8B` no mockup)
@@ -116,12 +120,16 @@ apenas desktop.
 
 - **Header**: logo-chip laranja reduzido; bloco de avatar mantém-se visível, mas exibe só o
   avatar e o chevron (esconde `MAKER_X` / `NÍVEL 3`) **(proposta)**.
-  - **Decidido (rodada 2, 2026-08-23):** a barra do tablet exibe, nesta ordem —
-    `PROJETOS` · `AULAS` · `CALENDÁRIO` · `ARTIGOS`. `BIBLIOTECA 3D` e `INSTAGRAM` **saem da
-    barra** e permanecem acessíveis fora dela; o mecanismo (menu/drawer) segue **(proposta)**,
-    assim como o acesso à Home pelo logo **(proposta)**. Item ativo: `ARTIGOS`.
-  - *Nota:* a ordem compacta inverte `AULAS`/`CALENDÁRIO` em relação à desktop — é a resposta
-    literal da designer, registrada como decidida.
+  - **Decidido (rodada 3, 2026-08-23):** a barra do tablet exibe, nesta ordem —
+    `PROJETOS` · `CALENDÁRIO` · `AULAS` · `ARTIGOS` ("mantenha a ordem das abas da página
+    inicial": a barra compacta segue a **ordem relativa do desktop**). Isto **corrige** a
+    ordem registrada na rodada 2 (`PROJETOS · AULAS · CALENDÁRIO · ARTIGOS`).
+    `BIBLIOTECA 3D` e `INSTAGRAM` **saem da barra** e ficam no **menu** — botão **no topo,
+    na extremidade esquerda da barra**, com **todas as abas** (a Biblioteca 3D fica **só
+    no menu**). O **logo leva à Home** (decidido). Item ativo: `ARTIGOS`.
+  - ~~*Nota:* a ordem compacta inverte `AULAS`/`CALENDÁRIO` em relação à desktop — é a resposta
+    literal da designer, registrada como decidida.~~ — **superado na rodada 3**: não há
+    inversão; a ordem compacta acompanha a do desktop.
   - ~~Navegação colapsa inteira em menu **hambúrguer** à direita do logo~~ — **superado** pela
     decisão acima (a barra permanece com os 4 itens).
 - **Hero (proposta)**: mantém teal e título; composição isométrica reduz para ~35% da largura;
@@ -132,22 +140,27 @@ apenas desktop.
 - **Grid (proposta)**: **2 colunas**; capa em ~16:10; título até 2 linhas com reticências;
   resumo limitado a 3 linhas.
 - **Footer (proposta)**: três pilares permanecem em linha; ornamento isométrico reduzido.
-- **Alvos de toque (proposta)**: mínimo 44×44px para chips, coração, seta e itens do drawer.
+- **Alvos de toque (proposta)**: mínimo 44×44px para chips, coração, seta e itens do menu.
 
 ## Adaptação mobile (<768px)
 
 Salvo onde marcado como decidido, as decisões desta seção são **(proposta)**.
 
-- **Header**: logo-chip laranja + acesso ao menu; avatar/nível acessível pelo item `PERFIL`
-  **(proposta)**.
-- **Navegação inferior fixa (bottom navigation)** — **Decidido (rodada 2, 2026-08-23):** 5
-  posições, nesta ordem: `PROJETOS` · `AULAS` · `CALENDÁRIO` · `ARTIGOS` · `PERFIL`.
+- **Header**: logo-chip laranja + **botão de menu no topo, na extremidade esquerda da barra**
+  (decidido na rodada 3), com **todas as abas**; o **logo leva à Home** (decidido).
+  Avatar/nível acessível pelo item `PERFIL` da barra inferior.
+- **Navegação inferior fixa (bottom navigation)** — **Decidido (rodada 3, 2026-08-23):** 5
+  posições, nesta ordem: `PROJETOS` · `CALENDÁRIO` · `AULAS` · `ARTIGOS` · `PERFIL`
+  (ordem corrigida para acompanhar a do desktop — supera a lista da rodada 2,
+  `PROJETOS · AULAS · CALENDÁRIO · ARTIGOS · PERFIL`).
   - ~~5 itens (Home, Biblioteca 3D, Projetos, Artigos, Perfil)~~ — proposta **superada** pela
     barra decidida acima.
-  - `BIBLIOTECA 3D` e `INSTAGRAM` saem da barra e permanecem acessíveis fora dela; o mecanismo
-    (menu/drawer) segue **(proposta)**, assim como o acesso à Home pelo logo **(proposta)**.
-  - *Nota:* a ordem compacta inverte `AULAS`/`CALENDÁRIO` em relação à desktop — resposta
-    literal da designer, registrada como decidida.
+  - `BIBLIOTECA 3D` e `INSTAGRAM` saem da barra e ficam **no menu** (rodada 3) — a
+    Biblioteca 3D **só no menu**, sem atalho extra.
+  - **Decidido (rodada 3, 2026-08-23):** com o usuário **deslogado**, o item `PERFIL`
+    **abre a tela de login**.
+  - ~~*Nota:* a ordem compacta inverte `AULAS`/`CALENDÁRIO` em relação à desktop — resposta
+    literal da designer, registrada como decidida.~~ — **superado na rodada 3**.
 - **Hero (proposta)**: composição isométrica vira faixa decorativa reduzida ou é omitida abaixo
   de 390px; título `ARTIGOS` e parágrafo centralizados/à esquerda em bloco único.
 - **Tabs (proposta)**: chips horizontais roláveis fixos abaixo do hero (sticky ao rolar);
@@ -163,7 +176,8 @@ Salvo onde marcado como decidido, as decisões desta seção são **(proposta)**
 
 | Componente | Descrição | Reuso |
 |---|---|---|
-| `HeaderPrincipal` | Logo-chip, nav em caps, bloco de conta (avatar/nível/chevron) | Todas as páginas |
+| `HeaderPrincipal` | Logo-chip (→ Home), nav em caps, bloco de conta (avatar/nível/chevron); em tablet/mobile, botão de menu no topo à esquerda (decidido rodada 3) | Todas as páginas |
+| `MenuCompleto` | Painel com **todas as abas**, incluindo `BIBLIOTECA 3D` e `INSTAGRAM` (decidido rodada 3) | Todas as páginas (tablet/mobile) |
 | `HeroTeal` | Faixa teal, título display, parágrafo, chevrons `»`, arte isométrica | Projetos, Biblioteca 3D, Aulas |
 | `TabsCategoria` | Tabs caps com item ativo rosa sublinhado; chips roláveis em telas menores **(proposta)** | Projetos, Biblioteca 3D |
 | `CampoBusca` | Input arredondado escuro com ícone de lupa e placeholder | Projetos, Biblioteca 3D |
@@ -258,12 +272,13 @@ Campos consumidos aqui: `handle` (`@maker_x`), `avatar_pixel` (imagem), `nivel` 
   `Tentar novamente` **(proposta)**.
 - Capa quebrada: placeholder isométrico da identidade no lugar da imagem **(proposta)**.
 
-### Deslogado vs logado **(proposta)**
+### Deslogado vs logado **(proposta, salvo onde marcado como decidido)**
 
 | Aspecto | Visitante (deslogado) | Maker (logado) |
 |---|---|---|
 | Leitura dos artigos | Livre (conteúdo público, indexável) | Livre |
 | Bloco de conta no header | Botão `CRIAR CONTA` no lugar do avatar | Avatar + `MAKER_X` / `NÍVEL 3` + chevron |
+| Item `PERFIL` (barra inferior mobile) | Abre a **tela de login** (decidido, rodada 3) | Leva a **Minha Conta** (`pages/minha-conta.md`) |
 | Curtir | Clique abre convite para criar conta | Curtida registrada, contador atualiza |
 | `ESCREVER ARTIGO` | Não exibido | Exibido, leva ao editor |
 | XP | Não acumula | Acumula por publicação/missões |

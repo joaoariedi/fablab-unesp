@@ -101,13 +101,18 @@ Vocabulário isométrico da prancha, usado como ornamento e ícone:
   `BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS` — todos
   **alinhados**; o item `AULAS` torto em alguns mockups é ruído de render. O mockup
   `design/avatar-create.png` já renderiza essa navegação canônica alinhada.
-- **Navegação compacta (decidido na rodada 2)**: `BIBLIOTECA 3D` e `INSTAGRAM` **saem da
-  barra** em tablet e mobile. Barra do **tablet**, nesta ordem: `PROJETOS · AULAS ·
-  CALENDÁRIO · ARTIGOS`. Barra inferior do **mobile** (5 posições): `PROJETOS · AULAS ·
-  CALENDÁRIO · ARTIGOS · PERFIL`. Biblioteca 3D e Instagram permanecem acessíveis fora da
-  barra (menu/drawer **(proposta)**); Home pelo logo **(proposta)**. *(Nota registrada: a
-  ordem compacta inverte Aulas/Calendário em relação à desktop — resposta literal da
-  designer.)*
+- **Navegação compacta (rodadas 2–3)**: `BIBLIOTECA 3D` e `INSTAGRAM` **saem da barra**
+  em tablet e mobile. **Ordem corrigida na rodada 3** ("mantenha a ordem das abas da
+  página inicial" — segue a ordem relativa do desktop): barra do **tablet**
+  `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS`; barra inferior do **mobile** (5 posições)
+  `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS · PERFIL`.
+- **Menu (decidido na rodada 3)**: botão de menu **no topo, na extremidade esquerda da
+  barra**, contendo **todas as abas** (inclusive Biblioteca 3D e Instagram — a Biblioteca
+  fica **só no menu**, sem atalho extra). Tocar no **logo leva à Home**. `PERFIL`
+  deslogado **abre a tela de login**; logado, abre **Minha Conta** *(complemento óbvio —
+  ver `pages/minha-conta.md`)*. O botão de menu aplica-se às **versões compactas**
+  (tablet/mobile) — no desktop as 6 abas já estão na barra e não há botão de menu
+  **(interpretação; confirmar com a designer se o menu também existe no desktop)**.
 - **Footer institucional**: três pilares com ícones outline (Aprenda fazendo / Compartilhe
   conhecimento / Desenvolva projetos reais) + composição isométrica no canto.
 - **Pixel art**: avatares dos usuários em pixel art isométrico com **4 direções**; o hero

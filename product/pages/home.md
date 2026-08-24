@@ -32,6 +32,11 @@ missões em destaque, nível coletivo do lab, ranking e últimos projetos.
   - Registro histórico dos mockups: o v1 (dashboard) mostrava apenas
     `BIBLIOTECA 3D` · `PROJETOS` · `INSTAGRAM` · `ARTIGOS`; o v2 (mapa) já trazia o conjunto
     completo, agora adotado como canônico.
+- **Decidido (rodada 3, 2026-08-23) — menu e logo:** o **botão de menu** fica **no topo, na
+  extremidade esquerda da barra** — ou seja, **à esquerda do logo-chip** (mesma ordem descrita
+  na adaptação mobile) —, e contém **todas as abas** (inclusive `BIBLIOTECA 3D` e
+  `INSTAGRAM`). A `BIBLIOTECA 3D` fica **só dentro do menu**, sem atalho extra nas barras
+  compactas. Tocar/clicar no **logo leva à Home** (não é mais proposta).
 - À direita: avatar pixel em moldura + `MAKER_X` / `NÍVEL 3` + chevron `⌄` (abre o menu da
   conta **(proposta)** — o mockup mostra apenas o chevron).
 
@@ -122,11 +127,14 @@ desktop.
 
 - ~~Header: logo + nav reduzida a `BIBLIOTECA 3D`, `PROJETOS`, `ARTIGOS`; demais itens
   (`CALENDÁRIO`, `AULAS`, `INSTAGRAM`) em menu "⋯ MAIS".~~
-  **Decidido (rodada 2, 2026-08-23):** a barra do tablet é `PROJETOS` · `AULAS` ·
-  `CALENDÁRIO` · `ARTIGOS`, nesta ordem; `BIBLIOTECA 3D` e `INSTAGRAM` **saem da barra** e
-  permanecem acessíveis **fora dela**, pelo menu (mecanismo **(proposta)**); Home pelo logo
-  **(proposta)**. Avatar mantém nome e nível. *(A ordem compacta inverte Aulas/Calendário em
-  relação à desktop — é a resposta literal da designer, registrada como decidida.)*
+  ~~**Decidido (rodada 2, 2026-08-23):** a barra do tablet é `PROJETOS` · `AULAS` ·
+  `CALENDÁRIO` · `ARTIGOS`, nesta ordem.~~ *(A nota da rodada 2 sobre "ordem invertida
+  Aulas/Calendário — resposta literal da designer" está **superada**.)*
+  **Decidido (rodada 3, 2026-08-23):** "mantenha a ordem das abas da página inicial" — a barra
+  do tablet segue a **ordem relativa do desktop**: `PROJETOS` · `CALENDÁRIO` · `AULAS` ·
+  `ARTIGOS`. `BIBLIOTECA 3D` e `INSTAGRAM` **saem da barra** e ficam **no menu** (botão no
+  topo, à esquerda, com todas as abas); **Home pelo logo** (decidido). Avatar mantém nome e
+  nível.
 - Hero (v2, oficial): mapa recortado no centro de interesse (contêineres), altura ~70vh, texto
   sobreposto com painel de contraste navy 60%. Se a designer entregar arte dedicada de tablet,
   ela substitui o recorte.
@@ -142,11 +150,12 @@ desktop.
 
 Salvo onde indicado como decidido, as decisões abaixo são **(proposta)**.
 
-- Header: logo-chip + avatar. **Decidido (rodada 2, 2026-08-23):** a navegação principal do
-  mobile é a **barra inferior fixa** (ver abaixo); `BIBLIOTECA 3D` e `INSTAGRAM` ficam **fora
-  da barra**, acessíveis por menu/drawer (mecanismo **(proposta)**); Home pelo logo
-  **(proposta)**. O **menu hambúrguer** com drawer full-screen (itens em lista display,
-  `INSTAGRAM` marcado como link externo) pode permanecer como acesso ao restante.
+- Header: **botão de menu à esquerda** + logo-chip + avatar. **Decidido (rodada 2,
+  2026-08-23):** a navegação principal do mobile é a **barra inferior fixa** (ver abaixo);
+  `BIBLIOTECA 3D` e `INSTAGRAM` ficam **fora da barra**. **Decidido (rodada 3, 2026-08-23):**
+  o **menu fica no topo, na extremidade esquerda da barra**, com drawer contendo **todas as
+  abas** (`BIBLIOTECA 3D` — só aqui, sem atalho extra — e `INSTAGRAM` marcado como link
+  externo); **Home pelo logo** (decidido).
 - Hero (v2, oficial) — **decidido (2026-08-23):** mobile recebe **arte nova dedicada**
   produzida pela designer (não é recorte automático do mapa desktop nem fallback para o v1).
   Sobre ela: título display reduzido (mantendo as 3 linhas), parágrafo e botão
@@ -163,15 +172,22 @@ Salvo onde indicado como decidido, as decisões abaixo são **(proposta)**.
 - Footer: pilares empilhados em 1 coluna, ícone à esquerda do texto.
 - ~~Barra de navegação inferior fixa **(proposta, alternativa ao hambúrguer)**: Home, Projetos,
   Biblioteca 3D, Perfil.~~
-  **Decidido (rodada 2, 2026-08-23):** a barra inferior fixa é a navegação do mobile, com
-  **5 posições**: `PROJETOS` · `AULAS` · `CALENDÁRIO` · `ARTIGOS` · `PERFIL`. Home pelo logo
-  **(proposta)**; `BIBLIOTECA 3D` e `INSTAGRAM` via menu/drawer **(proposta)**.
+  ~~**Decidido (rodada 2, 2026-08-23):** a barra inferior fixa é a navegação do mobile, com
+  **5 posições**: `PROJETOS` · `AULAS` · `CALENDÁRIO` · `ARTIGOS` · `PERFIL`.~~ *(A ordem
+  invertida Aulas/Calendário da rodada 2 está **superada**.)*
+  **Decidido (rodada 3, 2026-08-23):** a barra inferior fixa é a navegação do mobile, com
+  **5 posições**, na ordem relativa do desktop: `PROJETOS` · `CALENDÁRIO` · `AULAS` ·
+  `ARTIGOS` · `PERFIL`. **Home pelo logo**; `BIBLIOTECA 3D` e `INSTAGRAM` pelo **menu** (topo,
+  à esquerda). **Deslogado, o item `PERFIL` abre a tela de login**; logado, leva a
+  [Minha Conta](minha-conta.md).
 
 ## Componentes
 
 | Componente | Uso na Home | Observações |
 |---|---|---|
-| `HeaderNav` | topo | logo-chip **laranja com cubo entre `FAB` e `LAB`** (canônico, decidido rodada 2), itens caps na ordem canônica desktop `BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS` (decidido 2026-08-23, todos alinhados), `UserChip` (avatar + nome + nível + chevron). Compacto (decidido rodada 2): tablet `PROJETOS · AULAS · CALENDÁRIO · ARTIGOS`; mobile em `BottomNav` de 5 posições `PROJETOS · AULAS · CALENDÁRIO · ARTIGOS · PERFIL`; `BIBLIOTECA 3D` e `INSTAGRAM` fora da barra, via menu **(proposta)** |
+| `HeaderNav` | topo | logo-chip **laranja com cubo entre `FAB` e `LAB`** (canônico, decidido rodada 2), itens caps na ordem canônica desktop `BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS` (decidido 2026-08-23, todos alinhados), `UserChip` (avatar + nome + nível + chevron). **Botão de menu no topo, à esquerda da barra** (decidido rodada 3), com **todas as abas**. Compacto (decidido rodada 3, ordem do desktop): tablet `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS`; `BIBLIOTECA 3D` e `INSTAGRAM` só no menu; logo → Home |
+| `MenuDrawer` | botão no topo à esquerda | lista com **todas as abas** (`BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS`), `INSTAGRAM` como link externo (decidido rodada 3) |
+| `BottomNav` | mobile, fixa no rodapé | 5 posições `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS · PERFIL` (decidido rodada 3); `PERFIL` deslogado abre o **login**, logado abre `Minha Conta` |
 | ~~`HeroBanner` (v1)~~ | ~~faixa teal~~ | **descartado (2026-08-23)** — registro do mockup v1 |
 | `HeroPixelMap` | hero oficial, tela cheia | cena pixel art + hotspots **(proposta)**; arte mobile dedicada da designer |
 | `ButtonPrimary` | `COMECE A CRIAR →` | estilo único: **rosa preenchido, texto navy, sombra dura deslocada** (decidido 2026-08-23). O estilo navy com contorno rosa existiu no mockup v1 e foi **descartado** |
@@ -263,6 +279,9 @@ o hero v2 é o único, não há variante a escolher · `hero_titulo` · `hero_te
 - **Deslogado**: `UserChip` é substituído por botões `ENTRAR` e `CRIAR CONTA` **(proposta)**;
   as missões aparecem sem progresso pessoal (0% ou rótulo "Faça login para participar")
   **(proposta)**; CTA do hero permanece `COMECE A CRIAR →` apontando ao onboarding.
+  **Decidido (rodada 3, 2026-08-23):** no mobile, o item **`PERFIL`** da barra inferior
+  **abre a tela de login** quando não há sessão (resolve a lacuna sobre o comportamento de
+  `PERFIL` deslogado); com sessão, leva a [Minha Conta](minha-conta.md).
 - **Logado**: `UserChip` com avatar, `MAKER_X`, `NÍVEL 3` e menu no chevron (Perfil, Meus
   projetos, Sair) **(proposta)**; missões mostram o progresso real do maker; CTA do hero muda
   para `CONTINUAR CRIANDO` **(proposta)**.
@@ -286,6 +305,10 @@ o hero v2 é o único, não há variante a escolher · `hero_titulo` · `hero_te
    `BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS`, itens alinhados.
    **Rodada 2 (2026-08-23):** nas versões compactas `BIBLIOTECA 3D` e `INSTAGRAM` saem da
    barra — ver "Adaptação tablet" e "Adaptação mobile".
+   **Rodada 3 (2026-08-23):** as barras compactas seguem a **ordem do desktop** — tablet
+   `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS`, mobile `PROJETOS · CALENDÁRIO · AULAS ·
+   ARTIGOS · PERFIL`; menu no topo à esquerda com todas as abas; logo → Home; `PERFIL`
+   deslogado abre o login.
 3. ~~O typo `VER MAIS PROPLETOS` deve ser corrigido para `VER MAIS PROJETOS` — confirmar.~~
    **Decidido (2026-08-23):** é typo do mockup; usar `VER MAIS PROJETOS`.
 4. ~~O card `ÚLTIMOS PROJETOS` mostra 1 projeto ou é carrossel de vários?~~

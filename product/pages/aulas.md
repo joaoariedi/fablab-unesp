@@ -46,6 +46,10 @@ geram pontos — **1 XP** por aula assistida (`gamification.md`).
     torto/desalinhado em alguns mockups é ruído de render, não intenção de design.
   - Item ativo `AULAS` em **rosa** com sublinhado rosa curto; demais em branco.
   - `INSTAGRAM` abre em nova aba **(proposta)**.
+- **Decidido (rodada 3, 2026-08-23):** tocar/clicar no **logo leva à Home** (não é mais
+  proposta). Nas versões compactas existe um **botão de menu no topo, na extremidade
+  esquerda da barra** — ou seja, **à esquerda do logo-chip** —, contendo **todas as abas**
+  — inclusive `BIBLIOTECA 3D` (que fica **só no menu**, sem atalho extra) e `INSTAGRAM`.
 - À direita: avatar pixel em moldura clara + `MAKER_X` / `NÍVEL 3` + chevron `⌄` (menu da conta).
 
 ### Hero (faixa teal `#74B7A5`)
@@ -137,13 +141,18 @@ geram pontos — **1 XP** por aula assistida (`gamification.md`).
 Salvo onde marcado **Decidido**, as decisões abaixo são **(proposta)** — o mockup cobre
 apenas desktop.
 
-- **Header** — **Decidido (rodada 2, 2026-08-23):** a barra do tablet tem 4 itens, nesta
-  ordem: `PROJETOS · AULAS · CALENDÁRIO · ARTIGOS`; `BIBLIOTECA 3D` e `INSTAGRAM` **saem da
-  barra** e permanecem acessíveis fora dela (menu/drawer **(proposta)**), assim como Home
-  pelo logo **(proposta)**. `AULAS` é o item **ativo** nesta página. *(Nota: a ordem compacta
-  inverte Aulas/Calendário em relação à desktop — resposta literal da designer, registrada
-  como decidida.)* Segue **(proposta)**: logo-chip reduzido e bloco de conta reduzido para
-  avatar + `NÍVEL 3` (esconde `MAKER_X`).
+- **Header** — **Decidido (rodada 3, 2026-08-23):** a barra do tablet tem 4 itens, nesta
+  ordem: `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS` — "mantenha a ordem das abas da página
+  inicial", ou seja, a barra compacta segue a **ordem relativa do desktop**. `AULAS` é o
+  item **ativo** nesta página. ~~`PROJETOS · AULAS · CALENDÁRIO · ARTIGOS` (rodada 2)~~ e
+  ~~a nota de que "a ordem compacta inverte Aulas/Calendário em relação à desktop — resposta
+  literal da designer"~~ ficam **superadas** pela rodada 3.
+  `BIBLIOTECA 3D` e `INSTAGRAM` **saem da barra** e vivem **dentro do menu** —
+  **decidido (rodada 3, 2026-08-23):** o botão de menu fica **no topo, na extremidade
+  esquerda da barra**, e contém **todas as abas** (inclusive `BIBLIOTECA 3D` e `INSTAGRAM`);
+  a Biblioteca 3D fica **só no menu**, sem atalho extra. Tocar no **logo leva à Home**
+  (decidido — não é mais proposta). Segue **(proposta)**: logo-chip reduzido e bloco de
+  conta reduzido para avatar + `NÍVEL 3` (esconde `MAKER_X`).
 - **Hero (proposta)**: mantém faixa teal; composição isométrica reduz ~40% e o texto ocupa
   ~60% da largura; parágrafo reflui em 2 linhas.
 - **Barra de seção (proposta)**: `TODAS AS AULAS` e busca permanecem na mesma linha; a busca
@@ -160,13 +169,18 @@ apenas desktop.
 Salvo onde marcado **Decidido**, as decisões abaixo são **(proposta)** — o mockup cobre
 apenas desktop.
 
-- **Header** — **Decidido (rodada 2, 2026-08-23):** navegação em **barra inferior fixa de 5
-  posições**, nesta ordem: `PROJETOS · AULAS · CALENDÁRIO · ARTIGOS · PERFIL`, com item ativo
-  em rosa (`AULAS` nesta página). `BIBLIOTECA 3D` e `INSTAGRAM` **saem da barra** e ficam
-  acessíveis fora dela (menu/drawer **(proposta)**); Home pelo logo **(proposta)**. A
-  composição anterior (Home · Biblioteca · Projetos · Aulas · Perfil, com Artigos/Instagram/
-  Calendário em "Mais") fica como registro histórico. Segue **(proposta)**: no topo, apenas
-  logo-chip + avatar.
+- **Header** — **Decidido (rodada 3, 2026-08-23):** navegação em **barra inferior fixa de 5
+  posições**, nesta ordem: `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS · PERFIL`, com item ativo
+  em rosa (`AULAS` nesta página) — a ordem segue a do desktop ("mantenha a ordem das abas da
+  página inicial"). ~~`PROJETOS · AULAS · CALENDÁRIO · ARTIGOS · PERFIL` (rodada 2, com a
+  nota de inversão Aulas/Calendário)~~ fica **superada**. `BIBLIOTECA 3D` e `INSTAGRAM`
+  **saem da barra** e vivem **dentro do menu** — botão de menu **no topo, na extremidade
+  esquerda da barra**, com **todas as abas** (a Biblioteca 3D fica **só no menu**, sem
+  atalho extra); tocar no **logo leva à Home** (decidido). **`PERFIL` deslogado abre a tela
+  de login** (decidido, rodada 3). A composição anterior (Home · Biblioteca · Projetos ·
+  Aulas · Perfil, com Artigos/Instagram/Calendário em "Mais") fica como registro histórico.
+  Segue **(proposta)**: no topo, apenas botão de menu (na extremidade esquerda, à esquerda
+  do logo) + logo-chip + avatar.
 - **Hero (proposta)**: composição isométrica reduzida abaixo do texto ou omitida; título
   `AULAS` em tamanho menor; parágrafo com no máximo 4 linhas.
 - **Busca (proposta)**: campo em largura total abaixo do título `TODAS AS AULAS`; opção de
@@ -193,7 +207,7 @@ apenas desktop.
 
 | Componente | Descrição | Reuso |
 |---|---|---|
-| `HeaderPrincipal` | Logo-chip **laranja** (canônico), nav canônica em caps (`BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS`, itens alinhados); compacta — tablet `PROJETOS · AULAS · CALENDÁRIO · ARTIGOS`, mobile `PROJETOS · AULAS · CALENDÁRIO · ARTIGOS · PERFIL`; bloco de conta com avatar/nível | Todas as páginas |
+| `HeaderPrincipal` | Logo-chip **laranja** (canônico), nav canônica em caps (`BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS`, itens alinhados); compacta (rodada 3, na ordem do desktop) — tablet `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS`, mobile `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS · PERFIL`; botão de **menu no topo à esquerda** com todas as abas (inclui `BIBLIOTECA 3D` e `INSTAGRAM`); logo → Home; `PERFIL` deslogado → login; bloco de conta com avatar/nível | Todas as páginas |
 | `HeroSecao` | Faixa teal com título display, parágrafo, chevrons e composição isométrica | Projetos, Artigos, Calendário (na Biblioteca 3D o teal é sidebar, não faixa) |
 | `CampoBusca` | Input arredondado navy, borda rosa, lupa; placeholder `Buscar aulas...`; **variante clara** para o fundo branco desta página | Todas as listagens |
 | `CardAula` | Card horizontal: número, thumbnail, título, descrição, metadados, `ASSISTIR`; sobre **fundo branco** — card **branco com contorno azul navy escuro e sombra**, texto navy | Exclusivo desta página |
@@ -277,6 +291,8 @@ apenas desktop.
   busca e metadados permanecem visíveis (conteúdo público indexável); clicar em coração ou em
   `ASSISTIR` abre modal "Crie sua conta para assistir e ganhar XP" com CTA `COMECE A CRIAR`.
   Se visitante pode assistir sem conta: ver "Questões em aberto".
+  **Decidido (rodada 3, 2026-08-23):** no mobile, o item `PERFIL` da barra inferior, quando
+  deslogado, **abre a tela de login**.
 - **Logado (proposta)**: exibe progresso por aula (barra fina no rodapé do card), estado de
   curtida persistido, selo de concluída e toast de XP ao concluir — **decidido (2026-08-23):**
   a mensagem é **"+1 XP em Impressão 3D"** (o "+50 XP" era placeholder).

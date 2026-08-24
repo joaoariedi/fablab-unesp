@@ -1,112 +1,96 @@
-PERGUNTAS PARA A DESIGNER — RODADA 3
-As respostas das rodadas 1 e 2 já foram aplicadas na documentação.
-Estas perguntas vêm do novo mockup do avatar (avatar-create.png) e de
-detalhes que apareceram ao aplicar as decisões da rodada 2.
+PERGUNTAS PARA A DESIGNER — RODADA 4
+As respostas da rodada 3 já foram aplicadas na documentação (cadastro
+em 2 passos, skills fora do cadastro, base F/M, rosto 4+4+4, barras
+compactas na ordem do desktop, menu com todas as abas).
+Estas são as pendências que sobraram — as duas primeiras pedem arte.
 
 --------------------------------------------------------------------
-1. PARA ONDE FOI A ESCOLHA DAS SKILLS INICIAIS?
+1. "MINHA CONTA" PRECISA DE DESENHO
 --------------------------------------------------------------------
-Contexto: o mockup antigo do cadastro tinha o bloco "ESCOLHA SUAS
-SKILLS INICIAIS" (Modelagem 3D, Corte a Laser, Impressão 3D,
-Eletrônica, Design). O novo mockup do avatar não tem esse bloco.
+Contexto: você definiu que a visualização das skills vai para a
+Minha Conta — miniatura do avatar com as skills embaixo. É uma tela
+nova, sem mockup.
 
 Perguntas:
-a) A escolha de skills vai para outro passo do cadastro, para o
-   perfil depois do cadastro, ou sai do fluxo?
-b) Quantas skills o usuário pode marcar (mínimo/máximo)?
-
-Por que importa: as skills alimentam níveis, missões e o ranking —
-o fluxo de cadastro não fecha sem saber onde isso acontece.
+a) O que mais compõe a Minha Conta além do avatar e das skills?
+   (meus projetos/modelos/artigos, missões em andamento, dados
+   pessoais, editar avatar, sair...)
+b) Você consegue produzir o mockup dessa tela (desktop já ajuda)?
 
 --------------------------------------------------------------------
-2. QUANTOS PASSOS TEM O CADASTRO AGORA?
+2. TELA DE LOGIN — E COMO A PESSOA ENTRA?
 --------------------------------------------------------------------
-Contexto: o mockup antigo mostrava "CRIAR CONTA" com indicador de
-passos 1-2-3. No novo mockup o indicador sumiu, mas o botão diz
-"SALVAR E CONTINUAR", indicando que existe um próximo passo.
+Contexto: o PERFIL deslogado abre a tela de login, mas essa tela não
+tem mockup. E um detalhe importante: os campos do cadastro que você
+listou (nome, nascimento, e-mail, vínculo, escolaridade, curso) não
+incluem SENHA.
 
 Perguntas:
-a) Quantos passos o fluxo tem, e o indicador de passos volta?
-b) O que vem depois do avatar: dados pessoais? vínculo com a UNESP?
-   confirmação por e-mail?
+a) O login será com e-mail + senha (e o cadastro ganha um campo de
+   senha), ou com link de acesso enviado por e-mail (sem senha)?
+b) Você consegue produzir o mockup da tela de login?
 
 --------------------------------------------------------------------
-3. "NOME DO AVATAR" É O MESMO QUE O @USUARIO?
+3. NOME DA PESSOA × @USUARIO NOS CARDS
 --------------------------------------------------------------------
-Contexto: o novo mockup tem o campo "NOME DO AVATAR" (até 20
-caracteres). Nas outras telas os autores aparecem como @handle
-(ex.: @laser.nick) com nível.
+Contexto: você definiu que o nome do avatar é o nome da pessoa. Mas
+todos os mockups mostram os autores como @usuario (ex.: @laser.nick,
+@print.lu) nos cards, ranking e cabeçalho.
 
-Pergunta: o nome do avatar é o @handle público, um nome de exibição,
-ou só um apelido do boneco (com o @handle criado em outro passo)?
+Pergunta: o que aparece publicamente nos cards e no ranking — o nome
+da pessoa, um @usuario escolhido por ela, ou os dois? (Se o @usuario
+morreu, atualizamos todos os cards para o nome.)
 
 --------------------------------------------------------------------
-4. SELETOR "XX OU XY": CONFIRMAR RÓTULOS E IMPACTO NOS SPRITES
+4. LIMITE DE 20 CARACTERES NO NOME
 --------------------------------------------------------------------
-Contexto: o novo mockup introduz a escolha de base do corpo com as
-opções "XX" e "XY" (no lugar dos 4 tipos de corpo e da altura,
-removidos na rodada 1).
+Contexto: o campo NOME DO AVATAR tem contador 0/20. Como agora ele é
+o nome real da pessoa, 20 caracteres truncam nomes compostos
+(ex.: "Maria Fernanda Oliveira" tem 23).
 
+Pergunta: aumentamos o limite (sugestão: 60) ou mantemos 20 e o
+boneco exibe só o primeiro nome?
+
+--------------------------------------------------------------------
+5. O BOTÃO DE MENU EXISTE NO DESKTOP?
+--------------------------------------------------------------------
+Contexto: você definiu o menu (botão no topo à esquerda, com todas
+as abas) respondendo sobre tablet/celular. No desktop as 6 abas já
+aparecem na barra.
+
+Pergunta: no desktop existe também o botão de menu, ou ele é só das
+versões compactas? (Aplicamos "só nas compactas" por interpretação —
+confirmar.)
+
+--------------------------------------------------------------------
+6. DETALHES DO CADASTRO EM 2 PASSOS
+--------------------------------------------------------------------
 Perguntas:
-a) Confirmar que "XX OU XY" é o rótulo final dessa escolha.
-b) As roupas (partes de cima/baixo) variam por base? Se sim, cada
-   item de roupa precisa de sprite nas duas bases — dobra a produção
-   de arte. As 4 direções de rotação multiplicam isso também.
-
-Por que importa: define o tamanho real do pacote de sprites que você
-vai produzir.
+a) O indicador de passos volta à tela (agora "1 2")?
+b) Durante o cadastro no celular, a barra inferior
+   (Projetos/Calendário/Aulas/Artigos/Perfil) aparece ou some?
 
 --------------------------------------------------------------------
-5. CATÁLOGO DO ROSTO E CONTAGENS OFICIAIS
+7. ROSTO: CONFIRMAR REMOÇÃO DO "VER MAIS"
 --------------------------------------------------------------------
-Contexto: no mockup, OLHOS mostra 9 opções visíveis, NARIZ 5 e BOCA 5,
-todos com "Ver mais". E os rótulos nem sempre batem com a arte:
-CABELO diz "30 opções" mas o render mostra 32; PARTE DE CIMA diz
-"10 opções" com 9 visíveis; SAPATOS diz "10" com 11 visíveis.
+Contexto: com 4 opções de olhos, 4 de nariz e 4 de boca, todas cabem
+na fileira — o link "Ver mais ⌄" do mockup perde a função.
 
-Perguntas:
-a) Quantas opções terão OLHOS, NARIZ e BOCA no total?
-b) Vale o número dos rótulos (20 pele / 10 cores de cabelo / 30
-   cabelos / 10+10+10 roupas / 5+5 acessórios) e a arte é ilustrativa?
+Pergunta: confirmar que o "Ver mais" sai das três fileiras do rosto.
 
 --------------------------------------------------------------------
-6. BARRA COMPACTA: A ORDEM AULAS/CALENDÁRIO INVERTIDA É INTENCIONAL?
+8. SKILLS COMEÇAM NO NÍVEL 0 OU 1?
 --------------------------------------------------------------------
-Contexto: no desktop a ordem decidida é ... CALENDÁRIO · AULAS ...;
-na barra compacta você respondeu "projetos, aulas, calendário,
-artigos" — Aulas antes de Calendário, invertido em relação ao desktop.
+Contexto: sem escolha no cadastro, todo maker nasce com as 5 skills.
+O mockup antigo mostrava "NÍVEL 1" com 1 pip preenchido.
 
-Pergunta: a inversão é intencional ou as barras compactas devem
-seguir a mesma ordem relativa do desktop (Calendário antes de Aulas)?
-Aplicamos a sua resposta literal; é só confirmar.
+Pergunta: a skill de quem nunca pontuou aparece como nível 0 (barra
+vazia) ou nível 1 (1 pip preenchido)?
 
 --------------------------------------------------------------------
-7. ITEM "PERFIL" DA BARRA INFERIOR PARA QUEM NÃO ESTÁ LOGADO
+LEMBRETE — LICENÇA DAS FONTES (ainda pendente)
 --------------------------------------------------------------------
-Contexto: a barra inferior do celular tem PERFIL na 5ª posição.
-Visitante sem conta não tem perfil.
-
-Pergunta: para o visitante deslogado, o PERFIL vira "ENTRAR"/"CRIAR
-CONTA", abre a tela de login, ou some da barra?
-
---------------------------------------------------------------------
-8. ONDE FICAM BIBLIOTECA 3D E INSTAGRAM FORA DA BARRA?
---------------------------------------------------------------------
-Contexto: você decidiu tirar Biblioteca 3D e Instagram das barras de
-tablet e celular. Eles precisam continuar acessíveis.
-
-Perguntas:
-a) Ficam num menu (hambúrguer/drawer)? Onde fica o botão desse menu?
-b) Confirmar que tocar no logo leva à Home no celular.
-c) A Biblioteca 3D é uma seção importante — tudo bem ela ficar a dois
-   toques de distância no celular, ou merece um atalho em outro lugar
-   (ex.: card na Home)?
-
---------------------------------------------------------------------
-LEMBRETE — LICENÇA DAS FONTES
---------------------------------------------------------------------
-Os arquivos chegaram (obrigado!). Comfortaa é OFL, ok. Aldo the
-Apache e SquareFont vieram sem arquivo de licença — você consegue
-confirmar (ou enviar) a licença que permite uso em site
-institucional? Fontes desses acervos costumam ser "free for personal
-use", e precisamos disso resolvido antes do lançamento.
+Aldo the Apache e SquareFont vieram sem arquivo de licença. Você
+consegue confirmar (ou enviar) a licença que permite uso em site
+institucional? Comfortaa está ok (OFL). Precisamos disso antes do
+lançamento.

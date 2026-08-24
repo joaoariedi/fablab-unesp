@@ -41,16 +41,19 @@ Navegação principal (header, com logo-chip à esquerda e avatar do usuário à
 | **Aulas** | Cursos/tutoriais em vídeo para assistir | [pages/aulas.md](pages/aulas.md) |
 | **Artigos** | Conteúdos, reflexões e referências | [pages/artigos.md](pages/artigos.md) |
 | **Instagram** | Link externo, abre em nova aba | — |
-| **Criar conta** | Onboarding com criação de avatar (nº de passos em aberto — o novo mockup removeu o indicador `1 2 3`) | [pages/onboarding.md](pages/onboarding.md) |
+| **Criar conta** | Onboarding em **2 passos** (1: criar avatar; 2: dados pessoais) — decidido na rodada 3 | [pages/onboarding.md](pages/onboarding.md) |
+| **Minha Conta** | Perfil do maker: miniatura do avatar com as skills abaixo (rodada 3) | [pages/minha-conta.md](pages/minha-conta.md) |
 
 > **Decidido (2026-08-23, designer):** navegação canônica **desktop** em todas as
 > páginas, nesta ordem: `BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM ·
 > ARTIGOS` — Calendário e Aulas confirmados no menu principal. O item `AULAS` desalinhado
-> em alguns mockups é ruído de render; tudo alinhado. **Rodada 2:** nas versões
-> compactas, `BIBLIOTECA 3D` e `INSTAGRAM` saem da barra — **tablet**: `PROJETOS · AULAS
-> · CALENDÁRIO · ARTIGOS`; **mobile (barra inferior)**: `PROJETOS · AULAS · CALENDÁRIO ·
-> ARTIGOS · PERFIL` (Biblioteca 3D e Instagram acessíveis pelo menu). A página Calendário
-> segue sem mockup (spec marcada como proposta).
+> em alguns mockups é ruído de render; tudo alinhado. **Rodadas 2–3:** nas versões
+> compactas, `BIBLIOTECA 3D` e `INSTAGRAM` saem da barra e vivem no **menu** (botão no
+> topo, à esquerda, com todas as abas) — **tablet**: `PROJETOS · CALENDÁRIO · AULAS ·
+> ARTIGOS`; **mobile (barra inferior)**: `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS ·
+> PERFIL` (ordem corrigida na rodada 3 para seguir a do desktop; logo → Home; `PERFIL`
+> deslogado abre o login). A página Calendário segue sem mockup (spec marcada como
+> proposta).
 
 ## Gamificação
 

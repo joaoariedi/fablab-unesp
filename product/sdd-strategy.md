@@ -38,7 +38,7 @@ Uma feature = um ciclo SDD completo. Ordem proposta (dependências entre parênt
 | 001 | `design-system-shell` | Tokens (cores, tipografia, shapes) como **CSS custom properties — zero hex literal em componente** (porta do co-branding), componentes base (card, botão, chip, barra de progresso, pips), header/footer responsivos, grid | visual-identity.md, pages/* |
 | 002 | `cms-conteudo` | Coleções (projetos, modelos 3D, aulas, artigos, eventos, usuários), upload multi-formato para storage S3-compatível, admin/moderação | pages/*/Modelo de conteúdo |
 | 003 | `paginas-publicas` (001, 002) | Home v1, Projetos, Artigos, Aulas, Biblioteca 3D (com preview 3D), Calendário | pages/*.md |
-| 004 | `contas-avatar` (001, 002) | Cadastro 3 passos, login, perfil, construtor de avatar pixel art, LGPD | pages/onboarding.md |
+| 004 | `contas-avatar` (001, 002) | Cadastro em 2 passos (avatar → dados pessoais), login, Minha Conta (avatar + skills), construtor de avatar pixel art, LGPD | pages/onboarding.md, pages/minha-conta.md |
 | 005 | `gamificacao` (004) | Ledger de XP, skills/níveis, missões + validação, ranking, nível do lab, recompensas cosméticas | gamification.md |
 | 006 | `home-gamificada` (003, 005) | Home logada com missões em destaque, ranking, nível do lab; hero v2 (mapa pixel art) se aprovado | pages/home.md |
 | 007 | `onboarding-de-orgs` — **gatilho: convênio assinado + 2º lab real** | Wizard de organização, tema/co-branding, quotas de storage, TLS multi-host | tech-stack.md → Multi-tenancy |

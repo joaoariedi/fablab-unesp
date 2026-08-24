@@ -188,13 +188,14 @@ Como o design gamificado se materializa — decidido junto com a arquitetura A:
 - **Avatar pixel art por composição de camadas**: cada cosmético é um PNG por slot
   (corpo/cabelo/rosto/roupas/acessórios) empilhado por z-index no construtor; um composite
   server-side (`sharp`) gera a miniatura cacheada usada em cards e ranking.
-  **Decidido (2026-08-23):** a designer produz os sprites; rotação em **4 direções**;
-  catálogo conforme o mockup `design/avatar-create.png` — base `XX OU XY`, 20 tons de
-  pele, 10 tons de cabelo, 30 cabelos, rosto por olhos/nariz/boca, roupas em 3 slots de
-  10, óculos e chapéus com 5 cada; somente **itens fixos** no v1 (cosméticos de recompensa
-  adiados); cards/ranking usam o mesmo rosto do boneco em miniatura. Resta definir o
-  template/grade técnico dos sprites (e se roupas variam por base XX/XY) no brainstorm da
-  feature 004.
+  **Decidido (2026-08-23, rodadas 1–3):** a designer produz os sprites; rotação em
+  **4 direções**; catálogo conforme `design/avatar-create.png` atualizado pela rodada 3 —
+  base **`F`/`M`** (rótulos trocados de XX/XY), 20 tons de pele, 10 tons de cabelo, 30
+  cabelos, rosto com **4 olhos + 4 narizes + 4 bocas**, roupas em 3 slots de 10 (**apenas
+  a parte de cima varia por base** — F com peitos, M sem), óculos e chapéus com 5 cada;
+  somente **itens fixos** no v1 (cosméticos de recompensa adiados); cards/ranking usam o
+  mesmo rosto do boneco em miniatura. Resta definir o template/grade técnico dos sprites
+  no brainstorm da feature 004 (produção: partes de cima ×2 bases, tudo ×4 direções).
 - **Hero v2 (mapa isométrico)** como arte pré-renderizada com *art direction*, não mundo
   renderizado — **decidido (2026-08-23):** o v2 é o hero oficial da home (substitui o v1)
   e o mobile recebe **arte dedicada** produzida pela designer; `<picture>` seleciona a
