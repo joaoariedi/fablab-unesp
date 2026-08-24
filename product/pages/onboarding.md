@@ -13,20 +13,27 @@ antigo "passo 3 — vínculo UNESP" foi **absorvido pelo passo 2**.
 
 ## Fonte de design
 
-- **`design/avatar-create.png`** (2026-08-23) — **fonte primária** da tela de criação de
+- **`design/criar-conta-passo-1.png`** (2026-08-23) — **fonte primária** da tela de criação de
   avatar, desktop. **Substitui** a metade direita de
-  `design/ChatGPT Image 18 de ago. de 2026, 11_19_16.png`, que fica como **registro
+  `design/home-v1-criar-conta-v1.png`, que fica como **registro
   histórico** (era o "passo 1 de 3" com abas, tipos de corpo, altura e skills).
+- **`design/criar-conta-passo-2.jpg`** (2026-08-24) — **fonte primária do passo 2** (dados
+  pessoais), desktop; confirma os campos decididos nas rodadas 3–4 (ver §6).
+- **Tela de login — design definido (decisão do PO, 2026-08-24):** a tela de **login por
+  e-mail + senha** reusa o design do passo 2 (`design/criar-conta-passo-2.jpg`),
+  **trocando apenas o formulário** — spec em [login.md](login.md); o link `Fazer login`
+  do passo 2 aponta para ela. (Se a designer entregar um mockup dedicado, ele atualiza a
+  spec.)
 - Apoio: `visual-identity.md` (paleta, tipografia, botões) e `gamification.md` (avatar,
   skills, XP).
-- **Demais passos do fluxo não possuem mockup** — **layout (proposta)**; os **campos** do
-  passo 2 foram decididos na rodada 3 (ver §6).
 
 ## Estrutura da página — desktop (≥1280px)
 
 Fundo geral **claro** (cinza muito claro/quase branco; token exato **(proposta)**), com
-texto navy. Conteúdo em duas colunas: trilho esquerdo (~1/4) e painéis de customização
-(~3/4).
+texto navy. No **passo 1**, conteúdo em duas colunas: trilho esquerdo (~1/4) e painéis de
+customização (~3/4). No **passo 2** o layout é outro — trilho esquerdo só com o preview e
+**card de formulário centrado** (~40% da largura), sobrando a faixa direita com os
+ornamentos de fundo (ver §6).
 
 ### 1. Header (barra navy, padrão do site)
 
@@ -34,20 +41,29 @@ O novo mockup usa o **header padrão do site**, não mais um header de fluxo foc
 
 - **Logo-chip laranja** extrudado à esquerda, cubo isométrico entre `FAB` e `LAB`
   (`FAB ◆ LAB` / `CITE BAURU`). **Decidido (rodada 2, 2026-08-23):** a versão **laranja** é
-  o **chip canônico do header** em todo o site — este mockup (`design/avatar-create.png`) é
+  o **chip canônico do header** em todo o site — este mockup (`design/criar-conta-passo-1.png`) é
   a referência; a variante rosa fica como registro de mockup. **Decidido (rodada 3,
   2026-08-23):** tocar no **logo leva à Home** (não é mais proposta).
 - **Navegação canônica completa e alinhada**: `BIBLIOTECA 3D` · `PROJETOS` · `CALENDÁRIO` ·
   `AULAS` · `INSTAGRAM` · `ARTIGOS` — primeiro mockup que já renderiza a ordem decidida em
   2026-08-23.
 - À direita: avatar pixel em moldura + `MAKER_X` / `NÍVEL 3` + chevron `⌄`.
+  **Rodada 4 (2026-08-24):** `MAKER_X` é rótulo **ilustrativo** — a UI real mostra o **nome
+  da pessoa** (identificador `@nomesobrenome` quando exibido).
   - O estado **logado** no header sugere que esta tela também serve como **`Editar avatar`**
     do perfil; para o cadastro de visitante, o bloco de conta vira `ENTRAR`/`CRIAR CONTA`
     **(proposta)**.
 
 > **Superado pelo novo mockup:** o header anterior (chip rosa, rótulo `CRIAR CONTA`,
 > indicador de passos `1 2 3`, sem navegação) era do mockup antigo. O **indicador de passos
-> não aparece** no novo mockup — ver Questões em aberto.
+> não aparece** no novo mockup — ver a decisão abaixo (questão 11, fechada na rodada 4).
+>
+> **Decidido (rodada 4, 2026-08-24):** o **indicador de passos volta à tela**, agora com
+> **2 passos** (`1 2`). O `1 2 3` do mockup antigo segue superado.
+
+> **Decidido (rodada 4, 2026-08-24):** o **botão de menu existe só nas versões compactas**
+> (tablet/mobile). No **desktop** as **6 abas ficam na barra**, **sem botão de menu** — como
+> este mockup já mostra.
 
 ### 2. Cabeçalho da etapa
 
@@ -64,14 +80,20 @@ O novo mockup usa o **header padrão do site**, não mais um header de fluxo foc
    selecionada com **contorno amarelo**. É um elemento **novo**: a base binária substitui
    os 4 tipos de corpo e o slider de altura removidos em 2026-08-23.
    **Decidido (rodada 3, 2026-08-23):** os rótulos são **`F`** e **`M`** — o mockup
-   `design/avatar-create.png` mostra ~~`XX OU XY`~~, que fica como **registro superado**.
+   `design/criar-conta-passo-1.png` mostra ~~`XX OU XY`~~, que fica como **registro superado**.
    **Apenas a `PARTE DE CIMA` varia por base** (`F` com peitos, `M` sem); todos os demais
    slots (cabelo, rosto, parte de baixo, sapatos, acessórios) são **únicos**, produzidos em
    versão única de sprite.
 3. **`NOME DO AVATAR`** — campo de texto com placeholder `Digite um nome...` e contador
-   **`0/20`** (máximo 20 caracteres). **Decidido (rodada 3, 2026-08-23):** é o **nome da
+   ~~`0/20` (máximo 20 caracteres)~~ — **registro do mockup**.
+   **Decidido (rodada 4, 2026-08-24):** o limite passa de 20 para **60 caracteres**; o
+   contador real é **`0/60`**. **Decidido (rodada 3, 2026-08-23):** é o **nome da
    pessoa** informado no passo 2 (mesmo campo/valor) — não é um apelido separado do boneco.
-   Como esse nome convive com o `@handle` exibido nos cards **segue em aberto** (questão 12).
+   **Decidido (rodada 4, 2026-08-24):** publicamente aparece o **nome da pessoa**; o
+   identificador segue o modelo **`@nomesobrenome`**, **derivado do nome** (ex.:
+   `@mariasilva`) — não é digitado pelo usuário. Os handles dos mockups (`@laser.nick`,
+   `@print.lu`, `@maker_jv`) são **ilustrativos/superados**. Normalização (acentos/espaços)
+   e colisões de homônimos seguem **(proposta)** — ver questão 12.
 4. **Botões**: secundário **`VOLTAR`** (navy, texto claro) e primário
    **`SALVAR E CONTINUAR →`** (rosa preenchido, texto navy, sombra dura — estilo canônico
    decidido em 2026-08-23; o rótulo mudou de `CONTINUAR` para `SALVAR E CONTINUAR`).
@@ -100,8 +122,9 @@ itálico fica **fora** do contêiner, no rodapé da página:
   **Decidido (rodada 3, 2026-08-23):** **4 opções de cada — 12 no total**.
   ~~Registro do mockup: `OLHOS` em duas fileiras com 5 + 4 = 9 opções visíveis, `NARIZ` 5 e
   `BOCA` 5, cada bloco com `Ver mais ⌄`.~~ Com 4 opções por categoria, todas cabem numa
-  fileira e o link **`Ver mais ⌄` perde função — remoção (proposta)** decorrente da
-  decisão, a confirmar com a designer.
+  fileira e o link `Ver mais ⌄` perde função. **Decidido (rodada 4, 2026-08-24):** a
+  **remoção do `Ver mais ⌄`** das fileiras de `OLHOS`/`NARIZ`/`BOCA` está **confirmada**
+  (não é mais proposta decorrente).
 - **Card `ROUPAS`** — três slots independentes:
   - **`PARTE DE CIMA`** — catálogo de **10**: camisetas, moletons, jaqueta, regata e
     croppeds listrados (o render mostra apenas **9** miniaturas; vale o total do catálogo).
@@ -132,22 +155,63 @@ publicar projetos — **1 ponto por tarefa**, economia em `gamification.md`). A
 logo abaixo (spec em [minha-conta.md](minha-conta.md)). As especificações do card de skill
 (pips de 10 níveis, `NÍVEL n`) permanecem válidas em `gamification.md`, agora sem checkbox.
 
-### 6. Passo 2 do fluxo — `SEUS DADOS` (sem mockup)
+**Decidido (rodada 4, 2026-08-24):** as 5 skills criadas automaticamente começam no
+**nível 0** — barra de pips **vazia**. O `NÍVEL 1` com 1 pip do mockup antigo é **registro
+superado**.
+
+### 6. Passo 2 — `CRIAR CONTA` (dados pessoais) — mockup `design/criar-conta-passo-2.jpg`
 
 **Decidido (rodada 3, 2026-08-23):** o fluxo tem **2 passos** e o passo 2 reúne os dados
-pessoais **e** o vínculo com a UNESP. Campos decididos:
+pessoais **e** o vínculo com a UNESP. **Mockup entregue em 2026-08-24** — estrutura:
 
-- `Nome` — **é também o `NOME DO AVATAR`** (mesmo campo/valor, ≤20 caracteres);
-- `Data de nascimento`;
-- `E-mail`;
-- `Vínculo com a UNESP`;
-- `Escolaridade`;
-- `Curso`.
+- **Trilho esquerdo**: o **preview do avatar** criado no passo 1 permanece visível —
+  cartão claro de grade quadriculada com ornamentos de "janela" (três quadradinhos no
+  topo à esquerda e **marca de canto** em L no topo à direita), avatar sobre base
+  isométrica teal e botão ⟳ no canto inferior direito. É o **único** elemento do trilho —
+  o seletor de base e o `NOME DO AVATAR` ficam só no passo 1.
+- **Fundo claro** com ornamentos isométricos em linha esmaecida (impressora 3D, cubos,
+  trilhas de circuito) como marca-d'água.
+- **Card central claro** e **centrado na página**, com contorno navy fino, cantos
+  arredondados e sombra suave — o tom do card é **praticamente o mesmo do fundo**
+  (~`#F2F2F2` sobre `#EFEFEF`); quem separa os dois é o contorno, não o preenchimento
+  (token exato **(proposta)**):
+  - Título display navy **`CRIAR CONTA`** + subtítulo
+    `Preencha os dados abaixo para criar sua conta.`
+  - Campos na ordem do mockup — rótulos caps navy; inputs com ícone à esquerda:
+    1. **`NOME COMPLETO`** — ícone de pessoa — `Digite seu nome completo`. Confirma
+       **nome completo** (≤60 — rodada 4); é também o `NOME DO AVATAR` (rodada 3).
+    2. **`DATA DE NASCIMENTO`** — ícone de calendário — `DD / MM / AAAA` + segundo ícone
+       de calendário à direita (date picker; comportamento **(proposta)**).
+    3. **`EMAIL`** — ícone de envelope — `Digite seu e-mail`.
+    4. **`VÍNCULO COM UNESP`** — ícone de instituição — `Selecione seu vínculo` +
+       chevron `⌄` (select; lista de opções **(proposta)**).
+    5. **`ESCOLARIDADE`** — ícone de capelo — `Selecione sua escolaridade` + chevron `⌄`
+       (select; lista **(proposta)**).
+    6. **`CURSO`** — ícone de livro — **`Digite ou selecione seu curso`** + chevron `⌄`
+       — **combobox** (texto livre OU seleção; detalhe novo do mockup).
+    7. **`SENHA`** — ícone de cadeado — `Crie uma senha` + **ícone de olho**
+       (mostrar/ocultar). **Sem `Confirmar senha`** no mockup (segue **(proposta)**,
+       assim como regras de força).
+  - Botão **`CRIAR CONTA →`** em **navy preenchido com texto claro** — **diverge** do
+    primário canônico (rosa preenchido/texto navy) — ver questão 17.
+  - Abaixo do botão: **`Já tem uma conta?` `Fazer login`** (link azul) → tela de login.
 
-Itens **(proposta)**, não citados pela designer e mantidos como necessidade
-técnica/LGPD: `Senha` + `Confirmar senha` (ou outro método de autenticação), aceite de
-`Termos de uso e política de privacidade`, `@handle` público (verificação de
-disponibilidade) e CTA final `COMEÇAR A CRIAR`.
+**Divergências do mockup com decisões/propostas** (prevalecem as decisões — ver
+Questões em aberto):
+
+- **CTA em navy preenchido, sem a sombra dura deslocada**, em vez do primário canônico
+  **rosa** (decidido 2026-08-23, `visual-identity.md`) — diverge de uma decisão vigente,
+  mas a questão 17 **reabre** o ponto (estilo próprio de formulário × rosa canônico): o
+  navy **não** entra como token novo antes da resposta da designer.
+- **Sem indicador de passos** `1 2` no mockup — a decisão da rodada 4 (o indicador volta)
+  prevalece (questão 18).
+- **Sem botão `VOLTAR`** — como retornar ao passo 1 fica em aberto (questão 9).
+- **Sem aceite de termos/LGPD** — permanece **(proposta)** como necessidade legal
+  (questão 19).
+
+**Decidido (rodada 4, 2026-08-24):** **não há campo `@handle` digitado** no passo 2 — ✓ o
+mockup confirma; o identificador `@nomesobrenome` é **derivado do nome**; normalização e
+colisão de homônimos seguem **(proposta)**.
 
 > ~~**Passo final — `VÍNCULO UNESP`** (proposta): tipo de vínculo (`Aluno`, `Servidor`,
 > `Voluntário externo`), `Curso/Unidade`, `RA/matrícula` (opcional), e confirmação com
@@ -169,7 +233,8 @@ navegação**: composição decidida na rodada 2; **ordem, menu e logo → Home*
   **Decidido (rodada 3):** o **botão de menu fica no topo, na extremidade esquerda da
   barra**, e contém **todas as abas** (inclusive `BIBLIOTECA 3D` e `INSTAGRAM`); a
   Biblioteca 3D fica **só no menu**, sem atalho extra. Tocar no **logo leva à Home**
-  (decidido — não é mais proposta).
+  (decidido — não é mais proposta). **Confirmado (rodada 4, 2026-08-24):** o botão de menu
+  existe **só nas versões compactas** (tablet/mobile) — no desktop as 6 abas ficam na barra.
 - Trilho esquerdo vira **linha superior**: preview + (seletor de base `F`/`M` e
   `NOME DO AVATAR` empilhados ao lado); painéis de customização abaixo, em largura total.
 - Painéis em 2 colunas (`TONS DE PELE` + `ROSTO`; `CABELO` largura total; `ROUPAS` e
@@ -180,7 +245,8 @@ navegação**: composição decidida na rodada 2; **ordem, menu e logo → Home*
 ## Adaptação mobile (<768px)
 
 Todas as decisões abaixo são **(proposta)**, **exceto a barra inferior**: composição
-decidida na rodada 2; **ordem, menu, logo → Home e `PERFIL` deslogado** na rodada 3.
+decidida na rodada 2; **ordem, menu, logo → Home e `PERFIL` deslogado** na rodada 3; e a
+**visibilidade da barra durante o cadastro** na rodada 4.
 
 - **Decidido (rodada 2, 2026-08-23):** a barra inferior do mobile tem **5 posições**;
   `BIBLIOTECA 3D` e `INSTAGRAM` saem da barra. **Ordem corrigida na rodada 3
@@ -191,9 +257,13 @@ decidida na rodada 2; **ordem, menu, logo → Home e `PERFIL` deslogado** na rod
   **Decidido (rodada 3):** `BIBLIOTECA 3D` e `INSTAGRAM` ficam **no menu** — botão no
   **topo, extremidade esquerda da barra**, com **todas as abas** (Biblioteca 3D só ali,
   sem atalho extra); **logo leva à Home**; o item **`PERFIL` deslogado abre a tela de
-  login** (referência: [minha-conta.md](minha-conta.md)). Se o fluxo de cadastro
-  **suprimir a barra inferior** (para não competir com `VOLTAR` / `SALVAR E CONTINUAR` da
-  barra fixa de ação), isso segue **(proposta)** — ver questão 15, ainda em aberto.
+  login** (login por **e-mail + senha** — rodada 4; referência:
+  [minha-conta.md](minha-conta.md)). **Confirmado (rodada 4, 2026-08-24):** o botão de menu
+  é exclusivo das versões compactas.
+  ~~Se o fluxo de cadastro **suprimir a barra inferior** (para não competir com `VOLTAR` /
+  `SALVAR E CONTINUAR` da barra fixa de ação), isso segue **(proposta)**.~~
+  **Decidido (rodada 4, 2026-08-24):** durante o cadastro no mobile a **barra inferior
+  aparece** — não é suprimida; convive com a barra fixa de ação (questão 15 resolvida).
 - Preview do avatar em faixa **sticky no topo** (~240px) com o botão ⟳ sobreposto, para o
   resultado ficar visível durante a customização.
 - Seletor de base (`F`/`M`) e `NOME DO AVATAR` logo abaixo do preview, empilhados.
@@ -201,7 +271,7 @@ decidida na rodada 2; **ordem, menu, logo → Home e `PERFIL` deslogado** na rod
   Rosto · Roupas · Acessórios); swatches e miniaturas em grade com células ≥44×44px;
   fileiras longas (30 cabelos, 20 tons) com rolagem vertical dentro da seção.
 - ~~`Ver mais` do rosto expande inline.~~ Sem função com **4 opções por categoria**
-  (rodada 3) — remoção **(proposta)** decorrente.
+  (rodada 3) — **remoção confirmada (rodada 4, 2026-08-24)**.
 - `VOLTAR` / `SALVAR E CONTINUAR` em **barra fixa inferior** (safe-area), primário com
   ~65% da largura.
 
@@ -210,19 +280,22 @@ decidida na rodada 2; **ordem, menu, logo → Home e `PERFIL` deslogado** na rod
 | Componente | Descrição | Origem |
 |---|---|---|
 | `HeaderPrincipal` | Header padrão do site com navegação canônica completa no desktop; compacto (ordem corrigida na rodada 3): tablet `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS`, mobile em barra inferior de 5 posições `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS · PERFIL`; `BIBLIOTECA 3D` e `INSTAGRAM` **no menu** | mockup novo + decisão |
-| `BotaoMenu` / `MenuCompleto` | Botão no **topo, extremidade esquerda** da barra; abre **todas as abas** (inclusive `BIBLIOTECA 3D` e `INSTAGRAM`); logo → Home | decidido (rodada 3) |
+| `BotaoMenu` / `MenuCompleto` | Botão no **topo, extremidade esquerda** da barra; abre **todas as abas** (inclusive `BIBLIOTECA 3D` e `INSTAGRAM`); logo → Home. **Só nas versões compactas** (tablet/mobile) — no desktop não existe botão de menu | decidido (rodadas 3–4) |
 | `AvatarPreview` | Pixel art sobre grade + base isométrica teal + botão ⟳ (**4 direções**) | mockup + decisão |
 | `SeletorBase` | Card com 2 silhuetas rotuladas **`F`** e **`M`** (rodada 3; ~~`XX OU XY`~~ do mockup superado), seleção em contorno amarelo; afeta **só** `PARTE DE CIMA` | mockup novo + decisão |
-| `CampoNomeAvatar` | Input com placeholder `Digite um nome...` e contador `0/20`; **é o nome da pessoa** do passo 2 (rodada 3) | mockup novo + decisão |
+| `CampoNomeAvatar` | Input com placeholder `Digite um nome...` e contador **`0/60`** (rodada 4; ~~`0/20`~~ do mockup é registro); **é o nome da pessoa** do passo 2 (rodada 3) | mockup novo + decisão |
 | `SwatchRow` | Swatches de cor (tons de pele 20, tons de cabelo 10); seleção por contorno **(proposta — nenhum swatch aparece selecionado no mockup)** | mockup novo |
 | `PainelCatalogo` | Card claro com título caps + grade de miniaturas; **sem legenda de quantidade** (rodada 3 — ~~`(n opções)`~~ sai da UI) | mockup novo + decisão |
-| ~~`LinhaVerMais`~~ | ~~Fileira de opções + link `Ver mais ⌄` (olhos, nariz, boca)~~ — sem função com 4 opções por categoria (rodada 3); remoção **(proposta)** | mockup novo |
+| ~~`LinhaVerMais`~~ | ~~Fileira de opções + link `Ver mais ⌄` (olhos, nariz, boca)~~ — sem função com 4 opções por categoria (rodada 3); **remoção confirmada (rodada 4)** | mockup novo |
 | ~~`CustomizationTabs`~~ | ~~5 abas Corpo/Cabelo/Rosto/Roupas/Acessórios~~ — **superado**: painéis simultâneos | mockup antigo |
-| `StepIndicator` | Indicador de passos — o fluxo tem **2 passos** (rodada 3); ~~quadrados `1 2 3`~~ do mockup antigo superados. Exibir ou não o indicador segue **(proposta)** | mockup antigo + decisão |
-| ~~`SkillCard`~~ | ~~Nome, ícone, `NÍVEL 1`, pips (10) e checkbox~~ — **fora do cadastro** (rodada 3); vive em [minha-conta.md](minha-conta.md), sem checkbox | mockup antigo + decisão |
+| `StepIndicator` | Indicador de passos — **volta à tela com 2 passos `1 2`** (decidido na rodada 4); ~~quadrados `1 2 3`~~ do mockup antigo superados | mockup antigo + decisão (rodadas 3–4) |
+| ~~`SkillCard`~~ | ~~Nome, ícone, `NÍVEL 1`, pips (10) e checkbox~~ — **fora do cadastro** (rodada 3); vive em [minha-conta.md](minha-conta.md), sem checkbox e com **nível inicial 0** (rodada 4) | mockup antigo + decisão |
 | `ButtonSecondary` / `ButtonPrimary` | `VOLTAR` / `SALVAR E CONTINUAR →` (primário canônico) | mockup novo |
-| `FormField`, `SelectField`, `DateField` | Campos do passo 2 (nome, data de nascimento, e-mail, vínculo UNESP, escolaridade, curso) | decidido (rodada 3) |
-| `PasswordField`, `CheckboxTermos` | Senha/autenticação e aceite de termos | **(proposta)** |
+| `FormField`, `SelectField`, `DateField` | Campos do passo 2 com ícone à esquerda (pessoa, calendário, envelope, instituição, capelo, livro); `CURSO` é **combobox** (`Digite ou selecione seu curso`) | decidido (rodada 3) + mockup `criar-conta-passo-2.jpg` |
+| `PasswordField` | `SENHA` — `Crie uma senha` + ícone de **olho** (mostrar/ocultar) | decidido (rodada 4) + mockup |
+| `BotaoFormulario` | `CRIAR CONTA →` — **navy preenchido, texto claro** no mockup; diverge do primário canônico rosa (questão 17) | mockup `criar-conta-passo-2.jpg` |
+| `LinkLogin` | `Já tem uma conta?` `Fazer login` (azul) → tela de login | mockup `criar-conta-passo-2.jpg` |
+| `CheckboxTermos` | Aceite de termos de uso e política de privacidade — **ausente no mockup**; mantido como necessidade legal (questão 19) | **(proposta)** |
 | `ToastError` / `InlineError` | Feedback de validação | **(proposta)** |
 
 ## Modelo de conteúdo (CMS)
@@ -263,16 +336,16 @@ novo mockup.)*
 
 | Campo | Tipo | Obrigatório | Observações |
 |---|---|---|---|
-| `handle` | texto único | sim | exibido como `@handle` |
-| `nome_avatar` | texto (≤20) | sim | campo `NOME DO AVATAR` — **decidido (rodada 3): mesmo valor do `nome` da pessoa** (passo 2); relação com `@handle` em aberto (questão 12) |
-| `nome` | texto | sim | passo 2 — **decidido (rodada 3)**; alimenta também `nome_avatar` |
-| `data_nascimento` / `email` | data / e-mail | sim | passo 2 — **decidido (rodada 3)** |
-| `vinculo_unesp` / `escolaridade` / `curso` | enum/texto | sim | passo 2 — **decidido (rodada 3)**; listas de opções **(proposta)** |
-| `senha_hash` | — | — | **(proposta)** — necessidade técnica, não citada pela designer |
+| `handle` | texto único | sim | exibido como `@handle`. **Decidido (rodada 4):** é **derivado do `nome`** no modelo `@nomesobrenome` (ex.: `@mariasilva`) — **não é digitado** no cadastro; normalização (acentos/espaços/maiúsculas) e desempate de homônimos **(proposta)** |
+| `nome_avatar` | texto (**≤60** — rodada 4; ~~≤20~~) | sim | campo `NOME DO AVATAR` — **decidido (rodada 3): mesmo valor do `nome` da pessoa** (passo 2) |
+| `nome` | texto (**≤60** — rodada 4) | sim | passo 2 — **decidido (rodada 3)**; alimenta também `nome_avatar` e o `handle` derivado (rodada 4); é o que aparece publicamente |
+| `data_nascimento` / `email` | data / e-mail | sim | passo 2 — **decidido (rodada 3)**; o `email` é o **identificador de login** (rodada 4) |
+| `vinculo_unesp` / `escolaridade` / `curso` | enum/texto | sim | passo 2 — **decidido (rodada 3)**; listas de opções **(proposta)**; `curso` é **combobox** — texto livre ou seleção (mockup 2026-08-24) |
+| `senha_hash` | texto | sim | **decidido (rodada 4):** login por **e-mail + senha**; campo `Senha` no passo 2. Algoritmo/parâmetros de hash **(proposta)** |
 | ~~`curso_unidade` / `ra_matricula`~~ | — | — | ~~antigo passo 3~~ — absorvidos por `curso` / `vinculo_unesp`; `ra_matricula` segue **(proposta)** |
 | `avatar_config` | JSON | sim | `base` (**`f`/`m`** — rodada 3), `tom_pele`, `tom_cabelo`, e um item por slot: `cabelo`, `olhos`, `nariz`, `boca`, `roupa_cima` (variante por base), `roupa_baixo`, `sapatos`, `oculos?`, `chapeu?` + direção do preview |
 | `avatar_render` | mídia | não | PNG composto para cards/ranking (mesmo rosto — decidido 2026-08-23) **(proposta)** |
-| `skills` | relação N:N → `skill` | sim | com `nivel` e `xp` por skill — **criada automaticamente** no cadastro (rodada 3: não há escolha), exibida em Minha Conta |
+| `skills` | relação N:N → `skill` | sim | com `nivel` e `xp` por skill — **criada automaticamente** no cadastro (rodada 3: não há escolha), **`nivel` inicial = 0** (rodada 4), exibida em Minha Conta |
 | `xp_total` / `nivel` | número | sim | derivados |
 | `aceite_termos_em` | data/hora | sim | **(proposta)** |
 
@@ -286,9 +359,10 @@ novo mockup.)*
   2026-08-23 — mecânica de desbloqueio adiada). "As opções podem ser combinadas
   livremente."
 - **Skills iniciais**: **decidido (rodada 3)** — criadas **automaticamente** com o perfil,
-  sem escolha do usuário, e evoluídas pelo jogo (1 ponto por tarefa). Nível inicial 1 (pips
-  de 10; 5 XP por nível, teto 10) segue **(proposta)** em `gamification.md` (0 × 1). A
-  visualização é em [minha-conta.md](minha-conta.md).
+  sem escolha do usuário, e evoluídas pelo jogo (1 ponto por tarefa). **Decidido (rodada 4,
+  2026-08-24): nível inicial 0** — barra de pips **vazia** (pips de 10; 5 XP por nível, teto
+  10); o `NÍVEL 1` do mockup antigo é registro superado. A visualização é em
+  [minha-conta.md](minha-conta.md).
 - **XP de boas-vindas (proposta)**: concluir o cadastro concede XP e conta para o Nível do
   Lab (números dos mockups são ilustrativos — economia real em `gamification.md`).
 - Curtidas (♥) não têm papel nesta página.
@@ -304,19 +378,28 @@ novo mockup.)*
   mesmo contorno cinza-azulado neutro. Que os demais slots adotem esse mesmo padrão de
   seleção é **(proposta)**. Toda mudança atualiza o preview em tempo real **(proposta)**.
 - ~~**`Ver mais`**: expande o catálogo completo da fileira (olhos/nariz/boca) inline ou em
-  modal **(proposta)**.~~ Sem função com **4 opções por categoria** (rodada 3) — remoção
-  **(proposta)** decorrente.
+  modal **(proposta)**.~~ Sem função com **4 opções por categoria** (rodada 3) — **remoção
+  confirmada (rodada 4, 2026-08-24)**.
 - **Seleção da base**: trocar entre `F` e `M` altera **apenas** a variante da
   `PARTE DE CIMA`; os demais slots permanecem como estão (rodada 3).
-- **`NOME DO AVATAR`**: contador `n/20` em tempo real; como o valor é o **nome da pessoa**
-  (rodada 3), os dois campos ficam sincronizados entre os passos — validação de conteúdo
-  (palavrões, unicidade?) **(proposta — ver questão 12)**.
+- **`NOME DO AVATAR`**: contador **`n/60`** em tempo real (rodada 4; ~~`n/20`~~ superado);
+  como o valor é o **nome da pessoa** (rodada 3), os dois campos ficam sincronizados entre
+  os passos. O identificador `@nomesobrenome` é **derivado** desse nome (rodada 4) —
+  normalização, colisão de homônimos e validação de conteúdo (palavrões) seguem
+  **(proposta — ver questão 12)**.
 - **Loading**: skeleton no preview enquanto sprites carregam; `SALVAR E CONTINUAR` com
   spinner e desabilitado durante o envio **(proposta)**.
 - **Vazio/Erro**: catálogo vazio → `Nenhum item disponível ainda`; falha de sprites →
   `Tentar novamente` **(proposta)**.
 - **Deslogado (cadastro)**: header troca o bloco de conta por `ENTRAR`/`CRIAR CONTA`
-  **(proposta)**; `VOLTAR` retorna à home **(proposta)**.
+  **(proposta)**; `VOLTAR` retorna à home **(proposta)**. `ENTRAR` leva à **tela de login
+  por e-mail + senha** (decidido na rodada 4; **design da tela de login definido** — ver `login.md`).
+- **Indicador de passos**: visível nos dois passos, com `1 2` (decidido na rodada 4); o
+  passo corrente em destaque **(proposta de estilo)**. *Nenhum dos dois mockups renderiza
+  o indicador — a decisão prevalece (questão 18).*
+- **Senha**: ícone de olho alterna a visibilidade (mockup `criar-conta-passo-2.jpg`).
+- **`Fazer login`**: link do passo 2 leva à tela de login (e-mail + senha; mockup a
+  caminho).
 - **Logado (edição)**: o mockup mostra usuário logado — a tela reusada como
   `Editar avatar` do perfil, com `SALVAR` no lugar de `SALVAR E CONTINUAR` **(proposta)**.
 - **Persistência (proposta)**: rascunho do avatar guardado localmente entre passos.
@@ -328,8 +411,9 @@ novo mockup.)*
    skills no cadastro; todas evoluem pelo jogo e são vistas em Minha Conta.
 2. ~~Conteúdo definitivo dos passos seguintes — dados pessoais, vínculo UNESP,
    confirmação?~~ **Decidido (rodada 3, 2026-08-23):** passo 2 = nome, data de nascimento,
-   e-mail, vínculo com a UNESP, escolaridade, curso (vínculo absorvido aqui). Senha/
-   autenticação, aceite de termos e tela de confirmação seguem **(proposta)**.
+   e-mail, vínculo com a UNESP, escolaridade, curso (vínculo absorvido aqui).
+   **Decidido (rodada 4, 2026-08-24):** o passo 2 **ganha campo de senha** — login por
+   **e-mail + senha**. Aceite de termos e tela de confirmação seguem **(proposta)**.
 3. O cadastro exige e-mail institucional UNESP ou aceita externos/comunidade?
 4. ~~Quais opções existem em `CABELO`, `ROSTO`, `ROUPAS` e `ACESSÓRIOS`?~~
    **Superado pelo novo mockup (2026-08-23):** cabelo 30 + 10 cores; roupas 3×10;
@@ -339,20 +423,29 @@ novo mockup.)*
 6. ~~Altura/tipo de corpo?~~ **Removidos (2026-08-23)**; o novo mockup introduz a base
    binária no lugar, com rótulos **`F` e `M`** (rodada 3) — ver questão 14.
 7. Cadastro concede XP inicial? Quanto, e conta para o Nível do Lab?
-8. Há login social/SSO da UNESP como alternativa ao formulário?
-9. Onde o `VOLTAR` leva — home ou tela de escolha entrar/cadastrar?
+8. Há login social/SSO da UNESP como alternativa ao formulário? *(O método base já está
+   decidido na rodada 4: **e-mail + senha**; um SSO adicional segue em aberto.)*
+9. O mockup do passo 2 (`criar-conta-passo-2.jpg`) **não tem botão `VOLTAR`** — como o usuário
+   retorna ao passo 1 para ajustar o avatar? E no passo 1, para onde o `VOLTAR` leva —
+   home ou tela de escolha entrar/cadastrar?
 10. ~~**Nova:** para onde foi a **escolha de skills iniciais** — outro passo do fluxo, o
     perfil pós-cadastro, ou saiu do onboarding?~~ **Decidido (rodada 3, 2026-08-23):**
     **saiu do cadastro** — não há escolha em passo algum; skills evoluem pelo jogo e a
     **visualização** vive em **Minha Conta** ([minha-conta.md](minha-conta.md)).
 11. ~~**Nova:** o fluxo continua em passos (o botão diz `SALVAR E CONTINUAR`), mas o
     **indicador `1 2 3` sumiu** — quantos passos existem e o indicador volta?~~
-    **Decidido (rodada 3, 2026-08-23):** são **2 passos** (avatar → dados pessoais). Se o
-    indicador de passos volta à UI segue **(proposta)**.
+    **Decidido (rodada 3, 2026-08-23):** são **2 passos** (avatar → dados pessoais).
+    ~~Se o indicador de passos volta à UI segue **(proposta)**.~~ **Decidido (rodada 4,
+    2026-08-24):** o indicador **volta à tela**, com **2 passos (`1 2`)**.
 12. ~~**Nova:** `NOME DO AVATAR` (≤20) é o mesmo que o `@handle` público, um apelido
     separado do boneco, ou vira o nome de exibição?~~ **Decidido (rodada 3, 2026-08-23):**
-    é o **nome da pessoa** informado no cadastro (mesmo campo/valor). **Segue em aberto**
-    como esse nome convive com o `@handle` exibido nos cards.
+    é o **nome da pessoa** informado no cadastro (mesmo campo/valor). ~~**Segue em aberto**
+    como esse nome convive com o `@handle` exibido nos cards.~~ **Decidido (rodada 4,
+    2026-08-24):** publicamente aparece **o nome da pessoa**; o identificador segue o modelo
+    **`@nomesobrenome`**, derivado do nome (ex.: `@mariasilva`), e **não é digitado** no
+    cadastro — os handles dos mockups são ilustrativos. O **limite do nome passa a 60
+    caracteres**. **Continuam (proposta):** regras de normalização (acentos, espaços,
+    maiúsculas) e desempate de **homônimos**.
 13. ~~**Nova:** totais dos catálogos de `OLHOS`, `NARIZ` e `BOCA`~~ **Decidido (rodada 3,
     2026-08-23): 4 opções de cada, 12 no total** (o mockup mostrava 9 olhos, 5 narizes e
     5 bocas com `Ver mais` — superado).
@@ -360,8 +453,19 @@ novo mockup.)*
     itens de roupa variam por base~~ **Decidido (rodada 3, 2026-08-23):** (a) rótulos
     **`F` e `M`**; (b) **apenas a `PARTE DE CIMA` varia por base** (`F` com peitos, `M`
     sem) — demais slots com sprite único.
-15. **Nova (rodada 2) — em aberto:** durante o fluxo de cadastro em mobile, a **barra
+15. ~~**Nova (rodada 2) — em aberto:** durante o fluxo de cadastro em mobile, a **barra
     inferior de navegação** (`PROJETOS · CALENDÁRIO · AULAS · ARTIGOS · PERFIL`) fica
     visível ou é suprimida em favor da barra fixa de ação (`VOLTAR` /
-    `SALVAR E CONTINUAR`)? A composição e a ordem da barra já estão decididas (rodada 3);
-    só o comportamento dentro do fluxo está em aberto.
+    `SALVAR E CONTINUAR`)?~~ **Decidido (rodada 4, 2026-08-24):** a barra inferior
+    **aparece** durante o cadastro no mobile.
+16. **Nova (rodada 4):** a **tela de login** (e-mail + senha) ganha spec própria quando o
+    mockup prometido pela designer chegar — recuperação de senha, erros de credencial e
+    link para o cadastro seguem **(proposta)**.
+17. **Nova (mockup `criar-conta-passo-2.jpg`):** o CTA **`CRIAR CONTA →`** aparece em **navy
+    preenchido com texto claro** — diverge do primário canônico (rosa preenchido/texto
+    navy). Formulários têm um estilo próprio de botão, ou vale o rosa canônico?
+18. **Nova (mockup `criar-conta-passo-2.jpg`):** o **indicador de passos `1 2`** (decidido na
+    rodada 4) **não aparece** no mockup do passo 2 — confirmar que entra na tela final.
+19. **Nova (mockup `criar-conta-passo-2.jpg`):** o **aceite de termos/política de privacidade**
+    segue ausente no desenho — confirmar a inclusão no passo 2 (necessidade LGPD; gate
+    de cadastro).

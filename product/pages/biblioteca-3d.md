@@ -4,12 +4,13 @@
 
 Catálogo público de **modelos 3D criados pela comunidade maker** do Fab Lab CITe Bauru, para
 explorar, filtrar, curtir e baixar arquivos imprimíveis. É a página de acervo do lab: dá
-visibilidade autoral aos alunos (avatar + @handle + nível) e alimenta o ciclo de gamificação
-(publicar modelo gera XP; baixar/curtir gera sinal social).
+visibilidade autoral aos alunos (avatar + nome da pessoa + `@nomesobrenome` + nível — rodada
+4) e alimenta o ciclo de gamificação (publicar modelo gera XP; baixar/curtir gera sinal
+social).
 
 ## Fonte de design
 
-- `design/ChatGPT Image 18 de ago. de 2026, 11_45_01.png` — mockup único, **desktop**, tela
+- `design/biblioteca-3d.png` — mockup único, **desktop**, tela
   completa da Biblioteca 3D (header, sidebar teal, busca + filtros, lista numerada de modelos,
   paginação e footer institucional).
 - Apoio: `concept.md`, `visual-identity.md`, `gamification.md`.
@@ -35,6 +36,12 @@ visibilidade autoral aos alunos (avatar + @handle + nível) e alimenta o ciclo d
     > design — todos os itens ficam alinhados e no mesmo peso; o único item destacado é o
     > **ativo** (`BIBLIOTECA 3D`, rosa sublinhado).
 - À direita: avatar pixel em moldura + `MAKER_X` / `NÍVEL 3` + chevron `⌄` (menu da conta).
+  - > **Decidido (rodada 4, 2026-08-24):** no **desktop as 6 abas ficam na barra, sem botão
+    > de menu** — o botão de menu existe **só nas versões compactas** (tablet/mobile). Isso
+    > confirma a leitura da rodada 3 e supera qualquer menção a botão de menu no header
+    > desktop. O chevron `⌄` ao lado do avatar é o **menu da conta**, não o menu de navegação.
+  - > **Decidido (rodada 4, 2026-08-24):** no bloco de conta aparece o **nome da pessoa**
+    > (até **60 caracteres**); `MAKER_X` é rótulo ilustrativo do mockup.
 
 ### Sidebar esquerda (faixa teal, ~1/5 da largura, altura total do conteúdo)
 
@@ -104,6 +111,11 @@ escuro e sombra**:
    claro sobre navy, **sobre o fundo branco em azul navy escuro** (**decidido rodada 2** —
    a inversão de cor de texto está confirmada).
 4. **Rodapé de autoria** — avatar pixel + `@handle` + `NÍVEL n`.
+   > **Decidido (rodada 4, 2026-08-24):** a autoria exibe o **nome da pessoa**, e o
+   > identificador segue o modelo **`@nomesobrenome`** (derivado do nome, ex.: `@mariasilva`).
+   > Os handles dos mockups (`@print.lu`, `@maker_jv`, `@laser.nick`…) são **ilustrativos e
+   > superados**. Normalização (acentos/espaços/maiúsculas) e colisão de homônimos seguem
+   > **(proposta)**.
 5. **Coluna de ações** (à direita, separada por divisória): botão **download** (ícone de seta
    para baixo em moldura teal, com micro-rótulo ilegível no mockup — texto a definir
    **(proposta)**) e contador de curtidas `♥ n` — rosa no mockup; sobre o fundo branco o
@@ -124,6 +136,11 @@ Conteúdo exato dos 10 cards do mockup:
 | 08 | `CHAVEIRO FAB LAB` | `Chaveiro com logo do Fab Lab para personalizar.` | `@print.lu` | `NÍVEL 6` | `27` |
 | 09 | `VELOCIRAPTOR` | `Modelo articulado com partes móveis e encaixes.` | `@laser.nick` | `NÍVEL 7` | `41` |
 | 10 | `CHAVEIRO CONTROLE` | `Chaveiro de controle de videogame para gamers makers.` | `@projeto_ana` | `NÍVEL 4` | `26` |
+
+> **Decidido (rodada 4, 2026-08-24):** os handles da coluna **Autor** (`@print.lu`,
+> `@laser.nick`, `@projeto_ana`, `@maker_jv`, `@bia.tech`) são **ilustrativos** e ficam como
+> registro histórico do mockup. No conteúdo real o card mostra o **nome da pessoa** e o
+> identificador no modelo **`@nomesobrenome`** (ex.: `@mariasilva`).
 
 > Grafia do mockup preservada em `MINI LOBO GUÁRÁ` — **decidido (2026-08-23):** no
 > conteúdo real usar a grafia correta `MINI LOBO GUARÁ`.
@@ -208,6 +225,9 @@ rodada 3, 2026-08-23**).
     > a Biblioteca 3D fica **só no menu**, sem atalho extra. Tocar no **logo leva à Home**
     > (confirmado, não é mais proposta). `PERFIL` **deslogado abre a tela de login**
     > (ver `pages/minha-conta.md`).
+  - > **Decidido (rodada 4, 2026-08-24):** o login é por **e-mail + senha**; **design da
+    > tela de login definido** — reuso do passo 2 do cadastro, trocando o formulário
+    > (decisão do PO, 2026-08-24) — ver `login.md`.
 - **Hero (proposta de arranjo)**: faixa teal compacta com `BIBLIOTECA 3D` + descrição sobre o
   conteúdo branco — a **permanência da faixa teal é decidida (rodada 2)**, só o formato
   compacto é proposta; ilustração isométrica oculta abaixo de 390px.
@@ -248,7 +268,9 @@ Todos observados no mockup, salvo indicação contrária.
 - `BotaoMenu` — botão de menu **no topo, na extremidade esquerda da barra**, abrindo
   **todas as abas** (inclusive `BIBLIOTECA 3D` e `INSTAGRAM`); é o **único** ponto de
   entrada da Biblioteca 3D em tablet/mobile. Logo → Home. **Decidido (rodada 3,
-  2026-08-23)**.
+  2026-08-23)**. **Decidido (rodada 4, 2026-08-24):** este componente existe **só nas
+  versões compactas** (tablet/mobile) — **no desktop não há botão de menu**, as 6 abas
+  ficam na barra.
 - `SidebarPagina` (hero teal lateral) — título display, descrição, arte isométrica; a faixa
   teal **permanece** convivendo com o conteúdo branco (**decidido rodada 2**).
 - `ListaCategorias` — item = ícone + rótulo caps + contador; funciona como **tag de tema que
@@ -260,7 +282,8 @@ Todos observados no mockup, salvo indicação contrária.
   `ContadorCurtidas` (ícone ♥ rosa + número em **azul navy escuro** sobre branco; clicável
   **(proposta)**); sobre branco, card branco com
   contorno navy escuro e sombra (**decidido rodada 2**).
-- `SeloAutor` — avatar pixel + @handle + `NÍVEL n`.
+- `SeloAutor` — avatar pixel + **nome da pessoa** + identificador `@nomesobrenome` +
+  `NÍVEL n` (**decidido rodada 4, 2026-08-24**; os `@handle` dos mockups são ilustrativos).
 - `Paginacao` — setas, páginas, reticências, última página.
 - `FooterPilares` — três pilares + arte isométrica.
 - `EstadoVazio` / `Skeleton` / `Toast` **(proposta)** — ver Estados e interações.
@@ -282,7 +305,7 @@ Todos observados no mockup, salvo indicação contrária.
 | `documentacao` | mídia (arquivo) | não | `.pdf` (guia de impressão/montagem) **(proposta)** |
 | `formatos` | multi-seleção derivada | sim | alimenta o filtro `Todos os formatos` |
 | `categoria` | relação → `categoria` (1:n) | sim | Acessórios, Animais, Veículos, Decoração, Educação, Utilidades |
-| `autor` | relação → `usuario` (n:1) | sim | fornece avatar, @handle e nível |
+| `autor` | relação → `usuario` (n:1) | sim | fornece avatar, **nome**, identificador `@nomesobrenome` e nível (**rodada 4**) |
 | `nivel_dificuldade` | seleção | sim | alimenta o filtro `Todos os níveis` — escala a definir **(proposta)** |
 | `curtidas` | contador (derivado de `curtida`) | sim | exibido como `♥ n` |
 | `downloads` | contador | não | métrica interna **(proposta)** |
@@ -303,8 +326,14 @@ Todos observados no mockup, salvo indicação contrária.
 
 ### Coleção `usuario` (referenciada)
 
-`handle` (texto, obrigatório) · `avatar_pixel` (imagem `.png`, obrigatório) · `nivel` (número,
-derivado do XP) · `skills` (relação n:n) — definida em `pages/onboarding.md`.
+`nome` (texto, obrigatório, **até 60 caracteres** — rodada 4) · `handle` (texto, obrigatório,
+**derivado do nome no modelo `@nomesobrenome`** — rodada 4) · `avatar_pixel` (imagem `.png`,
+obrigatório) · `nivel` (número, derivado do XP) · `skills` (relação n:n) — definida em
+`pages/onboarding.md`.
+
+> **Decidido (rodada 4, 2026-08-24):** o card exibe o **nome da pessoa**; o `handle` segue
+> `@nomesobrenome`. Regras de normalização (acentos, espaços, maiúsculas) e desempate de
+> homônimos ficam **(proposta)**.
 
 ### Coleção `curtida` **(proposta)**
 
@@ -313,8 +342,9 @@ derivado do XP) · `skills` (relação n:n) — definida em `pages/onboarding.md
 
 ## Ganchos de gamificação
 
-- **Autoria visível**: todo card exibe `avatar pixel + @handle + NÍVEL n` — o nível vem do XP
-  do autor (`gamification.md`), com **máximo 10**.
+- **Autoria visível**: todo card exibe `avatar pixel + nome da pessoa + @nomesobrenome +
+  NÍVEL n` (**decidido rodada 4, 2026-08-24**; no mockup, `@handle` ilustrativo) — o nível
+  vem do XP do autor (`gamification.md`), com **máximo 10**.
 - **XP por publicar modelo 3D**: publicar um `modelo3d` aprovado concede **1 XP**
   (**decidido 2026-08-23**) na skill **Modelagem 3D**; se também conta para **Impressão 3D**
   quando houver parâmetros de impressão fica **(proposta)** — a economia é de 1 XP por ação,
@@ -366,12 +396,12 @@ derivado do XP) · `skills` (relação n:n) — definida em `pages/onboarding.md
   **(proposta)**.
 - Falha no download: toast `Falha no download. Tente novamente.` **(proposta)**.
 
-### Deslogado × logado **(proposta, exceto o header do mockup e a linha `PERFIL`, decidida na rodada 3)**
+### Deslogado × logado **(proposta, exceto o header do mockup e a linha `PERFIL`, decidida nas rodadas 3–4)**
 
 | Aspecto | Visitante (deslogado) | Maker (logado) |
 |---|---|---|
-| Header direito | botão `CRIAR CONTA` | avatar + `MAKER_X` / `NÍVEL 3` (mockup) |
-| `PERFIL` da barra inferior (mobile) | **abre a tela de login** (decidido rodada 3) | abre **Minha Conta** |
+| Header direito | botão `CRIAR CONTA` | avatar + **nome da pessoa** / `NÍVEL n` (no mockup, `MAKER_X` / `NÍVEL 3` — ilustrativo, rodada 4) |
+| `PERFIL` da barra inferior (mobile) | **abre a tela de login** — **e-mail + senha** (decidido rodadas 3–4; design do login definido — ver `login.md`) | abre **Minha Conta** |
 | Navegar / buscar / filtrar | liberado | liberado |
 | Ver curtidas | sim (somente leitura) | sim |
 | Curtir | bloqueado → modal "Crie sua conta para curtir" | permitido |
@@ -413,3 +443,6 @@ derivado do XP) · `skills` (relação n:n) — definida em `pages/onboarding.md
     nessas larguras.
 14. As **tags de tema** da faixa teal são exatamente a coleção `categoria` (1 por modelo) ou
     uma taxonomia própria n:n administrável pelo CMS? **(proposta)** — relacionado à questão 6.
+15. **Nova (rodada 4):** com o identificador no modelo `@nomesobrenome`, como normalizar
+    acentos, espaços e maiúsculas e como desempatar **homônimos** na exibição de autoria dos
+    cards? **(proposta)** — espelha `gamification.md` e `pages/minha-conta.md` (questão 3).

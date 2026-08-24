@@ -8,11 +8,14 @@ missões em destaque, nível coletivo do lab, ranking e últimos projetos.
 
 ## Fonte de design
 
-- `design/ChatGPT Image 18 de ago. de 2026, 11_19_16.png` — **metade esquerda** (home
+- `design/home-v1-criar-conta-v1.png` — **metade esquerda** (home
   dashboard, hero v1). A metade direita é a tela de criação de conta e pertence a
   `pages/onboarding.md`.
-- `design/ChatGPT Image 18 de ago. de 2026, 12_43_11.png` — hero v2, mapa isométrico
-  pixel art noturno do lab em tela cheia.
+- `design/home-desktop.png` — hero v2, mapa isométrico
+  pixel art noturno do lab em tela cheia (desktop).
+- **`design/home-mobile.png`** (2026-08-24, 864×1821) — **arte mobile dedicada do hero
+  v2**, entregue pela designer (decisão da rodada 1 cumprida); fonte primária da Home
+  mobile.
 - Apoio: `concept.md`, `visual-identity.md`, `gamification.md`.
 
 ## Estrutura da página — desktop (≥1280px)
@@ -23,7 +26,7 @@ missões em destaque, nível coletivo do lab, ranking e últimos projetos.
   **entre** as palavras ("FAB [cubo] LAB / CITE BAURU"); no v2 chip rosa e cubo (aresta teal)
   **à esquerda** de "FAB LAB / CITE BAURU".
   **Decidido (rodada 2, 2026-08-23):** o chip **canônico do header** é o **laranja com o cubo
-  isométrico entre `FAB` e `LAB`** (como em `design/avatar-create.png`). A descrição do chip
+  isométrico entre `FAB` e `LAB`** (como em `design/criar-conta-passo-1.png`). A descrição do chip
   rosa com cubo à esquerda (mockup v2) fica como **registro histórico**.
 - Navegação em caps display:
   - **Canônica (decidido 2026-08-23):** `BIBLIOTECA 3D` · `PROJETOS` · `CALENDÁRIO` · `AULAS` ·
@@ -32,13 +35,19 @@ missões em destaque, nível coletivo do lab, ranking e últimos projetos.
   - Registro histórico dos mockups: o v1 (dashboard) mostrava apenas
     `BIBLIOTECA 3D` · `PROJETOS` · `INSTAGRAM` · `ARTIGOS`; o v2 (mapa) já trazia o conjunto
     completo, agora adotado como canônico.
-- **Decidido (rodada 3, 2026-08-23) — menu e logo:** o **botão de menu** fica **no topo, na
+- ~~**Decidido (rodada 3, 2026-08-23) — menu e logo:** o **botão de menu** fica **no topo, na
   extremidade esquerda da barra** — ou seja, **à esquerda do logo-chip** (mesma ordem descrita
   na adaptação mobile) —, e contém **todas as abas** (inclusive `BIBLIOTECA 3D` e
-  `INSTAGRAM`). A `BIBLIOTECA 3D` fica **só dentro do menu**, sem atalho extra nas barras
-  compactas. Tocar/clicar no **logo leva à Home** (não é mais proposta).
+  `INSTAGRAM`).~~ **Decidido (rodada 4, 2026-08-24) — menu e logo:** o botão de menu existe
+  **só nas versões compactas** (tablet/mobile); no **desktop as 6 abas ficam na barra, SEM
+  botão de menu** (o texto da rodada 3 acima fica como registro). Nas versões compactas o
+  menu segue no topo, à extremidade esquerda da barra, com **todas as abas** (inclusive
+  `BIBLIOTECA 3D` e `INSTAGRAM`); a `BIBLIOTECA 3D` fica **só dentro do menu**, sem atalho
+  extra. Tocar/clicar no **logo leva à Home** (não é mais proposta) — em todos os tamanhos.
 - À direita: avatar pixel em moldura + `MAKER_X` / `NÍVEL 3` + chevron `⌄` (abre o menu da
-  conta **(proposta)** — o mockup mostra apenas o chevron).
+  conta **(proposta)** — o mockup mostra apenas o chevron). **Rodada 4 (2026-08-24):**
+  `MAKER_X` é rótulo **ilustrativo** — a UI real mostra o **nome da pessoa** (identificador
+  `@nomesobrenome` quando exibido).
 
 ### Hero — variante v1 (faixa teal) — **descartado (2026-08-23)**
 
@@ -106,9 +115,16 @@ questão 8).
 `04 @bia.tech 1750 XP` · `05 @projeto_ana 1420 XP`; link rodapé `VER RANKING COMPLETO`.
 Os valores de XP são **ilustrativos do mockup**; a economia real está em
 [gamification.md](../gamification.md).
+**Decidido (rodada 4, 2026-08-24):** os handles do mockup (`@laser.nick`, `@print.lu`,
+`@maker_jv`, `@bia.tech`, `@projeto_ana`) são **ilustrativos/superados** — publicamente
+aparece o **nome da pessoa** e o identificador segue o modelo **`@nomesobrenome`** (derivado
+do nome, ex.: `@mariasilva`). Normalização (acentos/espaços) e colisão de homônimos:
+**(proposta)** — ver [gamification.md](../gamification.md).
 
 **Card `ÚLTIMOS PROJETOS`** — imagem de capa (luminária iluminada), título
-`Luminária Paramétrica`, autoria `por @laser.nick`, curtidas `♡ 32`; link rodapé
+`Luminária Paramétrica`, autoria `por @laser.nick` (handle **ilustrativo** — na UI real a
+autoria mostra o **nome da pessoa** + identificador `@nomesobrenome`, rodada 4),
+curtidas `♡ 32`; link rodapé
 `VER MAIS PROPLETOS` (**typo no mockup** — decidido em 2026-08-23: o site usa
 `VER MAIS PROJETOS`). **Decidido (2026-08-23):** o card é um **carrossel** de vários
 projetos; o mockup mostra apenas um slide.
@@ -150,17 +166,34 @@ desktop.
 
 Salvo onde indicado como decidido, as decisões abaixo são **(proposta)**.
 
-- Header: **botão de menu à esquerda** + logo-chip + avatar. **Decidido (rodada 2,
-  2026-08-23):** a navegação principal do mobile é a **barra inferior fixa** (ver abaixo);
-  `BIBLIOTECA 3D` e `INSTAGRAM` ficam **fora da barra**. **Decidido (rodada 3, 2026-08-23):**
-  o **menu fica no topo, na extremidade esquerda da barra**, com drawer contendo **todas as
-  abas** (`BIBLIOTECA 3D` — só aqui, sem atalho extra — e `INSTAGRAM` marcado como link
-  externo); **Home pelo logo** (decidido).
-- Hero (v2, oficial) — **decidido (2026-08-23):** mobile recebe **arte nova dedicada**
-  produzida pela designer (não é recorte automático do mapa desktop nem fallback para o v1).
-  Sobre ela: título display reduzido (mantendo as 3 linhas), parágrafo e botão
-  `COMECE A CRIAR →` em largura total. A otimização técnica de peso do arquivo entregue é
-  tarefa de implementação (ver questão 8, já decidida).
+- **Header (mockup `home-mobile.png`)**: **logo-chip laranja à esquerda** (cubo entre
+  `FAB` e `LAB` — canônico ✓) e **botão hambúrguer rosa à direita** (três traços). **Sem
+  avatar/`UserChip`** no header do mockup.
+  - **Divergência com a rodada 3**: a decisão dizia menu "no topo, na **extremidade
+    esquerda** da barra"; a arte da designer o coloca **à direita** — ver questão 10
+    (registrado; a arte é mais recente que a resposta). **Até a resposta, a decisão da
+    rodada 3 (esquerda) prevalece** na spec.
+  - **Decidido (rodada 2, 2026-08-23):** a navegação principal do mobile é a **barra
+    inferior fixa** (ver abaixo); `BIBLIOTECA 3D` e `INSTAGRAM` ficam **fora da barra**,
+    no drawer do menu (`INSTAGRAM` como link externo); **Home pelo logo** (decidido).
+  - A ausência do avatar no header mobile fica registrada — o estado logado no mobile é a
+    questão 12.
+- **Hero (v2, oficial) — arte mobile dedicada ENTREGUE** (`design/home-mobile.png`,
+  2026-08-24): recomposição **vertical** da cena noturna — anexo `WC`/`DEPÓSITO` e
+  bicicletas no topo; contêineres reorganizados (`IMPRESSORAS 3D` azul à esquerda,
+  `CORTE A LASER` laranja ao centro, `SERIGRAFIA` verde abaixo à esquerda, `COWORK` verde
+  à direita); personagens (grupo conversando, pessoa soldando no chão, pessoa no banco com
+  tablet), marca no piso "FAB LAB CITE BAURU", placa rosa no gradil, portão rosa, lixeira
+  de reciclagem, quadro no gradil com `CRIE.` / `EXPERIMENTE.` / `TRANSFORME.` em
+  rosa/teal/amarelo e a marca-d'água isométrica rosa/teal no alto à direita (mantida do
+  desktop).
+  - **Bloco de texto ABAIXO da cena** (sobre fundo navy escuro), não sobreposto:
+    `CRIE.` / `EXPERIMENTE.` (branco) / `TRANSFORME.` (rosa); parágrafo em 3 linhas
+    (`Bem-vindo ao Fab Lab CITe Bauru. Aqui ideias ganham forma e você evolui como
+    maker.`); botão `COMECE A CRIAR →` **rosa preenchido/texto navy** (canônico ✓) em
+    **largura parcial** (~38% da largura da arte: 325 de 864px), com os chevrons duplos
+    `»` (rosa + teal) à direita — supera a proposta anterior de botão em largura total.
+  - A otimização técnica de peso do arquivo é tarefa de implementação (questão 8, decidida).
 - ~~Hero v1: título display reduzido (mantendo as 3 linhas), parágrafo, botão
   `COMECE A CRIAR →` em largura total; composição isométrica como ornamento de fundo recortado.~~
   ~~Hero v2: substituir o mapa panorâmico por recorte vertical (crop 3:4) ou fallback estático
@@ -177,25 +210,30 @@ Salvo onde indicado como decidido, as decisões abaixo são **(proposta)**.
   invertida Aulas/Calendário da rodada 2 está **superada**.)*
   **Decidido (rodada 3, 2026-08-23):** a barra inferior fixa é a navegação do mobile, com
   **5 posições**, na ordem relativa do desktop: `PROJETOS` · `CALENDÁRIO` · `AULAS` ·
-  `ARTIGOS` · `PERFIL`. **Home pelo logo**; `BIBLIOTECA 3D` e `INSTAGRAM` pelo **menu** (topo,
-  à esquerda). **Deslogado, o item `PERFIL` abre a tela de login**; logado, leva a
-  [Minha Conta](minha-conta.md).
+  `ARTIGOS` · `PERFIL`. **Home pelo logo**; `BIBLIOTECA 3D` e `INSTAGRAM` pelo **menu**.
+  **Deslogado, o item `PERFIL` abre a tela de login**; logado, leva a
+  [Minha Conta](minha-conta.md). **Decidido (rodada 4, 2026-08-24):** o login é por
+  **e-mail + senha** (design da tela de login definido — ver `login.md`).
+  - **Nota do mockup `home-mobile.png`**: a arte da Home mobile **não desenha a barra
+    inferior** (a arte cobre uma tela inteira e termina no bloco de texto, sem faixa de
+    navegação no rodapé) — a decisão da barra prevalece; se ela sobrepõe o hero, aparece
+    ao rolar, ou foi omitida da arte é a **questão 11**.
 
 ## Componentes
 
 | Componente | Uso na Home | Observações |
 |---|---|---|
-| `HeaderNav` | topo | logo-chip **laranja com cubo entre `FAB` e `LAB`** (canônico, decidido rodada 2), itens caps na ordem canônica desktop `BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS` (decidido 2026-08-23, todos alinhados), `UserChip` (avatar + nome + nível + chevron). **Botão de menu no topo, à esquerda da barra** (decidido rodada 3), com **todas as abas**. Compacto (decidido rodada 3, ordem do desktop): tablet `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS`; `BIBLIOTECA 3D` e `INSTAGRAM` só no menu; logo → Home |
-| `MenuDrawer` | botão no topo à esquerda | lista com **todas as abas** (`BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS`), `INSTAGRAM` como link externo (decidido rodada 3) |
-| `BottomNav` | mobile, fixa no rodapé | 5 posições `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS · PERFIL` (decidido rodada 3); `PERFIL` deslogado abre o **login**, logado abre `Minha Conta` |
+| `HeaderNav` | topo | logo-chip **laranja com cubo entre `FAB` e `LAB`** (canônico, decidido rodada 2), itens caps na ordem canônica desktop `BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS` (decidido 2026-08-23, todos alinhados), `UserChip` (avatar + nome + nível + chevron; a arte `home-mobile.png` **não traz `UserChip`** no header — **questão 12**). **Decidido (rodada 4):** **sem botão de menu no desktop** — as 6 abas ficam na barra; o botão de menu (com **todas as abas**) existe **só nas versões compactas**, no topo à esquerda (a arte `home-mobile.png` o desenha **à direita** — divergência registrada na **questão 10**; até a resposta vale a esquerda). Compacto (decidido rodada 3, ordem do desktop): tablet `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS`; `BIBLIOTECA 3D` e `INSTAGRAM` só no menu; logo → Home |
+| `MenuDrawer` | **só nas versões compactas** (tablet/mobile), botão no topo à esquerda (decidido rodada 4; no mobile a arte `home-mobile.png` mostra o hambúrguer **à direita** — **questão 10**) | lista com **todas as abas** (`BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS`), `INSTAGRAM` como link externo (decidido rodada 3) |
+| `BottomNav` | mobile, fixa no rodapé (a arte `home-mobile.png` **não a desenha** — **questão 11**) | 5 posições `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS · PERFIL` (decidido rodada 3); `PERFIL` deslogado abre o **login** (**e-mail + senha** — rodada 4; design definido — ver `login.md`), logado abre `Minha Conta` |
 | ~~`HeroBanner` (v1)~~ | ~~faixa teal~~ | **descartado (2026-08-23)** — registro do mockup v1 |
-| `HeroPixelMap` | hero oficial, tela cheia | cena pixel art + hotspots **(proposta)**; arte mobile dedicada da designer |
+| `HeroPixelMap` | hero oficial, tela cheia | cena pixel art + hotspots **(proposta)**; arte mobile dedicada **entregue** (`design/home-mobile.png`, 2026-08-24) — texto e CTA abaixo da cena no mobile |
 | `ButtonPrimary` | `COMECE A CRIAR →` | estilo único: **rosa preenchido, texto navy, sombra dura deslocada** (decidido 2026-08-23). O estilo navy com contorno rosa existiu no mockup v1 e foi **descartado** |
 | `SectionHeader` | `MISSÕES EM DESTAQUE` + `VER TODAS ›` | título caps + link à direita |
 | `MissionCard` | 3 cards | ícone, título, descrição, `ProgressBar` com % |
 | `LabLevelCard` | `NÍVEL DO LAB` | cubo, nível, barra, `X / Y XP`, próxima recompensa |
-| `RankingList` | `RANKING MAKERS` | linhas posição/avatar/@handle/XP + link rodapé |
-| `LatestProjectCard` | `ÚLTIMOS PROJETOS` | capa, título, `por @autor`, `♡ n`, link rodapé |
+| `RankingList` | `RANKING MAKERS` | linhas posição/avatar/nome + `@nomesobrenome`/XP + link rodapé (handles do mockup são ilustrativos — rodada 4) |
+| `LatestProjectCard` | `ÚLTIMOS PROJETOS` | capa, título, `por <nome>` + `@nomesobrenome` (rodada 4), `♡ n`, link rodapé |
 | `PillarsFooter` | rodapé | 3 pilares com ícones outline + arte isométrica |
 
 ## Modelo de conteúdo (CMS)
@@ -226,8 +264,8 @@ Salvo onde indicado como decidido, as decisões abaixo são **(proposta)**.
 ### `Maker`
 | Campo | Tipo | Obrigatório | Relações |
 |---|---|---|---|
-| handle | texto (`@nome`) | sim | único |
-| nome_exibicao | texto curto | sim | exibido no `UserChip` (ex.: `MAKER_X`) |
+| handle | texto (`@nomesobrenome`, derivado do nome — decidido rodada 4) | sim | único (normalização e colisão de homônimos **(proposta)**) |
+| nome_exibicao | texto curto | sim | **é o nome da pessoa** (rodada 4); exibido no `UserChip` (o `MAKER_X` do mockup é ilustrativo) |
 | avatar_pixel | imagem (PNG) | sim | gerado no onboarding |
 | nivel | inteiro (derivado do XP) | sim | — |
 | xp_total | inteiro | sim | alimenta `RANKING MAKERS` |
@@ -247,7 +285,8 @@ Salvo onde indicado como decidido, as decisões abaixo são **(proposta)**.
 ~~`variante_hero` (enum: `dashboard` | `mapa_pixel`)~~ — **removido/obsoleto (2026-08-23):**
 o hero v2 é o único, não há variante a escolher · `hero_titulo` · `hero_texto` ·
 `hero_cta_label` / `hero_cta_url` · `mapa_imagem` (PNG/WEBP) ·
-`mapa_imagem_mobile` (PNG/WEBP — arte dedicada da designer) ·
+`mapa_imagem_mobile` (PNG/WEBP — arte dedicada **entregue**: `design/home-mobile.png`,
+864×1821) ·
 `pilares` (repetível: `titulo`, `icone` SVG/PNG).
 
 ## Ganchos de gamificação
@@ -264,6 +303,9 @@ o hero v2 é o único, não há variante a escolher · `hero_titulo` · `hero_te
   [gamification.md](../gamification.md)); `VER TODAS ›` leva ao catálogo de missões
   **(proposta)**.
 - **Skills**: a Home não edita skills, apenas as referencia via ícone/categoria das missões.
+  **Rodada 4 (2026-08-24):** as skills começam no **nível 0** (pips vazios) — ver
+  [gamification.md](../gamification.md); a **exibição** das skills fica em
+  [Minha Conta](minha-conta.md), não na Home.
 - **Curtidas**: contador `♡ 32` no card de projeto; **curtidas não geram XP** (decidido
   2026-08-23 — ver [gamification.md](../gamification.md)); curtir a partir da Home exige login
   **(proposta)**; o clique no coração é otimista com rollback em erro **(proposta)**.
@@ -282,7 +324,11 @@ o hero v2 é o único, não há variante a escolher · `hero_titulo` · `hero_te
   **Decidido (rodada 3, 2026-08-23):** no mobile, o item **`PERFIL`** da barra inferior
   **abre a tela de login** quando não há sessão (resolve a lacuna sobre o comportamento de
   `PERFIL` deslogado); com sessão, leva a [Minha Conta](minha-conta.md).
-- **Logado**: `UserChip` com avatar, `MAKER_X`, `NÍVEL 3` e menu no chevron (Perfil, Meus
+  **Decidido (rodada 4, 2026-08-24):** essa tela de login é por **e-mail + senha** — o passo 2
+  do cadastro ganha campo de senha (ver [onboarding.md](onboarding.md)); design do login
+  definido — ver [login.md](login.md).
+- **Logado**: `UserChip` com avatar, **nome da pessoa** (`MAKER_X` é rótulo ilustrativo do
+  mockup — rodada 4), `NÍVEL 3` e menu no chevron (Perfil, Meus
   projetos, Sair) **(proposta)**; missões mostram o progresso real do maker; CTA do hero muda
   para `CONTINUAR CRIANDO` **(proposta)**.
 - **Loading**: skeletons com o contorno dos cards (3 missões, 3 cards da faixa) e barra de
@@ -309,6 +355,9 @@ o hero v2 é o único, não há variante a escolher · `hero_titulo` · `hero_te
    `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS`, mobile `PROJETOS · CALENDÁRIO · AULAS ·
    ARTIGOS · PERFIL`; menu no topo à esquerda com todas as abas; logo → Home; `PERFIL`
    deslogado abre o login.
+   **Rodada 4 (2026-08-24):** o botão de menu existe **só nas versões compactas** — no
+   **desktop** as 6 abas ficam na barra, **sem botão de menu**; o login é por
+   **e-mail + senha**.
 3. ~~O typo `VER MAIS PROPLETOS` deve ser corrigido para `VER MAIS PROJETOS` — confirmar.~~
    **Decidido (2026-08-23):** é typo do mockup; usar `VER MAIS PROJETOS`.
 4. ~~O card `ÚLTIMOS PROJETOS` mostra 1 projeto ou é carrossel de vários?~~
@@ -325,3 +374,12 @@ o hero v2 é o único, não há variante a escolher · `hero_titulo` · `hero_te
 9. ~~Estilo canônico do `ButtonPrimary`: navy com contorno rosa (v1) ou rosa preenchido com
    texto navy (v2)?~~ **Decidido (2026-08-23):** rosa preenchido, texto navy, sombra dura
    deslocada (estilo v2); a variante v1 foi descartada.
+10. **Nova (mockup `home-mobile.png`):** o **botão de menu** aparece **à direita** do
+    header na arte mobile — a rodada 3 decidiu "extremidade **esquerda**". A arte é mais
+    recente que a resposta: qual posição vale?
+11. **Nova (mockup `home-mobile.png`):** a **barra inferior** decidida (5 posições) **não
+    aparece na arte** — ela sobrepõe o hero (fixa), surge ao rolar, ou foi só omitida do
+    desenho?
+12. **Nova (mockup `home-mobile.png`):** o header mobile da arte **não tem avatar/
+    `UserChip`** — como o estado logado aparece no mobile (só via `PERFIL` da barra
+    inferior)?

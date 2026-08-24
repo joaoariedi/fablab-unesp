@@ -5,13 +5,15 @@
 Catálogo dos **cursos e tutoriais em vídeo** do Fab Lab CITe Bauru — "Aprenda com tutoriais
 práticos e conteúdos feitos para makers de todos os níveis." A página permite encontrar uma
 aula por busca textual, avaliar rapidamente esforço (duração em minutos) e popularidade
-(curtidas), dar crédito ao autor (avatar pixel + @handle + nível) e iniciar o consumo pelo
-botão `ASSISTIR`. É um dos ganchos de XP do sistema: assistir aulas é uma das ações que
-geram pontos — **1 XP** por aula assistida (`gamification.md`).
+(curtidas), dar crédito ao autor (avatar pixel + nome + `@nomesobrenome` + nível — rodada 4)
+e iniciar o consumo pelo botão `ASSISTIR`. É um dos ganchos de XP do sistema: assistir aulas
+é uma das ações que geram pontos — **1 XP** por aula assistida (`gamification.md`), e as
+aulas assistidas aparecem em **Cursos assistidos** na Minha Conta
+(`pages/minha-conta.md`, rodada 4).
 
 ## Fonte de design
 
-- `design/ChatGPT Image 18 de ago. de 2026, 11_54_58.png` — tela completa de Aulas (header,
+- `design/aulas.png` — tela completa de Aulas (header,
   hero teal `AULAS`, título de seção `TODAS AS AULAS`, busca, lista numerada 01–08 em duas
   colunas, footer de pilares).
 - Apoio: `concept.md`, `visual-identity.md`, `gamification.md`.
@@ -36,7 +38,7 @@ geram pontos — **1 XP** por aula assistida (`gamification.md`).
 
 - Logo-chip extrudado laranja `FAB ● LAB` / `CITE BAURU` à esquerda, com hachura de sombra 3D.
   **Decidido (rodada 2, 2026-08-23):** o chip **laranja**, com cubo isométrico entre `FAB` e
-  `LAB` (como em `design/avatar-create.png`), é a versão **canônica** do header; a variante
+  `LAB` (como em `design/criar-conta-passo-1.png`), é a versão **canônica** do header; a variante
   rosa fica como registro de mockup.
 - Navegação em caps display, na ordem exata do mockup:
   `BIBLIOTECA 3D` · `PROJETOS` · `AULAS` · `INSTAGRAM` · `ARTIGOS`
@@ -50,7 +52,15 @@ geram pontos — **1 XP** por aula assistida (`gamification.md`).
   proposta). Nas versões compactas existe um **botão de menu no topo, na extremidade
   esquerda da barra** — ou seja, **à esquerda do logo-chip** —, contendo **todas as abas**
   — inclusive `BIBLIOTECA 3D` (que fica **só no menu**, sem atalho extra) e `INSTAGRAM`.
+  **Decidido (rodada 4, 2026-08-24):** o botão de menu existe **só nas versões compactas**
+  (tablet/mobile) — **no desktop as 6 abas ficam na barra, sem botão de menu**. Isso
+  confirma a leitura da rodada 3 e supera qualquer menção a botão de menu no header
+  desktop.
 - À direita: avatar pixel em moldura clara + `MAKER_X` / `NÍVEL 3` + chevron `⌄` (menu da conta).
+  **Decidido (rodada 4, 2026-08-24):** publicamente aparece o **nome da pessoa** (campo do
+  cadastro, até 60 caracteres); o `MAKER_X` do mockup é ilustrativo. O menu da conta leva a
+  **Minha Conta** (`pages/minha-conta.md`); deslogado, o acesso leva à tela de **login por
+  e-mail + senha** (design da tela de login definido — ver `login.md`).
 
 ### Hero (faixa teal `#74B7A5`)
 
@@ -112,6 +122,12 @@ geram pontos — **1 XP** por aula assistida (`gamification.md`).
        **Decidido (2026-08-23):** os níveis dos autores nos mockups são **ilustrativos** —
        a economia real é 1 XP por ação, 5 XP por nível e **nível máximo 10**
        (`gamification.md`).
+       **Decidido (rodada 4, 2026-08-24):** os **handles fictícios** acima (`@laser.nick`,
+       `@print.lu`, `@maker_jv`, `@projeto_ana`, `@fab.teach`, `@maker_x`) são
+       **ilustrativos/superados** — na atribuição real aparece o **nome da pessoa** e o
+       identificador segue o modelo **`@nomesobrenome`**, derivado do nome (ex.:
+       `@mariasilva`). Normalização (acentos/espaços) e colisão de homônimos seguem
+       **(proposta)**.
      - Ícone de relógio outline + duração: `25 min`, `28 min`, `23 min`, `18 min`, `15 min`,
        `22 min`, `17 min`, `20 min`.
      - Ícone de coração outline rosa + curtidas: `42`, `38`, `27`, `34`, `31`, `29`, `24`, `26`.
@@ -177,8 +193,10 @@ apenas desktop.
   **saem da barra** e vivem **dentro do menu** — botão de menu **no topo, na extremidade
   esquerda da barra**, com **todas as abas** (a Biblioteca 3D fica **só no menu**, sem
   atalho extra); tocar no **logo leva à Home** (decidido). **`PERFIL` deslogado abre a tela
-  de login** (decidido, rodada 3). A composição anterior (Home · Biblioteca · Projetos ·
-  Aulas · Perfil, com Artigos/Instagram/Calendário em "Mais") fica como registro histórico.
+  de login** (decidido, rodada 3) — **decidido (rodada 4, 2026-08-24):** o login é por
+  **e-mail + senha**; logado, `PERFIL` abre **Minha Conta**. A composição anterior (Home ·
+  Biblioteca · Projetos · Aulas · Perfil, com Artigos/Instagram/Calendário em "Mais") fica
+  como registro histórico.
   Segue **(proposta)**: no topo, apenas botão de menu (na extremidade esquerda, à esquerda
   do logo) + logo-chip + avatar.
 - **Hero (proposta)**: composição isométrica reduzida abaixo do texto ou omitida; título
@@ -207,12 +225,12 @@ apenas desktop.
 
 | Componente | Descrição | Reuso |
 |---|---|---|
-| `HeaderPrincipal` | Logo-chip **laranja** (canônico), nav canônica em caps (`BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS`, itens alinhados); compacta (rodada 3, na ordem do desktop) — tablet `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS`, mobile `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS · PERFIL`; botão de **menu no topo à esquerda** com todas as abas (inclui `BIBLIOTECA 3D` e `INSTAGRAM`); logo → Home; `PERFIL` deslogado → login; bloco de conta com avatar/nível | Todas as páginas |
+| `HeaderPrincipal` | Logo-chip **laranja** (canônico), nav canônica em caps (`BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS`, itens alinhados); compacta (rodada 3, na ordem do desktop) — tablet `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS`, mobile `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS · PERFIL`; botão de **menu no topo à esquerda** com todas as abas (inclui `BIBLIOTECA 3D` e `INSTAGRAM`) — **só nas versões compactas**, no desktop não há botão de menu (rodada 4); logo → Home; `PERFIL` deslogado → login por **e-mail + senha** (rodada 4), logado → Minha Conta; bloco de conta com avatar/nome/nível | Todas as páginas |
 | `HeroSecao` | Faixa teal com título display, parágrafo, chevrons e composição isométrica | Projetos, Artigos, Calendário (na Biblioteca 3D o teal é sidebar, não faixa) |
 | `CampoBusca` | Input arredondado navy, borda rosa, lupa; placeholder `Buscar aulas...`; **variante clara** para o fundo branco desta página | Todas as listagens |
 | `CardAula` | Card horizontal: número, thumbnail, título, descrição, metadados, `ASSISTIR`; sobre **fundo branco** — card **branco com contorno azul navy escuro e sombra**, texto navy | Exclusivo desta página |
 | `ChipNumero` | Chip retangular com borda rosa e número `01`–`08` | **(proposta)** listas ordenadas |
-| `AutorInline` | Avatar pixel + `@handle` + `NÍVEL n` | Projetos, Biblioteca 3D, Artigos |
+| `AutorInline` | Avatar pixel + nome da pessoa + identificador `@nomesobrenome` + `NÍVEL n` (rodada 4; os `@handle` dos mockups são ilustrativos) | Projetos, Biblioteca 3D, Artigos |
 | `MetaDuracao` | Ícone de relógio + `n min` | **(proposta)** Calendário |
 | `BotaoCurtida` | Coração outline rosa + contador | Todas as listagens |
 | `BotaoAssistir` | Botão outline teal com ícone de download + rótulo `ASSISTIR` | Exclusivo desta página |
@@ -232,7 +250,7 @@ apenas desktop.
 | `video_url` | URL / embed | sim | YouTube/Vimeo ou arquivo hospedado **(proposta)** |
 | `duracao_min` | inteiro | sim | exibido como `n min` |
 | `ordem` | inteiro | sim | numeração `01`–`08` da lista |
-| `autor` | relação → `usuario` | sim | fornece avatar, `@handle` e `NÍVEL n` |
+| `autor` | relação → `usuario` | sim | fornece avatar, **nome** (≤60 car.), identificador `@nomesobrenome` e `NÍVEL n` (rodada 4) |
 | `skill` | relação → `skill` | **(proposta)** sim | Modelagem 3D, Corte a Laser, Impressão 3D, Eletrônica, Design |
 | `nivel_dificuldade` | enum **(proposta)** | não | Iniciante · Intermediário · Avançado |
 | `xp_recompensa` | inteiro | sim | XP concedido ao concluir — **decidido (2026-08-23):** valor fixo **1 XP** por aula assistida; campo mantido só para exceções futuras |
@@ -243,7 +261,9 @@ apenas desktop.
 
 ### Coleções relacionadas
 
-- `usuario` — `handle` (ex.: `@laser.nick`), `avatar_pixel` (`.png` `.gif`), `nivel`, `xp`, `skills[]`.
+- `usuario` — `nome` (≤60 caracteres — rodada 4), `handle` no modelo `@nomesobrenome`
+  (ex.: `@mariasilva`; o `@laser.nick` do mockup é ilustrativo), `avatar_pixel`
+  (`.png` `.gif`), `nivel`, `xp`, `skills[]`.
 - `skill` — `nome`, `icone` (`.svg`), `nivel_usuario` (via progressão).
 - `curtida` **(proposta)** — relação `usuario` × `aula`, única por par, alimenta o contador.
 - `progresso_aula` **(proposta)** — `usuario`, `aula`, `percentual_assistido`, `concluida_em`.
@@ -255,11 +275,16 @@ apenas desktop.
   ação, 5 XP por nível, nível máximo 10). **(proposta)** XP creditado ao atingir ≥90% do vídeo
   ou ao marcar `CONCLUIR AULA`, uma vez por aula (anti-farm). Eventual **bônus por
   trilha/sequência** segue **em aberto**.
+  **Decidido (rodada 4, 2026-08-24):** as aulas assistidas aparecem na seção **Cursos
+  assistidos** de **Minha Conta** (`pages/minha-conta.md`).
 - **Skills** — **(proposta)** o XP da aula é creditado na skill de `skill` (ex.: `PRIMEIROS
   PASSOS CORTE A LASER` → Corte a Laser), evoluindo a barra segmentada em pips do perfil.
+  **Decidido (rodada 4, 2026-08-24):** as skills começam no **nível 0** (barra de pips
+  **vazia**, 10 níveis) — antes da primeira aula assistida a skill correspondente está em 0.
 - **Níveis** — o nível do autor aparece em cada card (`NÍVEL 1`, `NÍVEL 2`); o nível do usuário
   logado aparece no header (`MAKER_X` / `NÍVEL 3`). **Decidido (2026-08-23):** esses valores
-  são **ilustrativos**; a faixa real vai de 1 a **10**.
+  são **ilustrativos**; a faixa real vai de 1 a **10**. **Rodada 4 (2026-08-24):** as
+  **skills**, porém, começam em **nível 0** (0–10).
 - **Curtidas** — coração + contador por aula (`42`, `38`, `27`, `34`, `31`, `29`, `24`, `26`).
   **Decidido (2026-08-23):** curtidas **não geram XP** — apenas reputação/popularidade.
   **(proposta)** Curtir exige login.
@@ -292,7 +317,9 @@ apenas desktop.
   `ASSISTIR` abre modal "Crie sua conta para assistir e ganhar XP" com CTA `COMECE A CRIAR`.
   Se visitante pode assistir sem conta: ver "Questões em aberto".
   **Decidido (rodada 3, 2026-08-23):** no mobile, o item `PERFIL` da barra inferior, quando
-  deslogado, **abre a tela de login**.
+  deslogado, **abre a tela de login**. **Decidido (rodada 4, 2026-08-24):** o login é por
+  **e-mail + senha** (design da tela de login definido — ver `login.md`); `ENTRAR` no desktop leva à mesma
+  tela.
 - **Logado (proposta)**: exibe progresso por aula (barra fina no rodapé do card), estado de
   curtida persistido, selo de concluída e toast de XP ao concluir — **decidido (2026-08-23):**
   a mensagem é **"+1 XP em Impressão 3D"** (o "+50 XP" era placeholder).

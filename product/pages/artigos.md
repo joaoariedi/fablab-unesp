@@ -5,13 +5,14 @@
 Espaço editorial do lab: **conteúdos, reflexões e referências** escritos pela comunidade maker
 e pela equipe do Fab Lab CITe Bauru. Serve para (1) publicar textos autorais e materiais de
 referência (ex.: coleção "Primeiros Passos"), (2) permitir descoberta por eixo temático e por
-busca textual, (3) dar crédito público ao autor (avatar pixel + @handle + nível) e (4) alimentar
+busca textual, (3) dar crédito público ao autor (avatar pixel + **nome da pessoa** +
+identificador `@nomesobrenome` + nível — decidido na rodada 4) e (4) alimentar
 o loop de gamificação — **escrever artigos gera XP**, conforme regra central de
 `gamification.md` ("assistir aulas, postar projetos e escrever artigos").
 
 ## Fonte de design
 
-- `design/ChatGPT Image 18 de ago. de 2026, 11_40_02.png` — tela completa de Artigos
+- `design/artigos.png` — tela completa de Artigos
   (header, hero teal, tabs de categoria, busca, grid de 3 cards, footer de pilares).
 - Apoio: `concept.md`, `visual-identity.md`, `gamification.md`.
 
@@ -21,7 +22,7 @@ o loop de gamificação — **escrever artigos gera XP**, conforme regra central
 
 - Logo-chip extrudado **laranja** "FAB ● LAB / CITE BAURU" à esquerda, com hachura de sombra 3D.
   - **Decidido (rodada 2, 2026-08-23):** o chip **laranja**, com o cubo isométrico entre `FAB`
-    e `LAB` (como em `design/avatar-create.png`), é a versão **canônica do header** em todas as
+    e `LAB` (como em `design/criar-conta-passo-1.png`), é a versão **canônica do header** em todas as
     páginas; a variante rosa fica como registro de mockup.
 - Navegação em caps display; a ordem do mockup abaixo fica como **registro histórico** e é
   **superada** pela navegação canônica (ver decisão nos itens seguintes):
@@ -38,7 +39,14 @@ o loop de gamificação — **escrever artigos gera XP**, conforme regra central
   proposta). Nas versões compactas existe um **botão de menu no topo, na extremidade
   esquerda da barra**, contendo **todas as abas** — inclusive `BIBLIOTECA 3D` (que fica
   **só no menu**, sem atalho extra) e `INSTAGRAM`.
+- **Decidido (rodada 4, 2026-08-24):** o botão de menu existe **só nas versões compactas**
+  (tablet/mobile). No **desktop** as **6 abas** ficam na barra, **sem botão de menu** —
+  isto confirma a leitura da rodada 3 e **supera** qualquer menção a botão de menu no
+  header desktop.
 - À direita: avatar pixel em moldura clara + `MAKER_X` / `NÍVEL 3` + chevron `⌄` (menu da conta).
+  - **Decidido (rodada 4, 2026-08-24):** o rótulo público é o **nome da pessoa** (até 60
+    caracteres) e o identificador segue o modelo **`@nomesobrenome`**; `MAKER_X` é rótulo
+    **ilustrativo** do mockup.
 
 ### Hero (faixa teal — token `#74B7A5`; renderizado ~`#488D8B` no mockup)
 
@@ -96,6 +104,10 @@ o loop de gamificação — **escrever artigos gera XP**, conforme regra central
      `NÍVEL 3`; `@print.lu` / `NÍVEL 6`; `@laser.nick` / `NÍVEL 7`. À direita, ícone de coração
      outline rosa + contador de curtidas (`24`, `31`, `18`) e, após divisória vertical, seta
      `→` clara que abre o artigo completo.
+     > **Decidido (rodada 4, 2026-08-24):** os handles do mockup (`@maker_x`, `@print.lu`,
+     > `@laser.nick`) são **ilustrativos/superados**. A identidade pública exibe o **nome da
+     > pessoa** e o identificador no modelo **`@nomesobrenome`** (derivado do nome, ex.:
+     > `@mariasilva`). Normalização (acentos/espaços) e colisão de homônimos: **(proposta)**.
 - **Paginação**: não visível no mockup. Adotar botão `CARREGAR MAIS` centralizado abaixo do
   grid, com scroll infinito como alternativa **(proposta)**.
 - **CTA de publicação**: não visível no mockup. Para usuário logado, botão primário
@@ -127,6 +139,8 @@ apenas desktop.
     `BIBLIOTECA 3D` e `INSTAGRAM` **saem da barra** e ficam no **menu** — botão **no topo,
     na extremidade esquerda da barra**, com **todas as abas** (a Biblioteca 3D fica **só
     no menu**). O **logo leva à Home** (decidido). Item ativo: `ARTIGOS`.
+    **Rodada 4 (2026-08-24):** confirmado — o botão de menu é exclusivo das versões
+    compactas (tablet/mobile); no desktop ele não existe.
   - ~~*Nota:* a ordem compacta inverte `AULAS`/`CALENDÁRIO` em relação à desktop — é a resposta
     literal da designer, registrada como decidida.~~ — **superado na rodada 3**: não há
     inversão; a ordem compacta acompanha a do desktop.
@@ -147,7 +161,8 @@ apenas desktop.
 Salvo onde marcado como decidido, as decisões desta seção são **(proposta)**.
 
 - **Header**: logo-chip laranja + **botão de menu no topo, na extremidade esquerda da barra**
-  (decidido na rodada 3), com **todas as abas**; o **logo leva à Home** (decidido).
+  (decidido na rodada 3; **rodada 4** confirma que esse botão existe **só** aqui e no
+  tablet), com **todas as abas**; o **logo leva à Home** (decidido).
   Avatar/nível acessível pelo item `PERFIL` da barra inferior.
 - **Navegação inferior fixa (bottom navigation)** — **Decidido (rodada 3, 2026-08-23):** 5
   posições, nesta ordem: `PROJETOS` · `CALENDÁRIO` · `AULAS` · `ARTIGOS` · `PERFIL`
@@ -158,7 +173,9 @@ Salvo onde marcado como decidido, as decisões desta seção são **(proposta)**
   - `BIBLIOTECA 3D` e `INSTAGRAM` saem da barra e ficam **no menu** (rodada 3) — a
     Biblioteca 3D **só no menu**, sem atalho extra.
   - **Decidido (rodada 3, 2026-08-23):** com o usuário **deslogado**, o item `PERFIL`
-    **abre a tela de login**.
+    **abre a tela de login**. **Decidido (rodada 4, 2026-08-24):** o login é por
+    **e-mail + senha** (design da tela de login **definido** — ver `login.md` — ver
+    `pages/minha-conta.md`).
   - ~~*Nota:* a ordem compacta inverte `AULAS`/`CALENDÁRIO` em relação à desktop — resposta
     literal da designer, registrada como decidida.~~ — **superado na rodada 3**.
 - **Hero (proposta)**: composição isométrica vira faixa decorativa reduzida ou é omitida abaixo
@@ -167,8 +184,8 @@ Salvo onde marcado como decidido, as decisões desta seção são **(proposta)**
   alternativa: botão `FILTRAR` abrindo **drawer** de categorias em lista.
 - **Busca (proposta)**: campo full-width acima dos chips; ícone de lupa aciona teclado.
 - **Grid (proposta)**: **1 coluna**, cards empilhados com espaçamento de 16px; capa em 16:9;
-  rodapé do card mantém avatar + @handle + nível à esquerda e coração + seta à direita, com o
-  card inteiro clicável.
+  rodapé do card mantém avatar + **nome da pessoa** + `@nomesobrenome` + nível à esquerda
+  (rodada 4) e coração + seta à direita, com o card inteiro clicável.
 - **Footer (proposta)**: pilares empilhados verticalmente, ícone acima do rótulo, centralizados.
 - **Alvos de toque (proposta)**: mínimo 44×44px; espaçamento vertical mínimo de 8px entre alvos.
 
@@ -176,13 +193,13 @@ Salvo onde marcado como decidido, as decisões desta seção são **(proposta)**
 
 | Componente | Descrição | Reuso |
 |---|---|---|
-| `HeaderPrincipal` | Logo-chip (→ Home), nav em caps, bloco de conta (avatar/nível/chevron); em tablet/mobile, botão de menu no topo à esquerda (decidido rodada 3) | Todas as páginas |
-| `MenuCompleto` | Painel com **todas as abas**, incluindo `BIBLIOTECA 3D` e `INSTAGRAM` (decidido rodada 3) | Todas as páginas (tablet/mobile) |
+| `HeaderPrincipal` | Logo-chip (→ Home), nav em caps, bloco de conta (avatar/nome/nível/chevron); botão de menu **só em tablet/mobile**, no topo à esquerda (rodada 3; confirmado rodada 4 — desktop sem botão de menu) | Todas as páginas |
+| `MenuCompleto` | Painel com **todas as abas**, incluindo `BIBLIOTECA 3D` e `INSTAGRAM` (decidido rodada 3) — **apenas versões compactas** (rodada 4) | Todas as páginas (tablet/mobile) |
 | `HeroTeal` | Faixa teal, título display, parágrafo, chevrons `»`, arte isométrica | Projetos, Biblioteca 3D, Aulas |
 | `TabsCategoria` | Tabs caps com item ativo rosa sublinhado; chips roláveis em telas menores **(proposta)** | Projetos, Biblioteca 3D |
 | `CampoBusca` | Input arredondado escuro com ícone de lupa e placeholder | Projetos, Biblioteca 3D |
 | `CardArtigo` | Capa + chip categoria + data + título + resumo + rodapé de autor/curtidas/seta | Exclusivo desta página |
-| `AutorInline` | Avatar pixel + `@handle` + `NÍVEL n` | Todos os cards do site |
+| `AutorInline` | Avatar pixel + **nome da pessoa** + identificador `@nomesobrenome` + `NÍVEL n` (rodada 4; handles do mockup são ilustrativos) | Todos os cards do site |
 | `BotaoCurtir` | Coração outline rosa + contador | Projetos, Aulas, Biblioteca 3D |
 | `BotaoCarregarMais` **(proposta)** | Botão outline centralizado abaixo do grid | Listagens |
 | `FooterPilares` | Três pilares com ícones + ornamento isométrico | Todas as páginas |
@@ -200,7 +217,7 @@ Salvo onde marcado como decidido, as decisões desta seção são **(proposta)**
 | `capa` | mídia (imagem) | sim | `.jpg`, `.png`, `.webp`; ~3:2 (como no mockup), mín. 1200×800px **(proposta)** |
 | `categoria` | relação → `categoria_artigo` | sim | Uma por artigo |
 | `data_publicacao` | data | sim | Formato exibido `12 MAI 2024` |
-| `autor` | relação → `usuario` | sim | Alimenta avatar + @handle + nível |
+| `autor` | relação → `usuario` | sim | Alimenta avatar + nome + identificador `@nomesobrenome` + nível (rodada 4) |
 | `anexos` | mídia múltipla | não | `.pdf`, `.zip`, `.stl`, `.3mf`, `.obj`, `.gltf`, `.glb` — para publicações e materiais de apoio **(proposta)** |
 | `link_externo` | URL | não | Publicações hospedadas fora do site **(proposta)** |
 | `curtidas` | inteiro (derivado) | sim | Contador exibido no card |
@@ -220,7 +237,10 @@ Salvo onde marcado como decidido, as decisões desta seção são **(proposta)**
 
 ### Relações com `usuario` (definida em outras páginas)
 
-Campos consumidos aqui: `handle` (`@maker_x`), `avatar_pixel` (imagem), `nivel` (inteiro).
+Campos consumidos aqui: `nome` (texto, até **60 caracteres** — rodada 4), `handle`
+(identificador no modelo **`@nomesobrenome`**, derivado do nome — rodada 4; `@maker_x` do
+mockup é ilustrativo), `avatar_pixel` (imagem), `nivel` (inteiro). Normalização
+(acentos/espaços) e desempate de homônimos: **(proposta)**.
 
 ## Ganchos de gamificação
 
@@ -229,7 +249,8 @@ Campos consumidos aqui: `handle` (`@maker_x`), `avatar_pixel` (imagem), `nivel` 
   (subir de nível custa 5 XP; nível máximo 10).
 - **Skill associada** — artigo pode declarar a skill que exercita (Modelagem 3D, Corte a Laser,
   Impressão 3D, Eletrônica, Design), creditando XP naquela skill **(proposta)**.
-- **Exibição de nível** — cada card exibe `NÍVEL n` do autor ao lado do `@handle`, reforçando a
+- **Exibição de nível** — cada card exibe `NÍVEL n` do autor ao lado do nome/identificador
+  `@nomesobrenome` (rodada 4), reforçando a
   progressão pública (níveis 3, 6 e 7 no mockup — **ilustrativos**; o nível máximo real é
   **10**, decidido 2026-08-23).
 - **Curtidas (♥)** — contador por artigo (`24`, `31`, `18`); curtir exige login **(proposta)**.
@@ -277,8 +298,8 @@ Campos consumidos aqui: `handle` (`@maker_x`), `avatar_pixel` (imagem), `nivel` 
 | Aspecto | Visitante (deslogado) | Maker (logado) |
 |---|---|---|
 | Leitura dos artigos | Livre (conteúdo público, indexável) | Livre |
-| Bloco de conta no header | Botão `CRIAR CONTA` no lugar do avatar | Avatar + `MAKER_X` / `NÍVEL 3` + chevron |
-| Item `PERFIL` (barra inferior mobile) | Abre a **tela de login** (decidido, rodada 3) | Leva a **Minha Conta** (`pages/minha-conta.md`) |
+| Bloco de conta no header | Botão `CRIAR CONTA` no lugar do avatar | Avatar + **nome da pessoa** (`MAKER_X` é ilustrativo) / `NÍVEL 3` + chevron |
+| Item `PERFIL` (barra inferior mobile) | Abre a **tela de login** — **e-mail + senha** (rodada 4; design definido — ver `login.md`) | Leva a **Minha Conta** (`pages/minha-conta.md`) |
 | Curtir | Clique abre convite para criar conta | Curtida registrada, contador atualiza |
 | `ESCREVER ARTIGO` | Não exibido | Exibido, leva ao editor |
 | XP | Não acumula | Acumula por publicação/missões |

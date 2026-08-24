@@ -26,7 +26,7 @@ um jogo. Ao **assistir aulas**, **postar projetos** e **escrever artigos**, ganh
 - A barra de pips das skills representa os **10 níveis** — o mockup mostra 6 segmentos,
   **superado** por esta decisão.
 
-## Avatar — atualizado em 2026-08-23 (novo mockup `design/avatar-create.png`)
+## Avatar — atualizado em 2026-08-23 (novo mockup `design/criar-conta-passo-1.png`)
 
 - Pixel art em base isométrica com **4 direções de rotação** (botão ⟳ no preview).
 - **Catálogo do novo mockup** (supera a resposta genérica "6 tons / 10 itens por aba" e o
@@ -42,9 +42,12 @@ um jogo. Ao **assistir aulas**, **postar projetos** e **escrever artigos**, ganh
   - **Rodada 3:** os **escritos de quantidade** da interface ("20 opções", "(10 opções)",
     "30 opções") **saem da UI** — mantém-se o desenho original; os números seguem valendo
     como tamanho de catálogo no CMS.
-- **`NOME DO AVATAR`** (até 20 caracteres) — **decidido na rodada 3: é o nome da pessoa**
-  informado no cadastro (mesmo valor). Como convive com o `@handle` exibido nos cards
-  segue em aberto.
+- **`NOME DO AVATAR`** — **decidido na rodada 3: é o nome da pessoa** informado no
+  cadastro (mesmo valor). **Rodada 4 (2026-08-24):** limite ampliado de 20 para **60
+  caracteres** (o contador `0/20` do mockup é registro); publicamente aparece **o nome da
+  pessoa**, e o identificador segue o modelo **`@nomesobrenome`** (derivado do nome) —
+  os handles fictícios dos mockups (`@laser.nick` etc.) são ilustrativos. Normalização
+  (acentos/espaços) e colisões de nomes iguais: **(proposta)**.
 - Combinação livre entre slots: "As opções podem ser combinadas livremente. Solte sua
   criatividade!"
 - **Somente itens fixos por enquanto** — sem cosméticos de recompensa; a mecânica de
@@ -70,9 +73,9 @@ As cinco skills:
   (economia acima).
 - A **visualização** das skills fica em **Minha Conta**: miniatura do avatar com as
   skills logo abaixo (ver [pages/minha-conta.md](pages/minha-conta.md)).
-- Cada skill tem nível próprio (1 a **10**), exibido com barra segmentada em pips.
-  Nível inicial de cada skill: **(proposta)** nível 1, como no mockup antigo — confirmar
-  0 × 1 com a equipe.
+- Cada skill tem nível próprio (até **10**), exibido com barra segmentada em pips.
+  **Decidido (rodada 4, 2026-08-24):** as skills começam no **nível 0** (barra de pips
+  vazia); o "NÍVEL 1 com 1 pip" do mockup antigo é registro superado.
 - **(proposta)** Bordado Digital e Serigrafia aparecem como categorias de missão/conteúdo
   e podem virar skills futuras.
 
@@ -107,8 +110,9 @@ lab (anexar foto/arquivo do resultado).
 
 - Curtidas (♥) em projetos, modelos 3D, artigos e aulas — **não geram XP** (decidido
   2026-08-23).
-- Conteúdo sempre atribuído ao autor: avatar pixel (mesmo rosto em miniatura) + @handle +
-  nível.
+- Conteúdo sempre atribuído ao autor: avatar pixel (mesmo rosto em miniatura) + nome/
+  identificador + nível. **Rodada 4:** o identificador segue o modelo `@nomesobrenome`;
+  os handles fictícios dos mockups são ilustrativos.
 
 ## Questões em aberto (para /speckit.brainstorm e /speckit.clarify)
 
@@ -118,6 +122,9 @@ lab (anexar foto/arquivo do resultado).
 3. ~~Passos 2 e 3 do cadastro (dados pessoais? vínculo UNESP? confirmação?).~~
    **Decidido (rodada 3, 2026-08-23):** cadastro em **2 passos** — avatar → dados
    pessoais (nome, data de nascimento, e-mail, vínculo UNESP, escolaridade, curso).
+   **Decidido (rodada 4, 2026-08-24):** o passo 2 ganha **senha** (login por e-mail +
+   senha) — 7 campos, conforme o mockup `design/criar-conta-passo-2.jpg` e
+   [pages/onboarding.md](pages/onboarding.md) §6.
 4. XP por atividades presenciais (check-in via calendário? QR code no lab?).
 5. ~~Curtidas geram XP para o autor? Limites?~~ **Decidido (2026-08-23):** não geram XP.
 6. Visitante não logado pode baixar modelos/assistir aulas sem conta?

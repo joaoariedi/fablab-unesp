@@ -1,8 +1,9 @@
 # Identidade Visual — Fab Lab CITe Bauru
 
-> Transposição da proposta da designer (`design/FabLab - Proposta de identidade visual-2.jpg`
-> e `-3.jpg`) e dos padrões observados nos mockups de tela (`design/ChatGPT Image *.png`),
-> atualizada com as **decisões da designer de 2026-08-23**.
+> Transposição da proposta da designer (`design/identidade-visual-2.jpg` e
+> `design/identidade-visual-3.jpg`) e dos padrões observados nos mockups de tela em
+> `design/` (arquivos nomeados pela página que representam), atualizada com as
+> **decisões da designer de 2026-08-23**.
 
 ## Paleta de cores
 
@@ -20,9 +21,11 @@
 > aparecendo ~`#478E90`) são artefato de render e devem ser ignoradas.
 
 **Fundos de página (decidido 2026-08-23):** base navy `#191C37` no site em geral;
-**Biblioteca 3D e Aulas usam fundo branco** na área de conteúdo — texto em navy. A tela de
-criação de avatar (onboarding) também usa fundo claro, conforme seus dois mockups (token
-exato **(proposta)**).
+**Biblioteca 3D e Aulas usam fundo branco** na área de conteúdo — texto em navy. As telas
+do **onboarding** também usam fundo claro (token exato **(proposta)**): a criação de avatar
+(passo 1, dois mockups) e o **passo 2 — dados pessoais**, conforme `design/criar-conta-passo-2.jpg`
+(2026-08-24).
+A **Minha Conta** também usa fundo claro, conforme `design/minha-conta.jpg` (2026-08-24).
 **Rodada 2 (decidido):** a **faixa/sidebar teal permanece** nessas páginas, e seus itens
 funcionam como **tags de tema que filtram o conteúdo**; sobre o fundo branco os **cards
 são brancos com contorno azul navy escuro e sombra**, e as **thumbnails dos modelos 3D
@@ -49,9 +52,10 @@ Notas para web (arquivos **recebidos em 2026-08-23**, em `product/fonts/`):
   (Google Fonts) — uso web liberado.
 - Na implementação: converter para WOFF2, `font-display: swap`, e definir fallbacks
   (display → sans condensada; corpo → `system-ui, sans-serif`).
-- **Licenças pendentes:** Aldo the Apache e SquareFont vieram **sem arquivo de licença** —
-  confirmar permissão de uso web/institucional (fontes desses acervos costumam ser
-  "free for personal use"); Comfortaa está ok.
+- **Licenças:** Aldo the Apache e SquareFont vieram **sem arquivo de licença**; a
+  confirmação está **em espera** (decisão do PO, 2026-08-24) — rastreada como **ISS-001**
+  em [backlog.md](backlog.md), com gate antes do lançamento público. Comfortaa está ok
+  (OFL).
 
 ## Logo
 
@@ -60,7 +64,7 @@ Notas para web (arquivos **recebidos em 2026-08-23**, em `product/fonts/`):
   azul, verde, amarelo, laranja, rosa e claro/outline.
 - Versão monocromática navy para fundos claros.
 - **Chip canônico do header (decidido na rodada 2):** a versão **laranja**, com o cubo
-  isométrico entre `FAB` e `LAB` (como em `design/avatar-create.png`). A variante rosa do
+  isométrico entre `FAB` e `LAB` (como em `design/criar-conta-passo-1.png`). A variante rosa do
   mockup do mapa fica como registro; as demais cores do chip seguem valendo para
   pôsteres/materiais.
 
@@ -80,8 +84,9 @@ Vocabulário isométrico da prancha, usado como ornamento e ícone:
 ## Direção de arte da UI (padrões dos mockups + decisões)
 
 - **Hero da home (decidido 2026-08-23):** o mapa isométrico em pixel art (v2) é o hero
-  **oficial** e substitui a faixa teal (v1); para mobile a designer produzirá **arte
-  dedicada**.
+  **oficial** e substitui a faixa teal (v1); a **arte mobile dedicada foi entregue**
+  (`design/home-mobile.png`, 2026-08-24) — recomposição vertical com texto e CTA abaixo
+  da cena.
 - **Base escura**: páginas internas sobre navy `#191C37` com faixa hero teal `#74B7A5`
   (título display + composição isométrica F + cubo) — **exceto Biblioteca 3D e Aulas,
   com fundo branco** (decidido 2026-08-23).
@@ -100,7 +105,7 @@ Vocabulário isométrico da prancha, usado como ornamento e ícone:
 - **Navegação (decidido 2026-08-23)**: itens do menu **desktop** nesta ordem —
   `BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS` — todos
   **alinhados**; o item `AULAS` torto em alguns mockups é ruído de render. O mockup
-  `design/avatar-create.png` já renderiza essa navegação canônica alinhada.
+  `design/criar-conta-passo-1.png` já renderiza essa navegação canônica alinhada.
 - **Navegação compacta (rodadas 2–3)**: `BIBLIOTECA 3D` e `INSTAGRAM` **saem da barra**
   em tablet e mobile. **Ordem corrigida na rodada 3** ("mantenha a ordem das abas da
   página inicial" — segue a ordem relativa do desktop): barra do **tablet**
@@ -109,10 +114,10 @@ Vocabulário isométrico da prancha, usado como ornamento e ícone:
 - **Menu (decidido na rodada 3)**: botão de menu **no topo, na extremidade esquerda da
   barra**, contendo **todas as abas** (inclusive Biblioteca 3D e Instagram — a Biblioteca
   fica **só no menu**, sem atalho extra). Tocar no **logo leva à Home**. `PERFIL`
-  deslogado **abre a tela de login**; logado, abre **Minha Conta** *(complemento óbvio —
-  ver `pages/minha-conta.md`)*. O botão de menu aplica-se às **versões compactas**
-  (tablet/mobile) — no desktop as 6 abas já estão na barra e não há botão de menu
-  **(interpretação; confirmar com a designer se o menu também existe no desktop)**.
+  deslogado **abre a tela de login** (login por **e-mail + senha**, rodada 4); logado,
+  abre **Minha Conta** *(ver `pages/minha-conta.md`)*. **Decidido (rodada 4,
+  2026-08-24):** o botão de menu existe **só nas versões compactas** (tablet/mobile) —
+  no desktop as 6 abas ficam na barra, sem botão de menu.
 - **Footer institucional**: três pilares com ícones outline (Aprenda fazendo / Compartilhe
   conhecimento / Desenvolva projetos reais) + composição isométrica no canto.
 - **Pixel art**: avatares dos usuários em pixel art isométrico com **4 direções**; o hero

@@ -2,7 +2,7 @@
 
 > Transposição do material de produto/design para documentação de referência.
 > Fontes: `ESTRUTURA SITE.docx`, mockups em `design/`, proposta de identidade visual
-> (`FabLab - Proposta de identidade visual-2.jpg` e `-3.jpg`) e pôsteres da cultura FabLab
+> (`identidade-visual-2.jpg` e `identidade-visual-3.jpg`) e pôsteres da cultura FabLab
 > (`references/FabLab Posters.pdf` — Makers' Guide for Making, WeFab/Estúdio Arnold, 2016).
 
 ## Visão
@@ -41,8 +41,9 @@ Navegação principal (header, com logo-chip à esquerda e avatar do usuário à
 | **Aulas** | Cursos/tutoriais em vídeo para assistir | [pages/aulas.md](pages/aulas.md) |
 | **Artigos** | Conteúdos, reflexões e referências | [pages/artigos.md](pages/artigos.md) |
 | **Instagram** | Link externo, abre em nova aba | — |
-| **Criar conta** | Onboarding em **2 passos** (1: criar avatar; 2: dados pessoais) — decidido na rodada 3 | [pages/onboarding.md](pages/onboarding.md) |
-| **Minha Conta** | Perfil do maker: miniatura do avatar com as skills abaixo (rodada 3) | [pages/minha-conta.md](pages/minha-conta.md) |
+| **Criar conta** | Onboarding em **2 passos** (1: criar avatar — `design/criar-conta-passo-1.png`; 2: dados pessoais — `design/criar-conta-passo-2.jpg`) | [pages/onboarding.md](pages/onboarding.md) |
+| **Minha Conta** | Perfil do maker: avatar + skills, meus projetos, meus modelos 3D, artigos (card de **leitura/recomendação**, não "meus artigos") e cursos assistidos — mockup `design/minha-conta.jpg` (2026-08-24) | [pages/minha-conta.md](pages/minha-conta.md) |
+| **Login** | Entrada por e-mail + senha — **reusa o design do passo 2 do cadastro, trocando o formulário** (decisão do PO, 2026-08-24) | [pages/login.md](pages/login.md) |
 
 > **Decidido (2026-08-23, designer):** navegação canônica **desktop** em todas as
 > páginas, nesta ordem: `BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM ·
@@ -70,9 +71,10 @@ Duas camadas visuais complementares (detalhes em [visual-identity.md](visual-ide
 1. **UI vetorial isométrica** — cards com contorno grosso, chips extrudados, elementos
    isométricos (cubos, plataformas, letra F), paleta da identidade sobre base navy.
 2. **Mundo em pixel art** — **decidido (2026-08-23):** o hero da home **é** o mapa
-   isométrico do lab estilo jogo (v2, substitui a faixa teal v1), com arte dedicada para
-   mobile produzida pela designer; contêineres-estações (Impressoras 3D, Corte a Laser,
-   Serigrafia, Cowork) e personagens pixel art; avatares dos usuários seguem esse estilo.
+   isométrico do lab estilo jogo (v2, substitui a faixa teal v1), com arte mobile
+   dedicada **entregue** (`design/home-mobile.png`, 2026-08-24); contêineres-estações
+   (Impressoras 3D, Corte a Laser, Serigrafia, Cowork) e personagens pixel art; avatares
+   dos usuários seguem esse estilo.
 
 ## Público
 

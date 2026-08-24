@@ -1,96 +1,119 @@
-PERGUNTAS PARA A DESIGNER — RODADA 4
-As respostas da rodada 3 já foram aplicadas na documentação (cadastro
-em 2 passos, skills fora do cadastro, base F/M, rosto 4+4+4, barras
-compactas na ordem do desktop, menu com todas as abas).
-Estas são as pendências que sobraram — as duas primeiras pedem arte.
+PERGUNTAS PARA A DESIGNER — RODADA 5
+As respostas da rodada 4 e as três telas novas (minha conta, criar
+conta e home mobile) já foram aplicadas na documentação — obrigado!
+Estas perguntas vêm da conferência dessas telas contra o que já foi
+decidido, mais a definição da tela de login por reuso.
 
---------------------------------------------------------------------
-1. "MINHA CONTA" PRECISA DE DESENHO
---------------------------------------------------------------------
-Contexto: você definiu que a visualização das skills vai para a
-Minha Conta — miniatura do avatar com as skills embaixo. É uma tela
-nova, sem mockup.
+====================================================================
+SOBRE A TELA "MINHA CONTA"
+====================================================================
 
+1. CARDS DE SKILL: BARRA, NÍVEL INICIAL E CHECKBOX
+Contexto: os cards mostram barra de 6 segmentos com "NÍVEL 1" e 1
+segmento preenchido, e um checkbox vazio embaixo. Já decidimos que a
+barra representa 10 níveis e que as skills começam no nível 0 (barra
+vazia). E a seleção de skills saiu do produto.
 Perguntas:
-a) O que mais compõe a Minha Conta além do avatar e das skills?
-   (meus projetos/modelos/artigos, missões em andamento, dados
-   pessoais, editar avatar, sair...)
-b) Você consegue produzir o mockup dessa tela (desktop já ajuda)?
+a) Confirmar que o desenho será atualizado: barra com 10 segmentos e
+   estado inicial vazio (nível 0)?
+b) O checkbox nos cards tem alguma função, ou é sobra do desenho
+   antigo e pode sair?
 
---------------------------------------------------------------------
-2. TELA DE LOGIN — E COMO A PESSOA ENTRA?
---------------------------------------------------------------------
-Contexto: o PERFIL deslogado abre a tela de login, mas essa tela não
-tem mockup. E um detalhe importante: os campos do cadastro que você
-listou (nome, nascimento, e-mail, vínculo, escolaridade, curso) não
-incluem SENHA.
+2. CARD "ARTIGOS" É DE LEITURA, NÃO "MEUS ARTIGOS"?
+Contexto: o card mostra um artigo recomendado para ler ("Como
+calibrar sua impressora 3D", link "Ler artigo completo"), diferente
+dos cards vizinhos que são "meus" (meus projetos, meus modelos 3D).
+Pergunta: confirmar — a Minha Conta mostra artigos para LER
+(recomendação), e "meus artigos publicados" não aparece na tela?
 
+3. CURSOS: NÍVEIS DE DIFICULDADE E QUANDO CONTA COMO "ASSISTIDO"
+Contexto: o card de curso mostra "Básico" e "60% concluído".
 Perguntas:
-a) O login será com e-mail + senha (e o cadastro ganha um campo de
-   senha), ou com link de acesso enviado por e-mail (sem senha)?
-b) Você consegue produzir o mockup da tela de login?
+a) Quais são os níveis de dificuldade dos cursos (Básico, ...)?
+b) Quando um curso conta como "assistido" para ganhar o 1 ponto —
+   ao concluir 100%, a partir de uma % ou manualmente?
 
---------------------------------------------------------------------
-3. NOME DA PESSOA × @USUARIO NOS CARDS
---------------------------------------------------------------------
-Contexto: você definiu que o nome do avatar é o nome da pessoa. Mas
-todos os mockups mostram os autores como @usuario (ex.: @laser.nick,
-@print.lu) nos cards, ranking e cabeçalho.
+4. VERDE DO CHIP "PÚBLICO"
+Contexto: o chip "Público" usa um verde saturado (~#1B9C6B) que não
+está na paleta oficial (o verde da paleta é o teal #74B7A5).
+Pergunta: esse verde vira um token novo de status, ou trocamos pelo
+teal da paleta?
 
-Pergunta: o que aparece publicamente nos cards e no ranking — o nome
-da pessoa, um @usuario escolhido por ela, ou os dois? (Se o @usuario
-morreu, atualizamos todos os cards para o nome.)
+5. ONDE FICAM "EDITAR AVATAR", DADOS PESSOAIS E SAIR?
+Contexto: a tela não tem botão de editar o avatar nem acesso a dados
+pessoais/sair.
+Pergunta: ficam no menu do chevron (⌄) ao lado do avatar no topo, ou
+entram na própria tela?
 
---------------------------------------------------------------------
-4. LIMITE DE 20 CARACTERES NO NOME
---------------------------------------------------------------------
-Contexto: o campo NOME DO AVATAR tem contador 0/20. Como agora ele é
-o nome real da pessoa, 20 caracteres truncam nomes compostos
-(ex.: "Maria Fernanda Oliveira" tem 23).
+====================================================================
+SOBRE A TELA "CRIAR CONTA" (PASSO 2)
+====================================================================
 
-Pergunta: aumentamos o limite (sugestão: 60) ou mantemos 20 e o
-boneco exibe só o primeiro nome?
+6. BOTÃO DE FORMULÁRIO: NAVY OU ROSA?
+Contexto: o botão "CRIAR CONTA →" está navy preenchido com texto
+claro; o botão primário canônico do site é rosa preenchido com texto
+navy (como o "COMECE A CRIAR").
+Pergunta: formulários (criar conta e login) têm um estilo próprio de
+botão (navy), ou usam o rosa canônico?
 
---------------------------------------------------------------------
-5. O BOTÃO DE MENU EXISTE NO DESKTOP?
---------------------------------------------------------------------
-Contexto: você definiu o menu (botão no topo à esquerda, com todas
-as abas) respondendo sobre tablet/celular. No desktop as 6 abas já
-aparecem na barra.
+7. INDICADOR DE PASSOS "1 2"
+Contexto: você decidiu que o indicador volta com 2 passos, mas ele
+não aparece no desenho.
+Pergunta: confirmar que o indicador "1 2" entra na tela final.
 
-Pergunta: no desktop existe também o botão de menu, ou ele é só das
-versões compactas? (Aplicamos "só nas compactas" por interpretação —
-confirmar.)
+8. ACEITE DE TERMOS (LGPD) — PRECISA ENTRAR
+Contexto: o formulário não tem o aceite de termos de uso/política de
+privacidade. Por ser site institucional com dados pessoais (inclusive
+data de nascimento), o aceite é necessidade legal antes de criar a
+conta.
+Pergunta: pode desenhar o checkbox de aceite no formulário (com link
+para os termos)?
 
---------------------------------------------------------------------
-6. DETALHES DO CADASTRO EM 2 PASSOS
---------------------------------------------------------------------
+9. COMO VOLTAR AO PASSO 1?
+Contexto: a tela não tem botão VOLTAR — se a pessoa quiser ajustar o
+avatar antes de concluir, não há caminho.
+Pergunta: adicionamos um "← Voltar" (link ou botão secundário), ou
+outro mecanismo?
+
+====================================================================
+SOBRE A HOME MOBILE
+====================================================================
+
+10. LADO DO BOTÃO DE MENU
+Contexto: na rodada 3 você respondeu que o menu fica "no topo, na
+extremidade esquerda da barra"; na arte nova o hambúrguer (rosa) está
+no topo À DIREITA.
+Pergunta: qual vale — esquerda (resposta) ou direita (arte)?
+
+11. BARRA INFERIOR NO CELULAR
+Contexto: a barra inferior decidida (Projetos · Calendário · Aulas ·
+Artigos · Perfil) não aparece na arte da home mobile.
+Pergunta: ela fica fixa sobreposta à cena, aparece só ao rolar, ou
+foi apenas omitida do desenho?
+
+12. ESTADO LOGADO NO CELULAR
+Contexto: o header mobile da arte tem só logo + menu, sem o avatar/
+nome que existe no desktop.
+Pergunta: no celular, o estado logado aparece só pelo PERFIL da barra
+inferior, ou o avatar entra no header também?
+
+====================================================================
+SOBRE A TELA DE LOGIN (REUSO DO CRIAR CONTA)
+====================================================================
+
+13. DETALHES DO LOGIN
+Contexto: decidimos reusar o design do passo 2 trocando o formulário
+(e-mail + senha).
 Perguntas:
-a) O indicador de passos volta à tela (agora "1 2")?
-b) Durante o cadastro no celular, a barra inferior
-   (Projetos/Calendário/Aulas/Artigos/Perfil) aparece ou some?
+a) Título e botão: "ENTRAR", "FAZER LOGIN", outro?
+b) O que ocupa o lugar do preview do avatar à esquerda (ornamento,
+   mascote, ou card centralizado sem coluna)?
+c) Entra o link "Esqueci minha senha"? (o fluxo de recuperação por
+   e-mail precisa existir)
 
 --------------------------------------------------------------------
-7. ROSTO: CONFIRMAR REMOÇÃO DO "VER MAIS"
---------------------------------------------------------------------
-Contexto: com 4 opções de olhos, 4 de nariz e 4 de boca, todas cabem
-na fileira — o link "Ver mais ⌄" do mockup perde a função.
-
-Pergunta: confirmar que o "Ver mais" sai das três fileiras do rosto.
-
---------------------------------------------------------------------
-8. SKILLS COMEÇAM NO NÍVEL 0 OU 1?
---------------------------------------------------------------------
-Contexto: sem escolha no cadastro, todo maker nasce com as 5 skills.
-O mockup antigo mostrava "NÍVEL 1" com 1 pip preenchido.
-
-Pergunta: a skill de quem nunca pontuou aparece como nível 0 (barra
-vazia) ou nível 1 (1 pip preenchido)?
-
---------------------------------------------------------------------
-LEMBRETE — LICENÇA DAS FONTES (ainda pendente)
---------------------------------------------------------------------
-Aldo the Apache e SquareFont vieram sem arquivo de licença. Você
-consegue confirmar (ou enviar) a licença que permite uso em site
-institucional? Comfortaa está ok (OFL). Precisamos disso antes do
-lançamento.
+Duas notas cosméticas, sem pressa: o quadro no gradil diz
+"CRIE./EXPERIMENTE./TRANSFORME." na arte mobile e
+"CRIAR/EXPERIMENTAR/TRANSFORMAR" na arte desktop — unificar quando
+mexer nas artes; e o personagem do banco aparece com celular numa
+arte e tablet na outra.

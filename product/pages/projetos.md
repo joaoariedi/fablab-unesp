@@ -5,12 +5,18 @@
 Vitrine dos **projetos realizados no lab pelos alunos e voluntários**. Serve para inspirar
 ("Conheça projetos incríveis desenvolvidos por nossos makers. Inspire-se!"), permitir
 descoberta por categoria de fabricação e por busca textual, dar crédito público ao autor
-(avatar + @handle + nível) e alimentar o loop de gamificação — publicar projeto gera XP e
-curtidas reforçam a reputação do maker.
+(avatar + nome + identificador + nível) e alimentar o loop de gamificação — publicar projeto
+gera XP e curtidas reforçam a reputação do maker.
+
+> **Decidido (rodada 4, 2026-08-24):** na identidade pública aparece o **nome da pessoa**; o
+> identificador segue o modelo **`@nomesobrenome`**, derivado do nome (ex.: `@mariasilva`).
+> Os handles dos mockups (`@laser.nick`, `@print.lu`, `@maker_jv`) são **ilustrativos** e
+> ficam como registro histórico. O nome aceita até **60 caracteres** (rodada 4). Normalização
+> (acentos/espaços) e colisão de homônimos permanecem **(proposta)** — ver `gamification.md`.
 
 ## Fonte de design
 
-- `design/ChatGPT Image 18 de ago. de 2026, 11_28_34.png` — tela completa de Projetos
+- `design/projetos.png` — tela completa de Projetos
   (header, hero teal, tabs de filtro, busca, grid de 3 cards, footer de pilares).
 - Apoio: `concept.md`, `visual-identity.md`, `gamification.md`.
 
@@ -20,7 +26,7 @@ curtidas reforçam a reputação do maker.
 
 - Logo-chip extrudado laranja "FAB ● LAB / CITE BAURU" à esquerda (hachura de sombra 3D).
   - **Decidido (rodada 2, 2026-08-23):** o chip **laranja**, com o cubo isométrico entre
-    `FAB` e `LAB` (como em `design/avatar-create.png`), é a versão **canônica** do header em
+    `FAB` e `LAB` (como em `design/criar-conta-passo-1.png`), é a versão **canônica** do header em
     todas as páginas; a variante rosa fica como registro de mockup (`visual-identity.md`).
   - **Decidido (rodada 3, 2026-08-23):** o **logo leva à Home** em todos os tamanhos de
     tela.
@@ -35,7 +41,15 @@ curtidas reforçam a reputação do maker.
     é **ruído de render**, não intenção de design; todos os itens ficam **alinhados**.
   - `CALENDÁRIO` não aparece neste mockup — **decidido (2026-08-23):** **entra** no header
     desta página, na posição canônica acima.
+  - **Decidido (rodada 4, 2026-08-24):** no **desktop** as 6 abas ficam **na barra, sem
+    botão de menu** — o botão de menu existe **só nas versões compactas** (tablet/mobile).
 - À direita: avatar pixel em moldura clara + `MAKER_X` / `NÍVEL 3` + chevron `⌄` (menu da conta).
+  - `MAKER_X` é rótulo **ilustrativo** do mockup — **decidido (rodada 4, 2026-08-24):** o
+    bloco de conta mostra o **nome da pessoa** (até 60 caracteres) e o identificador
+    `@nomesobrenome`.
+  - **Decidido (rodada 4, 2026-08-24):** o menu da conta leva a **Minha Conta**
+    (ver [minha-conta.md](minha-conta.md)) quando logado; **deslogado**, o acesso leva à tela
+    de **login por e-mail + senha** (design da tela de login **definido** — ver `login.md`).
 
 ### Hero (faixa teal `#74B7A5`)
 
@@ -75,6 +89,9 @@ curtidas reforçam a reputação do maker.
   5. **Rodapé do card** (separado por linha divisória): avatar pixel + `@laser.nick` /
      `NÍVEL 7`; `@print.lu` / `NÍVEL 6`; `@maker_jv` / `NÍVEL 5` — **decidido (2026-08-23):**
      esses níveis são **ilustrativos**; o nível máximo real é **10** (ver `gamification.md`).
+     **Decidido (rodada 4, 2026-08-24):** os **handles** `@laser.nick`, `@print.lu` e
+     `@maker_jv` também são **ilustrativos/superados** — o rodapé exibe o **nome da pessoa**
+     e o identificador no modelo **`@nomesobrenome`**.
      À direita, ícone de coração
      outline rosa + contador de curtidas (`32`, `28`, `19`) e, após divisória vertical, seta
      `→` rosa (ação principal do card; o destino — página de detalhe do projeto — é
@@ -111,7 +128,9 @@ mostra apenas desktop.
   - **Decidido (rodada 3, 2026-08-23):** o **botão de menu fica no topo, na extremidade
     esquerda da barra**, e contém **todas as abas** (inclusive `BIBLIOTECA 3D` e
     `INSTAGRAM`); a Biblioteca 3D fica **só no menu**, sem atalho extra. Tocar no **logo
-    leva à Home** (não é mais proposta).
+    leva à Home** (não é mais proposta). **Confirmado (rodada 4, 2026-08-24):** o botão de
+    menu existe **só nas versões compactas** (tablet/mobile) — no desktop não há botão de
+    menu.
 - **Hero (proposta)**: título e parágrafo mantêm-se à esquerda; a composição isométrica
   reduz para ~35% da largura; chevrons `»` ocultos.
 - **Filtros (proposta)**: tabs viram **chips horizontais roláveis** (scroll-x, sem barra
@@ -141,17 +160,20 @@ Salvo onde indicado como decidido, as decisões desta seção são **(proposta)*
     esquerda da barra superior** (não na barra inferior), com **todas as abas** dentro
     (inclusive `BIBLIOTECA 3D` e `INSTAGRAM`); a Biblioteca 3D fica **só no menu**, sem
     atalho extra. Tocar no **logo
-    leva à Home** (não é mais proposta).
+    leva à Home** (não é mais proposta). **Confirmado (rodada 4, 2026-08-24):** o botão de
+    menu é exclusivo das **versões compactas**; o desktop não o tem.
   - **Decidido (rodada 3, 2026-08-23):** com o usuário **deslogado**, o item `PERFIL` da
     barra inferior **abre a tela de login** (resolve a lacuna anotada em *Estados e
-    interações* → Deslogado).
+    interações* → Deslogado). **Decidido (rodada 4, 2026-08-24):** o login é por
+    **e-mail + senha** (design da tela **definido** — ver `login.md`); **logado**, `PERFIL` abre
+    **Minha Conta** — ver [minha-conta.md](minha-conta.md).
 - **Hero (proposta)**: empilhado — título, parágrafo e, abaixo, a arte isométrica centralizada
   e reduzida (ou omitida em telas <390px para preservar leitura).
 - **Filtros (proposta)**: chips horizontais roláveis fixos abaixo do hero; busca em campo de
   largura total acima dos chips, com placeholder `Buscar projetos...` preservado.
 - **Grid (proposta)**: **1 coluna**, cards empilhados em largura total; foto em 16:9;
-  rodapé do card mantém avatar + @handle + nível na primeira linha e curtidas + seta na
-  segunda, se necessário.
+  rodapé do card mantém avatar + nome + `@nomesobrenome` + nível (rodada 4) na primeira
+  linha e curtidas + seta na segunda, se necessário.
 - **Footer (proposta)**: pilares empilhados verticalmente, ícone à esquerda do texto.
 - **Alvos de toque (proposta)**: mínimo 44×44px; espaçamento vertical mínimo de 8px entre
   ações do card.
@@ -160,13 +182,13 @@ Salvo onde indicado como decidido, as decisões desta seção são **(proposta)*
 
 | Componente | Descrição | Reuso |
 |---|---|---|
-| `HeaderPrincipal` | Logo-chip (→ Home), nav caps, bloco de conta (avatar/@nome/nível/chevron); em tablet/mobile, botão de menu no topo à esquerda com **todas as abas** e barra compacta na ordem do desktop (decidido rodada 3) | Todas as páginas |
+| `HeaderPrincipal` | Logo-chip (→ Home), nav caps, bloco de conta (avatar/nome/`@nomesobrenome`/nível/chevron → Minha Conta; deslogado → login por e-mail + senha); botão de menu com **todas as abas** **só nas versões compactas** (tablet/mobile) — no desktop as 6 abas ficam na barra, sem botão de menu (decidido rodadas 3–4) | Todas as páginas |
 | `HeroFaixa` | Faixa teal com título display, parágrafo, arte isométrica | Projetos, Biblioteca 3D, Aulas, Artigos |
 | `TabsFiltro` | Tabs caps com ativo em rosa sublinhado; vira chips roláveis em telas menores **(proposta)** | Listagens |
 | `CampoBusca` | Input arredondado navy, borda rosa, placeholder + ícone de lupa | Listagens |
 | `CardProjeto` | Foto, chip de categoria, título, descrição, rodapé de autor, curtidas, seta | Projetos, Home |
 | `ChipCategoria` | Chip rosa, texto navy caps | Projetos, Biblioteca 3D |
-| `AutorInline` | Avatar pixel + `@handle` + `NÍVEL n` | Cards e listas |
+| `AutorInline` | Avatar pixel + nome da pessoa + `@nomesobrenome` + `NÍVEL n` (rodada 4; handles dos mockups são ilustrativos) | Cards e listas |
 | `BotaoCurtir` | Coração outline rosa + contador | Projetos, Modelos, Artigos, Aulas |
 | `FooterPilares` | Três pilares + ornamento isométrico | Todas as páginas |
 | `BotaoCarregarMais` | **(proposta)** paginação incremental | Listagens |
@@ -190,7 +212,7 @@ Salvo onde indicado como decidido, as decisões desta seção são **(proposta)*
 | `imagem_capa` | mídia (`.jpg`, `.jpeg`, `.png`, `.webp`) | sim | usada no card |
 | `galeria` | lista de mídia (`.jpg`, `.png`, `.webp`) | não **(proposta)** | detalhe |
 | `categoria` | relação → `categoria_projeto` | sim | alimenta o chip e as tabs |
-| `autor` | relação → `maker` | sim | avatar + @handle + nível |
+| `autor` | relação → `maker` | sim | avatar + nome + `@nomesobrenome` + nível (rodada 4) |
 | `curtidas` | inteiro (derivado de `curtida`) | sim | contador exibido no card |
 | `arquivos` | lista de arquivos (`.stl`, `.3mf`, `.obj`, `.gltf`, `.glb`, `.zip`, `.pdf`, `.svg`, `.dxf`) | não **(proposta)** | downloads do projeto |
 | `materiais` | lista de texto | não **(proposta)** | ex.: MDF 6mm, PLA |
@@ -213,7 +235,9 @@ Salvo onde indicado como decidido, as decisões desta seção são **(proposta)*
 
 ### Coleções referenciadas (definidas em outras páginas)
 
-- `maker` — `handle` (`@laser.nick`), `avatar` (pixel art, `.png`), `nivel`, `xp`.
+- `maker` — `nome` (até **60 caracteres** — rodada 4), `handle` no modelo `@nomesobrenome`
+  (derivado do nome; `@laser.nick` do mockup é ilustrativo), `avatar` (pixel art, `.png`),
+  `nivel`, `xp`. Normalização e colisão de homônimos: **(proposta)**.
 - `curtida` — relação `maker` × `projeto`, única por par **(proposta)**.
 - `skill`, `missao`, `estacao` — ver `gamification.md`.
 
@@ -225,7 +249,7 @@ Salvo onde indicado como decidido, as decisões desta seção são **(proposta)*
 - **(proposta)** O XP é creditado na(s) `skills_relacionadas` do projeto (ex.: projeto de
   serigrafia evolui a skill correspondente), e apenas quando `status = publicado` — evitando
   farm por rascunhos.
-- **Exibição de nível**: cada card mostra `NÍVEL 7` / `NÍVEL 6` / `NÍVEL 5` junto ao @handle,
+- **Exibição de nível**: cada card mostra `NÍVEL 7` / `NÍVEL 6` / `NÍVEL 5` junto ao autor,
   reforçando a progressão pública do autor (valores **ilustrativos**; escala real de 1 a 10).
 - **Curtidas (♥)**: contador visível por card (`32`, `28`, `19`). **Decidido (2026-08-23):**
   curtidas **não geram XP** para o autor — são apenas sinal social/reputação.
@@ -257,8 +281,16 @@ Salvo onde indicado como decidido, as decisões desta seção são **(proposta)*
   "Crie sua conta para curtir e evoluir como maker"); download de arquivos pode
   exigir conta (ver questão 6 de `gamification.md`). **Decidido (rodada 3, 2026-08-23):**
   no **mobile**, deslogado, o item `PERFIL` da barra inferior **abre a tela de login**.
+  **Decidido (rodada 4, 2026-08-24):** o login é por **e-mail + senha** (a senha é definida
+  no passo 2 do cadastro — ver [onboarding.md](onboarding.md)); o **design da tela de login
+  está definido** — reuso do passo 2, trocando o formulário (decisão do PO, 2026-08-24) —
+  ver [login.md](login.md).
 - **Logado (proposta)**: coração reflete o estado do maker (curtido/não curtido); aparece o
   CTA `PUBLICAR PROJETO`; projetos próprios em revisão exibem selo `EM REVISÃO`.
+  **Decidido (rodada 4, 2026-08-24):** o bloco de conta do header (e o `PERFIL` da barra
+  inferior no mobile) leva a **Minha Conta** — avatar (miniatura + skills), meus projetos,
+  meus modelos 3D, meus artigos e cursos assistidos (ver [minha-conta.md](minha-conta.md));
+  "meus projetos" é a visão por autor desta mesma coleção.
 
 ## Questões em aberto
 

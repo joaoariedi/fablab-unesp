@@ -24,7 +24,7 @@ uma **skill** e uma **máquina**, e é o candidato natural para conceder **XP po
 
 - `ESTRUTURA SITE.docx` — única fonte textual: item de menu "Calendário" e descrição
   "calendário com atividades do fab lab".
-- `design/ChatGPT Image 18 de ago. de 2026, 12_43_11.png` — mockup da home v2 (mapa
+- `design/home-desktop.png` — mockup da home v2 (mapa
   isométrico pixel art), **única imagem** onde `CALENDÁRIO` aparece no header; dela vêm o
   rótulo de navegação e o padrão de header (o footer **não** aparece nessa imagem).
   **Decidido (2026-08-23):** esse header v2 é o canônico **quanto à navegação** — o
@@ -49,7 +49,7 @@ Toda a estrutura abaixo é **(proposta)**, derivada dos padrões das demais tela
   isométrico **à esquerda** de `FAB LAB` / `CITE BAURU` (no v1 o chip é laranja e o cubo fica
   entre as palavras; ver `pages/home.md`).
   - **Decidido (rodada 2, 2026-08-23):** o chip canônico do header é a versão **laranja**,
-    com o cubo isométrico **entre** `FAB` e `LAB` (como em `design/avatar-create.png`). O
+    com o cubo isométrico **entre** `FAB` e `LAB` (como em `design/criar-conta-passo-1.png`). O
     chip rosa do mockup do mapa fica como **registro de mockup**, não é o header oficial.
   - **Decidido (rodada 3, 2026-08-23):** tocar no **logo leva à Home** (deixa de ser
     proposta) — vale em todos os tamanhos de tela.
@@ -59,7 +59,18 @@ Toda a estrutura abaixo é **(proposta)**, derivada dos padrões das demais tela
   - Item ativo `CALENDÁRIO` em **rosa** com sublinhado curto.
   - O `AULAS` torto/desalinhado em alguns mockups é **ruído de render**, não intenção de
     design.
+  - **Decidido (rodada 4, 2026-08-24):** no **desktop não há botão de menu** — as 6 abas
+    ficam na barra. O botão de menu existe **só nas versões compactas** (tablet/mobile),
+    o que **supera** qualquer menção a botão de menu no header desktop.
 - À direita: avatar pixel + `MAKER_X` / `NÍVEL 3` + chevron `⌄`.
+  - **Decidido (rodada 4, 2026-08-24):** o rótulo exibido é o **nome da pessoa** e o
+    identificador segue o modelo **`@nomesobrenome`** (derivado do nome, ex.:
+    `@mariasilva`), com limite de **60 caracteres** para o nome. O `MAKER_X` do mockup é
+    **registro superado**. Normalização (acentos/espaços) e colisão de homônimos seguem
+    **(proposta)**.
+  - **Decidido (rodada 4, 2026-08-24):** o bloco de conta leva a **Minha Conta**
+    (`pages/minha-conta.md`) quando logado; deslogado, abre a tela de **login por e-mail +
+    senha** (design da tela de login definido — ver `login.md`).
 
 ### Hero (faixa teal `#74B7A5`)
 
@@ -106,6 +117,9 @@ Toda a estrutura abaixo é **(proposta)**, derivada dos padrões das demais tela
   5. **Metadados** em linha, com ícones outline: 📍 local (`Fab Lab CITe — Sala 2`),
      🖨 máquinas envolvidas (`Corte a Laser`), 👤 responsável (avatar pixel + `@handle` +
      `NÍVEL n`), 👥 vagas (`12/20 vagas`), ⏱ duração (`3 h`).
+     - **Decidido (rodada 4, 2026-08-24):** o responsável aparece pelo **nome da pessoa**,
+       com identificador no modelo **`@nomesobrenome`**. Os handles fictícios dos mockups
+       (`@laser.nick`, `@print.lu`, `@maker_jv`) são **ilustrativos/superados**.
   6. **Missão relacionada**: chip amarelo com ícone de missão (`DESAFIO CORTE LASER`).
   7. **Ações à direita**: botão primário `INSCREVER-SE` no **estilo canônico decidido em
      2026-08-23** — rosa preenchido, texto navy, sombra dura deslocada (a variante navy com
@@ -155,6 +169,11 @@ Todas **(proposta)**.
     **dentro do menu**, cujo botão fica **no topo, na extremidade esquerda da barra**, e
     que contém **todas as abas** (a Biblioteca 3D fica **só no menu**, sem atalho extra).
     Home pelo logo (decidido).
+  - **Decidido (rodada 4, 2026-08-24):** esse botão de menu existe **só nas versões
+    compactas** (tablet/mobile) — confirma a interpretação anterior. *Observação de design
+    para o mockup futuro:* logo e botão de menu disputam a **extremidade esquerda**; o
+    arranjo exato (logo à esquerda + menu ao lado, ou menu à esquerda + logo centralizado)
+    fica para o mockup das versões compactas.
   - Logo-chip **laranja** canônico (ver Header desktop).
 - **Hero**: composição isométrica reduz ~40%; parágrafo em 2 linhas.
 - **Barra de controle**: quebra em duas linhas — linha 1: `MÊS`/`LISTA` + navegação de mês +
@@ -181,6 +200,10 @@ Todas **(proposta)**.
     `INSTAGRAM` ficam **dentro do menu**, com botão **no topo, na extremidade esquerda da
     barra**, contendo **todas as abas** (Biblioteca 3D só no menu). Home pelo logo
     (decidido). **`PERFIL` deslogado abre a tela de login.**
+  - **Decidido (rodada 4, 2026-08-24):** o login é por **e-mail + senha** (design da tela
+    de login definido — ver `login.md`); **`PERFIL` logado abre a Minha Conta**
+    (`pages/minha-conta.md`). O botão de menu segue existindo **só nas compactas** —
+    mesma observação posicional (logo × menu na extremidade esquerda) do tablet.
 - **Hero**: composição isométrica omitida; título menor; parágrafo em até 4 linhas.
 - **Visão padrão**: **`LISTA`** passa a ser a visão inicial (grade mensal é pouco legível em
   390px); `MÊS` fica disponível como faixa compacta de **7 dias roláveis** (strip semanal)
@@ -198,7 +221,7 @@ Todas **(proposta)**.
 
 | Componente | Descrição | Reuso |
 |---|---|---|
-| `HeaderPrincipal` | Logo-chip **laranja** (canônico, decidido rodada 2) com **logo → Home** (rodada 3), nav em caps na ordem desktop `BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS`; compacta (ordem corrigida na rodada 3) — tablet `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS`, mobile em barra inferior de 5 posições `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS · PERFIL` (`PERFIL` deslogado → login), com `BIBLIOTECA 3D` e `INSTAGRAM` **no menu** (botão no topo, à esquerda, com todas as abas); bloco de conta | Todas as páginas |
+| `HeaderPrincipal` | Logo-chip **laranja** (canônico, decidido rodada 2) com **logo → Home** (rodada 3), nav em caps na ordem desktop `BIBLIOTECA 3D · PROJETOS · CALENDÁRIO · AULAS · INSTAGRAM · ARTIGOS`; compacta (ordem corrigida na rodada 3) — tablet `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS`, mobile em barra inferior de 5 posições `PROJETOS · CALENDÁRIO · AULAS · ARTIGOS · PERFIL` (`PERFIL` deslogado → login por **e-mail + senha**; logado → **Minha Conta**, rodada 4), com `BIBLIOTECA 3D` e `INSTAGRAM` **no menu** (botão no topo, à esquerda, com todas as abas) — botão de menu **só nas compactas**, sem menu no desktop (rodada 4); bloco de conta com **nome da pessoa** + `@nomesobrenome` (rodada 4) | Todas as páginas |
 | `HeroSecao` | Faixa teal, título display, parágrafo, chevrons, composição isométrica | Todas as seções |
 | `AlternadorVisao` **(proposta)** | Chips `MÊS` / `LISTA` | Exclusivo |
 | `NavegadorMes` **(proposta)** | `‹` `AGOSTO 2026` `›` + `HOJE` | Exclusivo |
@@ -210,7 +233,7 @@ Todas **(proposta)**.
 | `PainelDia` **(proposta)** | Drawer com eventos do dia selecionado | Exclusivo |
 | `BotaoInscricao` **(proposta)** | `INSCREVER-SE` no primário canônico (rosa preenchido, texto navy, sombra dura deslocada — decidido 2026-08-23) / outline `INSCRITO ✓` / `LOTADO` | Missões |
 | `ChipMissao` **(proposta)** | Chip amarelo com ícone de missão | Home, Projetos |
-| `AutorInline` | Avatar pixel + `@handle` + `NÍVEL n` | Aulas, Projetos, Artigos |
+| `AutorInline` | Avatar pixel + **nome da pessoa** + identificador `@nomesobrenome` + `NÍVEL n` (rodada 4; os `@handle` fictícios dos mockups são ilustrativos/superados) | Aulas, Projetos, Artigos |
 | `BotaoCurtida` | Coração outline rosa + contador | Todas as listagens |
 | `CheckinQR` **(proposta)** | QR code do evento + lista de presença (equipe do lab) | Exclusivo |
 | `FooterPilares` | Três pilares + composição isométrica | Todas as páginas |
@@ -234,7 +257,7 @@ Todas **(proposta)**.
 | `dia_inteiro` / `recorrencia` | booleano / texto (RRULE) | não | oculta o horário; eventos semanais/mensais |
 | `local` | relação → `local` | sim | sala/estação do lab ou externo |
 | `maquinas` | relação múltipla → `maquina` | não | Impressoras 3D, Corte a Laser, Serigrafia, Bordado Digital |
-| `responsavel` | relação → `usuario` | sim | avatar, `@handle`, `NÍVEL n` |
+| `responsavel` | relação → `usuario` | sim | avatar, **nome** (≤60 car.) + identificador `@nomesobrenome`, `NÍVEL n` (rodada 4) |
 | `skill` | relação → `skill` | não | destino do XP |
 | `missao_relacionada` | relação → `missao` | não | chip amarelo no card |
 | `aulas_prerequisito` | relação múltipla → `aula` | não | pré-requisitos |
@@ -269,8 +292,9 @@ Todos **(proposta)**, alinhados ao `gamification.md`.
   `usuario`×`evento`, validado por `presenca.xp_creditado`.
 - **Skills** — o XP evolui a barra segmentada em pips da skill correspondente; Serigrafia e
   Bordado Digital aparecem como tipo de evento antes de virarem skills.
-- **Níveis** — nível do responsável no card; nível do usuário no header (`MAKER_X` /
-  `NÍVEL 3`); XP de presença soma ao **Nível do Lab** coletivo.
+- **Níveis** — nível do responsável no card; nível do usuário no header (**nome da pessoa** /
+  `NÍVEL n`; o `MAKER_X` / `NÍVEL 3` do mockup é registro superado — rodada 4); XP de
+  presença soma ao **Nível do Lab** coletivo.
 - **Missões** — evento com `missao_relacionada` mostra chip amarelo e participar avança a
   barra de progresso; eventos `PRAZO DE MISSÃO` marcam o fim da janela.
 - **Curtidas** — ♥ com contador funciona como "tenho interesse" e ordena os destaques na home.
@@ -302,10 +326,13 @@ Todos **(proposta)**.
   `INSCREVER-SE` e ♥ abrem modal "Crie sua conta para participar e ganhar XP" com CTA
   `COMECE A CRIAR`; XP previsto exibido como convite; `.ICS` continua disponível. No
   mobile, o item `PERFIL` da barra inferior **abre a tela de login** (decidido na
-  rodada 3).
+  rodada 3). **Decidido (rodada 4, 2026-08-24):** o login é por **e-mail + senha** (o
+  passo 2 do cadastro ganha campo de senha); design da tela de login **definido** — ver `login.md`.
 - **Logado**: botões refletem o estado real (`INSCRITO ✓`, `LISTA DE ESPERA`, `LOTADO`);
   filtro extra `MINHAS INSCRIÇÕES`; badge de presença nos eventos já frequentados; lembrete
-  de evento próximo no topo da página.
+  de evento próximo no topo da página. **Decidido (rodada 4, 2026-08-24):** logado, o
+  destino do `PERFIL` (mobile) e do bloco de conta (desktop/tablet) é a **Minha Conta** —
+  ver [pages/minha-conta.md](minha-conta.md).
 - **Equipe do lab**: ações inline de editar/cancelar evento, abrir `CHECK-IN` com QR code e
   marcar presença manualmente; evento `CANCELADO` aparece tachado com aviso a todos.
 
