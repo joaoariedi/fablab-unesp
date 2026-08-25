@@ -134,8 +134,9 @@ detailed in [`docs/sdd-strategy.md`](docs/sdd-strategy.md):
 
 ## 🤝 Contributing
 
-The project is documentation-first — the docs are the contract (and yes,
-contributions earn you real-life XP ⭐):
+See **[CONTRIBUTING.md](CONTRIBUTING.md)** for the branch model (`dev` → `release/X.Y.Z`
+→ `main`), SemVer strategy and commit conventions. The project is documentation-first —
+the docs are the contract (and yes, contributions earn you real-life XP ⭐):
 
 - **Content is PT-BR; code and commits are English.** Product docs live in
   `docs/product/` and every decision is dated (`**Decidido (…, YYYY-MM-DD):**`);
@@ -148,6 +149,13 @@ contributions earn you real-life XP ⭐):
   scans for upload/auth surfaces) are non-negotiable.
 - Open items live in [`docs/backlog.md`](docs/backlog.md); page-level open questions live
   in each spec's *Questões em aberto* section.
+
+## 🧾 Changelog
+
+Notable changes are tracked in [CHANGELOG.md](CHANGELOG.md), following
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
+[Semantic Versioning](https://semver.org/) — current version: **v0.1.0**
+(specification milestone).
 
 ## 🏅 Credits
 
