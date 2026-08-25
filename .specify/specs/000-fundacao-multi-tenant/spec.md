@@ -179,7 +179,7 @@ access control and migrating data). Every later feature inherits these guardrail
 |----|-----------|-------------------|
 | SC-001 | A person who has never seen the repository reaches a working `/admin` login by following the README only | A second contributor performs it on a clean machine and reports elapsed time and every point of friction |
 | SC-002 | Zero cross-tenant reads: user of org A gets 0 rows or 403 on **100%** of scoped collections across all four surfaces | Isolation harness green in CI, and the same test shown red when a tenant constraint is deleted |
-| SC-003 | Neither an import of Payload nor a `req.payload` call outside `lib/tenancy/` can merge | **Two** probe commits on a throwaway branch: one importing `getPayload`, one calling `req.payload.find` inside a hook. CI must fail on both |
+| SC-003 | Neither an import of Payload nor a `req.payload` call outside `lib/tenancy/` can merge | **Three** probe commits on a throwaway branch: one importing `getPayload`, one calling `req.payload.find` inside a hook, one destructuring `const { payload } = req`. CI must fail on all three |
 | SC-004 | A pull request adding a collection absent from the scope registry cannot merge | Deliberate probe commit: registry test must fail naming the collection |
 | SC-005 | A write whose relationship points at another organization is rejected | Integration test asserting a validation error that names the field; a second assertion proves the message does **not** disclose the owning organization |
 | SC-006 | A single-organization deployment works with no master user and any hostname | Integration test with one seeded org: requests to two different hosts both resolve to it |

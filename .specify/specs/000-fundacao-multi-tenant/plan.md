@@ -287,10 +287,13 @@ forbids.
         '**/lib/tenancy/unscoped*', '**/lib/tenancy/system-payload*', // [N7] fence the bypasses
       ],
     }],
-    // [N2] req.payload is a full unscoped client handed to every hook — no import needed
+    // [N2] req.payload is a full unscoped client handed to every hook — no import needed.
+    // Selectors are deliberately object-agnostic: see "the two holes" below.
     'no-restricted-syntax': ['error',
-      { selector: "MemberExpression[object.name='req'][property.name='payload']",
-        message: 'req.payload skips access control. Use getTenantScopedPayload(req).' },
+      { selector: "MemberExpression[property.name='payload']",          // req.payload, args.req.payload, ctx.req.payload
+        message: 'An unscoped payload client skips access control. Use getTenantScopedPayload(req).' },
+      { selector: "ObjectPattern > Property[key.name='payload']",       // const { payload } = req
+        message: 'Destructuring payload skips access control. Use getTenantScopedPayload(req).' },
       { selector: "MemberExpression[property.name='drizzle']",
         message: 'Raw Drizzle access belongs in lib/tenancy.' },
     ],
@@ -308,6 +311,21 @@ The `no-restricted-syntax` rules above close that specific shape, and SC-003 now
 both paths. **[N7]** The same mechanism fences `unscoped*` and `system-payload*` so the most
 dangerous functions in the codebase cannot simply be imported by a page. `packages/game`
 gets its own entry (no Payload imports at all), which is what makes Principle 3 real.
+
+**The two holes a narrower selector would leave.** An earlier draft scoped the rule to
+`MemberExpression[object.name='req'][property.name='payload']`, which matches `req.payload`
+and nothing else: `const { payload } = req` is an `ObjectPattern` in a declarator, not a
+member expression, and in `args.req.payload` the object is itself a member expression, so
+`object.name` is `undefined`. Both are one keystroke away from what a contributor naturally
+writes inside a hook — a rule that misses them provides false assurance, which is worse than
+no rule. The selectors above are therefore **object-agnostic**: any `.payload` member access
+and any `{ payload }` destructuring outside `lib/tenancy/` fails the build.
+
+*Accepted cost:* this also flags unrelated `.payload` properties (a webhook body, a
+Redux-style action). That is deliberate — in this codebase such names are rare, and the
+escape valve is an `eslint-disable-next-line` **with a written justification**, which is
+visible in review. The type-aware rule on `BasePayload` remains the precise long-term
+answer; these selectors are the version that works before the type service is wired up.
 
 ### Sketch 8: invite — respond first, resolve membership after [R4]
 
