@@ -8,6 +8,7 @@
     <img alt="Content: PT-BR" src="https://img.shields.io/badge/content-pt--BR-009c3b">
     <img alt="Multi-tenant" src="https://img.shields.io/badge/multi--tenant-by_design-8e30eb">
     <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green">
+    <img alt="CI" src="https://github.com/joaoariedi/fablab-unesp/actions/workflows/ci.yml/badge.svg?branch=dev">
   </p>
 </div>
 
@@ -83,7 +84,7 @@ after an external senior game-developer review — full records in
 | Game rendering | DOM/CSS with `image-rendering: pixelated` — designer-produced sprite sheets, layered paperdoll avatar, server-side composited miniatures (no canvas engine) |
 | Deploy | Docker Compose on a campus VM; images built in CI |
 
-```
+```text
 apps/web/          Next + Payload (public frontend + admin + API)
 packages/game/     pure XP/level/mission rules — plain TS, tested, no Payload imports
 packages/ui/       identity design tokens + base components
@@ -98,7 +99,7 @@ the multi-tenancy section of [`docs/tech-stack.md`](docs/tech-stack.md).
 
 ## 🗂️ Repository layout
 
-```
+```text
 docs/
 ├── product/               Product vision — the spec-generation sources
 │   ├── concept.md           Vision, IA, audiences, platform requirements

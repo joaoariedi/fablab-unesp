@@ -150,10 +150,10 @@ Conteúdo exato dos 10 cards do mockup:
 > `@laser.nick`, `@projeto_ana`, `@maker_jv`, `@bia.tech`) são **ilustrativos** e ficam como
 > registro histórico do mockup. No conteúdo real o card mostra o **nome da pessoa** e o
 > identificador no modelo **`@nomesobrenome`** (ex.: `@mariasilva`).
-
+>
 > Grafia do mockup preservada em `MINI LOBO GUÁRÁ` — **decidido (2026-08-23):** no
 > conteúdo real usar a grafia correta `MINI LOBO GUARÁ`.
-
+>
 > **Decidido (2026-08-23):** os níveis de autor da tabela (`NÍVEL 4` a `NÍVEL 7`) são
 > **ilustrativos**. A economia real é 1 XP por ação, 5 XP por nível e **nível máximo 10**
 > (`gamification.md`).

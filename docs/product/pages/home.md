@@ -273,6 +273,7 @@ Salvo onde indicado como decidido, as decisões abaixo são **(proposta)**.
 ## Modelo de conteúdo (CMS)
 
 ### `Missao`
+
 | Campo | Tipo | Obrigatório | Relações |
 |---|---|---|---|
 | titulo | texto curto | sim | — |
@@ -286,6 +287,7 @@ Salvo onde indicado como decidido, as decisões abaixo são **(proposta)**.
 | progresso_percentual | inteiro (derivado, não editável no CMS) | sim | **por maker** → `Maker` (exibido como `50%` / `30%` / `0%`) — **decidido (PO, 2026-08-24):** progresso é **individual** do maker logado; **sem sessão** não há valor pessoal (exibe 0% + convite ao login) |
 
 ### `Projeto` (consumido pelo card `ÚLTIMOS PROJETOS`)
+
 | Campo | Tipo | Obrigatório | Relações |
 |---|---|---|---|
 | titulo | texto curto | sim | — |
@@ -296,6 +298,7 @@ Salvo onde indicado como decidido, as decisões abaixo são **(proposta)**.
 | arquivos | múltiplos arquivos (STL, 3MF, OBJ, GLTF/GLB, PDF, ZIP, SVG, DXF) | não | — |
 
 ### `Maker`
+
 | Campo | Tipo | Obrigatório | Relações |
 |---|---|---|---|
 | handle | texto (`@nomesobrenome`, derivado do nome — decidido rodada 4) | sim | único (normalização e colisão de homônimos **(proposta)**) |
@@ -306,11 +309,13 @@ Salvo onde indicado como decidido, as decisões abaixo são **(proposta)**.
 | skills | referências múltiplas | não | → `Skill` (com nível por skill) |
 
 ### `Skill`
+
 `nome` (texto, sim) · `icone` (SVG/PNG, sim) · ~~`nivel_maximo` (inteiro, **(proposta)**)~~
 **Decidido (2026-08-23):** `nivel_maximo` = **10** (por enquanto), 5 XP por nível — ver
 [gamification.md](../gamification.md).
 
 ### `NivelDoLab` (singleton)
+
 `nivel_atual` (inteiro, sim) · `xp_atual` (inteiro, sim) · `xp_meta` (inteiro, sim) ·
 ~~`proxima_recompensa_titulo` (texto, sim — ex.: `Novo Acabamento de Avatar`) ·
 `proxima_recompensa_icone` (imagem SVG/PNG, sim)~~.
@@ -319,6 +324,7 @@ Salvo onde indicado como decidido, as decisões abaixo são **(proposta)**.
 usados com os cosméticos (v2).
 
 ### `HomeSettings` (singleton) **(proposta)**
+
 ~~`variante_hero` (enum: `dashboard` | `mapa_pixel`)~~ — **removido/obsoleto (2026-08-23):**
 o hero v2 é o único, não há variante a escolher · `hero_titulo` · `hero_texto` ·
 `hero_cta_label` / `hero_cta_url` · `mapa_imagem` (PNG/WEBP) ·

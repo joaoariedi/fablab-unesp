@@ -1,0 +1,20 @@
+{
+  // Docs-stage lint: catch real breakage (bad lists, broken tables, stray syntax),
+  // not house style. Rules disabled below are deliberate — see CONTRIBUTING.md.
+  "config": {
+    "MD013": false, // line length — specs wrap at 90, tables are wider by nature
+    "MD033": false, // inline HTML — README/brand docs use <div>/<img> for layout
+    "MD041": false, // first line heading — README opens with the banner block
+    "MD024": { "siblings_only": true }, // page specs repeat section names by template
+    "MD036": false, // emphasis as heading — decision notes use **Decidido (…):**
+    "MD034": false, // bare URLs appear in provenance notes
+    "MD029": false, // ordered list numbering varies in transposed mockup content
+    "MD012": false, // multiple blank lines
+    "MD026": false, // trailing punctuation in headings (PT-BR titles)
+    "MD045": false, // alt text is present on real images; badges are decorative
+    "MD004": false, // list marker style — prose wraps onto lines starting with "+"
+    "MD060": false  // table pipe spacing — specs use compact |---|---| separators
+  },
+  "globs": ["**/*.md"],
+  "ignores": ["node_modules/**", ".specify/templates/**"]
+}

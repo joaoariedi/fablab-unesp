@@ -8,6 +8,23 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) �
 
 ## [Unreleased]
 
+### Added
+
+- **Spec-kit scaffolding** (`.specify/`): templates for spec, plan, tasks and checklist.
+- **Project constitution** v1.0.0 (`.specify/memory/constitution.md`) — five principles
+  (locked stack with swappable services; tenancy as a property of the data; pure game
+  rules over an immutable ledger; design and content fidelity; enumerated CI
+  verification gates), plus tech stack and architecture constraints.
+- **CI** (`.github/workflows/ci.yml`): docs-stage merge-blocking gates — secret scan
+  (gitleaks), markdown lint and relative-link integrity. The gate set grows with each
+  feature (000 adds the cross-tenant isolation harness; 001 adds
+  lint/typecheck/test/build) and never shrinks.
+
+### Fixed
+
+- Four documentation lines where a wrapped prose `+` had been auto-rewritten as a list
+  marker, inverting the meaning (e.g. "nome + `@nomesobrenome`").
+
 ## [0.1.0] — 2026-08-25
 
 The **specification milestone**: the product is fully specified and the architecture is

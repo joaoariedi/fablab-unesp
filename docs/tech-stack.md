@@ -24,7 +24,7 @@
 | Deploy | Docker Compose em VM do campus/VPS; imagem buildada no GitHub Actions (a VM só faz pull) |
 | Monorepo | pnpm workspaces (sem Turborepo) |
 
-```
+```text
 apps/web/          Next + Payload (frontend público + admin + API)
 packages/game/     regras puras de XP/nível/missão — TS puro, testado, zero import de Payload
 packages/ui/       design tokens da identidade + componentes (card, chip, pips, botões)

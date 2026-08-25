@@ -19,7 +19,7 @@
 
 > Nomes de token e assets de marca (banner/social do GitHub, gerados em 2026-08-25):
 > [`brand/README.md`](brand/README.md).
-
+>
 > **Decidido (2026-08-23):** os hexes da identidade oficial acima são os **tokens web
 > definitivos**. As divergências de tom nos renders dos mockups (ex.: teal do hero
 > aparecendo ~`#478E90`) são artefato de render e devem ser ignoradas.
@@ -50,6 +50,7 @@ pequeno).
 | **Comfortaa** | Corpo de texto |
 
 Notas para web (arquivos **recebidos em 2026-08-23**, em `fonts/`):
+
 - **Aldo the Apache** (`AldotheApache.ttf`) — Regular, de AJ Paglia.
 - **SquareFont** (`Square.ttf`) — Regular, © Bou Fonts 2011 — é a "Square Font" da prancha.
 - **Comfortaa** (`Comfortaa-VariableFont_wght.ttf`) — variável (Light–Bold), licença OFL

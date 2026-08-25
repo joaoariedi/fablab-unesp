@@ -1,0 +1,52 @@
+name: CI
+
+# Verification gates (constitution, principle 5). This set is the docs stage:
+# secrets, markdown, link integrity. It GROWS with each feature and never shrinks —
+# feature 000 adds the cross-tenant isolation harness; 001 adds lint/typecheck/test/build.
+
+on:
+  pull_request:
+  push:
+    branches: [dev, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  markdown:
+    name: Markdown lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DavidAnson/markdownlint-cli2-action@v19
+        with:
+          globs: '**/*.md'
+
+  links:
+    name: Link integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check relative links between docs
+        uses: lycheeverse/lychee-action@v2
+        with:
+          # --offline: verify that every relative link/image resolves to a file in the
+          # repo. External URLs are not fetched — they make CI flaky, not safer.
+          args: --offline --no-progress --include-fragments '**/*.md'
+          fail: true

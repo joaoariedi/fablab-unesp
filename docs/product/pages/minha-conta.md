@@ -16,6 +16,7 @@ elas são **visualizadas** e acompanhadas.
 - Apoio: `visual-identity.md`, `gamification.md`, `pages/onboarding.md`, `pages/aulas.md`.
 
 > **Divergências do mockup — resolvidas na rodada 5 (2026-08-24):**
+>
 > 1. Barra de pips com 6 segmentos no mockup → a designer **confirmou a atualização do
 >    desenho**: barra com **10 segmentos** e estado inicial **vazio (nível 0)**.
 > 2. `NÍVEL 1` com 1 pip no mockup → ilustrativo; vale o **nível 0** (rodada 4).

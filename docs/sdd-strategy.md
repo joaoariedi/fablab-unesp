@@ -54,7 +54,7 @@ Fatias pequenas mantêm cada espec/plan/tasks dentro de uma janela de contexto s
 
 ## Passo 2 — Ciclo por feature
 
-```
+```text
 /speckit.brainstorm  →  /speckit.specify  →  /speckit.clarify  →  /speckit.review
         →  /speckit.plan  →  /speckit.tasks  →  (/speckit.checklist, /speckit.analyze)
         →  implementação  →  quality gates  →  PR

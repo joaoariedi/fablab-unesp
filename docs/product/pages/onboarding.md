@@ -62,7 +62,7 @@ O novo mockup usa o **header padrão do site**, não mais um header de fluxo foc
 >
 > **Decidido (rodada 4, 2026-08-24):** o **indicador de passos volta à tela**, agora com
 > **2 passos** (`1 2`). O `1 2 3` do mockup antigo segue superado.
-
+>
 > **Decidido (rodada 4, 2026-08-24):** o **botão de menu existe só nas versões compactas**
 > (tablet/mobile). No **desktop** as **6 abas ficam na barra**, **sem botão de menu** — como
 > este mockup já mostra.
