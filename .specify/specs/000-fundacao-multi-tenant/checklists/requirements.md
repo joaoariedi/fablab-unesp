@@ -22,5 +22,12 @@
 | CHK017 | FR-022: admin scoping by role | [completeness] Organization admins cannot see `organizations` or `users`; master can | [ ] |
 | CHK018 | FR-023: gates grow, never shrink | [consistency] Docs-stage gates still present alongside the new jobs; all required on `dev` and `main` | [ ] |
 | CHK019 | FR-024: README quick start | [testability] SC-001 validated by a second person on a clean machine | [ ] |
+| CHK022 | FR-028: scoped canary collection | [testability] The harness generates ≥1 test per surface; a run with zero scoped collections is itself a failure | [ ] |
+| CHK023 | FR-029: invite scope | [completeness] Delivery/token/acceptance explicitly assigned to feature 004; pending-invite rows are the documented handoff | [ ] |
+| CHK024 | FR-030: packages exist with boundary | [consistency] `packages/game` has a README **and** an import-boundary rule — not an empty directory | [ ] |
+| CHK025 | FR-031: seed-on-create registry | [testability] Creating an organization runs registered seeds; the test proves copy-on-create, not read-time inheritance | [ ] |
+| CHK026 | SC-011: harness can fail | [testability] Mutation job flips the canary constraint and asserts failure on every run | [ ] |
+| CHK027 | SC-012: tenant spoofing | [testability] Forged `x-tenant` header is stripped; resolution comes from the host | [ ] |
+| CHK028 | Spike checklist S1–S6 | [completeness] All six answers recorded in plan.md **before** collections are written | [ ] |
 | CHK020 | Clarification 1: routing shape | [completeness] Domain/subdomain decision recorded before deployment work begins | [ ] |
 | CHK021 | Clarification 2: slug/field language | [consistency] Decided before the first collection is created — renaming later requires migrations | [ ] |

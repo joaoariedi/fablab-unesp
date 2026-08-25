@@ -50,7 +50,8 @@ access control and migrating data). Every later feature inherits these guardrail
 
 ### US3: Cross-tenant reads are impossible [P1] — *security scenario*
 
-- **Given** two seeded organizations, A and B, each with content and users
+- **Given** two seeded organizations, A and B, each with users and rows in the **canary
+  scoped collection** (FR-028 — content collections arrive in feature 002)
 - **When** a user of organization A reads any scoped collection through **any** surface —
   REST, the Local API inside a server component, the admin UI, or a custom endpoint
 - **Then** they receive zero rows from organization B (or `403`), on 100% of scoped
@@ -80,9 +81,11 @@ access control and migrating data). Every later feature inherits these guardrail
 - **Then** CI fails with a message pointing to the wrapper and the allowlist policy
 - **Edge:** the documented allowlist (seed scripts, migrations) passes, each entry
   carrying a comment with its reason
-- **Error:** the lint rule matches on **method name**, not on the `overrideAccess` flag —
-  Payload's Local API skips access control by default, so the dangerous call carries no
-  suspicious flag
+- **Error:** the primary mechanism is an **import boundary**, not method-name matching:
+  variable aliasing (`const p = await getPayload(); p.find(...)`) defeats a syntactic
+  method check, and raw SQL carries no method name at all. Linting for `overrideAccess`
+  would be worse still — Payload's Local API skips access control by default, so the
+  dangerous call never contains that flag
 
 ### US6: Relationships cannot cross tenants [P1]
 
@@ -148,7 +151,7 @@ access control and migrating data). Every later feature inherits these guardrail
 | FR-011 | Middleware resolves host → organization and injects the tenant into the request context | P1 | US4 |
 | FR-012 | When exactly one organization exists, any host resolves to it and no master user is required | P1 | US4 |
 | FR-013 | `getTenantScopedPayload(req)` in `lib/tenancy/` is the only path to Payload data operations | P1 | US5 |
-| FR-014 | An ESLint rule fails the build on `payload.find/findByID/create/update/delete` or raw SQL/Drizzle outside `lib/tenancy/`, matching on **method name**; the allowlist is explicit, short and commented | P1 | US5 |
+| FR-014 | An **import boundary** fails the build when `getPayload`, the Payload database adapter or Drizzle are imported outside `lib/tenancy/`; a secondary type-aware rule flags direct `payload.find/findByID/create/update/delete` calls. The allowlist is explicit, short and commented | P1 | US5 |
 | FR-015 | Access control on scoped collections returns a **query constraint**, never a boolean | P1 | US3 |
 | FR-016 | A shared same-tenant validator guards every relationship between scoped collections | P1 | US6 |
 | FR-017 | A versioned scope registry declares every collection `scoped` or `global` with a one-line justification | P1 | US7 |
@@ -162,6 +165,10 @@ access control and migrating data). Every later feature inherits these guardrail
 | FR-025 | Collection slugs and field names are **English**; admin UI labels are **PT-BR**. The PT-BR field names in the product specs are a mapping, not the schema | P1 | US2 |
 | FR-026 | Master bootstrap: a dev-only seed reads `SEED_MASTER_*` from the environment; production uses Payload's create-first-user screen and ships **no credential in configuration** | P1 | US1 |
 | FR-027 | A CI job fails when committed migrations do not reproduce the schema the code declares (drift gate) | P1 | US10 |
+| FR-028 | A minimal **scoped canary collection** with one scoped→scoped relationship ships in this feature, so the harness, access factories, validator and red→green evidence have a real subject | P1 | US3, US6 |
+| FR-029 | The invite in this feature resolves membership and persists a pending invite; **delivery and acceptance (token, expiry, password) belong to feature 004** — no e-mail transport is configured here | P1 | US8 |
+| FR-030 | `packages/game` and `packages/ui` exist with a README stating their constitutional role, and an import-boundary rule forbids Payload imports inside `packages/game` | P1 | US1 |
+| FR-031 | Organization creation runs a **seed-on-create registry**: later features register defaults to copy; this feature ships the mechanism and its test | P1 | US2 |
 
 ## Success Criteria
 
@@ -174,7 +181,9 @@ access control and migrating data). Every later feature inherits these guardrail
 | SC-005 | A write whose relationship points at another organization is rejected | Integration test asserting a validation error that names the field and both organizations |
 | SC-006 | A single-organization deployment works with no master user and any hostname | Integration test with one seeded org: requests to two different hosts both resolve to it |
 | SC-007 | Invite responses are identical for existing and non-existing e-mails | Test comparing status, body and timing class for both cases; membership row created in the existing-e-mail case |
-| SC-008 | Managed-service swap requires no code change | Test suite run against an alternate `.env` pointing at a second Postgres and an S3-compatible endpoint; zero source diffs |
+| SC-008 | Managed-service swap requires no code change | **Manual validation** (not a CI job): suite run against an alternate `.env` pointing at a second Postgres and an S3-compatible endpoint; zero source diffs |
+| SC-011 | The isolation harness can actually fail | Inverse CI job: mutate the canary's tenant constraint, assert the harness **fails**, restore — proves the gate is live on every run, not once in a PR |
+| SC-012 | Tenant cannot be spoofed via headers | Request carrying a forged `x-tenant` is resolved from the host regardless; test asserts the injected value is ignored |
 | SC-010 | Committed migrations reproduce the declared schema | Drift job: apply migrations to an empty database, diff against the schema the code generates — any difference fails |
 | SC-009 | All gates are required checks on `dev` and `main` | GitHub branch-protection API lists docs gates plus lint, typecheck, test, build and the isolation harness |
 
@@ -239,4 +248,4 @@ committed). Rotating volunteers drop rituals; gates they cannot drop. This conve
 documented mitigation into a mechanism.
 **Impact**: New FR-027, SC-010; the CI job list in FR-023.
 
-_No open `[NEEDS CLARIFICATION]` markers remain._
+*No open `[NEEDS CLARIFICATION]` markers remain.*

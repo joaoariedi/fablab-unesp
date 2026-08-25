@@ -23,11 +23,27 @@ type TenantScopedPayload = {
    permissive default.
 2. `find`/`findByID` merge the caller's `where` with the tenant constraint; the caller
    cannot widen it.
-3. `create`/`update` stamp/verify `tenant` — a mismatch throws before reaching the
-   database.
+3. `create` stamps `tenant`. `update`/`delete` take no `where`, so they verify by
+   **constraining the operation itself**: the wrapper issues them with a tenant-scoped
+   `where` on the id (`{ and: [{ id: { equals } }, byTenant(t)] }`) so a foreign document
+   matches zero rows instead of being read then rejected — no read-modify race.
 4. A `master` user may pass `allTenants: true`; every other role that tries gets a
    `403`.
 5. Unresolved tenant is an error, never a silent "all tenants".
+
+## Internal, allowlisted reads
+
+These live inside `lib/tenancy/` and are the **only** sanctioned bypasses of the tenant
+filter. Each is read-only, returns a single record, and exists because a tenant comparison
+cannot itself be tenant-filtered:
+
+```ts
+unscopedLookup(collection: string, id: string): Promise<{ tenant: string } | null>
+unscopedFindUserByEmail(email: string): Promise<User | null>
+```
+
+They are exported for `endpoints/invites.ts` and the same-tenant validator, never for
+feature code. Each carries an isolation assertion of its own (plan, Risks).
 
 ## Host resolution
 
@@ -35,7 +51,8 @@ type TenantScopedPayload = {
 resolveTenantFromHost(host: string): Promise<Organization | null>
 ```
 
-- `<slug>.<domain>` → the matching **active** organization.
+- `<slug>.<domain>` → the matching **active** organization (`status !== 'active'` resolves
+  to `null`, including in the sovereign fallback).
 - A host listed in `organizations.domains` → that organization.
 - **Sovereign fallback:** when exactly one organization exists, any host resolves to it
   (`docs/tech-stack.md:99`).
@@ -55,12 +72,19 @@ the field and both organizations. Relationships to global collections always pas
 
 `POST /api/organizations/:id/invites` — org admin or master only.
 
-| Case | Effect | Response |
+**Scope in this feature (FR-029).** There is **no e-mail transport** in the stack — the
+compose file ships Postgres and MinIO only and no Payload email adapter is configured.
+So feature 000 ships *membership resolution and the pending-invite record*; **delivery,
+token, expiry and the accept/set-password flow belong to feature 004**, together with the
+rest of the account experience.
+
+| Case | Effect in feature 000 | Response |
 |---|---|---|
-| E-mail has no account | Creates user (no password) + membership, sends invite | `202 Accepted`, generic body |
+| E-mail has no account | Creates a password-less user + membership + `pendingInvite` record | `202 Accepted`, generic body |
 | E-mail already has an account | **Adds a membership only** | `202 Accepted`, **byte-identical** body |
 | Already a member | No-op | `202 Accepted`, identical body |
 | Caller not admin of that organization | Nothing | `403` |
 
 The three `202` responses must be indistinguishable — no account enumeration (spec US8,
-FR-021).
+FR-021). Because the branches do different amounts of work, the handler **responds first
+and performs the work after**, so the reply carries no timing signal (SC-007).
