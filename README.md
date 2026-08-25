@@ -7,6 +7,7 @@
     <img alt="Database: PostgreSQL" src="https://img.shields.io/badge/database-PostgreSQL-336791?logo=postgresql&logoColor=white">
     <img alt="Content: PT-BR" src="https://img.shields.io/badge/content-pt--BR-009c3b">
     <img alt="Multi-tenant" src="https://img.shields.io/badge/multi--tenant-by_design-8e30eb">
+    <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green">
   </p>
 </div>
 
@@ -100,7 +101,7 @@ docs/
 │   ├── pages/               One spec per page (desktop faithful to mockups
 │   │                        + tablet/mobile adaptations + CMS content models)
 │   ├── design/              Designer mockups, named by page (source of truth for UI)
-│   ├── fonts/               Identity typefaces (license status: docs/backlog.md)
+│   ├── fonts/               Identity typefaces (Comfortaa OFL bundled; others fetched — see its README)
 │   └── exports/             Designer communication (Q&A rounds, art checklist)
 ├── tech-stack.md          Architecture decision record (incl. multi-tenancy design)
 ├── tech-stack-benchmark.md  Verified benchmark vs. Astro/Supabase proposal
@@ -155,7 +156,13 @@ contributions earn you real-life XP ⭐):
 
 ## 📜 License
 
-Not yet selected. A license will be chosen alongside the multi-tenant distribution
-decision (hosted service vs. self-host distribution — see `docs/tech-stack.md`);
-until then, all rights reserved. The identity typefaces have pending license
-confirmation (tracked as ISS-001 in [`docs/backlog.md`](docs/backlog.md)).
+Code and documentation are released under the **[MIT License](LICENSE)** (decided
+2026-08-25) — aligned with the multi-tenant "self-host distribution" door: any
+fablab/makerspace may run its own instance.
+
+**Exceptions** (not MIT): the Fab Lab CITe Bauru **visual identity, mockups, brand
+assets and pixel art** (`docs/product/design/`, `docs/product/brand/`) are © their
+authors, used here with permission — reuse them only for this project. Typefaces keep
+their own licenses: Comfortaa is OFL (bundled); Aldo the Apache and SquareFont are
+dafont "100% Free" but are **not redistributed** in this repository — see
+[`docs/product/fonts/README.md`](docs/product/fonts/README.md).
