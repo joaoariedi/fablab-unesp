@@ -33,6 +33,6 @@
 | CHK025 | FR-031: seed-on-create registry | [testability] Creating an organization runs registered seeds; the test proves copy-on-create, not read-time inheritance | [ ] |
 | CHK026 | SC-011: harness can fail | [testability] Mutation job flips the canary constraint and asserts failure on every run | [ ] |
 | CHK027 | SC-012: tenant spoofing | [testability] Forged `x-tenant` header is stripped; resolution comes from the host | [ ] |
-| CHK028 | Spike checklist S1–S5, S7 | [completeness] All six answers recorded in plan.md **before** collections are written (S6 retired — FR-029 creates no `users` row before acceptance) | [ ] |
+| CHK028 | Spike checklist S1–S5, S7, S8 | [completeness] All seven answers recorded in plan.md **before** collections are written (S6 retired — FR-029 creates no `users` row before acceptance; S8 added from CF-3) | [ ] |
 | CHK020 | Clarification 1: routing shape | [completeness] Domain/subdomain decision recorded before deployment work begins | [ ] |
 | CHK021 | Clarification 2: slug/field language | [consistency] Decided before the first collection is created — renaming later requires migrations | [ ] |

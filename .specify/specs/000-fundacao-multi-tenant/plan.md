@@ -112,6 +112,7 @@ cheaply.
 | S5 | Admin tenant selector behavior for a user with two memberships | _____ | Drives FR-022 and the admin-visibility test |
 | S6 | Can an auth user be created without a password (invites)? | *(no longer blocking — FR-029 creates no user before acceptance; question moves to feature 004)* | — |
 | S7 | Is `after()` schedulable, and `headers()` readable inside it, in a Payload-mounted Route Handler? | _____ | If not, the invite does its work inline and SC-007 relies on constant-time shaping instead |
+| S8 | Do `unstable_cache` and `revalidateTag` work **outside a Next request scope** (i.e. under Vitest)? *(added 2026-08-25 from carry-forward CF-3)* | _____ | If not, Sketch 4's resolver needs a test-visible seam, or the host tests cannot run at all |
 
 ## Code Sketches (Mental Alignment)
 
@@ -415,13 +416,16 @@ test registers a fixture seed, so it proves a copy rather than an empty loop.
 
 ## Quick Start
 
-1. Run the **spike checklist** above on a throwaway branch; record all six answers
-   (**S1–S5 and S7** — S6 is retired) here.
+1. Run the **spike checklist** above on a throwaway branch; record all seven answers
+   (**S1–S5, S7 and S8** — S6 is retired) here.
 2. Create the workspace skeleton (+ `packages/game`, `packages/ui`) + compose +
    `.env.example` + README quick start; open the first PR so feature 001 is unblocked.
 3. Register the plugin, then `Organizations`, `Users`, `TenantCanaries`, `PendingInvites`;
    generate and commit migrations.
-4. Build the tenancy module in sketch order (7 → 1 → 2 → 5 → 3 → 9), each with its test.
+4. Build the tenancy module in sketch order (**7 → 5 → 1 → 2 → 3 → 9**), each with its
+   test. *(Reordered 2026-08-25 from `7 → 1 → 2 → 5 → 3 → 9`: carry-forward CF-8 makes the
+   choke point consult `SCOPE_REGISTRY`, so Sketch 5 must exist before Sketch 1 — the old
+   order means writing the choke point twice.)*
 5. Write the isolation harness against the canary; demonstrate it **red**, then green; add
    the mutation job so the proof repeats.
 6. Add the invite endpoint (narrowed) and the seed (idempotent; dev-only master).
