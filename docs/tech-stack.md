@@ -162,7 +162,7 @@ dados do vizinho com HTTP 200. Defesas obrigatórias na fundação, antes de exi
 ### Sequenciamento
 
 - **Feature 000 (nova, curta, antes/junto da 002)**: plugin + `organizacoes` + papéis +
-  seed do CITe + middleware host→slug com fallback de org única + choke point + validator
+  seed do CITe + proxy host→slug (resolução cacheada server-side) com fallback de org única + choke point + validator
   + harness de vazamento + fluxo de convite. Roda em paralelo com a 001 e **não atrasa o
   lançamento do CITe**.
 - **Features 001–006**: escopo inalterado; toda collection nasce com `tenant`; a 004 cria

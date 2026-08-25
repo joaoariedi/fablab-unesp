@@ -65,7 +65,7 @@ access control and migrating data). Every later feature inherits these guardrail
 
 - **Given** the platform serving one organization per subdomain
 - **When** a request arrives for `bauru.<domain>`
-- **Then** the request resolves to the CITe organization — middleware forwards the host
+- **Then** the request resolves to the CITe organization — the proxy layer forwards the host
   and strips any forged tenant header, a **cached server-side resolver** does the lookup —
   and every downstream query is scoped to it
 - **Edge (sovereign install):** when **exactly one** organization exists, any host
@@ -150,7 +150,7 @@ access control and migrating data). Every later feature inherits these guardrail
 | FR-008 | `organizations` collection: `name`, immutable unique `slug`, `domains[]`, `status`, theme tokens, storage-quota fields, LGPD contact | P1 | US2 |
 | FR-009 | Minimal `users` collection with authentication: unique e-mail, password, global role `master \| user`, and `orgs[]` memberships of `{ organization, role: admin \| staff \| maker }` | P1 | US2, US8 |
 | FR-010 | Creating an organization triggers **seed-on-create** (defaults copied, never inherited at read time); later features register what they seed | P1 | US2 |
-| FR-011 | Middleware forwards the request host and **strips any inbound tenant header**; a cached server-side resolver maps host → organization. **No database access in middleware** | P1 | US4 |
+| FR-011 | The proxy layer (Next 16's `proxy.ts`, formerly `middleware.ts`) forwards the request host and **strips any inbound tenant header**; a cached server-side resolver maps host → organization. **No database access in the proxy** | P1 | US4 |
 | FR-012 | When exactly one organization exists, any host resolves to it and no master user is required | P1 | US4 |
 | FR-013 | `getTenantScopedPayload(req)` in `lib/tenancy/` is the only path to Payload data operations | P1 | US5 |
 | FR-014 | An **import boundary** fails the build when `getPayload`, the Payload database adapter or Drizzle are imported outside `lib/tenancy/`; a secondary type-aware rule flags direct `payload.find/findByID/create/update/delete` calls. The allowlist is explicit, short and commented | P1 | US5 |

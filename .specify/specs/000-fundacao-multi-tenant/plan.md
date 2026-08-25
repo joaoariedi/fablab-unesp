@@ -44,14 +44,14 @@ Full Truth Map in [`research.md`](research.md). The load-bearing findings:
 | `apps/web/collections/PendingInvites.ts` | create | **[N6]** Scoped invite record — the handoff to feature 004 (FR-029) |
 | `apps/web/lib/tenancy/index.ts` | create | Public surface (see `contracts/tenancy.md`) |
 | `apps/web/lib/tenancy/scoped-payload.ts` | create | The choke point |
-| `apps/web/lib/tenancy/resolve.ts` | create | **[R2]** Cached host→organization resolver (the DB call middleware must not make) |
+| `apps/web/lib/tenancy/resolve.ts` | create | **[R2]** Cached host→organization resolver (the DB call the proxy must not make); **split into a pure `lookupOrganizationByHost` + injected cache** per spike S8 |
 | `apps/web/lib/tenancy/unscoped.ts` | create | **[R4]** Allowlisted internal reads, each with its own isolation test |
 | `apps/web/lib/tenancy/system-payload.ts` | create | **[N1]** Explicit-tenant write client (FR-032) — the tenant is named by the caller, never inferred from the host |
 | `apps/web/lib/tenancy/access.ts` | create | Access factories returning **query constraints** |
 | `apps/web/lib/tenancy/same-tenant-validator.ts` | create | Relationship guard |
 | `apps/web/lib/tenancy/scope-registry.ts` | create | `scoped \| global` per collection |
 | `apps/web/lib/tenancy/seed-on-create.ts` | create | **[R5]** Seed-on-create registry + organization hook (FR-031) |
-| `apps/web/middleware.ts` | create | **[R2]** Header hygiene only — strips spoofed `x-tenant`, forwards the host. No database |
+| `apps/web/proxy.ts` | create | **[R2]** Header hygiene only — strips spoofed `x-tenant`, forwards the host. No database. **Named `proxy.ts`, not `middleware.ts`** — Next 16 deprecated the old convention (spike S9) |
 | `apps/web/app/(payload)/api/organizations/[id]/invites/route.ts` | create | **[R4] [N-path]** Membership resolution + pending invite. A **Next Route Handler** (`createPayloadRequest`), not a Payload-config endpoint — that is where `after()` is valid |
 | `apps/web/seed/index.ts` | create | Idempotent CITe bootstrap; dev-only master from env |
 | `apps/web/migrations/*` | create | Committed Payload migrations |
@@ -113,6 +113,7 @@ cheaply.
 | S6 | Can an auth user be created without a password (invites)? | *(no longer blocking — FR-029 creates no user before acceptance; question moves to feature 004)* | — |
 | S7 | Is `after()` schedulable, and `headers()` readable inside it, in a Payload-mounted Route Handler? | **YES to both.** `after()` accepted the callback, the callback ran after the `202` was sent, and `headers()` inside it returned `host` and a forged `x-tenant`. Sketch 8 stands. *Residual:* tested in a plain Next 16 Route Handler in a Payload-installed project — the `(payload)` route group plus `createPayloadRequest` interaction is **not** exercised | If not, the invite does its work inline and SC-007 relies on constant-time shaping instead |
 | S8 | Do `unstable_cache` and `revalidateTag` work **outside a Next request scope** (i.e. under Vitest)? *(added 2026-08-25 from carry-forward CF-3)* | **NO — all three throw.** Under real Vitest: `unstable_cache` → `Invariant: incrementalCache missing`; `revalidateTag` → `Invariant: static generation store missing`; `headers()` → "called outside a request scope". **The seam is required** — see the S8 consequence note below | If not, Sketch 4's resolver needs a test-visible seam, or the host tests cannot run at all |
+| S9 | Does `NextResponse.next({ request: { headers } })` actually **propagate modified request headers to the route handler and to an RSC** — and is a header set on the *response* correctly invisible to the server? Which runtime does middleware get? *(added 2026-08-25; Sketch 4's central claim, previously untested)* | **Propagation: YES, on both surfaces** — `x-tenant-host` arrived in a Route Handler *and* an RSC, and a client-forged `x-tenant` was **stripped** in both (SC-012's mechanism verified end to end). **But three corrections:** (1) the claim that response headers "never reach the server" is **false** — a header set only on the `NextResponse.next()` response was readable via `headers()` in both surfaces **and** visible to the client, so it is a *leakier* channel than the plan said, not an inert one; (2) **`middleware` is deprecated in Next 16 → `proxy`** (default export; Next's own logs report timing as `proxy.ts`); (3) the runtime **differs by convention** — `middleware.js` ran on **`edge`**, `proxy.js` on **`nodejs`** | If request headers do not propagate, Sketch 4's middleware is decorative: `x-tenant-host` never arrives, the choke point falls back to `headers()`, and the `x-tenant` strip (SC-012) protects nothing |
 
 ### Spike consequences (run 2026-08-25, Payload 3.88.0 + plugin 3.88.0 + Postgres 16)
 
@@ -138,6 +139,24 @@ which is the same dependency-injection rule the constitution already applies els
 "required" error, so on a create with no tenant it is handed `tenant: null`. It must return
 `true` (let the tenant field own that error) rather than throwing or reporting a confusing
 second message.
+
+**4. S9 renames the middleware file and corrects [R2]'s reasoning.** Next 16 **deprecates
+the `middleware` convention in favour of `proxy`** (default export; Next's own request log
+reports timing as `proxy.ts`), so `apps/web/middleware.ts` becomes **`apps/web/proxy.ts`**.
+The runtime follows the convention: `middleware.js` ran on **`edge`**, `proxy.js` on
+**`nodejs`**. That removes `[R2]`'s binding reason — "the Edge runtime cannot hold a
+Postgres connection" is no longer what stops us — but **the decision does not change**: the
+resolver stays a cached server-side lookup, because a per-request database round trip in the
+proxy layer is wrong on its own merits, and S8 forces the testable seam regardless. `[R2]`
+reached the right design through an argument that has now partly expired.
+
+**5. A plan claim was simply wrong, and in the reassuring direction.** `[R2]` states that
+`NextResponse.next()` response headers "never reach the server". They **do** — a header set
+only on the response was readable via `headers()` in both a Route Handler and an RSC, *and*
+was visible to the client. Response headers are therefore leaky in **both** directions, not
+inert. The instruction (use `request: { headers }`) is unchanged and in fact better
+supported; only the justification was false. Worth recording because a false reassurance is
+how a future contributor talks themselves into the response-header path.
 
 **Also confirmed live, not merely reasoned:**
 
@@ -217,16 +236,20 @@ export const sameTenant: Validate = async (value, { siblingData, field }) => {
 names the other organization** — that would let a user probe IDs and learn who owns them,
 contradicting US8's anti-enumeration stance. Depends on spike S4.
 
-### Sketch 4: middleware does header hygiene; resolution is cached and server-side [R2]
+### Sketch 4: the proxy does header hygiene; resolution is cached and server-side [R2]
 
-**File:** `apps/web/middleware.ts` (new) + `apps/web/lib/tenancy/resolve.ts` (new)
-**Intent:** no database in middleware, no spoofable tenant, no per-request lookup.
+**File:** `apps/web/proxy.ts` (new) + `apps/web/lib/tenancy/resolve.ts` (new)
+**Intent:** no database in the proxy, no spoofable tenant, no per-request lookup.
+
+> **Renamed by spike S9:** Next 16 deprecates `middleware` in favour of **`proxy`** (default
+> export). The runtime follows the convention — `middleware.js` ran on `edge`, `proxy.js` on
+> `nodejs`.
 
 ```ts
-// middleware.ts — no Payload import, so it runs on any runtime
+// proxy.ts — no Payload import, so it runs on any runtime
 export const config = { matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'] }
 
-export function middleware(req: NextRequest) {
+export default function proxy(req: NextRequest) {
   const headers = new Headers(req.headers)
   headers.delete('x-tenant')                       // never trust an inbound value
   headers.set('x-tenant-host', req.headers.get('host') ?? '')
@@ -234,10 +257,15 @@ export function middleware(req: NextRequest) {
 }
 
 // lib/tenancy/resolve.ts — the DB call, cached and INVALIDATED (never merely expiring)
-export const resolveTenant = (host: string) => getCachedTenant(host)   // host passed in [N4]
+// [S8] The cache is INJECTED, not imported: unstable_cache/revalidateTag/headers() all throw
+// outside a Next request scope, so a directly-imported wrapper cannot be tested at all.
+export const resolveTenant = (host: string, cache = getCachedTenant) => cache(host)
+
+// the pure, directly-testable half — this is what the host tests call
+export const lookupOrganizationByHost = async (host: string) => { /* Organization | null */ }
 
 const getCachedTenant = unstable_cache(
-  async (host: string) => lookupOrganizationByHost(host),   // returns Organization | null
+  async (host: string) => lookupOrganizationByHost(host),
   ['tenant-by-host'],
   { tags: ['tenant-resolution'] },                          // [N3] invalidated, see below
 )
@@ -245,11 +273,18 @@ const getCachedTenant = unstable_cache(
 // and: never cache a sovereign-fallback hit or a null — see "Why this shape"
 ```
 
-**Why this shape:** three defects in the first draft — Edge runtime cannot hold a Postgres
-connection (Node middleware needs a modern Next; the pin is ≥16.2.6 — see Spike consequences), `NextResponse.next()` response
-headers never reach the server and leak the tenant to the client, and two uncached queries
-ran per request. Taking the database out of middleware dissolves all three, and the header
-strip closes a spoofing hole the original sketch created (SC-012).
+**Why this shape:** three defects in the first draft — a per-request Postgres round trip in
+the proxy layer, tenant state carried on **response** headers, and two uncached queries per
+request. Taking the database out of the proxy dissolves all three, and the header strip
+closes a spoofing hole the original sketch created (SC-012).
+
+**Two of this sketch's own justifications were corrected by spike S9.** The original text
+said the Edge runtime cannot hold a Postgres connection — true, but no longer binding, since
+`proxy.ts` runs on **`nodejs`**. It also said response headers "never reach the server";
+they **do**, in both a Route Handler and an RSC, *and* they reach the client — so that
+channel is leaky in both directions rather than merely useless. The design survives both
+corrections; only its reasoning needed repair. **Verified working:** `request: { headers }`
+propagated `x-tenant-host` to both surfaces and a client-forged `x-tenant` was stripped.
 
 **[N3] Two caching rules that are correctness, not performance.** (1) An `organizations`
 change revalidates the tag, so a newly created organization is reachable immediately

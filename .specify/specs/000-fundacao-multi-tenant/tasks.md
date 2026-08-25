@@ -117,7 +117,7 @@ should be exercised on Node 22 with pnpm.
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T040 | Middleware: strip inbound `x-tenant`, forward host on **request** headers; no Payload import, no database | FR-011, SC-012 | `apps/web/middleware.ts` | T018 |
+| T040 | Proxy: strip inbound `x-tenant`, forward host on **request** headers; no Payload import, no database. **File is `proxy.ts` with a default export** — Next 16 deprecated `middleware` (spike S9), and the runtime follows the convention (`edge` → `nodejs`). S9 verified propagation to both a Route Handler and an RSC | FR-011, SC-012 | `apps/web/proxy.ts` | T018 |
 | T041 | **Pure** `lookupOrganizationByHost(host, deps)`: `<slug>.<domain>` and `organizations.domains`, **`active` only**; returns `Organization \| null`. Kept free of `next/cache` so tests can call it directly — **spike S8 proved `unstable_cache`, `revalidateTag` and `headers()` all throw outside a Next request scope**, so without this seam SC-006 and CHK031 cannot run at all | FR-011, FR-012, CF-3 | `apps/web/lib/tenancy/resolve.ts` | T033 |
 | T042 | Cached wrapper `resolveTenant` over T041, with the cache injected rather than imported: `revalidateTag` on organization change, and **never cache a sovereign-fallback hit or a `null`** — otherwise org B's subdomain serves org A's context for the whole TTL | FR-011, FR-012, CF-3 | `apps/web/lib/tenancy/resolve.ts` | T041 |
 | T043 | Unresolved host → `TenantUnresolvedError` at the choke point → 404 at the route; never "first organization" | FR-012, US4 error | `apps/web/lib/tenancy/resolve.ts` | T042 |

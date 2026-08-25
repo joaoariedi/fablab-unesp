@@ -1,5 +1,5 @@
 # Project Constitution
-<!-- Version: 1.1.0 | Date: 2026-08-25 -->
+<!-- Version: 1.2.0 | Date: 2026-08-25 -->
 <!-- Updated by /speckit.constitution -->
 
 Governing principles for the Fab Lab CITe Bauru platform. Every spec, plan and pull
@@ -102,11 +102,12 @@ amendment shifts every line below it, and stale line citations still read as aut
   approval**. Human moderation is the accepted antivirus for public downloads; ClamAV
   becomes mandatory before hosting an external tenant.
 - **Routing:** one subdomain per organization; path-based tenancy is prohibited.
-  Middleware performs **header hygiene only** — it strips any inbound tenant header and
-  forwards the host; host→organization resolution is a **cached server-side lookup, never a
-  database call in middleware** (amended 2026-08-25: the Edge runtime cannot hold a Postgres
-  connection, and `NextResponse.next()` response headers never reach the server). Falls back
-  to the single organization when only one exists.
+  The **proxy layer** (Next 16's `proxy.ts`, formerly `middleware.ts`) performs **header
+  hygiene only** — it strips any inbound tenant header and forwards the host on the
+  **request** headers; host→organization resolution is a **cached server-side lookup, never a
+  database call in the proxy**. Falls back to the single organization when only one exists.
+  *(Amended 2026-08-25 twice — see Amendments 1.1.0 and 1.2.0. The rule is unchanged; two of
+  its original justifications were measured and found wrong.)*
 - **LGPD:** deletion operates per `(tenant, user)` and purges draft/version history and
   the storage prefix; terms acceptance gates signup; export produces a documented
   artifact. **No external tenant before a signed legal instrument** (controller/operator,
@@ -136,4 +137,5 @@ Substantive changes only, newest first. See the **Amendment policy** in the prea
 |---|---|---|
 | 1.1.0 | 2026-08-25 | **Principle 2 — enforcement mechanism.** Linting by **method name** replaced by an **import boundary plus syntax rules covering `req.payload`**. Name matching is defeated by aliasing (`const p = await getPayload(); p.find()`), `req.payload` reaches every hook with no import at all, and raw SQL has no method name. Source: feature 000 plan review, round 2 |
 | 1.1.0 | 2026-08-25 | **Architecture Constraints — routing.** Host→organization resolution moved **out of middleware** to a cached server-side lookup; middleware does header hygiene only. The Edge runtime cannot hold a Postgres connection, and `NextResponse.next()` response headers never reach the server. Source: feature 000 plan, Sketch 4 |
+| 1.2.0 | 2026-08-25 | **Architecture Constraints — routing, correction.** Spike S9 measured two claims from 1.1.0 and both were wrong. `NextResponse.next()` response headers **do** reach the server (readable via `headers()` in a Route Handler *and* an RSC) as well as the client — leaky in both directions, not inert. And the Edge-runtime argument no longer binds: Next 16 renames `middleware` to **`proxy`**, which runs on **`nodejs`**. The constraint stands on its own merits — no per-request database round trip in the proxy — and gains a new reason: spike S8 shows the cached path cannot be tested at all without an injected seam. Source: feature 000 spike, S8 + S9 |
 | 1.0.0 | 2026-08-25 | Ratified — five principles, tech stack, architecture constraints |
