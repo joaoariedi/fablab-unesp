@@ -15,6 +15,10 @@
 | Amarelo | `#F8C810` | Destaques, XP/recompensas, ícones de missão, numeração |
 | Laranja | `#EE703E` | Chip do logo no header, categorias, elementos isométricos |
 | Rosa | `#EE9DC4` | CTAs primários, tags de categoria, títulos de card, acentos |
+| Claro (`light`) | `#DCE7E3` | Fundo claro das pranchas; texto sobre fundo escuro (token extraído em 2026-08-25) |
+
+> Nomes de token e assets de marca (banner/social do GitHub, gerados em 2026-08-25):
+> [`brand/README.md`](brand/README.md).
 
 > **Decidido (2026-08-23):** os hexes da identidade oficial acima são os **tokens web
 > definitivos**. As divergências de tom nos renders dos mockups (ex.: teal do hero
