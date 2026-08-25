@@ -161,6 +161,8 @@ Notable changes are tracked in [CHANGELOG.md](CHANGELOG.md), following
 
 **Main contributors:** [sophiabort](https://github.com/sophiabort) 🎨 Product leader & design · [John Ariedi](https://github.com/joaoariedi) 🛠️ Engineering
 
+**Advisors:** [Wendel Freitas](https://github.com/wendelfreitas) 🎮 Game development
+
 - **Design & art** — visual identity, mockups and all pixel-art/sprite production by
   [sophiabort](https://github.com/sophiabort).
 - **FabLab culture** — values inspired by the
