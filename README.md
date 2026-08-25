@@ -12,16 +12,22 @@
 
 ---
 
-🕹️ **CRIE. EXPERIMENTE. TRANSFORME.** This repository builds the official website of
-[Fab Lab CITe Bauru](https://www.bauru.unesp.br/#!/citeb/fab-lab) (UNESP), designed as a
-game 🎮: every volunteer gets a customizable **pixel-art avatar** 👾, earns **XP** ⭐ by watching
-classes, publishing projects, 3D models and articles, levels up **skills** 🛠️ (3D modeling,
-laser cutting, 3D printing, electronics, design), completes **missions** 🎯 curated by the
-lab team, and contributes to a collective **lab level** 🏆 — all wrapped in an isometric
-pixel-art visual identity with the lab drawn as a night-time game map.
+🕹️ **CRIE. EXPERIMENTE. TRANSFORME.**
 
-The platform is **open by culture** 🔓: reading, watching classes and downloading 3D models
-require no account. An account is for *making* — publishing, liking, and earning XP.
+This repository builds the official website of
+[Fab Lab CITe Bauru](https://www.bauru.unesp.br/#!/citeb/fab-lab) (UNESP) — designed as
+a game, wrapped in an isometric pixel-art identity with the lab drawn as a night-time
+game map:
+
+- 👾 Every volunteer gets a customizable **pixel-art avatar**.
+- ⭐ **XP** is earned by watching classes and publishing projects, 3D models and articles.
+- 🛠️ Five **skills** level up through play — 3D modeling, laser cutting, 3D printing,
+  electronics and design.
+- 🎯 **Missions** curated by the lab team feed a collective **lab level** 🏆.
+
+🔓 The platform is **open by culture**: reading, watching classes and downloading 3D
+models require no account. An account is for *making* — publishing, liking, and
+earning XP.
 
 > 🚧 **Status: specification complete, implementation not started.** The product is fully
 > specified through five designer decision rounds and a product-owner decision log — every
