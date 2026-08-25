@@ -144,7 +144,7 @@ contributions earn you real-life XP ⭐):
 
 ## 🏅 Credits
 
-**Main contributors:** [sophiabort](https://github.com/sophiabort) 🎨 Design & art · [John Ariedi](https://github.com/joaoariedi) 🛠️ Engineering
+**Main contributors:** [sophiabort](https://github.com/sophiabort) 🎨 Product leader & design · [John Ariedi](https://github.com/joaoariedi) 🛠️ Engineering
 
 - **Design & art** — visual identity, mockups and all pixel-art/sprite production by
   [sophiabort](https://github.com/sophiabort).
