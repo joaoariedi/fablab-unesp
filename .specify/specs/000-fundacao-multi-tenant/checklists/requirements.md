@@ -56,7 +56,7 @@ checklists.
 | CHK043 | Tenant stamping and tenant filtering are scoped to collections the registry marks `scoped`, so global collections are not silently tenant-stamped | [consistency] | FR-015, FR-017, CF-8 | [ ] |
 | CHK044 | Every operation the system client must perform — including `addMembership` — is declared in its type, not discovered at implementation | [completeness] | FR-032, CF-1 | [ ] |
 | CHK045 | Spike answers that invalidate the data model (S2 memberships, S4 validation order) have a written failure path, so the risk is planned rather than discovered | [feasibility] | FR-009, FR-016 | [ ] |
-| CHK046 | The Next ≥15.5 pin is justified by the capability it buys (Node middleware runtime), so the constraint survives an upgrade review | [feasibility] | FR-005, FR-011 | [ ] |
+| CHK046 | The Next pin (**≥16.2.6 <17**) is justified by the capability it buys (Node middleware runtime) **and** is checked against `@payloadcms/next`'s peer range, which excludes the whole 15.5.x line | [feasibility] | FR-005, FR-011 | [ ] |
 | CHK047 | Test tooling is decided (Vitest for unit + integration; Playwright deferred to 003), resolving the constitution's `(proposta)` | [feasibility] | spec decision 2, FR-023 | [ ] |
 | CHK048 | Organization `status` is explicitly **declared but not enforced** here, with enforcement assigned to feature 007 — no reader can mistake it for live behaviour | [clarity] | FR-008, spec decision 6 | [ ] |
 

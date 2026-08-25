@@ -12,10 +12,25 @@ Naming follows CLR-002: **English slugs and field names, PT-BR admin labels.**
 
 Scoped collections do **not** declare a tenant field by hand — `@payloadcms/plugin-multi-tenant`
 injects it. Every sketch that reads `tenant` / `data.tenant` / `siblingData.tenant` depends
-on this. **Pin after the spike** (plan Quick Start step 1): the field name (default
-`tenant`), whether it is indexed by default, and whether the tenant is stamped *before* or
-*after* field validation — if after, the same-tenant validator inverts and must move to a
-`beforeChange` hook.
+on this.
+
+**Pinned by the spike (2026-08-25, plugin 3.88.0)** — all three questions resolved:
+
+- **Name:** `tenant` (relationship → the tenants slug, `hasMany: false`, admin sidebar).
+- **Indexed:** **yes, and not configurable.** `index: true` is set *after* the overrides
+  spread, and `index` is omitted from the override type — so no `index: true` of ours is
+  needed, and none can turn it off.
+- **Stamped before field validation**, so the same-tenant validator stays an ordinary field
+  `validate`; it does **not** move to `beforeChange`.
+- **Presence** is enforced by the plugin's own `validate` wrapper, not `required: true`.
+
+Two traps the spike surfaced, both binding on the validator:
+
+1. On a create with no tenant, our validator runs **first**, receiving `tenant: null`,
+   *before* the tenant field reports "This field is required". It must return `true` and let
+   the tenant field own that error.
+2. `siblingData.tenant` resolves only for **root-level** relationship fields. A relationship
+   nested inside a group or array must read `data.tenant` instead.
 
 ## `organizations` (global)
 
@@ -51,9 +66,13 @@ Identity is global, role is per organization (`docs/tech-stack.md:104`).
 > **`orgs[]` must BE the plugin's tenants array field**, not an independent array beside
 > it. The plugin discovers memberships through the field *it* configures; if `orgs[]` is
 > hand-rolled, the admin tenant selector and access composition see **no memberships** and
-> organization admins get either nothing or everything. Confirm the naming options
-> (`tenantsArrayField`, row fields) in the spike; if the plugin cannot carry a `role` row
-> field, this model changes.
+> organization admins get either nothing or everything.
+>
+> **Confirmed by spike S2 (2026-08-25):** this model is buildable exactly as written —
+> `tenantsArrayField: { includeDefaultField: true, arrayFieldName: 'orgs',
+> arrayTenantFieldName: 'organization', rowFields: [role] }` persists as
+> `orgs: [{ organization, role, id }]`, and the `role` row field survives. `rowFields`
+> requires `includeDefaultField: true`.
 
 Profile data (name, birth date, UNESP affiliation, avatar) belongs to feature 004 — this
 feature deliberately stops at authentication and membership (spec, scope boundaries).
@@ -110,7 +129,7 @@ subjects and the registry test proves the deletion was deliberate.
 
 | Index | Why |
 |---|---|
-| `tenant` on every scoped collection | It is the filter on **every** scoped query. Verify whether the plugin already indexes it; if not, declare `index: true` |
+| `tenant` on every scoped collection | It is the filter on **every** scoped query. **Resolved by spike S1: the plugin already indexes it and the setting cannot be overridden — declare nothing.** `users.orgs[].organization` is indexed by the plugin too |
 | `organizations.slug` (unique) | Host resolution and storage-key construction |
 | `users.email` (unique) | Platform-wide identity |
 | `organizations.domains` | Read on every host resolution; as a Payload array it lives in a child table, so the join runs per request unless cached (see plan, Sketch 4) |

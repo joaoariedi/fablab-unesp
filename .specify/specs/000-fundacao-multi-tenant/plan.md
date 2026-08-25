@@ -33,7 +33,7 @@ Full Truth Map in [`research.md`](research.md). The load-bearing findings:
 
 | File | Change Type | Description |
 |------|------------|-------------|
-| `package.json`, `pnpm-workspace.yaml`, `.nvmrc` | create | Workspace root; Node 22 + pnpm pinned; **Next ≥15.5 pinned** [R2] |
+| `package.json`, `pnpm-workspace.yaml`, `.nvmrc` | create | Workspace root; Node 22 + pnpm pinned; **Next ≥16.2.6 <17 pinned** [R2, corrected by spike] |
 | `packages/game/{package.json,README.md}` | create | **[R5]** Pure-rules package; README states the constitutional role (no Payload, no IO) |
 | `packages/ui/{package.json,README.md}` | create | **[R5]** Design-token package placeholder for feature 001 |
 | `apps/web/package.json`, `next.config.mjs`, `tsconfig.json` | create | Next App Router application |
@@ -105,14 +105,49 @@ cheaply.
 
 | # | Question | Answer | Consequence if unexpected |
 |---|---|---|---|
-| S1 | Plugin's tenant field name; is it indexed by default? | _____ | Sketches 1–3 and the Indexes table pin this name |
-| S2 | Can the users tenants-array field be named `orgs` with `organization` + `role` rows? | _____ | If not, `data-model.md` changes — memberships must live where the plugin looks |
-| S3 | Does plugin access composition accept custom constraint-returning access? | _____ | If it replaces rather than intersects, Sketch 2 changes |
-| S4 | Is the tenant stamped **before or after** field validation? | _____ | If after, the same-tenant validator moves to `beforeChange` or it always fails on create |
-| S5 | Admin tenant selector behavior for a user with two memberships | _____ | Drives FR-022 and the admin-visibility test |
+| S1 | Plugin's tenant field name; is it indexed by default? | **`tenant`; YES, and it is not configurable.** `index: true` is hardcoded *after* the overrides spread in `dist/fields/tenantField/index.js`, and `index` is omitted from the override type. Relationship → tenants slug, `hasMany: false`, sidebar. Presence is enforced by a `validate` wrapper, **not** `required: true` | Sketches 1–3 and the Indexes table pin this name |
+| S2 | Can the users tenants-array field be named `orgs` with `organization` + `role` rows? | **YES, exactly as designed.** `tenantsArrayField: { arrayFieldName: 'orgs', arrayTenantFieldName: 'organization', rowFields: [role] }`. Persisted shape `orgs: [{ organization, role, id }]`; the `organization` row field is itself indexed. `rowFields` requires `includeDefaultField: true` | If not, `data-model.md` changes — memberships must live where the plugin looks |
+| S3 | Does plugin access composition accept custom constraint-returning access? | **It INTERSECTS (AND) — it does not replace.** `withTenantAccess` runs ours first: `false` short-circuits to deny; an object is AND-combined with the tenant constraint via `combineWhereConstraints`. When `userHasAccessToAllTenants(user)` is true it adds **no** tenant constraint at all — that is our `master`. Verified live: member of A saw only A's row, master saw both | If it replaces rather than intersects, Sketch 2 changes |
+| S4 | Is the tenant stamped **before or after** field validation? | **BEFORE.** The validator saw `siblingData.tenant` and `data.tenant` populated on create *and* update, so Sketch 3 stays a plain field `validate`. **Two traps:** (a) when tenant is absent the validator still runs with `tenant: null` *before* the tenant field's own "required" error — it must tolerate null, not throw; (b) `siblingData.tenant` resolves only because `related` is root-level — a relationship nested in a group/array must read `data.tenant` | If after, the same-tenant validator moves to `beforeChange` or it always fails on create |
+| S5 | Admin tenant selector behavior for a user with two memberships | **Lists exactly their orgs** (`[Org A, Org B]`), and a two-org member reads rows from both (constraint is `tenant: { in: [...] }`). A user with **no** membership gets **403 Forbidden** on scoped collections — *not* zero rows — but can still read their own `users` row. Note `getTenantOptions` is **not** publicly exported | Drives FR-022 and the admin-visibility test |
 | S6 | Can an auth user be created without a password (invites)? | *(no longer blocking — FR-029 creates no user before acceptance; question moves to feature 004)* | — |
-| S7 | Is `after()` schedulable, and `headers()` readable inside it, in a Payload-mounted Route Handler? | _____ | If not, the invite does its work inline and SC-007 relies on constant-time shaping instead |
-| S8 | Do `unstable_cache` and `revalidateTag` work **outside a Next request scope** (i.e. under Vitest)? *(added 2026-08-25 from carry-forward CF-3)* | _____ | If not, Sketch 4's resolver needs a test-visible seam, or the host tests cannot run at all |
+| S7 | Is `after()` schedulable, and `headers()` readable inside it, in a Payload-mounted Route Handler? | **YES to both.** `after()` accepted the callback, the callback ran after the `202` was sent, and `headers()` inside it returned `host` and a forged `x-tenant`. Sketch 8 stands. *Residual:* tested in a plain Next 16 Route Handler in a Payload-installed project — the `(payload)` route group plus `createPayloadRequest` interaction is **not** exercised | If not, the invite does its work inline and SC-007 relies on constant-time shaping instead |
+| S8 | Do `unstable_cache` and `revalidateTag` work **outside a Next request scope** (i.e. under Vitest)? *(added 2026-08-25 from carry-forward CF-3)* | **NO — all three throw.** Under real Vitest: `unstable_cache` → `Invariant: incrementalCache missing`; `revalidateTag` → `Invariant: static generation store missing`; `headers()` → "called outside a request scope". **The seam is required** — see the S8 consequence note below | If not, Sketch 4's resolver needs a test-visible seam, or the host tests cannot run at all |
+
+### Spike consequences (run 2026-08-25, Payload 3.88.0 + plugin 3.88.0 + Postgres 16)
+
+Three findings change the plan. The rest confirmed it.
+
+**1. The pinned Next version was wrong — and unsatisfiable.** `@payloadcms/next@3.88.0`
+declares `next: ">=15.2.9 <15.3.0 || >=15.3.9 <15.4.0 || >=15.4.11 <15.5.0 || >=16.2.6
+<17.0.0"`. The **entire 15.5.x line is excluded**, so `[R2]`'s "Next ≥15.5 pinned" — chosen
+for the stable Node middleware runtime — cannot be installed against this Payload. The
+viable pin is **Next ≥16.2.6 <17**, verified by installing 16.3.3 with peers satisfied.
+Node middleware is stable there too, so `[R2]`'s *reason* survives; only the number changes.
+The exclusion ranges look CVE-driven (`>=15.2.9`, `>=15.3.9`, `>=15.4.11`), so they will
+move — the pin belongs to the version-upgrade sprint, not to a one-off decision.
+
+**2. S8 forces a seam into Sketch 4.** `unstable_cache`, `revalidateTag` and `headers()`
+all throw outside a Next request scope, so the resolver **cannot be exercised by Vitest as
+written** and SC-006 / CHK031 would have no way to run. Split it: a pure
+`lookupOrganizationByHost(host, deps)` that tests call directly, wrapped by the cached
+`resolveTenant` that production uses. The cache wrapper is then injected, not imported —
+which is the same dependency-injection rule the constitution already applies elsewhere.
+
+**3. S4's null case.** The validator runs *before* the tenant field reports its own
+"required" error, so on a create with no tenant it is handed `tenant: null`. It must return
+`true` (let the tenant field own that error) rather than throwing or reporting a confusing
+second message.
+
+**Also confirmed live, not merely reasoned:**
+
+- **The leak vector is real in our own stack.** `payload.find({ collection })` with no
+  `overrideAccess` and no `user` returned **both organizations' rows**. This is
+  `docs/tech-stack.md:142` reproduced, and it is why FR-013 exists.
+- **The plugin does not validate cross-tenant relationships.** A row in org A was updated to
+  point at a row in org B and the write **succeeded**. FR-016 is load-bearing, not defensive.
+- **A user with no membership gets 403, not zero rows** — SC-002's "zero rows **or** 403"
+  wording was the right call.
 
 ## Code Sketches (Mental Alignment)
 
@@ -211,7 +246,7 @@ const getCachedTenant = unstable_cache(
 ```
 
 **Why this shape:** three defects in the first draft — Edge runtime cannot hold a Postgres
-connection (Node middleware is only stable in Next ≥15.5), `NextResponse.next()` response
+connection (Node middleware needs a modern Next; the pin is ≥16.2.6 — see Spike consequences), `NextResponse.next()` response
 headers never reach the server and leak the tenant to the client, and two uncached queries
 ran per request. Taking the database out of middleware dissolves all three, and the header
 strip closes a spoofing hole the original sketch created (SC-012).
@@ -386,7 +421,8 @@ test registers a fixture seed, so it proves a copy rather than an empty loop.
 - [x] **Principle 1 — Locked stack, swappable services:** Next + Payload 3 embedded,
   Postgres, S3-compatible storage; every address comes from the environment, so the managed
   swap is configuration (SC-008, manual validation). Versions pinned, now including
-  **Next ≥15.5** for the middleware runtime question [R2].
+  **Next ≥16.2.6 <17** for the middleware runtime question [R2, corrected by the spike:
+  Payload 3.88 excludes the whole 15.5.x line].
 - [x] **Principle 2 — Tenancy is a property of the data:** sketches 1, 2, 4, 5 and the
   canary collection implement choke point, constraint access, sovereign fallback, registry
   and a real test subject; no `TENANCY_MODE` exists.

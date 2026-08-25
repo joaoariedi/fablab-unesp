@@ -10,10 +10,10 @@ CF-8 and CF-9 are folded in as numbered tasks rather than left as prose.
 
 Four ordering facts are load-bearing. Getting them wrong does not fail loudly.
 
-1. **The spike gates the data model.** T001–T008 run on a throwaway branch and their
-   answers are recorded in the plan's spike table. S2 (memberships) and S4 (validation
-   order) can invalidate `data-model.md`; discovering that after collections exist means
-   migrations, which is exactly what CLR-002 was settled early to avoid.
+1. **The spike gated the data model — and it has run (2026-08-25).** All seven answers
+   are in the plan's spike table. S2 confirmed the membership shape and S4 confirmed the
+   validator's placement, so `data-model.md` stands; S1, S4 and S8 changed T029, T036 and
+   T041/T042 respectively. Do not re-derive these from documentation — they were measured.
 2. **The registry now precedes the choke point** — a change from the plan's stated build
    order `7 → 1 → 2 → 5 → 3 → 9`. CF-8 requires the choke point to consult
    `SCOPE_REGISTRY` before stamping or filtering `tenant`, so Sketch 5 must exist first.
@@ -30,25 +30,38 @@ accurate by hand.
 
 ## Phase 1: Setup
 
-### Spike — binding, blocks all collection work
+### Spike — ✅ COMPLETE (2026-08-25)
 
-Record every answer in the plan's spike table before Phase 2 opens.
+**All seven answers are recorded** in the plan's spike table, with the consequences written
+up under *Spike consequences*. Run against Payload 3.88.0 + plugin 3.88.0 + Postgres 16, in
+the session scratchpad rather than a throwaway branch (same isolation, and Next's scaffolder
+writes an unwanted `CLAUDE.md`/`AGENTS.md` that would otherwise land in the repo).
+
+**Three answers changed the plan** — the Next pin was wrong *and unsatisfiable* (T012),
+S8 forces a test seam into the resolver (T041/T042), and S4 adds a null case to the
+validator (T036). Everything else confirmed the design.
+
+Caveats carried forward: **`pnpm` is not installed** on this machine (T009 pins it, so the
+spike used npm), and it ran on **Node 26**, not the pinned Node 22 LTS. Neither affects the
+answers — all seven are Payload/Next semantics, not Node-version behaviour — but T009/T017
+should be exercised on Node 22 with pnpm.
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T001 | [P] **S1** — plugin's tenant field name; is it indexed by default? | FR-007 | throwaway branch → `plan.md` spike table | — |
-| T002 | [P] **S2** — can the tenants-array field be named `orgs` with `{ organization, role }` rows? | FR-009 | throwaway branch → `plan.md` | — |
-| T003 | [P] **S3** — does plugin access composition **intersect** custom constraint-returning access, or replace it? | FR-015 | throwaway branch → `plan.md` | — |
-| T004 | [P] **S4** — is the tenant stamped **before or after** field validation? | FR-016 | throwaway branch → `plan.md` | — |
-| T005 | [P] **S5** — admin tenant selector behaviour for a user with two memberships | FR-022 | throwaway branch → `plan.md` | — |
-| T006 | [P] **S7** — is `after()` schedulable and `headers()` readable inside a Payload-mounted Route Handler? | FR-021 | throwaway branch → `plan.md` | — |
-| T007 | [P] **S8 (new, CF-3)** — do `unstable_cache` and `revalidateTag` work **outside a Next request scope**, i.e. under Vitest? | FR-011, CF-3 | throwaway branch → `plan.md` | — |
-| T008 | Record all seven answers in the spike table; **if S2 or S4 came back unexpected, revise `data-model.md` and the affected sketches before Phase 2** | FR-007, FR-009, FR-016 | `plan.md`, `data-model.md` | T001–T007 |
+| T001 | ✅ [P] **S1** — plugin's tenant field name; is it indexed by default? | FR-007 | scratchpad → `plan.md` spike table | — |
+| T002 | ✅ [P] **S2** — can the tenants-array field be named `orgs` with `{ organization, role }` rows? | FR-009 | scratchpad → `plan.md` | — |
+| T003 | ✅ [P] **S3** — does plugin access composition **intersect** custom constraint-returning access, or replace it? | FR-015 | scratchpad → `plan.md` | — |
+| T004 | ✅ [P] **S4** — is the tenant stamped **before or after** field validation? | FR-016 | scratchpad → `plan.md` | — |
+| T005 | ✅ [P] **S5** — admin tenant selector behaviour for a user with two memberships | FR-022 | scratchpad → `plan.md` | — |
+| T006 | ✅ [P] **S7** — is `after()` schedulable and `headers()` readable inside a Payload-mounted Route Handler? | FR-021 | scratchpad → `plan.md` | — |
+| T007 | ✅ [P] **S8 (new, CF-3)** — do `unstable_cache` and `revalidateTag` work **outside a Next request scope**, i.e. under Vitest? | FR-011, CF-3 | scratchpad → `plan.md` | — |
+| T008 | ✅ Record all seven answers in the spike table; **if S2 or S4 came back unexpected, revise `data-model.md` and the affected sketches before Phase 2** | FR-007, FR-009, FR-016 | `plan.md`, `data-model.md` | T001–T007 |
 
-> **S8 is an addition to the plan's spike table.** CF-3 is a "does this API work in this
-> context" question, which is what the spike table is for. If `unstable_cache` throws
-> outside a request scope, Sketch 4's resolver needs a test-visible seam and T037 changes
-> shape. Adding it requires the one-line plan edit in T008.
+> **S8 was an addition to the plan's spike table, and it earned its place.** CF-3 asked a
+> "does this API work in this context" question; the answer was **no** — `unstable_cache`,
+> `revalidateTag` and `headers()` all throw outside a Next request scope. Sketch 4's
+> resolver therefore needs the test-visible seam now specified in **T041/T042**, without
+> which SC-006 and CHK031 could not have run at all.
 
 ### Skeleton — merge early (spec decision 5, unblocks feature 001)
 
@@ -57,7 +70,7 @@ Record every answer in the plan's spike table before Phase 2 opens.
 | T009 | Workspace root: pnpm workspaces, Node 22 + pnpm pinned via `packageManager`, `.nvmrc` | FR-001 | `package.json`, `pnpm-workspace.yaml`, `.nvmrc` | — |
 | T010 | [P] `packages/game` with README stating its constitutional role (no Payload, no IO, explicit `tenantId`) | FR-030 | `packages/game/{package.json,README.md}` | T009 |
 | T011 | [P] `packages/ui` placeholder with README (feature 001 fills it) | FR-030 | `packages/ui/{package.json,README.md}` | T009 |
-| T012 | `apps/web` Next App Router scaffold; **Next ≥15.5 pinned** for the Node-middleware runtime | FR-002, FR-005 | `apps/web/{package.json,next.config.mjs,tsconfig.json}` | T009 |
+| T012 | `apps/web` Next App Router scaffold; **Next ≥16.2.6 <17 pinned** (spike: Payload 3.88's peer range excludes 15.5.x entirely; 16.3.3 verified installing clean) | FR-002, FR-005 | `apps/web/{package.json,next.config.mjs,tsconfig.json}` | T009 |
 | T013 | [P] Compose: PostgreSQL + MinIO + bucket-init step | FR-003 | `infra/docker-compose.yml`, `infra/minio-init.sh` | T009 |
 | T014 | [P] `.env.example` listing **every** variable the app reads, with dev defaults and `SEED_MASTER_*` | FR-024, FR-026 | `.env.example` | T009 |
 | T015 | Vitest config for unit + integration (spec decision 2) | FR-023 | `apps/web/vitest.config.ts` | T012 |
@@ -69,7 +82,7 @@ Record every answer in the plan's spike table before Phase 2 opens.
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T019 | Payload 3 config with the multi-tenant plugin **registered before any collection**; field name from S1 | FR-007 | `apps/web/payload.config.ts` | T008, T018 |
+| T019 | Payload 3 config with the multi-tenant plugin **registered before any collection**; tenant field name is `tenant` (S1) | FR-007 | `apps/web/payload.config.ts` | T008, T018 |
 | T020 | ESLint import boundary + `no-restricted-syntax` for `.payload` / `{ payload }` / `.drizzle` (Sketch 7) | FR-014 | `eslint.config.mjs` | T018 |
 | T021 | Import-boundary entry forbidding Payload imports inside `packages/game` | FR-030 | `eslint.config.mjs` | T020 |
 | T022 | `SCOPE_REGISTRY` with all **four** entries (`organizations`, `users` global; `tenantCanaries`, `pendingInvites` scoped), each with a `why` | FR-017 | `apps/web/lib/tenancy/scope-registry.ts` | T019 |
@@ -79,7 +92,7 @@ Record every answer in the plan's spike table before Phase 2 opens.
 | T026 | Membership uniqueness validator — `orgs[].organization` unique within a user (Payload has no composite unique across array rows) | FR-009 | `apps/web/collections/Users.ts` | T025 |
 | T027 | `tenantCanaries` with a scoped→scoped `related` relationship; purpose stated in the file header so it is not deleted as dead code | FR-028 | `apps/web/collections/TenantCanaries.ts` | T022 |
 | T028 | `pendingInvites`: `email`, `role`, `invitedBy`, plugin-injected `tenant`; unique per `(tenant, email)` via validator | FR-029 | `apps/web/collections/PendingInvites.ts` | T022 |
-| T029 | Declare indexes: `tenant` on each scoped collection (only if S1 says the plugin does not), `organizations.slug`, `users.email`, `organizations.domains` | FR-008, FR-009 | collection files | T024, T025, T027, T028 |
+| T029 | Declare indexes: `organizations.slug`, `users.email`, `organizations.domains`. **Not `tenant`** — spike S1 proved the plugin already indexes it and the setting is not overridable; `users.orgs[].organization` likewise | FR-008, FR-009 | collection files | T024, T025, T027, T028 |
 | T030 | Generate and commit migrations; `push` restricted to dev | FR-004 | `apps/web/migrations/*` | T029 |
 
 ## Phase 3: User Stories (by priority)
@@ -95,7 +108,7 @@ Record every answer in the plan's spike table before Phase 2 opens.
 | T033 | **Choke point** — `overrideAccess: false` + request `user`; `find`/`findByID` merge tenant into caller `where`; `update`/`delete` issued with a tenant-scoped `where` on the id (no read-modify race). **Consults `SCOPE_REGISTRY` (CF-8)** so global collections are never tenant-stamped or tenant-filtered | FR-013, FR-015, CF-8 | `apps/web/lib/tenancy/scoped-payload.ts` | T031, T032 |
 | T034 | **RSC calling convention (CF-4)** — document and implement how a server component obtains a `req` for the choke point; host read from `PayloadRequest` with `next/headers` only as fallback, so it also runs under Vitest | FR-013, CF-4 | `apps/web/lib/tenancy/scoped-payload.ts`, `contracts/tenancy.md` | T033 |
 | T035 | Access factories returning a **query constraint, never a boolean** — master is the sole `true` (**CF-9: FR-015's "except master" wording reconciled in spec**) | FR-015, CF-9 | `apps/web/lib/tenancy/access.ts` | T033 |
-| T036 | Same-tenant validator: `normalizeRefs` covering hasMany, polymorphic `{relationTo, value}` and populated objects; globals always pass; message names **the field only** | FR-016, SC-005 | `apps/web/lib/tenancy/same-tenant-validator.ts` | T035 |
+| T036 | Same-tenant validator: `normalizeRefs` covering hasMany, polymorphic `{relationTo, value}` and populated objects; globals always pass; message names **the field only**. **Spike S4:** it runs *before* the tenant field's own "required" error, so a create with no tenant hands it `tenant: null` — return `true` and let the tenant field own that error; and read `data.tenant`, not `siblingData.tenant`, for any relationship nested in a group/array | FR-016, SC-005 | `apps/web/lib/tenancy/same-tenant-validator.ts` | T035 |
 | T037 | Attach the validator to **every** scoped→scoped relationship; placement per S4 (`beforeChange` if the tenant is stamped after validation) | FR-016 | `apps/web/collections/TenantCanaries.ts` | T036 |
 | T038 | Seed-on-create registry + `afterChange` hook scoped to `doc.id` via the system client | FR-010, FR-031 | `apps/web/lib/tenancy/seed-on-create.ts` | T033 |
 | T039 | `lib/tenancy/index.ts` public surface — **`getSystemScopedPayload` and `unscoped*` are never exported** | FR-013, FR-032 | `apps/web/lib/tenancy/index.ts` | T038 |
@@ -105,8 +118,8 @@ Record every answer in the plan's spike table before Phase 2 opens.
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
 | T040 | Middleware: strip inbound `x-tenant`, forward host on **request** headers; no Payload import, no database | FR-011, SC-012 | `apps/web/middleware.ts` | T018 |
-| T041 | Cached resolver: `<slug>.<domain>` and `organizations.domains`, **`active` only**; returns `Organization \| null` | FR-011, FR-012 | `apps/web/lib/tenancy/resolve.ts` | T033 |
-| T042 | Cache correctness: `revalidateTag` on organization change; **never cache a sovereign-fallback hit or a `null`** — otherwise org B's subdomain serves org A's context for the whole TTL. Shape per S8 (CF-3) | FR-011, FR-012 | `apps/web/lib/tenancy/resolve.ts` | T041, T007 |
+| T041 | **Pure** `lookupOrganizationByHost(host, deps)`: `<slug>.<domain>` and `organizations.domains`, **`active` only**; returns `Organization \| null`. Kept free of `next/cache` so tests can call it directly — **spike S8 proved `unstable_cache`, `revalidateTag` and `headers()` all throw outside a Next request scope**, so without this seam SC-006 and CHK031 cannot run at all | FR-011, FR-012, CF-3 | `apps/web/lib/tenancy/resolve.ts` | T033 |
+| T042 | Cached wrapper `resolveTenant` over T041, with the cache injected rather than imported: `revalidateTag` on organization change, and **never cache a sovereign-fallback hit or a `null`** — otherwise org B's subdomain serves org A's context for the whole TTL | FR-011, FR-012, CF-3 | `apps/web/lib/tenancy/resolve.ts` | T041 |
 | T043 | Unresolved host → `TenantUnresolvedError` at the choke point → 404 at the route; never "first organization" | FR-012, US4 error | `apps/web/lib/tenancy/resolve.ts` | T042 |
 
 **Invite (FR-029 scope: membership + pending record only)**
