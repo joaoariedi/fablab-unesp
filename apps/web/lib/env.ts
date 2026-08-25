@@ -1,3 +1,6 @@
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
 /**
  * Environment contract for apps/web.
  *
@@ -8,6 +11,34 @@
  * the variable and its expected shape. A volunteer on a clean clone gets one line they can
  * act on, not a Postgres stack trace that reads like a bug in the app.
  */
+
+/**
+ * Load the workspace `.env` before anything reads `process.env`.
+ *
+ * This is not optional convenience. Next loads a `.env` next to the app it serves, but the
+ * **Payload CLI does not load one at all** — so without this, the README's own quick start
+ * fails at `pnpm --filter @fablab/web migrate` with a missing `DATABASE_URI`, on a clean
+ * clone that followed every instruction. Measured, not theorised.
+ *
+ * `process.loadEnvFile` is native in Node 22 (the pinned version), so this costs no
+ * dependency. Its precedence is the correct one and worth stating: variables already
+ * present in the real environment **win**, and the file only fills gaps — so CI, the
+ * container and inline overrides are never silently replaced by a developer's local file.
+ *
+ * A missing file is normal, not an error: production sets real environment variables and
+ * ships no `.env` at all.
+ */
+function loadWorkspaceEnv(): void {
+  // apps/web/lib -> apps/web -> apps -> repo root
+  const envPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..', '.env')
+  try {
+    process.loadEnvFile(envPath)
+  } catch {
+    // No .env — expected in production and in CI.
+  }
+}
+
+loadWorkspaceEnv()
 
 type EnvVar = {
   name: string

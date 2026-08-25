@@ -127,8 +127,15 @@ pnpm dev
 Open **<http://localhost:3000/admin>** and create the first user — that account is your
 `master`. The public site is at <http://localhost:3000/>.
 
-> **Port 5432 already in use?** If you run Postgres locally, set `DB_PORT=55432` in `.env`
-> and update `DATABASE_URI` to match. `S3_PORT` and `S3_CONSOLE_PORT` work the same way.
+> **Two things that trip people up.**
+>
+> - **Port 5432 already in use?** If you run Postgres locally, set `DB_PORT=55432` in
+>   `.env` and update `DATABASE_URI` to match. `S3_PORT` and `S3_CONSOLE_PORT` work the
+>   same way.
+> - **Run `migrate` before `dev`, not after.** In development Payload pushes schema changes
+>   straight to the database. If it has done that, a later `migrate` stops and asks whether
+>   you accept data loss — a prompt that looks like a hang in a non-interactive shell. On a
+>   fresh database, in the order above, it just runs.
 
 **Useful commands**
 
