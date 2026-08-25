@@ -36,7 +36,7 @@ Identity is global, role is per organization (`docs/tech-stack.md:104`).
 | Field | Type | Required | Notes |
 |---|---|---|---|
 | `email` | email, unique | yes | The login identifier; uniqueness is **platform-wide** |
-| `password` | Payload auth | yes | Managed by Payload's auth. **Invited users are created without one**; the accept/set-password flow belongs to feature 004 (FR-029), so an invited row cannot authenticate until then — intended, and stated so it is not discovered as a bug |
+| `password` | Payload auth | yes | Managed by Payload's auth. **Every `users` row has one** — invites no longer create password-less users (FR-029): an unknown e-mail becomes a `pendingInvites` row, and the account is created at acceptance in feature 004. This also removes spike S6 from this feature's critical path |
 | `role` | select | yes | `master \| user` — the only global role. `master` is the sole cross-tenant reader |
 | `orgs` | array | no | Membership rows: `{ organization: relationship, role: 'admin' \| 'staff' \| 'maker' }` |
 
@@ -71,6 +71,24 @@ Initial contents:
 | `organizations` | global | It *is* the tenant |
 | `users` | global | Identity is platform-wide; role lives per membership |
 | `tenantCanaries` | **scoped** | Gives the guardrails a real subject in this feature (FR-028) |
+| `pendingInvites` | **scoped** | An invite belongs to the organization that issued it (FR-029) |
+
+## `pendingInvites` (scoped)
+
+An invitation to an e-mail that has **no account yet**. No `users` row is created until the
+person accepts and agrees to the terms (constitution: terms acceptance gates signup), so
+this collection is the handoff to feature 004.
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `email` | email | yes | Not unique globally — the same person may be invited by two organizations |
+| `role` | select | yes | `admin \| staff \| maker`, applied on acceptance |
+| `invitedBy` | relationship → `users` | yes | Audit trail |
+| `tenant` | *(plugin-injected)* | yes | Scoping it means org A cannot read org B's invite list — asserted by the harness |
+
+Unique per `(tenant, email)` via a validator; a repeat invite is a no-op (FR-021's
+idempotence). Token, expiry and delivery are feature 004's fields, added when the transport
+exists.
 
 ## `tenantCanaries` (scoped) — the harness subject
 

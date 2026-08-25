@@ -31,19 +31,35 @@ type TenantScopedPayload = {
    `403`.
 5. Unresolved tenant is an error, never a silent "all tenants".
 
-## Internal, allowlisted reads
+## Internal surface (the complete allowlist)
 
-These live inside `lib/tenancy/` and are the **only** sanctioned bypasses of the tenant
-filter. Each is read-only, returns a single record, and exists because a tenant comparison
-cannot itself be tenant-filtered:
+Everything that legitimately steps outside the request-scoped path lives here, inside
+`lib/tenancy/`. This list is exhaustive by design — the previous draft claimed "only two
+bypasses" while the design already needed more.
 
 ```ts
+// Explicit-tenant WRITE client, for operations with no request tenant (FR-032).
+// The caller names the tenant; it can never be inferred from the host.
+getSystemScopedPayload(tenantId: string): TenantScopedPayload
+
+// Reads that cannot themselves be tenant-filtered, because they exist to compare tenants.
 unscopedLookup(collection: string, id: string): Promise<{ tenant: string } | null>
 unscopedFindUserByEmail(email: string): Promise<User | null>
+
+// Host resolution reads `organizations` for anonymous requests — a third, previously
+// undeclared bypass, needed because a visitor has no tenant yet.
+resolveTenantFromHost(host: string): Promise<Organization | null>
 ```
 
-They are exported for `endpoints/invites.ts` and the same-tenant validator, never for
-feature code. Each carries an isolation assertion of its own (plan, Risks).
+**Why a system client is unavoidable.** Seed-on-create runs when a *master* creates
+organization B while served on some other host: a request-scoped client would resolve the
+master's host and seed the wrong organization, or throw. The invite likewise writes
+memberships into `users`, which org admins cannot see. Both need a tenant named by the
+caller, not by the URL.
+
+**Rules.** `getSystemScopedPayload` is never exported from `lib/tenancy/index.ts`, is
+import-fenced from feature code by lint, and every consumer is named in the plan. Each
+function carries its own isolation test.
 
 ## Host resolution
 
@@ -58,6 +74,10 @@ resolveTenantFromHost(host: string): Promise<Organization | null>
   (`docs/tech-stack.md:99`).
 - Otherwise `null` → the caller returns 404 (never "first organization").
 
+**Semantics (one, not two):** `resolveTenantFromHost` **returns `Organization | null`**.
+The choke point turns `null` into a thrown `TenantUnresolvedError`; route handlers and
+layouts turn it into a 404. Nothing swallows it silently.
+
 ## Same-tenant relationship validator
 
 ```ts
@@ -65,7 +85,8 @@ sameTenantValidator(field: RelationshipField): Validate
 ```
 
 Attached to every relationship between scoped collections. Rejects with a message naming
-the field and both organizations. Relationships to global collections always pass
+**the field only** — naming the other organization would turn any relationship input into
+an ID-ownership oracle, contradicting US8. Relationships to global collections always pass
 (`docs/tech-stack.md:147`).
 
 ## Invite
@@ -80,7 +101,7 @@ rest of the account experience.
 
 | Case | Effect in feature 000 | Response |
 |---|---|---|
-| E-mail has no account | Creates a password-less user + membership + `pendingInvite` record | `202 Accepted`, generic body |
+| E-mail has no account | Creates a **`pendingInvites` row only** — no `users` record before the person accepts and agrees to the terms | `202 Accepted`, generic body |
 | E-mail already has an account | **Adds a membership only** | `202 Accepted`, **byte-identical** body |
 | Already a member | No-op | `202 Accepted`, identical body |
 | Caller not admin of that organization | Nothing | `403` |

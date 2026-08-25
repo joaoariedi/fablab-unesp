@@ -22,6 +22,11 @@
 | CHK017 | FR-022: admin scoping by role | [completeness] Organization admins cannot see `organizations` or `users`; master can | [ ] |
 | CHK018 | FR-023: gates grow, never shrink | [consistency] Docs-stage gates still present alongside the new jobs; all required on `dev` and `main` | [ ] |
 | CHK019 | FR-024: README quick start | [testability] SC-001 validated by a second person on a clean machine | [ ] |
+| CHK029 | FR-032: explicit-tenant system client | [completeness] Seed-on-create and invite writes use it; it is never exported from lib/tenancy/index.ts and is import-fenced | [ ] |
+| CHK030 | N2: `req.payload` closed | [testability] SC-003's second probe (a hook calling `req.payload.find`) fails CI | [ ] |
+| CHK031 | N3: resolution cache | [testability] Creating an org makes its host resolve immediately; a probed-then-created host never serves another org's context | [ ] |
+| CHK032 | N6: pendingInvites | [consistency] Collection exists, is registered `scoped`, and no `users` row is created before acceptance | [ ] |
+| CHK033 | N8: mutation job | [testability] Fails for the right reason — asserts specific isolation test IDs, not a nonzero exit | [ ] |
 | CHK022 | FR-028: scoped canary collection | [testability] The harness generates ≥1 test per surface; a run with zero scoped collections is itself a failure | [ ] |
 | CHK023 | FR-029: invite scope | [completeness] Delivery/token/acceptance explicitly assigned to feature 004; pending-invite rows are the documented handoff | [ ] |
 | CHK024 | FR-030: packages exist with boundary | [consistency] `packages/game` has a README **and** an import-boundary rule — not an empty directory | [ ] |

@@ -65,8 +65,9 @@ access control and migrating data). Every later feature inherits these guardrail
 
 - **Given** the platform serving one organization per subdomain
 - **When** a request arrives for `bauru.<domain>`
-- **Then** middleware resolves it to the CITe organization and every downstream query is
-  scoped to it
+- **Then** the request resolves to the CITe organization — middleware forwards the host
+  and strips any forged tenant header, a **cached server-side resolver** does the lookup —
+  and every downstream query is scoped to it
 - **Edge (sovereign install):** when **exactly one** organization exists, any host
   resolves to it and no master user is required — a self-hosted lab is a normal deploy,
   not a special mode
@@ -91,8 +92,9 @@ access control and migrating data). Every later feature inherits these guardrail
 
 - **Given** a document in organization A
 - **When** any relationship field is set to a document belonging to organization B
-- **Then** the write is rejected with a validation error naming both the field and the
-  offending organizations
+- **Then** the write is rejected with a validation error naming **the field** — but not
+  the other organization, which would let a user probe document IDs to learn who owns them
+  (US8's anti-enumeration stance applies here too)
 - **Edge:** relationships to *global* collections are always allowed
 - **Error:** the plugin does not validate this by itself — the shared validator is
   project code and its absence on a scoped relationship fails review
@@ -148,7 +150,7 @@ access control and migrating data). Every later feature inherits these guardrail
 | FR-008 | `organizations` collection: `name`, immutable unique `slug`, `domains[]`, `status`, theme tokens, storage-quota fields, LGPD contact | P1 | US2 |
 | FR-009 | Minimal `users` collection with authentication: unique e-mail, password, global role `master \| user`, and `orgs[]` memberships of `{ organization, role: admin \| staff \| maker }` | P1 | US2, US8 |
 | FR-010 | Creating an organization triggers **seed-on-create** (defaults copied, never inherited at read time); later features register what they seed | P1 | US2 |
-| FR-011 | Middleware resolves host → organization and injects the tenant into the request context | P1 | US4 |
+| FR-011 | Middleware forwards the request host and **strips any inbound tenant header**; a cached server-side resolver maps host → organization. **No database access in middleware** | P1 | US4 |
 | FR-012 | When exactly one organization exists, any host resolves to it and no master user is required | P1 | US4 |
 | FR-013 | `getTenantScopedPayload(req)` in `lib/tenancy/` is the only path to Payload data operations | P1 | US5 |
 | FR-014 | An **import boundary** fails the build when `getPayload`, the Payload database adapter or Drizzle are imported outside `lib/tenancy/`; a secondary type-aware rule flags direct `payload.find/findByID/create/update/delete` calls. The allowlist is explicit, short and commented | P1 | US5 |
@@ -166,7 +168,8 @@ access control and migrating data). Every later feature inherits these guardrail
 | FR-026 | Master bootstrap: a dev-only seed reads `SEED_MASTER_*` from the environment; production uses Payload's create-first-user screen and ships **no credential in configuration** | P1 | US1 |
 | FR-027 | A CI job fails when committed migrations do not reproduce the schema the code declares (drift gate) | P1 | US10 |
 | FR-028 | A minimal **scoped canary collection** with one scoped→scoped relationship ships in this feature, so the harness, access factories, validator and red→green evidence have a real subject | P1 | US3, US6 |
-| FR-029 | The invite in this feature resolves membership and persists a pending invite; **delivery and acceptance (token, expiry, password) belong to feature 004** — no e-mail transport is configured here | P1 | US8 |
+| FR-029 | Invite for an **existing** account adds a membership immediately. Invite for an unknown e-mail persists a `pendingInvites` row and creates **no user record** — the account is born at acceptance, after terms are accepted (constitution: terms gate signup). Delivery, token, expiry and acceptance belong to feature 004; no e-mail transport is configured here | P1 | US8 |
+| FR-032 | `lib/tenancy` exposes an **explicit-tenant system client** for operations that have no request tenant (seed-on-create, invite writes): it scopes to a tenant id passed by the caller, is internal to the module, and is covered by its own isolation test | P1 | US2, US8 |
 | FR-030 | `packages/game` and `packages/ui` exist with a README stating their constitutional role, and an import-boundary rule forbids Payload imports inside `packages/game` | P1 | US1 |
 | FR-031 | Organization creation runs a **seed-on-create registry**: later features register defaults to copy; this feature ships the mechanism and its test | P1 | US2 |
 
@@ -176,9 +179,9 @@ access control and migrating data). Every later feature inherits these guardrail
 |----|-----------|-------------------|
 | SC-001 | A person who has never seen the repository reaches a working `/admin` login by following the README only | A second contributor performs it on a clean machine and reports elapsed time and every point of friction |
 | SC-002 | Zero cross-tenant reads: user of org A gets 0 rows or 403 on **100%** of scoped collections across all four surfaces | Isolation harness green in CI, and the same test shown red when a tenant constraint is deleted |
-| SC-003 | A pull request adding `payload.find` outside `lib/tenancy/` cannot merge | Deliberate probe commit on a throwaway branch: CI must fail with the wrapper message |
+| SC-003 | Neither an import of Payload nor a `req.payload` call outside `lib/tenancy/` can merge | **Two** probe commits on a throwaway branch: one importing `getPayload`, one calling `req.payload.find` inside a hook. CI must fail on both |
 | SC-004 | A pull request adding a collection absent from the scope registry cannot merge | Deliberate probe commit: registry test must fail naming the collection |
-| SC-005 | A write whose relationship points at another organization is rejected | Integration test asserting a validation error that names the field and both organizations |
+| SC-005 | A write whose relationship points at another organization is rejected | Integration test asserting a validation error that names the field; a second assertion proves the message does **not** disclose the owning organization |
 | SC-006 | A single-organization deployment works with no master user and any hostname | Integration test with one seeded org: requests to two different hosts both resolve to it |
 | SC-007 | Invite responses are identical for existing and non-existing e-mails | Test comparing status, body and timing class for both cases; membership row created in the existing-e-mail case |
 | SC-008 | Managed-service swap requires no code change | **Manual validation** (not a CI job): suite run against an alternate `.env` pointing at a second Postgres and an S3-compatible endpoint; zero source diffs |

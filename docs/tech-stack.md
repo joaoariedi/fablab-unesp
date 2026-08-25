@@ -139,6 +139,13 @@ Na **Local API do Payload o access control é pulado por padrão** — o vazamen
 `payload.find()` "limpo" dentro de um RSC ou hook, sem flag suspeita nenhuma, devolvendo
 dados do vizinho com HTTP 200. Defesas obrigatórias na fundação, antes de existir a 2ª org:
 
+> **Superado (2026-08-25, revisão do plano da feature 000):** o lint por **nome de método**
+> era defeito — `const p = await getPayload(); p.find()` escapa por renomeação, `req.payload`
+> chega a todo hook **sem import nenhum**, e SQL cru não tem nome de método. O mecanismo
+> primário passa a ser **fronteira de import** (`getPayload`, `@payloadcms/db-*`,
+> `drizzle-orm`) somada a regras de sintaxe para `req.payload`/`.drizzle`. O choke point e o
+> restante da lista seguem valendo. Ver `.specify/specs/000-fundacao-multi-tenant/plan.md`.
+
 1. **Choke point único**: nada fora de `lib/tenancy/` chama
    `payload.find/findByID/create/update/delete` nem Drizzle cru; tudo passa por
    `getTenantScopedPayload(req)`; lint pelo **nome do método** (o bug real não contém a

@@ -25,9 +25,12 @@ decision record disagree, the dated decision record wins and this file is amende
    `scoped` or `global` in a versioned registry, and CI fails on a collection missing
    from it. Access control on scoped collections **returns a query constraint, never a
    boolean**. No code outside `lib/tenancy/` calls `payload.find/findByID/create/update/
-   delete` or raw SQL — everything passes through `getTenantScopedPayload(req)`, linted
-   by method name because Payload's Local API skips access control by default (the
-   dangerous call carries no suspicious flag). Every relationship between scoped
+   delete` or raw SQL — everything passes through `getTenantScopedPayload(req)`, enforced
+   by an **import boundary plus syntax rules covering `req.payload`** (amended 2026-08-25:
+   method-name matching is defeated by aliasing, and `req.payload` reaches every hook with
+   no import at all). Payload's Local API skips access control by default, so the dangerous
+   call carries no suspicious flag. Operations with no request tenant use the explicit-tenant
+   system client inside `lib/tenancy/`. Every relationship between scoped
    collections uses the shared same-tenant validator. **Identity is global, role is per
    organization.**
 
