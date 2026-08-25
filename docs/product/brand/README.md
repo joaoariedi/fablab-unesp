@@ -35,7 +35,9 @@ clássica (eixos a 30°), contorno em `navy`, preenchimento chapado.
 Gerados em 25/08/2026:
 
 - `fablab-github-social-1280x640.png/.svg` — social preview do repositório
-  (Settings → Social preview).
+  (Settings → General → Social preview). **Nota:** o GitHub **esconde essa seção em
+  repositórios privados** que nunca tiveram preview — ela só aparece (e o preview só é
+  servido) quando o repositório for **público**; fazer o upload do PNG nesse momento.
 - `fablab-github-banner-1280x320.svg` + PNG @2x (`fablab-github-banner-2560x640.png`) —
   topo do README.
 
