@@ -46,6 +46,12 @@ Uma feature = um ciclo SDD completo. Ordem proposta (dependências entre parênt
 Fatias pequenas mantêm cada espec/plan/tasks dentro de uma janela de contexto saudável
 (ver regra de context-management: reset decisivo a ~40%).
 
+> **Absorções do benchmark (2026-08-25, vinculantes):** 001 ganha a **disciplina de
+> ilhas** (client components só onde há interatividade); 003 ganha a **medição do
+> orçamento de performance** (LCP ≤2,5s em 4G médio — falhou, reabre o híbrido C);
+> 004 ganha o **spike de palette-swap** no pipeline de sprites e a
+> **serialização-semente** do avatar como chave de cache.
+
 ## Passo 2 — Ciclo por feature
 
 ```

@@ -68,7 +68,8 @@ earning XP.
 ## 🏗️ Architecture
 
 Decided by adversarial panel review (three candidate stacks × three judging lenses),
-re-validated against an external Astro/Supabase proposal — full records in
+re-validated against an external Astro/Supabase proposal, and **ratified on 2026-08-25**
+after an external senior game-developer review — full records in
 [`docs/tech-stack.md`](docs/tech-stack.md) and
 [`docs/tech-stack-benchmark.md`](docs/tech-stack-benchmark.md).
 

@@ -3,8 +3,12 @@
 > Produzido em 2026-08-24 a pedido do PO, após relatório externo (Gemini) recomendar
 > **Astro + React Islands + PixiJS + Supabase**. Este documento compara a proposta com a
 > arquitetura decidida ([tech-stack.md](tech-stack.md)) sob os requisitos REAIS do
-> projeto e entrega um placar por lente. **A decisão final é do PO** — o documento não
-> altera a decisão vigente.
+> projeto e entrega um placar por lente.
+>
+> **✅ ENCERRADO (2026-08-25):** o PO leu o benchmark, colheu revisão externa de um
+> desenvolvedor sênior de games (Next.js confirmado; Colyseus.js/Phaser.js anotados como
+> ferramentas para necessidades futuras) e **ratificou a Arquitetura A**. As quatro
+> absorções do §5 tornaram-se vinculantes em `tech-stack.md`.
 
 ## 1. O que o relatório externo não sabia
 
