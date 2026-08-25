@@ -7,6 +7,7 @@
     <img alt="Database: PostgreSQL" src="https://img.shields.io/badge/database-PostgreSQL-336791?logo=postgresql&logoColor=white">
     <img alt="Content: PT-BR" src="https://img.shields.io/badge/content-pt--BR-009c3b">
     <img alt="Multi-tenant" src="https://img.shields.io/badge/multi--tenant-by_design-8e30eb">
+    <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green">
   </p>
 </div>
 
@@ -28,6 +29,11 @@ game map:
 🔓 The platform is **open by culture**: reading, watching classes and downloading 3D
 models require no account. An account is for *making* — publishing, liking, and
 earning XP.
+
+<div align="center">
+  <img src="docs/product/design/home-desktop.png" alt="Planned home page — the lab drawn as an isometric pixel-art night map" width="800">
+  <p><sub>How the home is planned to look: the lab as a pixel-art night map (official hero) — <a href="docs/product/design/home-mobile.png">mobile art</a> · <a href="docs/product/pages/home.md">full page spec</a></sub></p>
+</div>
 
 > 🚧 **Status: specification complete, implementation not started.** The product is fully
 > specified through five designer decision rounds and a product-owner decision log — every
@@ -62,7 +68,8 @@ earning XP.
 ## 🏗️ Architecture
 
 Decided by adversarial panel review (three candidate stacks × three judging lenses),
-re-validated against an external Astro/Supabase proposal — full records in
+re-validated against an external Astro/Supabase proposal, and **ratified on 2026-08-25**
+after an external senior game-developer review — full records in
 [`docs/tech-stack.md`](docs/tech-stack.md) and
 [`docs/tech-stack-benchmark.md`](docs/tech-stack-benchmark.md).
 
@@ -100,7 +107,7 @@ docs/
 │   ├── pages/               One spec per page (desktop faithful to mockups
 │   │                        + tablet/mobile adaptations + CMS content models)
 │   ├── design/              Designer mockups, named by page (source of truth for UI)
-│   ├── fonts/               Identity typefaces (license status: docs/backlog.md)
+│   ├── fonts/               Identity typefaces (Comfortaa OFL bundled; others fetched — see its README)
 │   └── exports/             Designer communication (Q&A rounds, art checklist)
 ├── tech-stack.md          Architecture decision record (incl. multi-tenancy design)
 ├── tech-stack-benchmark.md  Verified benchmark vs. Astro/Supabase proposal
@@ -127,8 +134,9 @@ detailed in [`docs/sdd-strategy.md`](docs/sdd-strategy.md):
 
 ## 🤝 Contributing
 
-The project is documentation-first — the docs are the contract (and yes,
-contributions earn you real-life XP ⭐):
+See **[CONTRIBUTING.md](CONTRIBUTING.md)** for the branch model (`dev` → `release/X.Y.Z`
+→ `main`), SemVer strategy and commit conventions. The project is documentation-first —
+the docs are the contract (and yes, contributions earn you real-life XP ⭐):
 
 - **Content is PT-BR; code and commits are English.** Product docs live in
   `docs/product/` and every decision is dated (`**Decidido (…, YYYY-MM-DD):**`);
@@ -141,6 +149,13 @@ contributions earn you real-life XP ⭐):
   scans for upload/auth surfaces) are non-negotiable.
 - Open items live in [`docs/backlog.md`](docs/backlog.md); page-level open questions live
   in each spec's *Questões em aberto* section.
+
+## 🧾 Changelog
+
+Notable changes are tracked in [CHANGELOG.md](CHANGELOG.md), following
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
+[Semantic Versioning](https://semver.org/) — current version: **v0.1.0**
+(specification milestone).
 
 ## 🏅 Credits
 
@@ -155,7 +170,13 @@ contributions earn you real-life XP ⭐):
 
 ## 📜 License
 
-Not yet selected. A license will be chosen alongside the multi-tenant distribution
-decision (hosted service vs. self-host distribution — see `docs/tech-stack.md`);
-until then, all rights reserved. The identity typefaces have pending license
-confirmation (tracked as ISS-001 in [`docs/backlog.md`](docs/backlog.md)).
+Code and documentation are released under the **[MIT License](LICENSE)** (decided
+2026-08-25) — aligned with the multi-tenant "self-host distribution" door: any
+fablab/makerspace may run its own instance.
+
+**Exceptions** (not MIT): the Fab Lab CITe Bauru **visual identity, mockups, brand
+assets and pixel art** (`docs/product/design/`, `docs/product/brand/`) are © their
+authors, used here with permission — reuse them only for this project. Typefaces keep
+their own licenses: Comfortaa is OFL (bundled); Aldo the Apache and SquareFont are
+dafont "100% Free" but are **not redistributed** in this repository — see
+[`docs/product/fonts/README.md`](docs/product/fonts/README.md).

@@ -4,6 +4,12 @@
 > independentes e julgadas por três lentes — manutenibilidade por voluntários rotativos,
 > aderência ao produto e operação/custo. Placar (soma das lentes): **A 23 · B 20 · C 15**,
 > com A vencendo as três lentes.
+>
+> **✅ DECISÃO RATIFICADA (PO, 2026-08-25)** após: (1) benchmark verificado contra a
+> proposta Astro/Supabase ([tech-stack-benchmark.md](tech-stack-benchmark.md) — A 51 ·
+> C 42 · B 27) e (2) revisão externa de desenvolvedor sênior de games, que confirmou o
+> Next.js ("preencher coisa server side fica muito mais fácil do que no Astro ou
+> qualquer outra ferramenta"). A stack está **fechada** para o v1.
 
 ## TL;DR — Arquitetura escolhida (A)
 
@@ -209,6 +215,16 @@ Como o design gamificado se materializa — decidido junto com a arquitetura A:
   `three` (STL/OBJ/3MF) carregados lazy, client-only, apenas na página de detalhe.
 - **Aulas**: embeds do YouTube — ação do botão `ASSISTIR` é reproduzir online
   (decidido em 2026-08-23, ver `product/pages/aulas.md`).
+- **Ferramentas sancionadas para necessidades FUTURAS** (revisão externa, 2026-08-25 —
+  nenhuma entra no v1): se surgir **realtime** (presença, colaboração ao vivo) →
+  **Colyseus.js**; se surgir interatividade de jogo específica (ex.: mapa navegável) →
+  **Phaser.js**. Até lá, valem as decisões vigentes: sem realtime e sem engine de canvas
+  nas superfícies atuais.
+- **Absorções do benchmark (2026-08-25, vinculantes)**: disciplina de ilhas + orçamento
+  de performance (LCP ≤2,5s em 4G médio) nas features 001/003; serialização-semente do
+  avatar como chave de cache do composite; spike de 1 dia de palette-swap no pipeline de
+  sprites (brainstorm da 004); gatilho objetivo — se o orçamento falhar medido na 003,
+  reabrir o híbrido C (Astro + Payload headless).
 - **Responsivo mobile-first em três layouts nomeados**: mobile <768px (alvo 390),
   tablet 768–1279px (alvo 834), desktop ≥1280px (alvo 1440). As adaptações por componente
   (grid 3→2→1, header → hambúrguer/bottom-nav, sidebar → chips/drawer, alvos de toque

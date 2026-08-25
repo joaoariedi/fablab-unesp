@@ -46,6 +46,12 @@ Uma feature = um ciclo SDD completo. Ordem proposta (dependências entre parênt
 Fatias pequenas mantêm cada espec/plan/tasks dentro de uma janela de contexto saudável
 (ver regra de context-management: reset decisivo a ~40%).
 
+> **Absorções do benchmark (2026-08-25, vinculantes):** 001 ganha a **disciplina de
+> ilhas** (client components só onde há interatividade); 003 ganha a **medição do
+> orçamento de performance** (LCP ≤2,5s em 4G médio — falhou, reabre o híbrido C);
+> 004 ganha o **spike de palette-swap** no pipeline de sprites e a
+> **serialização-semente** do avatar como chave de cache.
+
 ## Passo 2 — Ciclo por feature
 
 ```
@@ -85,11 +91,10 @@ Fatias pequenas mantêm cada espec/plan/tasks dentro de uma janela de contexto s
   F/M, checkbox de termos etc.) **não bloqueiam a implementação** — as specs escritas já
   registram as decisões finais; as artes atualizadas chegam depois como conferência
   visual. **Features 000/001 podem começar imediatamente.**
-- **Fontes:** arquivos recebidos em `product/fonts/` (2026-08-23): Aldo the Apache,
-  SquareFont (Bou Fonts) e Comfortaa variável (OFL). A confirmação das licenças de Aldo
-  the Apache e SquareFont está **em espera** por decisão do PO (2026-08-24) — rastreada
-  como **ISS-001** em [backlog.md](backlog.md); gate: antes do lançamento público. Não
-  bloqueia a feature 001.
+- **Fontes:** ~~confirmação de licenças em espera (ISS-001)~~ **resolvida (2026-08-25)**:
+  Comfortaa (OFL) versionada; Aldo the Apache e SquareFont são "100% Free" para uso, mas
+  **não são redistribuídas** no repositório público — setup local e caminhos futuros em
+  `product/fonts/README.md`.
 - **Gamificação:** números fechados em 2026-08-23 (1 XP por ação; 5 XP por nível; máximo
   10; curtidas sem XP; cosméticos de recompensa adiados). O brainstorm da 005 foca no que
   restou: moderação/anti-farm, check-in presencial e a recompensa coletiva do Nível do Lab.

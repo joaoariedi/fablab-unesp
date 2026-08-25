@@ -6,8 +6,7 @@ Um item por seção, com ID sequencial; ao resolver, registrar a data e mover pa
 
 ## ISS-001 — Licenças das fontes Aldo the Apache e SquareFont
 
-- **Status:** EM ESPERA (2026-08-24 — decisão do product owner: não cobrar a designer
-  por ora; o lembrete sai das próximas rodadas de perguntas).
+- **Status:** RESOLVIDA (2026-08-25) — ver seção Resolvidos.
 - **O quê:** os arquivos `product/fonts/AldotheApache.ttf` (AJ Paglia) e
   `product/fonts/Square.ttf` (© Bou Fonts 2011) vieram **sem arquivo de licença**;
   fontes desses acervos costumam ser "free for personal use". Comfortaa é OFL — ok.
@@ -35,4 +34,8 @@ Um item por seção, com ID sequencial; ao resolver, registrar a data e mover pa
 
 ## Resolvidos
 
-*(vazio)*
+- **ISS-001 (2026-08-25):** pesquisa confirmou as duas fontes como **"100% Free"** no
+  dafont (uso comercial reportado), porém **sem texto de licença dos autores** — logo,
+  uso no site liberado, **redistribuição no repositório público evitada**: TTFs
+  removidos do repo e do histórico ao abrir o código (MIT); Comfortaa (OFL) permanece
+  com a licença. Setup e caminhos futuros: `product/fonts/README.md`.
