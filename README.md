@@ -102,6 +102,17 @@ the multi-tenancy section of [`docs/tech-stack.md`](docs/tech-stack.md).
 You need **Node 22 LTS**, **pnpm 10** and **Docker**. Nothing else — Postgres and MinIO
 run in containers.
 
+The exact versions are pinned in [`.tool-versions`](.tool-versions). If you use
+[asdf](https://asdf-vm.com/) (recommended — it is what the maintainers run), the toolchain
+installs itself:
+
+```bash
+asdf plugin add nodejs && asdf plugin add pnpm
+asdf install          # reads .tool-versions
+```
+
+Then:
+
 ```bash
 git clone https://github.com/joaoariedi/fablab-unesp.git
 cd fablab-unesp
