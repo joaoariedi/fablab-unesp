@@ -16,5 +16,8 @@
     "MD060": false  // table pipe spacing — specs use compact |---|---| separators
   },
   "globs": ["**/*.md"],
-  "ignores": ["node_modules/**", ".specify/templates/**"]
+  // `node_modules/**` only matched the root copy. Once the workspace exists, pnpm creates
+  // apps/*/node_modules and packages/*/node_modules, and dependency LICENSE.md files then
+  // fail the docs gate — so the pattern must be recursive.
+  "ignores": ["**/node_modules/**", ".specify/templates/**", "**/.next/**"]
 }

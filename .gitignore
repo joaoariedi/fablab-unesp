@@ -1,2 +1,26 @@
 docs/product/fonts/AldotheApache.ttf
 docs/product/fonts/Square.ttf
+
+# --- workspace (feature 000) ---
+node_modules/
+.pnpm-store/
+
+# Next.js
+.next/
+next-env.d.ts
+out/
+
+# build output
+dist/
+*.tsbuildinfo
+
+# environment — never commit real values; .env.example is the contract
+.env
+.env.*
+!.env.example
+
+# test / coverage
+coverage/
+
+# Payload generated types (regenerated from the config)
+apps/web/payload-types.ts

@@ -1,0 +1,68 @@
+# Development services for apps/web. Production hardening (TLS, on-demand certificates,
+# backups, monitoring) is feature 007 — spec decision 4 keeps it out of feature 000.
+#
+# Every address the app uses comes from the environment, never from code, so pointing at a
+# managed Postgres or S3 is an .env change with zero source diffs (FR-006, SC-008).
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: fablab-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fablab
+      POSTGRES_PASSWORD: fablab
+      POSTGRES_DB: fablab
+    ports:
+      # Host port is configurable: a developer with a local Postgres already on 5432 would
+      # otherwise hit "port is already allocated" on their first `docker compose up`, which
+      # reads as a broken quick start. Set DB_PORT in .env to move it.
+      - '${DB_PORT:-5432}:5432'
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      # Payload runs migrations at startup; without this the app races an unready socket
+      # and fails with a connection error that looks like a config mistake.
+      test: ['CMD-SHELL', 'pg_isready -U fablab -d fablab']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  storage:
+    image: minio/minio:latest
+    container_name: fablab-storage
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: fablab
+      MINIO_ROOT_PASSWORD: fablab-dev-secret
+    ports:
+      - '${S3_PORT:-9000}:9000'
+      - '${S3_CONSOLE_PORT:-9001}:9001'
+    volumes:
+      - storage-data:/data
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  storage-init:
+    # One-shot: creates the bucket the app expects. Exits 0 and stays exited.
+    image: minio/mc:latest
+    container_name: fablab-storage-init
+    depends_on:
+      storage:
+        condition: service_healthy
+    entrypoint: /bin/sh
+    command: -c "/scripts/minio-init.sh"
+    environment:
+      MINIO_ROOT_USER: fablab
+      MINIO_ROOT_PASSWORD: fablab-dev-secret
+      S3_BUCKET: fablab
+    volumes:
+      - ./minio-init.sh:/scripts/minio-init.sh:ro
+
+volumes:
+  db-data:
+  storage-data:

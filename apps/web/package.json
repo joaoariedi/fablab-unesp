@@ -1,0 +1,37 @@
+{
+  "name": "@fablab/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Next.js App Router with Payload CMS 3 embedded. Admin at /admin.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "payload": "payload",
+    "generate:types": "payload generate:types",
+    "migrate": "payload migrate",
+    "migrate:create": "payload migrate:create",
+    "migrate:status": "payload migrate:status",
+    "seed": "node --experimental-strip-types seed/index.ts"
+  },
+  "dependencies": {
+    "@payloadcms/db-postgres": "3.88.0",
+    "@payloadcms/next": "3.88.0",
+    "@payloadcms/plugin-multi-tenant": "3.88.0",
+    "graphql": "16.11.0",
+    "next": "16.3.3",
+    "payload": "3.88.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.18.12",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.1",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
+  }
+}
