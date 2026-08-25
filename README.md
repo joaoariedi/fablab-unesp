@@ -143,16 +143,16 @@ contributions earn you real-life XP ⭐):
 <table>
   <tr>
     <td align="center">
-      <a href="https://github.com/joaoariedi"><img src="https://github.com/joaoariedi.png?size=100" width="80" alt="John Ariedi"/><br/><sub><b>John Ariedi</b></sub></a>
+      <a href="https://github.com/joaoariedi"><img src="https://github.com/joaoariedi.png?size=100" width="80" alt="John Ariedi"/><br/><sub><b>John Ariedi</b></sub></a><br/><sub>🛠️ Product & engineering</sub>
     </td>
     <td align="center">
-      <a href="https://github.com/sophiabort"><img src="https://github.com/sophiabort.png?size=100" width="80" alt="sophiabort"/><br/><sub><b>sophiabort</b></sub></a>
+      <a href="https://github.com/sophiabort"><img src="https://github.com/sophiabort.png?size=100" width="80" alt="sophiabort"/><br/><sub><b>sophiabort</b></sub></a><br/><sub>🎨 Design & art</sub>
     </td>
   </tr>
 </table>
 
-- **Design & art** — visual identity, mockups and all pixel-art/sprite production by the
-  Fab Lab CITe Bauru design team.
+- **Design & art** — visual identity, mockups and all pixel-art/sprite production by
+  [sophiabort](https://github.com/sophiabort).
 - **FabLab culture** — values inspired by the
   [Makers' Guide for Making](http://makersguideformaking.com) poster series
   (WeFab / Estúdio Arnold, São Paulo, 2016).
