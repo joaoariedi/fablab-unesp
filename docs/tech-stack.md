@@ -99,7 +99,7 @@ Incorporar à spec da feature correspondente — não são opcionais:
 - **Princípio central: tenancy é propriedade dos DADOS, nunca modo de deploy.** Não
   existe `TENANCY_MODE` nem ramo condicional: uma instância soberana (lab que se hospeda
   sozinho) é um deploy multi-tenant com **exatamente uma org e nenhum usuário master** —
-  o middleware host→org resolve para a org única. Um caminho de código, um runbook, uma
+  a resolução host→org devolve a org única (~~no middleware~~ → **superado 2026-08-25:** lookup server-side cacheado, sem banco no middleware). Um caminho de código, um runbook, uma
   matriz de testes; a porta "distribuir para self-host" fica aberta de graça.
 - **Identidade global, papel por organização**: um e-mail = um `usuario`;
   `usuarios.orgs[]: {org, papel: admin|staff|maker}`; `master` é papel global. Convite por
@@ -148,8 +148,8 @@ dados do vizinho com HTTP 200. Defesas obrigatórias na fundação, antes de exi
 
 1. **Choke point único**: nada fora de `lib/tenancy/` chama
    `payload.find/findByID/create/update/delete` nem Drizzle cru; tudo passa por
-   `getTenantScopedPayload(req)`; lint pelo **nome do método** (o bug real não contém a
-   string `overrideAccess`).
+   `getTenantScopedPayload(req)`; ~~lint pelo **nome do método**~~ → **fronteira de import +
+   regras de sintaxe** (ver nota "Superado" acima; o bug real não contém `overrideAccess`).
 2. **Access de collection scoped retorna query constraint, nunca booleano.**
 3. **Validator compartilhado de mesmo-tenant** em todo relationship — o plugin **não**
    valida relationship cruzando tenants.

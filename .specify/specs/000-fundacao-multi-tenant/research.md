@@ -41,8 +41,12 @@ constitution.
   is checked when the presigned URL is issued (enforcement is feature 002).
 - `docs/tech-stack.md:142` — **the leak vector**: Payload's Local API **skips access
   control by default**, so the dangerous call is a clean `payload.find()` inside an RSC or
-  hook — it contains no `overrideAccess` string. The lint rule must therefore match on
-  **method name**, and all access must funnel through `getTenantScopedPayload(req)`.
+  hook — it contains no `overrideAccess` string. All access must funnel through
+  `getTenantScopedPayload(req)`, enforced by an **import boundary plus syntax rules covering
+  `req.payload`/`.drizzle`** (superseded 2026-08-25: matching on **method name** was the
+  original mechanism and is defective — `const p = await getPayload(); p.find()` escapes by
+  renaming, `req.payload` reaches every hook with no import at all, and raw SQL has no
+  method name).
 - `docs/tech-stack.md:146` — access control on scoped collections **returns a query
   constraint, never a boolean**.
 - `docs/tech-stack.md:147` — **the plugin does not validate cross-tenant relationships**;

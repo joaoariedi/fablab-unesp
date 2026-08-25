@@ -66,16 +66,17 @@ Full Truth Map in [`research.md`](research.md). The load-bearing findings:
 
 ## Data Model
 
-See [`data-model.md`](data-model.md) — now three collections (`organizations`, `users`,
-`tenantCanaries`), the plugin-injected `tenant` field made explicit, an **Indexes**
-section, the membership-uniqueness mechanism, and the `theme.logoUrl` trap (it cannot be an
-upload field before feature 002).
+See [`data-model.md`](data-model.md) — now **four** collections (`organizations`, `users`,
+`tenantCanaries`, `pendingInvites`), the plugin-injected `tenant` field made explicit, an
+**Indexes** section, the membership-uniqueness mechanism, and the `theme.logoUrl` trap (it
+cannot be an upload field before feature 002).
 
 ## API Contracts
 
-See [`contracts/tenancy.md`](contracts/tenancy.md) — the module surface including the two
-**declared** allowlisted reads, tenant-constrained `update`/`delete`, host resolution that
-respects `status`, and the invite narrowed to what ships here.
+See [`contracts/tenancy.md`](contracts/tenancy.md) — the module surface including the
+**complete** allowlist of **four** declared entries (one explicit-tenant write client, three
+reads), tenant-constrained `update`/`delete`, host resolution that respects `status`, and
+the invite narrowed to what ships here.
 
 ## Implementation Approach
 
@@ -231,6 +232,7 @@ export const SCOPE_REGISTRY = {
   organizations:  { scope: 'global', why: 'it is the tenant' },
   users:          { scope: 'global', why: 'identity is platform-wide; role lives per membership' },
   tenantCanaries: { scope: 'scoped', why: 'gives the guardrails a real subject (FR-028)' },
+  pendingInvites: { scope: 'scoped', why: 'an invite belongs to the organization that issued it (FR-029)' },
 } as const satisfies Record<string, { scope: 'scoped' | 'global'; why: string }>
 ```
 
@@ -403,7 +405,7 @@ test registers a fixture seed, so it proves a copy rather than an empty loop.
 | Risk | Impact | Mitigation |
 |------|--------|------------|
 | Spike answers invalidate the data model (S2 especially: memberships not carryable by the plugin) | Rework of `users` and access before collections exist | Spike is step 1 and binding; S2's failure path is written down (memberships move to the plugin's field shape) |
-| A leak ships through an allowlisted file | Cross-tenant exposure — the worst failure | Allowlist is two functions, both declared in the contract, each with its own isolation assertion; the mutation job proves the harness can fail |
+| A leak ships through an allowlisted file | Cross-tenant exposure — the worst failure | Allowlist is four functions, all declared in the contract, each with its own isolation assertion; the mutation job proves the harness can fail |
 | Canary collection is mistaken for dead code and deleted | Harness silently returns to testing nothing | Its purpose is in the collection file header, the registry `why`, and the registry test fails on unregistered deletion |
 | Feature 000 grows and delays 001 | CITe launch slips | Skeleton merges as its own PR (approach step 2) while guardrails continue |
 | Migration drift | Silent dev/prod divergence — architecture risk #1 | Drift gate (CLR-004) |
@@ -413,11 +415,12 @@ test registers a fixture seed, so it proves a copy rather than an empty loop.
 
 ## Quick Start
 
-1. Run the **spike checklist** above on a throwaway branch; record all six answers here.
+1. Run the **spike checklist** above on a throwaway branch; record all six answers
+   (**S1–S5 and S7** — S6 is retired) here.
 2. Create the workspace skeleton (+ `packages/game`, `packages/ui`) + compose +
    `.env.example` + README quick start; open the first PR so feature 001 is unblocked.
-3. Register the plugin, then `Organizations`, `Users`, `TenantCanaries`; generate and
-   commit migrations.
+3. Register the plugin, then `Organizations`, `Users`, `TenantCanaries`, `PendingInvites`;
+   generate and commit migrations.
 4. Build the tenancy module in sketch order (7 → 1 → 2 → 5 → 3 → 9), each with its test.
 5. Write the isolation harness against the canary; demonstrate it **red**, then green; add
    the mutation job so the proof repeats.

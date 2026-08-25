@@ -95,8 +95,11 @@ decision record disagree, the dated decision record wins and this file is amende
   approval**. Human moderation is the accepted antivirus for public downloads; ClamAV
   becomes mandatory before hosting an external tenant.
 - **Routing:** one subdomain per organization; path-based tenancy is prohibited.
-  Host→organization resolution in middleware, falling back to the single organization
-  when only one exists.
+  Middleware performs **header hygiene only** — it strips any inbound tenant header and
+  forwards the host; host→organization resolution is a **cached server-side lookup, never a
+  database call in middleware** (amended 2026-08-25: the Edge runtime cannot hold a Postgres
+  connection, and `NextResponse.next()` response headers never reach the server). Falls back
+  to the single organization when only one exists.
 - **LGPD:** deletion operates per `(tenant, user)` and purges draft/version history and
   the storage prefix; terms acceptance gates signup; export produces a documented
   artifact. **No external tenant before a signed legal instrument** (controller/operator,
