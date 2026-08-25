@@ -4,21 +4,27 @@
 
 **Nature of this Truth Map:** the repository contains **no source code yet** — this is the
 first code-bearing feature. The canonical truths are therefore the decision records, not
-existing symbols. Every claim below carries a `file:line` citation so downstream agents can
-verify it without re-reading the corpus.
+existing symbols. Every claim below carries a citation so downstream agents can verify it
+without re-reading the corpus.
+
+**Citation convention.** Constitution claims cite a **named section** (`§ Principle 3`,
+`§ Monorepo layout`), not a line number — its line numbers shift on every amendment, and
+four of these citations had already drifted by 2026-08-25 while still reading as
+authoritative. `docs/tech-stack.md` keeps `file:line` for now; those anchors were verified
+on 2026-08-25, and edits to that file must be line-count neutral or re-verified.
 
 ## Affected Modules
 
 Nothing exists yet; this is the layout the feature creates, as mandated by the
 constitution.
 
-| Path | Role | Authority (file:line) |
+| Path | Role | Authority (file:line, or § section) |
 |------|------|-----------------------|
-| `apps/web/` | Next.js App Router + Payload 3 in one process; admin at `/admin` | `.specify/memory/constitution.md:82` |
-| `apps/web/lib/tenancy/` | The **only** module allowed to touch Payload data operations | `.specify/memory/constitution.md:22`, `docs/tech-stack.md:142` |
-| `packages/game/` | Pure XP/level/mission rules — no Payload imports, no IO (empty in this feature) | `.specify/memory/constitution.md:34` |
-| `packages/ui/` | Identity tokens + base components (feature 001 fills it) | `.specify/memory/constitution.md:82` |
-| `infra/` | docker-compose (Postgres + MinIO), Caddyfile, backups, runbooks | `.specify/memory/constitution.md:82` |
+| `apps/web/` | Next.js App Router + Payload 3 in one process; admin at `/admin` | `.specify/memory/constitution.md` § Monorepo layout |
+| `apps/web/lib/tenancy/` | The **only** module allowed to touch Payload data operations | `.specify/memory/constitution.md` § Principle 2, `docs/tech-stack.md:142` |
+| `packages/game/` | Pure XP/level/mission rules — no Payload imports, no IO (empty in this feature) | `.specify/memory/constitution.md` § Principle 3 |
+| `packages/ui/` | Identity tokens + base components (feature 001 fills it) | `.specify/memory/constitution.md` § Monorepo layout |
+| `infra/` | docker-compose (Postgres + MinIO), Caddyfile, backups, runbooks | `.specify/memory/constitution.md` § Monorepo layout |
 | `.github/workflows/ci.yml` | Existing docs-stage gates; this feature adds lint/typecheck/test/build/leak/drift | `.github/workflows/ci.yml:1` |
 
 ## Relevant Truths (each with citation)
@@ -58,14 +64,14 @@ constitution.
   red→green.
 - `docs/tech-stack.md:157` — the roadmap's own definition of feature 000, including the
   statement that it runs in parallel with 001 and **does not delay the CITe launch**.
-- `.specify/memory/constitution.md:12` — pinned versions; managed↔self-host swap by
+- `.specify/memory/constitution.md` § Principle 1 — pinned versions; managed↔self-host swap by
   environment only; new runtimes need written justification.
-- `.specify/memory/constitution.md:54` — the CI gate set **grows per feature and never
+- `.specify/memory/constitution.md` § Principle 5 — the CI gate set **grows per feature and never
   shrinks**; "ready" is a command list.
 
 ## Existing Patterns & Conventions
 
-- **Provenance discipline** (`.specify/memory/constitution.md:43`): decisions are dated,
+- **Provenance discipline** (`.specify/memory/constitution.md` § Principle 4): decisions are dated,
   `(proposta)` marks the undecided, superseded text is struck through, never deleted.
   Applies to specs and docs this feature touches.
 - **CI shape already in place** (`.github/workflows/ci.yml:20`): jobs are named in prose

@@ -1,11 +1,18 @@
 # Project Constitution
-<!-- Version: 1.0.0 | Date: 2026-08-25 -->
+<!-- Version: 1.1.0 | Date: 2026-08-25 -->
 <!-- Updated by /speckit.constitution -->
 
 Governing principles for the Fab Lab CITe Bauru platform. Every spec, plan and pull
 request is checked against these. They codify decisions already recorded in
 `docs/tech-stack.md`, `docs/product/` and `docs/sdd-strategy.md` — when this file and a
 decision record disagree, the dated decision record wins and this file is amended.
+
+**Amendment policy.** A substantive change to a principle or constraint **bumps the minor
+version** and is logged under [Amendments](#amendments) with its date and source. The
+amended text also carries an inline `(amended <date>: …)` note so the reasoning stays
+readable where the rule lives. Editorial changes — typos, rewrapping, formatting — bump
+nothing and are not logged. **Cite this file by section, never by line number:** an
+amendment shifts every line below it, and stale line citations still read as authoritative.
 
 ## Principles
 
@@ -120,3 +127,13 @@ decision record disagree, the dated decision record wins and this file is amende
 - **Open items:** `docs/backlog.md`
 - **Global engineering rules:** the maintainer's `.claude/rules/` (code quality, git
   workflow, LLM security, agent workflow) — referenced, not duplicated here.
+
+## Amendments
+
+Substantive changes only, newest first. See the **Amendment policy** in the preamble.
+
+| Version | Date | Change |
+|---|---|---|
+| 1.1.0 | 2026-08-25 | **Principle 2 — enforcement mechanism.** Linting by **method name** replaced by an **import boundary plus syntax rules covering `req.payload`**. Name matching is defeated by aliasing (`const p = await getPayload(); p.find()`), `req.payload` reaches every hook with no import at all, and raw SQL has no method name. Source: feature 000 plan review, round 2 |
+| 1.1.0 | 2026-08-25 | **Architecture Constraints — routing.** Host→organization resolution moved **out of middleware** to a cached server-side lookup; middleware does header hygiene only. The Edge runtime cannot hold a Postgres connection, and `NextResponse.next()` response headers never reach the server. Source: feature 000 plan, Sketch 4 |
+| 1.0.0 | 2026-08-25 | Ratified — five principles, tech stack, architecture constraints |
