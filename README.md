@@ -13,7 +13,7 @@
 ---
 
 🕹️ **CRIE. EXPERIMENTE. TRANSFORME.** This repository builds the official website of
-[Fab Lab CITe Bauru](https://www.instagram.com/fablabcitebauru/) (UNESP), designed as a
+[Fab Lab CITe Bauru](https://www.bauru.unesp.br/#!/citeb/fab-lab) (UNESP), designed as a
 game 🎮: every volunteer gets a customizable **pixel-art avatar** 👾, earns **XP** ⭐ by watching
 classes, publishing projects, 3D models and articles, levels up **skills** 🛠️ (3D modeling,
 laser cutting, 3D printing, electronics, design), completes **missions** 🎯 curated by the
