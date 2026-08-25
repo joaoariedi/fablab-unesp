@@ -140,16 +140,8 @@ contributions earn you real-life XP ⭐):
 
 **Main contributors**
 
-<table>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/joaoariedi"><img src="https://github.com/joaoariedi.png?size=100" width="80" alt="John Ariedi"/><br/><sub><b>John Ariedi</b></sub></a><br/><sub>🛠️ Product & engineering</sub>
-    </td>
-    <td align="center">
-      <a href="https://github.com/sophiabort"><img src="https://github.com/sophiabort.png?size=100" width="80" alt="sophiabort"/><br/><sub><b>sophiabort</b></sub></a><br/><sub>🎨 Design & art</sub>
-    </td>
-  </tr>
-</table>
+- [John Ariedi](https://github.com/joaoariedi) — 🛠️ Engineering
+- [sophiabort](https://github.com/sophiabort) — 🎨 Design & art
 
 - **Design & art** — visual identity, mockups and all pixel-art/sprite production by
   [sophiabort](https://github.com/sophiabort).
