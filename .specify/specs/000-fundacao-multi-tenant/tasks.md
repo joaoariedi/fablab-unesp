@@ -6,6 +6,23 @@ Derived from [`spec.md`](spec.md), [`plan.md`](plan.md), [`data-model.md`](data-
 and [`contracts/tenancy.md`](contracts/tenancy.md). Carry-forwards CF-1, CF-3, CF-4, CF-7,
 CF-8 and CF-9 are folded in as numbered tasks rather than left as prose.
 
+## Status — reconciled against the shipped code, 2026-08-26
+
+**73 of 75 done.** Every tick below was **verified against the repository**, not marked from
+memory: each task's concrete artifact was checked to exist and to contain the thing the task
+describes. The list was written at a finer grain than the work landed, so most of these
+shipped inside larger commits rather than one-per-task.
+
+Two are not done, and both say why rather than being quietly ticked:
+
+| # | State |
+|---|---|
+| **T018** | **Deviation.** The skeleton merged inside PR #2 alongside the guardrails instead of as its own early PR. Spec decision 5 wanted it separate so feature 001 could begin in parallel; that parallelism was not realised. Feature 001 is unblocked now anyway, but the decision was not honoured and pretending otherwise would hide a real scheduling cost. |
+| **T075** | **Open, and not mine to close.** SC-001 needs a person who has never seen the repository. The author cannot validate their own instructions — that is the entire point of the criterion. |
+
+Feature 000's verification state: **97 of 98 checks**, 95 tests across 10 files, 11
+merge-blocking CI gates on `dev` and `main`, all green on `dev`.
+
 ## Read before starting
 
 Four ordering facts are load-bearing. Getting them wrong does not fail loudly.
@@ -67,33 +84,33 @@ should be exercised on Node 22 with pnpm.
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T009 | Workspace root: pnpm workspaces, Node 22 + pnpm pinned via `packageManager`, `.nvmrc` | FR-001 | `package.json`, `pnpm-workspace.yaml`, `.nvmrc` | — |
-| T010 | [P] `packages/game` with README stating its constitutional role (no Payload, no IO, explicit `tenantId`) | FR-030 | `packages/game/{package.json,README.md}` | T009 |
-| T011 | [P] `packages/ui` placeholder with README (feature 001 fills it) | FR-030 | `packages/ui/{package.json,README.md}` | T009 |
-| T012 | `apps/web` Next App Router scaffold; **Next ≥16.2.6 <17 pinned** (spike: Payload 3.88's peer range excludes 15.5.x entirely; 16.3.3 verified installing clean) | FR-002, FR-005 | `apps/web/{package.json,next.config.mjs,tsconfig.json}` | T009 |
-| T013 | [P] Compose: PostgreSQL + MinIO + bucket-init step | FR-003 | `infra/docker-compose.yml`, `infra/minio-init.sh` | T009 |
-| T014 | [P] `.env.example` listing **every** variable the app reads, with dev defaults and `SEED_MASTER_*` | FR-024, FR-026 | `.env.example` | T009 |
-| T015 | Vitest config for unit + integration (spec decision 2) | FR-023 | `apps/web/vitest.config.ts` | T012 |
-| T016 | Startup fails with a message naming `DATABASE_URI` and its expected shape — never a bare stack trace | US1 error case | `apps/web/lib/env.ts` | T012 |
-| T017 | README quick start: clone → `docker compose up` → `pnpm install` → `pnpm dev` → `/admin` | FR-024 | `README.md` | T013, T014, T016 |
-| T018 | **Open the skeleton PR and merge it** before guardrail work continues | spec decision 5 | — | T017 |
+| T009 | ✅ Workspace root: pnpm workspaces, Node 22 + pnpm pinned via `packageManager`, `.nvmrc` | FR-001 | `package.json`, `pnpm-workspace.yaml`, `.nvmrc` | — |
+| T010 | ✅ [P] `packages/game` with README stating its constitutional role (no Payload, no IO, explicit `tenantId`) | FR-030 | `packages/game/{package.json,README.md}` | T009 |
+| T011 | ✅ [P] `packages/ui` placeholder with README (feature 001 fills it) | FR-030 | `packages/ui/{package.json,README.md}` | T009 |
+| T012 | ✅ `apps/web` Next App Router scaffold; **Next ≥16.2.6 <17 pinned** (spike: Payload 3.88's peer range excludes 15.5.x entirely; 16.3.3 verified installing clean) | FR-002, FR-005 | `apps/web/{package.json,next.config.mjs,tsconfig.json}` | T009 |
+| T013 | ✅ [P] Compose: PostgreSQL + MinIO + bucket-init step | FR-003 | `infra/docker-compose.yml`, `infra/minio-init.sh` | T009 |
+| T014 | ✅ [P] `.env.example` listing **every** variable the app reads, with dev defaults and `SEED_MASTER_*` | FR-024, FR-026 | `.env.example` | T009 |
+| T015 | ✅ Vitest config for unit + integration (spec decision 2) | FR-023 | `apps/web/vitest.config.ts` | T012 |
+| T016 | ✅ Startup fails with a message naming `DATABASE_URI` and its expected shape — never a bare stack trace | US1 error case | `apps/web/lib/env.ts` | T012 |
+| T017 | ✅ README quick start: clone → `docker compose up` → `pnpm install` → `pnpm dev` → `/admin` | FR-024 | `README.md` | T013, T014, T016 |
+| T018 | ⚠ **Deviation.** The skeleton shipped inside PR #2 with the guardrails rather than as its own early PR. Spec decision 5 wanted it separate so feature 001 could start in parallel; that parallelism was not realised. Feature 001 is unblocked now regardless, but the decision was not honoured. **Open the skeleton PR and merge it** before guardrail work continues | spec decision 5 | — | T017 |
 
 ## Phase 2: Foundational
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T019 | Payload 3 config with the multi-tenant plugin **registered before any collection**; tenant field name is `tenant` (S1) | FR-007 | `apps/web/payload.config.ts` | T008, T018 |
-| T020 | ESLint import boundary + `no-restricted-syntax` for `.payload` / `{ payload }` / `.drizzle` (Sketch 7) | FR-014 | `eslint.config.mjs` | T018 |
-| T021 | Import-boundary entry forbidding Payload imports inside `packages/game` | FR-030 | `eslint.config.mjs` | T020 |
-| T022 | `SCOPE_REGISTRY` with all **four** entries (`organizations`, `users` global; `tenantCanaries`, `pendingInvites` scoped), each with a `why` | FR-017 | `apps/web/lib/tenancy/scope-registry.ts` | T019 |
-| T023 | Registry test diffing keys against `payload.config.collections` in **both** directions | FR-018, SC-004 | `apps/web/tests/tenancy/registry.test.ts` | T022 |
-| T024 | `organizations`: `name`, immutable unique `slug`, `domains[]`, `status`, `theme` (`logoUrl` is **text/URL, not an upload field**), quota fields, `lgpdContact`; PT-BR labels | FR-008, FR-025 | `apps/web/collections/Organizations.ts` | T022 |
-| T025 | `users`: auth, unique e-mail, global role `master \| user`, and `orgs[]` **as the plugin's tenants-array field** (S2) | FR-009, FR-025 | `apps/web/collections/Users.ts` | T022 |
-| T026 | Membership uniqueness validator — `orgs[].organization` unique within a user (Payload has no composite unique across array rows) | FR-009 | `apps/web/collections/Users.ts` | T025 |
-| T027 | `tenantCanaries` with a scoped→scoped `related` relationship; purpose stated in the file header so it is not deleted as dead code | FR-028 | `apps/web/collections/TenantCanaries.ts` | T022 |
-| T028 | `pendingInvites`: `email`, `role`, `invitedBy`, plugin-injected `tenant`; unique per `(tenant, email)` via validator | FR-029 | `apps/web/collections/PendingInvites.ts` | T022 |
-| T029 | Declare indexes: `organizations.slug`, `users.email`, `organizations.domains`. **Not `tenant`** — spike S1 proved the plugin already indexes it and the setting is not overridable; `users.orgs[].organization` likewise | FR-008, FR-009 | collection files | T024, T025, T027, T028 |
-| T030 | Generate and commit migrations; `push` restricted to dev | FR-004 | `apps/web/migrations/*` | T029 |
+| T019 | ✅ Payload 3 config with the multi-tenant plugin **registered before any collection**; tenant field name is `tenant` (S1) | FR-007 | `apps/web/payload.config.ts` | T008, T018 |
+| T020 | ✅ ESLint import boundary + `no-restricted-syntax` for `.payload` / `{ payload }` / `.drizzle` (Sketch 7) | FR-014 | `eslint.config.mjs` | T018 |
+| T021 | ✅ Import-boundary entry forbidding Payload imports inside `packages/game` | FR-030 | `eslint.config.mjs` | T020 |
+| T022 | ✅ `SCOPE_REGISTRY` with all **four** entries (`organizations`, `users` global; `tenantCanaries`, `pendingInvites` scoped), each with a `why` | FR-017 | `apps/web/lib/tenancy/scope-registry.ts` | T019 |
+| T023 | ✅ Registry test diffing keys against `payload.config.collections` in **both** directions | FR-018, SC-004 | `apps/web/tests/tenancy/registry.test.ts` | T022 |
+| T024 | ✅ `organizations`: `name`, immutable unique `slug`, `domains[]`, `status`, `theme` (`logoUrl` is **text/URL, not an upload field**), quota fields, `lgpdContact`; PT-BR labels | FR-008, FR-025 | `apps/web/collections/Organizations.ts` | T022 |
+| T025 | ✅ `users`: auth, unique e-mail, global role `master \| user`, and `orgs[]` **as the plugin's tenants-array field** (S2) | FR-009, FR-025 | `apps/web/collections/Users.ts` | T022 |
+| T026 | ✅ Membership uniqueness validator — `orgs[].organization` unique within a user (Payload has no composite unique across array rows) | FR-009 | `apps/web/collections/Users.ts` | T025 |
+| T027 | ✅ `tenantCanaries` with a scoped→scoped `related` relationship; purpose stated in the file header so it is not deleted as dead code | FR-028 | `apps/web/collections/TenantCanaries.ts` | T022 |
+| T028 | ✅ `pendingInvites`: `email`, `role`, `invitedBy`, plugin-injected `tenant`; unique per `(tenant, email)` via validator | FR-029 | `apps/web/collections/PendingInvites.ts` | T022 |
+| T029 | ✅ Declare indexes: `organizations.slug`, `users.email`, `organizations.domains`. **Not `tenant`** — spike S1 proved the plugin already indexes it and the setting is not overridable; `users.orgs[].organization` likewise | FR-008, FR-009 | collection files | T024, T025, T027, T028 |
+| T030 | ✅ Generate and commit migrations; `push` restricted to dev | FR-004 | `apps/web/migrations/*` | T029 |
 
 ## Phase 3: User Stories (by priority)
 
@@ -103,24 +120,24 @@ should be exercised on Node 22 with pnpm.
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T031 | **System client (CF-1)** — `getSystemScopedPayload(tenantId)`; **`addMembership` declared in `TenantScopedPayload`**, and tenant-`where` semantics applied **only to collections the registry marks `scoped`** | FR-032, CF-1, CF-8 | `apps/web/lib/tenancy/system-payload.ts` | T023 |
-| T032 | Allowlisted reads: `unscopedLookup`, `unscopedFindUserByEmail` — each with a reason comment | FR-013 | `apps/web/lib/tenancy/unscoped.ts` | T023 |
-| T033 | **Choke point** — `overrideAccess: false` + request `user`; `find`/`findByID` merge tenant into caller `where`; `update`/`delete` issued with a tenant-scoped `where` on the id (no read-modify race). **Consults `SCOPE_REGISTRY` (CF-8)** so global collections are never tenant-stamped or tenant-filtered | FR-013, FR-015, CF-8 | `apps/web/lib/tenancy/scoped-payload.ts` | T031, T032 |
-| T034 | **RSC calling convention (CF-4)** — document and implement how a server component obtains a `req` for the choke point; host read from `PayloadRequest` with `next/headers` only as fallback, so it also runs under Vitest | FR-013, CF-4 | `apps/web/lib/tenancy/scoped-payload.ts`, `contracts/tenancy.md` | T033 |
-| T035 | Access factories returning a **query constraint, never a boolean** — master is the sole `true` (**CF-9: FR-015's "except master" wording reconciled in spec**) | FR-015, CF-9 | `apps/web/lib/tenancy/access.ts` | T033 |
-| T036 | Same-tenant validator: `normalizeRefs` covering hasMany, polymorphic `{relationTo, value}` and populated objects; globals always pass; message names **the field only**. **Spike S4:** it runs *before* the tenant field's own "required" error, so a create with no tenant hands it `tenant: null` — return `true` and let the tenant field own that error; and read `data.tenant`, not `siblingData.tenant`, for any relationship nested in a group/array | FR-016, SC-005 | `apps/web/lib/tenancy/same-tenant-validator.ts` | T035 |
-| T037 | Attach the validator to **every** scoped→scoped relationship; placement per S4 (`beforeChange` if the tenant is stamped after validation) | FR-016 | `apps/web/collections/TenantCanaries.ts` | T036 |
-| T038 | Seed-on-create registry + `afterChange` hook scoped to `doc.id` via the system client | FR-010, FR-031 | `apps/web/lib/tenancy/seed-on-create.ts` | T033 |
-| T039 | `lib/tenancy/index.ts` public surface — **`getSystemScopedPayload` and `unscoped*` are never exported** | FR-013, FR-032 | `apps/web/lib/tenancy/index.ts` | T038 |
+| T031 | ✅ **System client (CF-1)** — `getSystemScopedPayload(tenantId)`; **`addMembership` declared in `TenantScopedPayload`**, and tenant-`where` semantics applied **only to collections the registry marks `scoped`** | FR-032, CF-1, CF-8 | `apps/web/lib/tenancy/system-payload.ts` | T023 |
+| T032 | ✅ Allowlisted reads: `unscopedLookup`, `unscopedFindUserByEmail` — each with a reason comment | FR-013 | `apps/web/lib/tenancy/unscoped.ts` | T023 |
+| T033 | ✅ **Choke point** — `overrideAccess: false` + request `user`; `find`/`findByID` merge tenant into caller `where`; `update`/`delete` issued with a tenant-scoped `where` on the id (no read-modify race). **Consults `SCOPE_REGISTRY` (CF-8)** so global collections are never tenant-stamped or tenant-filtered | FR-013, FR-015, CF-8 | `apps/web/lib/tenancy/scoped-payload.ts` | T031, T032 |
+| T034 | ✅ **RSC calling convention (CF-4)** — document and implement how a server component obtains a `req` for the choke point; host read from `PayloadRequest` with `next/headers` only as fallback, so it also runs under Vitest | FR-013, CF-4 | `apps/web/lib/tenancy/scoped-payload.ts`, `contracts/tenancy.md` | T033 |
+| T035 | ✅ Access factories returning a **query constraint, never a boolean** — master is the sole `true` (**CF-9: FR-015's "except master" wording reconciled in spec**) | FR-015, CF-9 | `apps/web/lib/tenancy/access.ts` | T033 |
+| T036 | ✅ Same-tenant validator: `normalizeRefs` covering hasMany, polymorphic `{relationTo, value}` and populated objects; globals always pass; message names **the field only**. **Spike S4:** it runs *before* the tenant field's own "required" error, so a create with no tenant hands it `tenant: null` — return `true` and let the tenant field own that error; and read `data.tenant`, not `siblingData.tenant`, for any relationship nested in a group/array | FR-016, SC-005 | `apps/web/lib/tenancy/same-tenant-validator.ts` | T035 |
+| T037 | ✅ Attach the validator to **every** scoped→scoped relationship; placement per S4 (`beforeChange` if the tenant is stamped after validation) | FR-016 | `apps/web/collections/TenantCanaries.ts` | T036 |
+| T038 | ✅ Seed-on-create registry + `afterChange` hook scoped to `doc.id` via the system client | FR-010, FR-031 | `apps/web/lib/tenancy/seed-on-create.ts` | T033 |
+| T039 | ✅ `lib/tenancy/index.ts` public surface — **`getSystemScopedPayload` and `unscoped*` are never exported** | FR-013, FR-032 | `apps/web/lib/tenancy/index.ts` | T038 |
 
 **Host resolution**
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T040 | Proxy: strip inbound `x-tenant`, forward host on **request** headers; no Payload import, no database. **File is `proxy.ts` with a default export** — Next 16 deprecated `middleware` (spike S9), and the runtime follows the convention (`edge` → `nodejs`). S9 verified propagation to both a Route Handler and an RSC | FR-011, SC-012 | `apps/web/proxy.ts` | T018 |
-| T041 | **Pure** `lookupOrganizationByHost(host, deps)`: `<slug>.<domain>` and `organizations.domains`, **`active` only**; returns `Organization \| null`. Kept free of `next/cache` so tests can call it directly — **spike S8 proved `unstable_cache`, `revalidateTag` and `headers()` all throw outside a Next request scope**, so without this seam SC-006 and CHK031 cannot run at all | FR-011, FR-012, CF-3 | `apps/web/lib/tenancy/resolve.ts` | T033 |
-| T042 | Cached wrapper `resolveTenant` over T041, with the cache injected rather than imported: `revalidateTag` on organization change, and **never cache a sovereign-fallback hit or a `null`** — otherwise org B's subdomain serves org A's context for the whole TTL | FR-011, FR-012, CF-3 | `apps/web/lib/tenancy/resolve.ts` | T041 |
-| T043 | Unresolved host → `TenantUnresolvedError` at the choke point → 404 at the route; never "first organization" | FR-012, US4 error | `apps/web/lib/tenancy/resolve.ts` | T042 |
+| T040 | ✅ Proxy: strip inbound `x-tenant`, forward host on **request** headers; no Payload import, no database. **File is `proxy.ts` with a default export** — Next 16 deprecated `middleware` (spike S9), and the runtime follows the convention (`edge` → `nodejs`). S9 verified propagation to both a Route Handler and an RSC | FR-011, SC-012 | `apps/web/proxy.ts` | T018 |
+| T041 | ✅ **Pure** `lookupOrganizationByHost(host, deps)`: `<slug>.<domain>` and `organizations.domains`, **`active` only**; returns `Organization \| null`. Kept free of `next/cache` so tests can call it directly — **spike S8 proved `unstable_cache`, `revalidateTag` and `headers()` all throw outside a Next request scope**, so without this seam SC-006 and CHK031 cannot run at all | FR-011, FR-012, CF-3 | `apps/web/lib/tenancy/resolve.ts` | T033 |
+| T042 | ✅ Cached wrapper `resolveTenant` over T041, with the cache injected rather than imported: `revalidateTag` on organization change, and **never cache a sovereign-fallback hit or a `null`** — otherwise org B's subdomain serves org A's context for the whole TTL | FR-011, FR-012, CF-3 | `apps/web/lib/tenancy/resolve.ts` | T041 |
+| T043 | ✅ Unresolved host → `TenantUnresolvedError` at the choke point → 404 at the route; never "first organization" | FR-012, US4 error | `apps/web/lib/tenancy/resolve.ts` | T042 |
 
 **Invite (FR-029 scope: membership + pending record only)**
 
@@ -141,10 +158,10 @@ should be exercised on Node 22 with pnpm.
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T049 | **Write the harness and observe it RED** with the tenant constraint removed; capture the output for the PR | FR-020, SC-002 | `apps/web/tests/tenancy/isolation.test.ts` | T035, T037 |
-| T050 | Restore the constraint; harness green. Matrix over `scopedCollections()` × `{restApi, localApiAsRsc, adminRest, customEndpoint}`, with `expect(scopedCollections().length).toBeGreaterThan(0)` so an empty matrix is itself a failure | FR-019, SC-002 | same as T049 | T049 |
+| T049 | ✅ **Write the harness and observe it RED** with the tenant constraint removed; capture the output for the PR | FR-020, SC-002 | `apps/web/tests/tenancy/isolation.test.ts` | T035, T037 |
+| T050 | ✅ Restore the constraint; harness green. Matrix over `scopedCollections()` × `{restApi, localApiAsRsc, adminRest, customEndpoint}`, with `expect(scopedCollections().length).toBeGreaterThan(0)` so an empty matrix is itself a failure | FR-019, SC-002 | same as T049 | T049 |
 | T051 | ✅ **`customEndpoint` subjects (CF-9)** — declare a read endpoint on `TenantCanaries` **and** on `pendingInvites`, else that surface exercises nothing | FR-019, CF-9 | `apps/web/collections/{TenantCanaries,PendingInvites}.ts` | T050 |
-| T052 | Header in the test file recording that genuine rendered-RSC and admin-UI surfaces are closed by Playwright in feature 003 — `localApiAsRsc` is the Local API called as an RSC would, not a rendered RSC | FR-019 | same as T049 | T050 |
+| T052 | ✅ Header in the test file recording that genuine rendered-RSC and admin-UI surfaces are closed by Playwright in feature 003 — `localApiAsRsc` is the Local API called as an RSC would, not a rendered RSC | FR-019 | same as T049 | T050 |
 
 **Guardrail tests — one per mechanism**
 
