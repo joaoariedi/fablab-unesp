@@ -181,7 +181,7 @@ should be exercised on Node 22 with pnpm.
 | T071 | Record CLR-002 naming decision beside the tenancy section | FR-025 | `docs/tech-stack.md` | T030 |
 | T072 | Reconcile `contracts/tenancy.md` with what shipped: `addMembership` in the type (CF-1), registry-aware clauses 2–3 (CF-8), RSC calling convention (CF-4) | CF-1, CF-4, CF-8 | `contracts/tenancy.md` | T034, T044 |
 | T073 | Tick the CHK001–CHK033 checklist against the implementation | all | `checklists/requirements.md` | T067 |
-| T074 | **SC-008 manual validation** (not a CI job): run the suite against an alternate `.env` pointing at a second Postgres and an S3-compatible endpoint; assert **zero source diffs** | SC-008, FR-006 | manual | T067 |
+| T074 | ✅ **Validated 2026-08-26.** Suite run against a deliberately different stack — Postgres on `65432` with `managed_user/managed_pass/managed_db`, MinIO on `19000` with `managed_key/managed-bucket`, region `sa-east-1`. Nothing matched `infra/docker-compose.yml`, so anything hardcoded would have failed rather than accidentally still working. 87/87 tests passed, migrations applied, seed ran, `/admin` returned 200 and the seeded master authenticated. Tracked-source fingerprint identical before and after (`3896362ba769b2ed`), working tree 0 changes.<br><br>**SC-008 manual validation** (not a CI job): run the suite against an alternate `.env` pointing at a second Postgres and an S3-compatible endpoint; assert **zero source diffs** | SC-008, FR-006 | manual | T067 |
 | T075 | **SC-001 validation by a second person** on a clean machine; record elapsed time and every point of friction | SC-001 | manual | T017 |
 
 ## Deviations from `plan.md`
