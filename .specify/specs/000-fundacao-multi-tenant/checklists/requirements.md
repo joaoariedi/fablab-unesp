@@ -9,14 +9,13 @@ CHK001–CHK033 were carried over from the original auto-generated list (substan
 IDs stable); CHK034–CHK048 close gaps found while generating the security and API
 checklists.
 
-**Reviewed against the implementation on 2026-08-26 (T073).** 93 of 98 checks across the
-three files are satisfied. **Five are deliberately left open** rather than ticked — a
+**Reviewed against the implementation on 2026-08-26 (T073).** 94 of 98 checks across the
+three files are satisfied. **Four are deliberately left open** rather than ticked — a
 checklist that is all green because the author wanted it green is worth nothing:
 
 | Open | Why |
 |---|---|
 | CHK010, CHK013, CHK030 | The probe commits *were* rejected — but locally. GitHub Actions entered a major outage before the probe PR could run, so the CI half of SC-003/SC-004 is unproven. Re-run once Actions recovers. |
-| CHK014 | Three of four harness surfaces are covered (`chokePoint`, `localApiAsRsc`, `customEndpoint`). `restApi` and `adminRest` need a running HTTP server in the test setup. |
 | CHK019 | SC-001 requires a person who has never seen the repository. The author cannot validate their own instructions — that is the point of the criterion. |
 
 | ID | Check | Dimension | FR/US Ref | Status |
@@ -34,7 +33,7 @@ checklist that is all green because the author wanted it green is worth nothing:
 | CHK011 | No scoped collection is described as returning a boolean from an access function — the constraint rule has no stated exception except master | [consistency] | FR-015| [x] |
 | CHK012 | The validator is required on **every** relationship between scoped collections, not a sample | [completeness] | FR-016| [x] |
 | CHK013 | The registry gate is stated so SC-004's probe commit fails CI **naming** the unregistered collection | [testability] | FR-017, FR-018, SC-004| [ ] ⚠ SC-004's probe commit is proven locally but not in CI — PR #3 |
-| CHK014 | All four harness surfaces are named and honestly labelled: REST, `localApiAsRsc` (the Local API called as a server component would — **not** a rendered RSC), `adminRest`, `customEndpoint` | [completeness] | FR-019| [ ] ⚠ only three of four surfaces are covered; restApi and adminRest need an HTTP fixture |
+| CHK014 | All four harness surfaces are named and honestly labelled: REST, `localApiAsRsc` (the Local API called as a server component would — **not** a rendered RSC), `adminRest`, `customEndpoint` | [completeness] | FR-019| [x] |
 | CHK015 | Red→green is stated as recorded evidence, not a claim: the PR shows the harness failing with the constraint removed, then passing | [testability] | FR-020| [x] |
 | CHK016 | Invite semantics are comparable: SC-007 defines status, body **and** timing class for existing and non-existing e-mails | [testability] | FR-021, SC-007| [x] |
 | CHK017 | Admin scoping states both halves: organization admins cannot see `organizations` or `users`; master can | [completeness] | FR-022| [x] |

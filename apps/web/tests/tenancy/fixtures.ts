@@ -18,6 +18,12 @@ export type Fixture = {
   userA: Record<string, unknown>
   userB: Record<string, unknown>
   master: Record<string, unknown>
+  /**
+   * Real auth tokens, obtained through `payload.login`. The REST surfaces need them: an
+   * unauthenticated REST call is refused before access control is ever consulted, so a
+   * harness without tokens would assert 403-for-everyone and prove nothing about tenancy.
+   */
+  tokens: { userA: string; userB: string; master: string }
   /** Row ids per collection, per organization: rows.tenantCanaries.A */
   rows: Record<string, { A: string | number; B: string | number }>
 }
@@ -119,8 +125,23 @@ export async function buildWorld(): Promise<Fixture> {
     rows[collection] = { A: rowA.id, B: rowB.id }
   }
 
+  const login = async (email: string): Promise<string> => {
+    const result = await payload.login({
+      collection: 'users',
+      data: { email, password: PASSWORD },
+    })
+    const token = (result as { token?: string }).token
+    if (!token) throw new Error(`fixtures: could not obtain a token for ${email}`)
+    return token
+  }
+
   return {
     payload,
+    tokens: {
+      userA: await login('a@example.com'),
+      userB: await login('b@example.com'),
+      master: await login('master@example.com'),
+    },
     orgA: { id: String(a.id), slug: 'org-a', host: 'org-a.localhost' },
     orgB: { id: String(b.id), slug: 'org-b', host: 'org-b.localhost' },
     userA: { ...userA, collection: 'users' },
