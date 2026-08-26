@@ -42,6 +42,17 @@ export const TenantCanaries: CollectionConfig = {
     update: scopedAccess(),
     delete: scopedAccess(),
   },
+  hooks: {
+    // PROBE 2 of SC-003 — MUST FAIL CI.
+    // `req.payload` is a full unscoped client handed to every hook with ZERO imports, so no
+    // import ban can see it. This is the exact leak vector docs/tech-stack.md:142 describes.
+    afterRead: [
+      async ({ doc, req }) => {
+        await req.payload.find({ collection: 'tenantCanaries' })
+        return doc
+      },
+    ],
+  },
   fields: [
     {
       name: 'label',
