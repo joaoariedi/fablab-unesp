@@ -1,5 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 
+import { REST_GET } from '@payloadcms/next/routes'
+
 import configPromise from '../../payload.config'
 import { lookupOrganizationByHost } from '../../lib/tenancy/resolve'
 import { getTenantScopedPayload } from '../../lib/tenancy/scoped-payload'
@@ -14,21 +16,25 @@ import { buildWorld, type Fixture } from './fixtures'
  * adding a scoped collection in feature 002 automatically adds its assertions rather than
  * relying on someone remembering to.
  *
- * ## Surfaces covered here, and the ones that are not
+ * ## The five surfaces
  *
- * In-process surfaces are driven directly:
- *   - `chokePoint`    — `getTenantScopedPayload`, the sanctioned path all app code uses
+ *   - `chokePoint`     — `getTenantScopedPayload`, the sanctioned path all app code uses
  *   - `localApiAsRsc`  — Payload's Local API called the way a server component calls it:
  *                        `overrideAccess: false` with a user. **Not** a rendered RSC; the
  *                        name says what it is so nobody mistakes this for UI coverage.
- *   - `customEndpoint` — the collection's own `/mine` endpoint, invoked exactly as Payload
- *                        invokes it, on every scoped collection (T051).
+ *   - `customEndpoint` — the collection's own `/mine` endpoint, invoked as Payload invokes it
+ *   - `restApi`        — Payload's generated REST API via the real route handler, bearer auth
+ *   - `adminRest`      — the same REST endpoints via a session cookie, as the admin panel uses
  *
- * **Not yet covered: `restApi` and `adminRest`.** Both need a running HTTP server in the
- * test setup, which is real work rather than a line change. They are tracked as remaining
- * feature-000 work, and the surface-count assertion below is what stops this file from
- * quietly looking complete. Genuine rendered-UI coverage arrives with Playwright in
- * feature 003.
+ * `docs/tech-stack.md` names four surfaces; this covers all of them, and splits REST into
+ * its two authentication paths because an access rule can hold for a bearer token and not
+ * for a session cookie — which would leak through the panel while every API test stayed
+ * green.
+ *
+ * **What this does not cover.** The REST surfaces call the route handler in-process rather
+ * than over a socket, so Next's router and the proxy layer are excluded — neither carries
+ * tenancy logic, and the proxy was measured separately in spike S9. Genuine rendered-UI
+ * coverage arrives with Playwright in feature 003.
  */
 
 let world: Fixture
@@ -83,10 +89,58 @@ const customEndpoint: Surface = async ({ as, host, collection }) => {
   return body.docs ?? []
 }
 
+/**
+ * Payload's generated REST API — the public one, mounted at `app/(payload)/api/[...slug]`.
+ *
+ * This drives the **real** route handler (`REST_GET(config)`) with a real `Request`, so it
+ * exercises the whole REST path: header authentication, Payload's access composition, our
+ * access factories, and serialisation. What it does not exercise is the socket and Next's
+ * router — those carry no tenancy logic, and the proxy layer that does was measured
+ * separately in spike S9.
+ *
+ * The token matters. An unauthenticated REST call is refused before access control is ever
+ * consulted, so a harness without real credentials would assert 403-for-everyone and prove
+ * nothing at all about tenancy.
+ */
+const restCall = async (collection: string, authHeader: Record<string, string>) => {
+  const config = await configPromise
+  const handler = REST_GET(config)
+  const request = new Request(`http://org-a.localhost/api/${collection}?depth=0&limit=100`, {
+    headers: new Headers(authHeader),
+  })
+  const response = await handler(request, { params: Promise.resolve({ slug: [collection] }) })
+  if (response.status === 403) return [] // "zero rows OR 403" — SC-002 accepts both
+  const body = (await response.json()) as { docs?: Record<string, unknown>[] }
+  return body.docs ?? []
+}
+
+const tokenFor = (as: Record<string, unknown>): string => {
+  const email = as.email as string
+  if (email === 'a@example.com') return world.tokens.userA
+  if (email === 'b@example.com') return world.tokens.userB
+  return world.tokens.master
+}
+
+/** Bearer authentication — how an API client reaches the REST surface. */
+const restApi: Surface = async ({ as, collection }) =>
+  restCall(collection, { Authorization: `JWT ${tokenFor(as)}` })
+
+/**
+ * Cookie authentication — how the **admin panel** reaches the very same REST endpoints.
+ *
+ * Worth its own surface rather than folding into `restApi`: the two differ in how identity
+ * is established, and an access rule that held for a bearer token but not for a session
+ * cookie would leak through the panel while every API test stayed green.
+ */
+const adminRest: Surface = async ({ as, collection }) =>
+  restCall(collection, { Cookie: `payload-token=${tokenFor(as)}` })
+
 const SURFACES: [string, Surface][] = [
   ['chokePoint', chokePoint],
   ['localApiAsRsc', localApiAsRsc],
   ['customEndpoint', customEndpoint],
+  ['restApi', restApi],
+  ['adminRest', adminRest],
 ]
 
 const tenantOf = (row: Record<string, unknown>): string => {
@@ -105,8 +159,13 @@ describe('cross-tenant isolation', () => {
     ).toBeGreaterThan(0)
   })
 
-  it('drives more than one surface', () => {
-    expect(SURFACES.length, 'A single-surface harness is not an isolation harness.').toBeGreaterThan(2)
+  it('drives every surface the architecture document names', () => {
+    // Not a count — a NAMED set. A count passes if someone deletes restApi and adds a
+    // duplicate of an easy surface; this does not.
+    const names = SURFACES.map(([n]) => n)
+    for (const required of ['chokePoint', 'localApiAsRsc', 'customEndpoint', 'restApi', 'adminRest']) {
+      expect(names, `surface '${required}' is missing — SC-002 is not being met`).toContain(required)
+    }
   })
 
   for (const collection of scopedCollections()) {

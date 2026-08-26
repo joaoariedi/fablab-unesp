@@ -132,6 +132,15 @@ Incorporar à spec da feature correspondente — não são opcionais:
 - Reserva barata: `modelos3d.visibilidade: 'privada' | 'rede'` declarado com **apenas
   `privada` implementada** — features de rede (biblioteca compartilhada, ranking
   cross-lab) só após decisão de produto.
+- **Nomes: slugs e campos em INGLÊS, rótulos do admin em PT-BR** — *decidido na feature 000
+  (CLR-002, 2026-08-25); implementado.* As collections são `organizations`, `users`,
+  `tenantCanaries`, `pendingInvites`; os campos são `name`, `slug`, `domains`, `status`. Os
+  nomes PT-BR das specs de produto (`organizacoes`, `usuarios`, `data_nascimento`, …) são um
+  **mapeamento**, não o schema — a tabela completa está em
+  `.specify/specs/000-fundacao-multi-tenant/data-model.md`. A equipe do lab continua lendo o
+  painel em português porque os **rótulos** (`labels`, `admin.description`) são PT-BR.
+  **Foi decidido antes da primeira collection existir de propósito:** renomear um campo
+  depois custa migração, e o slug da organização ainda alimenta hostname e chave de storage.
 
 ### O risco nº 1: vazamento cross-tenant silencioso
 

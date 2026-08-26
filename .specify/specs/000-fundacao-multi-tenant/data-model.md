@@ -4,7 +4,7 @@
 Four collections: two global (`organizations`, `users`) and two scoped — the canary that
 gives the guardrails a subject (FR-028) and `pendingInvites` (FR-029). Content collections
 arrive in feature 002 — they inherit the tenancy shape defined here, which is why this
-feature must land first (`docs/tech-stack.md:92`).
+feature must land first (`docs/tech-stack.md` § Modelo escolhido → Row-level em banco compartilhado).
 
 Naming follows CLR-002: **English slugs and field names, PT-BR admin labels.**
 
@@ -37,16 +37,16 @@ Two traps the spike surfaced, both binding on the validator:
 | Field | Type | Required | Notes |
 |---|---|---|---|
 | `name` | text | yes | Label: "Nome da organização" |
-| `slug` | text, unique | yes | **Immutable after creation** — storage keys (`org/<slug>/…`) and hosts depend on it (`docs/tech-stack.md:116`) |
+| `slug` | text, unique | yes | **Immutable after creation** — storage keys (`org/<slug>/…`) and hosts depend on it (`docs/tech-stack.md` § Modelo escolhido → Storage) |
 | `domains` | array of text | no | Extra hostnames beyond `<slug>.<domain>`; used by host resolution |
 | `status` | select | yes | `active \| suspended \| archived`; only `active` resolves by host. Enforcement semantics → feature 007 (spec decision 6) |
 | `theme` | group | no | Co-branding tokens: `primaryColor`, `logoUrl` (**text/URL, not an upload field** — no upload-enabled collection exists until feature 002), `heroImageUrl`. Consumed by feature 001 |
-| `storageQuotaMb` / `storageUsedMb` | number | no | Declared now; enforcement is feature 002 (`docs/tech-stack.md:116`) |
+| `storageQuotaMb` / `storageUsedMb` | number | no | Declared now; enforcement is feature 002 (`docs/tech-stack.md` § Modelo escolhido → Storage) |
 | `lgpdContact` | email | no | Data-protection contact per organization |
 
 ## `users` (global, auth-enabled)
 
-Identity is global, role is per organization (`docs/tech-stack.md:104`).
+Identity is global, role is per organization (`docs/tech-stack.md` § Modelo escolhido → Identidade global, papel por organização).
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
@@ -81,7 +81,7 @@ feature deliberately stops at authentication and membership (spec, scope boundar
 
 `apps/web/lib/tenancy/scope-registry.ts` declares every collection as `scoped` or `global`
 with a one-line justification; a test fails when a registered collection is missing from
-the Payload config or vice-versa (`docs/tech-stack.md:149`).
+the Payload config or vice-versa (`docs/tech-stack.md` § O risco nº 1 → 1. Choke point único).
 
 Initial contents:
 

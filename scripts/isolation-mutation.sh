@@ -117,4 +117,13 @@ if ! grep -qE "leaked [0-9]+ row" "$OUT"; then
 fi
 
 echo "── PASS: removing '$LAYER' made the harness fail on '$EXPECT' with a row leak."
-grep -E "leaked [0-9]+ row" "$OUT" | head -4
+
+# awk, not `grep | head`. Under `set -o pipefail` a pipeline whose reader exits first leaves
+# the writer with SIGPIPE, and the whole script then exits non-zero AFTER announcing PASS.
+# It is timing-dependent, so it passed locally and failed on CI's slower I/O — and it only
+# appeared once the harness grew to five surfaces and produced more than four leak lines.
+# A gate that fails intermittently for a reason unrelated to what it tests is worse than no
+# gate: it teaches people to ignore it.
+awk '/leaked [0-9]+ row/ && n++ < 4' "$OUT"
+
+exit 0

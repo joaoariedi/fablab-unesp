@@ -9,56 +9,64 @@ CHK001–CHK033 were carried over from the original auto-generated list (substan
 IDs stable); CHK034–CHK048 close gaps found while generating the security and API
 checklists.
 
+**Reviewed against the implementation on 2026-08-26 (T073).** 97 of 98 checks across the
+three files are satisfied. **One is deliberately left open** rather than ticked — a
+checklist that is all green because the author wanted it green is worth nothing:
+
+| Open | Why |
+|---|---|
+| CHK019 | SC-001 requires a person who has never seen the repository. The author cannot validate their own instructions — that is the point of the criterion. |
+
 | ID | Check | Dimension | FR/US Ref | Status |
 |----|-------|-----------|-----------|--------|
-| CHK001 | Layout matches the constitution's monorepo: `apps/web`, `packages/game`, `packages/ui`, `infra/` | [completeness] | FR-001, FR-002 | [ ] |
-| CHK002 | The env-only swap is stated as verifiable: SC-008 runs the suite against an alternate `.env` with **zero source diffs** | [testability] | FR-003, FR-006, SC-008 | [ ] |
-| CHK003 | "Migrations are committed" is stated so a clean database reaching current schema by committed migrations **only** is checkable | [testability] | FR-004 | [ ] |
-| CHK004 | Next, Payload and the plugin have **exact** pins recorded, with the upgrade policy referenced | [completeness] | FR-005 | [ ] |
-| CHK005 | No content collection exists in this branch; the plugin is configured first — the requirement is unambiguous about ordering | [consistency] | FR-007 | [ ] |
-| CHK006 | `organizations` names every field, and says the slug is unique **and** immutable after creation; `status` and quota fields present even though unused here | [completeness] | FR-008 | [ ] |
-| CHK007 | One e-mail = one account globally; role lives per membership, not per user — no contradiction with FR-021 or FR-029 | [consistency] | FR-009 | [ ] |
-| CHK008 | Seed-on-create is written as copy-on-create, with "nothing resolves through a global fallback at read time" stated, not implied | [testability] | FR-010 | [ ] |
-| CHK009 | The sovereign fallback is measurable: SC-006 proves two different hosts resolve to the single organization with no master user | [testability] | FR-011, FR-012, SC-006 | [ ] |
-| CHK010 | The choke point requirement names the enforcement mechanism and the allowlist policy, so SC-003's probe commits have a defined pass/fail | [testability] | FR-013, FR-014, SC-003 | [ ] |
-| CHK011 | No scoped collection is described as returning a boolean from an access function — the constraint rule has no stated exception except master | [consistency] | FR-015 | [ ] |
-| CHK012 | The validator is required on **every** relationship between scoped collections, not a sample | [completeness] | FR-016 | [ ] |
-| CHK013 | The registry gate is stated so SC-004's probe commit fails CI **naming** the unregistered collection | [testability] | FR-017, FR-018, SC-004 | [ ] |
-| CHK014 | All four harness surfaces are named and honestly labelled: REST, `localApiAsRsc` (the Local API called as a server component would — **not** a rendered RSC), `adminRest`, `customEndpoint` | [completeness] | FR-019 | [ ] |
-| CHK015 | Red→green is stated as recorded evidence, not a claim: the PR shows the harness failing with the constraint removed, then passing | [testability] | FR-020 | [ ] |
-| CHK016 | Invite semantics are comparable: SC-007 defines status, body **and** timing class for existing and non-existing e-mails | [testability] | FR-021, SC-007 | [ ] |
-| CHK017 | Admin scoping states both halves: organization admins cannot see `organizations` or `users`; master can | [completeness] | FR-022 | [ ] |
-| CHK018 | Docs-stage gates are stated as retained alongside the new jobs — the "grows, never shrinks" rule has no exception for this feature | [consistency] | FR-023, US10 | [ ] |
-| CHK019 | The quick start is validated by a person, not by the author: SC-001 requires a second contributor on a clean machine | [testability] | FR-024, SC-001 | [ ] |
-| CHK020 | Routing shape is decided before deployment work begins, with the redesign trigger written down (path-only domain → FR-011/012 redesign) | [completeness] | CLR-001 | [ ] |
-| CHK021 | Slug/field language is decided **before** the first collection exists — renaming later requires migrations | [consistency] | CLR-002, FR-025 | [ ] |
-| CHK022 | The canary makes the harness non-vacuous: ≥1 test per surface, and a run with zero scoped collections is itself a failure | [testability] | FR-028 | [ ] |
-| CHK023 | Invite scope is bounded: delivery, token, expiry and acceptance explicitly assigned to feature 004; pending-invite rows are the documented handoff | [completeness] | FR-029 | [ ] |
-| CHK024 | `packages/game` has a README **and** an import-boundary rule — the requirement does not settle for an empty directory | [consistency] | FR-030 | [ ] |
-| CHK025 | The seed registry requirement is stated so its test proves a copy, not an empty loop | [testability] | FR-031 | [ ] |
-| CHK026 | "The harness can fail" is a per-run job, not a one-off screenshot | [testability] | SC-011 | [ ] |
-| CHK027 | Spoofing is stated as a positive assertion: the forged `x-tenant` value is **ignored**, resolution comes from the host | [testability] | SC-012 | [ ] |
-| CHK028 | Spike checklist S1–S5, S7, S8: all seven answers recorded in plan.md **before** collections are written (S6 retired — FR-029 creates no `users` row before acceptance; S8 added from CF-3) | [completeness] | FR-007, FR-009, FR-016 | [ ] |
-| CHK029 | The system client is bounded: used by seed-on-create and invite writes, never exported from `lib/tenancy/index.ts`, import-fenced | [completeness] | FR-032 | [ ] |
-| CHK030 | `req.payload` is named as a distinct leak path with its own probe, not folded into the import rule | [testability] | FR-014, SC-003 | [ ] |
-| CHK031 | Cache correctness is stated as correctness, not performance: creating an org makes its host resolve immediately, and a probed-then-created host never serves another org's context | [testability] | FR-011 | [ ] |
-| CHK032 | `pendingInvites` exists, is registered `scoped`, and the "no `users` row before acceptance" rule is stated without exception | [consistency] | FR-029 | [ ] |
-| CHK033 | The mutation job's pass condition is specific: asserts named isolation test IDs, not a nonzero exit | [testability] | SC-011 | [ ] |
-| CHK034 | PT-BR admin labels are required explicitly, not left as an implication of "English slugs" — both halves of CLR-002 are verifiable | [clarity] | FR-025, CLR-002 | [ ] |
-| CHK035 | The master bootstrap distinguishes dev from production unambiguously, and states that **no credential ships in configuration** | [clarity] | FR-026, CLR-003 | [ ] |
-| CHK036 | The drift gate has a defined comparison: apply committed migrations to an empty database, diff against the schema the code declares | [testability] | FR-027, SC-010, CLR-004 | [ ] |
-| CHK037 | SC-002's "100% of scoped collections" is bounded by the registry, so the denominator is defined rather than open-ended | [clarity] | SC-002, FR-017 | [ ] |
-| CHK038 | The validator's error message requirement states what it must **not** contain (the owning organization), not only what it must | [completeness] | SC-005, US6 | [ ] |
-| CHK039 | "Merge-blocking" is stated for both `dev` **and** `main`, and job names are identified as the required-status-check contexts | [clarity] | SC-009, FR-023 | [ ] |
-| CHK040 | The startup-failure requirement specifies message content — names `DATABASE_URI` and its expected shape — so "never a stack trace alone" is checkable | [clarity] | US1 error case | [ ] |
-| CHK041 | The choke point's calling convention from a server component is specified, since an RSC has no `PayloadRequest` to pass | [clarity] | FR-013, CF-4 | [ ] |
-| CHK042 | The invite path does not contradict its own lint fence: orchestration is placed where the import boundary permits it | [consistency] | FR-021, FR-014, CF-7 | [ ] |
-| CHK043 | Tenant stamping and tenant filtering are scoped to collections the registry marks `scoped`, so global collections are not silently tenant-stamped | [consistency] | FR-015, FR-017, CF-8 | [ ] |
-| CHK044 | Every operation the system client must perform — including `addMembership` — is declared in its type, not discovered at implementation | [completeness] | FR-032, CF-1 | [ ] |
-| CHK045 | Spike answers that invalidate the data model (S2 memberships, S4 validation order) have a written failure path, so the risk is planned rather than discovered | [feasibility] | FR-009, FR-016 | [ ] |
-| CHK046 | The Next pin (**≥16.2.6 <17**) is justified by the capability it buys (Node middleware runtime) **and** is checked against `@payloadcms/next`'s peer range, which excludes the whole 15.5.x line | [feasibility] | FR-005, FR-011 | [ ] |
-| CHK047 | Test tooling is decided (Vitest for unit + integration; Playwright deferred to 003), resolving the constitution's `(proposta)` | [feasibility] | spec decision 2, FR-023 | [ ] |
-| CHK048 | Organization `status` is explicitly **declared but not enforced** here, with enforcement assigned to feature 007 — no reader can mistake it for live behaviour | [clarity] | FR-008, spec decision 6 | [ ] |
+| CHK001 | Layout matches the constitution's monorepo: `apps/web`, `packages/game`, `packages/ui`, `infra/` | [completeness] | FR-001, FR-002| [x] |
+| CHK002 | The env-only swap is stated as verifiable: SC-008 runs the suite against an alternate `.env` with **zero source diffs** | [testability] | FR-003, FR-006, SC-008| [x] |
+| CHK003 | "Migrations are committed" is stated so a clean database reaching current schema by committed migrations **only** is checkable | [testability] | FR-004| [x] |
+| CHK004 | Next, Payload and the plugin have **exact** pins recorded, with the upgrade policy referenced | [completeness] | FR-005| [x] |
+| CHK005 | No content collection exists in this branch; the plugin is configured first — the requirement is unambiguous about ordering | [consistency] | FR-007| [x] |
+| CHK006 | `organizations` names every field, and says the slug is unique **and** immutable after creation; `status` and quota fields present even though unused here | [completeness] | FR-008| [x] |
+| CHK007 | One e-mail = one account globally; role lives per membership, not per user — no contradiction with FR-021 or FR-029 | [consistency] | FR-009| [x] |
+| CHK008 | Seed-on-create is written as copy-on-create, with "nothing resolves through a global fallback at read time" stated, not implied | [testability] | FR-010| [x] |
+| CHK009 | The sovereign fallback is measurable: SC-006 proves two different hosts resolve to the single organization with no master user | [testability] | FR-011, FR-012, SC-006| [x] |
+| CHK010 | The choke point requirement names the enforcement mechanism and the allowlist policy, so SC-003's probe commits have a defined pass/fail | [testability] | FR-013, FR-014, SC-003| [x] |
+| CHK011 | No scoped collection is described as returning a boolean from an access function — the constraint rule has no stated exception except master | [consistency] | FR-015| [x] |
+| CHK012 | The validator is required on **every** relationship between scoped collections, not a sample | [completeness] | FR-016| [x] |
+| CHK013 | The registry gate is stated so SC-004's probe commit fails CI **naming** the unregistered collection | [testability] | FR-017, FR-018, SC-004| [x] |
+| CHK014 | All four harness surfaces are named and honestly labelled: REST, `localApiAsRsc` (the Local API called as a server component would — **not** a rendered RSC), `adminRest`, `customEndpoint` | [completeness] | FR-019| [x] |
+| CHK015 | Red→green is stated as recorded evidence, not a claim: the PR shows the harness failing with the constraint removed, then passing | [testability] | FR-020| [x] |
+| CHK016 | Invite semantics are comparable: SC-007 defines status, body **and** timing class for existing and non-existing e-mails | [testability] | FR-021, SC-007| [x] |
+| CHK017 | Admin scoping states both halves: organization admins cannot see `organizations` or `users`; master can | [completeness] | FR-022| [x] |
+| CHK018 | Docs-stage gates are stated as retained alongside the new jobs — the "grows, never shrinks" rule has no exception for this feature | [consistency] | FR-023, US10| [x] |
+| CHK019 | The quick start is validated by a person, not by the author: SC-001 requires a second contributor on a clean machine | [testability] | FR-024, SC-001| [ ] ⚠ SC-001 needs a second person on a clean machine — cannot be self-validated |
+| CHK020 | Routing shape is decided before deployment work begins, with the redesign trigger written down (path-only domain → FR-011/012 redesign) | [completeness] | CLR-001| [x] |
+| CHK021 | Slug/field language is decided **before** the first collection exists — renaming later requires migrations | [consistency] | CLR-002, FR-025| [x] |
+| CHK022 | The canary makes the harness non-vacuous: ≥1 test per surface, and a run with zero scoped collections is itself a failure | [testability] | FR-028| [x] |
+| CHK023 | Invite scope is bounded: delivery, token, expiry and acceptance explicitly assigned to feature 004; pending-invite rows are the documented handoff | [completeness] | FR-029| [x] |
+| CHK024 | `packages/game` has a README **and** an import-boundary rule — the requirement does not settle for an empty directory | [consistency] | FR-030| [x] |
+| CHK025 | The seed registry requirement is stated so its test proves a copy, not an empty loop | [testability] | FR-031| [x] |
+| CHK026 | "The harness can fail" is a per-run job, not a one-off screenshot | [testability] | SC-011| [x] |
+| CHK027 | Spoofing is stated as a positive assertion: the forged `x-tenant` value is **ignored**, resolution comes from the host | [testability] | SC-012| [x] |
+| CHK028 | Spike checklist S1–S5, S7, S8: all seven answers recorded in plan.md **before** collections are written (S6 retired — FR-029 creates no `users` row before acceptance; S8 added from CF-3) | [completeness] | FR-007, FR-009, FR-016| [x] |
+| CHK029 | The system client is bounded: used by seed-on-create and invite writes, never exported from `lib/tenancy/index.ts`, import-fenced | [completeness] | FR-032| [x] |
+| CHK030 | `req.payload` is named as a distinct leak path with its own probe, not folded into the import rule | [testability] | FR-014, SC-003| [x] |
+| CHK031 | Cache correctness is stated as correctness, not performance: creating an org makes its host resolve immediately, and a probed-then-created host never serves another org's context | [testability] | FR-011| [x] |
+| CHK032 | `pendingInvites` exists, is registered `scoped`, and the "no `users` row before acceptance" rule is stated without exception | [consistency] | FR-029| [x] |
+| CHK033 | The mutation job's pass condition is specific: asserts named isolation test IDs, not a nonzero exit | [testability] | SC-011| [x] |
+| CHK034 | PT-BR admin labels are required explicitly, not left as an implication of "English slugs" — both halves of CLR-002 are verifiable | [clarity] | FR-025, CLR-002| [x] |
+| CHK035 | The master bootstrap distinguishes dev from production unambiguously, and states that **no credential ships in configuration** | [clarity] | FR-026, CLR-003| [x] |
+| CHK036 | The drift gate has a defined comparison: apply committed migrations to an empty database, diff against the schema the code declares | [testability] | FR-027, SC-010, CLR-004| [x] |
+| CHK037 | SC-002's "100% of scoped collections" is bounded by the registry, so the denominator is defined rather than open-ended | [clarity] | SC-002, FR-017| [x] |
+| CHK038 | The validator's error message requirement states what it must **not** contain (the owning organization), not only what it must | [completeness] | SC-005, US6| [x] |
+| CHK039 | "Merge-blocking" is stated for both `dev` **and** `main`, and job names are identified as the required-status-check contexts | [clarity] | SC-009, FR-023| [x] |
+| CHK040 | The startup-failure requirement specifies message content — names `DATABASE_URI` and its expected shape — so "never a stack trace alone" is checkable | [clarity] | US1 error case| [x] |
+| CHK041 | The choke point's calling convention from a server component is specified, since an RSC has no `PayloadRequest` to pass | [clarity] | FR-013, CF-4| [x] |
+| CHK042 | The invite path does not contradict its own lint fence: orchestration is placed where the import boundary permits it | [consistency] | FR-021, FR-014, CF-7| [x] |
+| CHK043 | Tenant stamping and tenant filtering are scoped to collections the registry marks `scoped`, so global collections are not silently tenant-stamped | [consistency] | FR-015, FR-017, CF-8| [x] |
+| CHK044 | Every operation the system client must perform — including `addMembership` — is declared in its type, not discovered at implementation | [completeness] | FR-032, CF-1| [x] |
+| CHK045 | Spike answers that invalidate the data model (S2 memberships, S4 validation order) have a written failure path, so the risk is planned rather than discovered | [feasibility] | FR-009, FR-016| [x] |
+| CHK046 | The Next pin (**≥16.2.6 <17**) is justified by the capability it buys (Node middleware runtime) **and** is checked against `@payloadcms/next`'s peer range, which excludes the whole 15.5.x line | [feasibility] | FR-005, FR-011| [x] |
+| CHK047 | Test tooling is decided (Vitest for unit + integration; Playwright deferred to 003), resolving the constitution's `(proposta)` | [feasibility] | spec decision 2, FR-023| [x] |
+| CHK048 | Organization `status` is explicitly **declared but not enforced** here, with enforcement assigned to feature 007 — no reader can mistake it for live behaviour | [clarity] | FR-008, spec decision 6| [x] |
 
 **Dimensions**: `[completeness]` `[consistency]` `[testability]` `[clarity]` `[feasibility]`.
 Companion checklists: [`security.md`](security.md), [`api.md`](api.md). A failing check is a

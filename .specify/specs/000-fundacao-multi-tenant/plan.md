@@ -20,11 +20,11 @@ Full Truth Map in [`research.md`](research.md). The load-bearing findings:
   authorities are decision records, not symbols.
 - **The leak vector is a clean call.** Payload's Local API skips access control by
   default, so a plain `payload.find()` in a server component returns a neighbour's rows
-  with HTTP 200 and contains no suspicious token (`docs/tech-stack.md:142`). Everything
+  with HTTP 200 and contains no suspicious token (`docs/tech-stack.md` § O risco nº 1 → nota Superado). Everything
   here follows from that: an import boundary, one choke point, and a harness that *proves*
   isolation on a real subject.
 - The plugin **does not** validate cross-tenant relationships — that validator is ours
-  (`docs/tech-stack.md:147`).
+  (`docs/tech-stack.md` § O risco nº 1 → nota Superado).
 - Four clarifications resolved in `spec.md`: subdomain routing with the domain deferred
   (CLR-001), English slugs with PT-BR labels (CLR-002), env-seeded master in dev only
   (CLR-003), CI fails on migration drift (CLR-004).
@@ -88,7 +88,7 @@ subject to be tested against.
 2. **Skeleton, merged early** (spec decision 5) so feature 001 can start in parallel:
    workspace, both packages, Next+Payload, compose, `.env.example`, README quick start.
 3. **Plugin, then collections** — plugin registered before `Organizations`/`Users`/
-   `TenantCanaries` exist (`docs/tech-stack.md:92`).
+   `TenantCanaries` exist (`docs/tech-stack.md` § Modelo escolhido → Row-level em banco compartilhado).
 4. **Guardrails**: import boundary → choke point → access factories → registry →
    validator → seed-on-create. Each lands with its test.
 5. **Harness against the canary**: write it failing (constraint removed), then passing;
@@ -162,7 +162,7 @@ how a future contributor talks themselves into the response-header path.
 
 - **The leak vector is real in our own stack.** `payload.find({ collection })` with no
   `overrideAccess` and no `user` returned **both organizations' rows**. This is
-  `docs/tech-stack.md:142` reproduced, and it is why FR-013 exists.
+  `docs/tech-stack.md` § O risco nº 1 → nota Superado reproduced, and it is why FR-013 exists.
 - **The plugin does not validate cross-tenant relationships.** A row in org A was updated to
   point at a row in org B and the write **succeeded**. FR-016 is load-bearing, not defensive.
 - **A user with no membership gets 403, not zero rows** — SC-002's "zero rows **or** 403"
@@ -211,7 +211,7 @@ export const scopedAccess = (): Access => ({ req }) =>
 ```
 
 **Why this shape:** a boolean authorizes the *operation* and leaks the *rows*; the
-constraint is what makes `find` safe by construction (`docs/tech-stack.md:146`). Field name
+constraint is what makes `find` safe by construction (`docs/tech-stack.md` § O risco nº 1 → nota Superado). Field name
 `tenant` is pinned by spike S1.
 
 ### Sketch 3: same-tenant relationship validator
@@ -231,7 +231,7 @@ export const sameTenant: Validate = async (value, { siblingData, field }) => {
 ```
 
 **Why this shape:** the plugin accepts a document in org A pointing at org B
-(`docs/tech-stack.md:147`). `normalizeRefs` handles the shapes the first draft ignored
+(`docs/tech-stack.md` § O risco nº 1 → nota Superado). `normalizeRefs` handles the shapes the first draft ignored
 (hasMany, polymorphic `{relationTo, value}`, populated objects). The message **no longer
 names the other organization** — that would let a user probe IDs and learn who owns them,
 contradicting US8's anti-enumeration stance. Depends on spike S4.
@@ -401,7 +401,7 @@ forbids.
 Imports are statically visible and not aliasable across modules, so the boundary is the
 right primary. **[N2] But an import ban alone is not enough:** every Payload hook and route
 handler receives `req.payload`, a full unscoped client, with *zero imports* — the exact
-leak vector from `docs/tech-stack.md:142`, reachable in code this feature itself creates.
+leak vector from `docs/tech-stack.md` § O risco nº 1 → nota Superado, reachable in code this feature itself creates.
 The `no-restricted-syntax` rules above close that specific shape, and SC-003 now probes
 both paths. **[N7]** The same mechanism fences `unscoped*` and `system-payload*` so the most
 dangerous functions in the codebase cannot simply be imported by a page. `packages/game`
@@ -440,7 +440,7 @@ return res
 ```
 
 **Why this shape:** identity is global and role is per organization
-(`docs/tech-stack.md:104`). Responding before the work removes the timing oracle the byte-
+(`docs/tech-stack.md` § Modelo escolhido → Identidade global, papel por organização). Responding before the work removes the timing oracle the byte-
 identical body alone did not close (SC-007). **[N6] An unknown e-mail creates no `users`
 row** — only a `pendingInvites` record — because the constitution makes terms acceptance a
 signup gate, and a person who never consented should not exist as an account; feature 004

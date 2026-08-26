@@ -10,26 +10,26 @@ matters, since it is the only sanctioned path to data and every later feature ca
 
 | ID | Check | Dimension | FR/US Ref | Status |
 |----|-------|-----------|-----------|--------|
-| CHK080 | `TenantScopedPayload` declares every operation callers need — `find`, `findByID`, `create`, `update`, `delete`, `tenantId` — so no consumer needs an escape hatch | [contract] | FR-013 | [ ] |
-| CHK081 | The system client's type declares **every** operation it must perform, `addMembership` included, rather than leaving it to implementation | [contract] | FR-032, CF-1 | [ ] |
-| CHK082 | `resolveTenantFromHost` has **one** stated return semantics (`Organization \| null`), with the null→throw→404 conversion assigned to named layers | [contract] | FR-011, FR-012 | [ ] |
-| CHK083 | The invite endpoint's method, path and required caller role are specified: `POST /api/organizations/:id/invites`, org admin or master | [contract] | FR-021, US8 | [ ] |
-| CHK084 | The endpoint's placement is specified as a **Next Route Handler** (`createPayloadRequest`), not a Payload-config endpoint — the two differ in what runtime APIs are available | [contract] | FR-021, CF-7 | [ ] |
-| CHK085 | The invite's three branches and their identical `202` response are enumerated in a table, so "byte-identical" has an explicit denominator | [contract] | FR-021, SC-007 | [ ] |
-| CHK086 | The contract states that `find`/`findByID` **merge** the caller's `where` with the tenant constraint, defining precedence rather than leaving it to implementation | [contract] | FR-013, FR-015 | [ ] |
-| CHK087 | Tenant stamping on `create` is specified to apply only to registry-`scoped` collections, so writes to global collections have defined behaviour | [contract] | FR-015, FR-017, CF-8 | [ ] |
-| CHK088 | The custom-endpoint harness surface has a declared subject on **both** scoped collections, so the surface is not asserted against nothing | [contract] | FR-019, CF-9 | [ ] |
-| CHK089 | Invite input validation is specified: a well-formed e-mail and a `role` within `admin \| staff \| maker` | [validation] | FR-021, FR-029 | [ ] |
-| CHK090 | The organization id in the path is stated to be validated against the caller's own membership, not trusted from the URL | [validation] | FR-021, US8 | [ ] |
-| CHK091 | Invite idempotence is specified for both repeat cases: an existing membership is a no-op, and `(tenant, email)` is unique for pending rows | [validation] | FR-021, FR-029 | [ ] |
-| CHK092 | Membership uniqueness within a user is specified together with its mechanism, since Payload has no composite unique across array rows | [validation] | FR-009 | [ ] |
-| CHK093 | Slug uniqueness **and** immutability are both stated, with the duplicate case assigned a field-level validation error | [validation] | FR-008, US2 edge | [ ] |
-| CHK094 | Every failure mode has an assigned status code: `403` non-admin caller, `404` unresolved host, field-level validation error for a cross-tenant relationship | [errors] | FR-021, FR-012, FR-016 | [ ] |
-| CHK095 | Error responses are specified not to disclose existence — neither of an account (invite) nor of a document's owner (relationship validator) | [errors] | SC-007, SC-005 | [ ] |
-| CHK096 | Work performed **after** the response is stated to log failures rather than surface them, since the `202` has already been sent | [errors] | FR-021, US8 | [ ] |
-| CHK097 | The generated REST surface is acknowledged as part of the isolation matrix, so it is not treated as internal-only | [errors] | FR-019, US3 | [ ] |
-| CHK098 | The spec records that this feature ships **no externally consumed API**, so a breaking-change policy is deliberately deferred rather than forgotten | [versioning] | FR-029, scope boundaries | [ ] |
-| CHK099 | The forward-compatibility path is stated: `pendingInvites` gains token, expiry and delivery fields in feature 004 once a transport exists, without reshaping what ships here | [versioning] | FR-029 | [ ] |
+| CHK080 | `TenantScopedPayload` declares every operation callers need — `find`, `findByID`, `create`, `update`, `delete`, `tenantId` — so no consumer needs an escape hatch | [contract] | FR-013| [x] |
+| CHK081 | The system client's type declares **every** operation it must perform, `addMembership` included, rather than leaving it to implementation | [contract] | FR-032, CF-1| [x] |
+| CHK082 | `resolveTenantFromHost` has **one** stated return semantics (`Organization \| null`), with the null→throw→404 conversion assigned to named layers | [contract] | FR-011, FR-012| [x] |
+| CHK083 | The invite endpoint's method, path and required caller role are specified: `POST /api/organizations/:id/invites`, org admin or master | [contract] | FR-021, US8| [x] |
+| CHK084 | The endpoint's placement is specified as a **Next Route Handler** (`createPayloadRequest`), not a Payload-config endpoint — the two differ in what runtime APIs are available | [contract] | FR-021, CF-7| [x] |
+| CHK085 | The invite's three branches and their identical `202` response are enumerated in a table, so "byte-identical" has an explicit denominator | [contract] | FR-021, SC-007| [x] |
+| CHK086 | The contract states that `find`/`findByID` **merge** the caller's `where` with the tenant constraint, defining precedence rather than leaving it to implementation | [contract] | FR-013, FR-015| [x] |
+| CHK087 | Tenant stamping on `create` is specified to apply only to registry-`scoped` collections, so writes to global collections have defined behaviour | [contract] | FR-015, FR-017, CF-8| [x] |
+| CHK088 | The custom-endpoint harness surface has a declared subject on **both** scoped collections, so the surface is not asserted against nothing | [contract] | FR-019, CF-9| [x] |
+| CHK089 | Invite input validation is specified: a well-formed e-mail and a `role` within `admin \| staff \| maker` | [validation] | FR-021, FR-029| [x] |
+| CHK090 | The organization id in the path is stated to be validated against the caller's own membership, not trusted from the URL | [validation] | FR-021, US8| [x] |
+| CHK091 | Invite idempotence is specified for both repeat cases: an existing membership is a no-op, and `(tenant, email)` is unique for pending rows | [validation] | FR-021, FR-029| [x] |
+| CHK092 | Membership uniqueness within a user is specified together with its mechanism, since Payload has no composite unique across array rows | [validation] | FR-009| [x] |
+| CHK093 | Slug uniqueness **and** immutability are both stated, with the duplicate case assigned a field-level validation error | [validation] | FR-008, US2 edge| [x] |
+| CHK094 | Every failure mode has an assigned status code: `403` non-admin caller, `404` unresolved host, field-level validation error for a cross-tenant relationship | [errors] | FR-021, FR-012, FR-016| [x] |
+| CHK095 | Error responses are specified not to disclose existence — neither of an account (invite) nor of a document's owner (relationship validator) | [errors] | SC-007, SC-005| [x] |
+| CHK096 | Work performed **after** the response is stated to log failures rather than surface them, since the `202` has already been sent | [errors] | FR-021, US8| [x] |
+| CHK097 | The generated REST surface is acknowledged as part of the isolation matrix, so it is not treated as internal-only | [errors] | FR-019, US3| [x] |
+| CHK098 | The spec records that this feature ships **no externally consumed API**, so a breaking-change policy is deliberately deferred rather than forgotten | [versioning] | FR-029, scope boundaries| [x] |
+| CHK099 | The forward-compatibility path is stated: `pendingInvites` gains token, expiry and delivery fields in feature 004 once a transport exists, without reshaping what ships here | [versioning] | FR-029| [x] |
 
 **Dimensions**: `[contract]` `[validation]` `[errors]` `[versioning]`. Companion checklists:
 [`requirements.md`](requirements.md), [`security.md`](security.md). CHK080–CHK082 and

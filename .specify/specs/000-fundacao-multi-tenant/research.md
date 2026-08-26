@@ -10,8 +10,10 @@ without re-reading the corpus.
 **Citation convention.** Constitution claims cite a **named section** (`§ Principle 3`,
 `§ Monorepo layout`), not a line number — its line numbers shift on every amendment, and
 four of these citations had already drifted by 2026-08-25 while still reading as
-authoritative. `docs/tech-stack.md` keeps `file:line` for now; those anchors were verified
-on 2026-08-25, and edits to that file must be line-count neutral or re-verified.
+authoritative. **`docs/tech-stack.md` now cites the same way** (2026-08-26): its 31 line
+citations were converted to `§ Section → Bolded label` anchors when task T071 needed to add
+content to that file and would otherwise have shifted every number below it. Renumbering
+would have re-inherited the same rot on the next edit.
 
 ## Affected Modules
 
@@ -21,7 +23,7 @@ constitution.
 | Path | Role | Authority (file:line, or § section) |
 |------|------|-----------------------|
 | `apps/web/` | Next.js App Router + Payload 3 in one process; admin at `/admin` | `.specify/memory/constitution.md` § Monorepo layout |
-| `apps/web/lib/tenancy/` | The **only** module allowed to touch Payload data operations | `.specify/memory/constitution.md` § Principle 2, `docs/tech-stack.md:142` |
+| `apps/web/lib/tenancy/` | The **only** module allowed to touch Payload data operations | `.specify/memory/constitution.md` § Principle 2, `docs/tech-stack.md` § O risco nº 1 → nota Superado |
 | `packages/game/` | Pure XP/level/mission rules — no Payload imports, no IO (empty in this feature) | `.specify/memory/constitution.md` § Principle 3 |
 | `packages/ui/` | Identity tokens + base components (feature 001 fills it) | `.specify/memory/constitution.md` § Monorepo layout |
 | `infra/` | docker-compose (Postgres + MinIO), Caddyfile, backups, runbooks | `.specify/memory/constitution.md` § Monorepo layout |
@@ -29,23 +31,23 @@ constitution.
 
 ## Relevant Truths (each with citation)
 
-- `docs/tech-stack.md:92` — **row-level tenancy in a shared database** via
+- `docs/tech-stack.md` § Modelo escolhido → Row-level em banco compartilhado — **row-level tenancy in a shared database** via
   `@payloadcms/plugin-multi-tenant` (MIT), installed **before the first content
   collection**; adopting it later means renaming fields, rewriting access and migrating
   data.
-- `docs/tech-stack.md:99` — **tenancy is a property of the data, never a deploy mode**: a
+- `docs/tech-stack.md` § Modelo escolhido → Princípio central — **tenancy is a property of the data, never a deploy mode**: a
   sovereign install is a deploy with one organization and no master user.
-- `docs/tech-stack.md:104` — **identity is global, role is per organization**: one e-mail =
+- `docs/tech-stack.md` § Modelo escolhido → Identidade global, papel por organização — **identity is global, role is per organization**: one e-mail =
   one user; `orgs[]` carries `{organization, role}`. An invite for an existing e-mail
   **adds a membership** and must not reveal that the account exists.
-- `docs/tech-stack.md:108` — **the Payload admin is the panel**: master sees everything
+- `docs/tech-stack.md` § Modelo escolhido → Painéis — **the Payload admin is the panel**: master sees everything
   plus `organizations`; org admin uses the same `/admin` with the tenant selector locked
   and global collections hidden by role. No second app is built.
-- `docs/tech-stack.md:112` — **subdomain routing is canonical; path-based is forbidden**
+- `docs/tech-stack.md` § Modelo escolhido → Roteamento por subdomínio — **subdomain routing is canonical; path-based is forbidden**
   (cookies, isolation, per-organization site identity).
-- `docs/tech-stack.md:116` — storage keys have **one constructor**, `org/<slug>/…`; quota
+- `docs/tech-stack.md` § Modelo escolhido → Storage — storage keys have **one constructor**, `org/<slug>/…`; quota
   is checked when the presigned URL is issued (enforcement is feature 002).
-- `docs/tech-stack.md:142` — **the leak vector**: Payload's Local API **skips access
+- `docs/tech-stack.md` § O risco nº 1 → nota Superado — **the leak vector**: Payload's Local API **skips access
   control by default**, so the dangerous call is a clean `payload.find()` inside an RSC or
   hook — it contains no `overrideAccess` string. All access must funnel through
   `getTenantScopedPayload(req)`, enforced by an **import boundary plus syntax rules covering
@@ -53,16 +55,16 @@ constitution.
   original mechanism and is defective — `const p = await getPayload(); p.find()` escapes by
   renaming, `req.payload` reaches every hook with no import at all, and raw SQL has no
   method name).
-- `docs/tech-stack.md:146` — access control on scoped collections **returns a query
+- `docs/tech-stack.md` § O risco nº 1 → nota Superado — access control on scoped collections **returns a query
   constraint, never a boolean**.
-- `docs/tech-stack.md:147` — **the plugin does not validate cross-tenant relationships**;
+- `docs/tech-stack.md` § O risco nº 1 → nota Superado — **the plugin does not validate cross-tenant relationships**;
   the same-tenant validator is project code.
-- `docs/tech-stack.md:149` — a **versioned scope registry** declares each collection
+- `docs/tech-stack.md` § O risco nº 1 → 1. Choke point único — a **versioned scope registry** declares each collection
   `scoped` or `global`, with a CI test failing on omissions.
-- `docs/tech-stack.md:151` — the **isolation harness**: two seeded organizations; a user of
+- `docs/tech-stack.md` § O risco nº 1 → 1. Choke point único — the **isolation harness**: two seeded organizations; a user of
   A gets 0 rows/403 across REST, Local API in RSC, admin and custom endpoints, proven
   red→green.
-- `docs/tech-stack.md:157` — the roadmap's own definition of feature 000, including the
+- `docs/tech-stack.md` § O risco nº 1 → 4. Registro versionado de escopo — the roadmap's own definition of feature 000, including the
   statement that it runs in parallel with 001 and **does not delay the CITe launch**.
 - `.specify/memory/constitution.md` § Principle 1 — pinned versions; managed↔self-host swap by
   environment only; new runtimes need written justification.
@@ -89,7 +91,7 @@ constitution.
   `payloadcms/payload` monorepo — verified during the stack benchmark
   (`docs/tech-stack-benchmark.md:95`).
 - Payload's Local API bypasses access control unless `overrideAccess: false` **and** a
-  `user` are passed — the reason the choke point exists (`docs/tech-stack.md:142`).
+  `user` are passed — the reason the choke point exists (`docs/tech-stack.md` § O risco nº 1 → nota Superado).
 
 ## Open Questions
 
@@ -100,5 +102,5 @@ labels; CLR-003 env-seeded master in dev only; CLR-004 migration drift gate).
 Deferred by decision, tracked elsewhere:
 
 - Production domain and TLS strategy — deployment time, feature 007 (CLR-001).
-- Storage quota values per organization — feature 002 (`docs/tech-stack.md:116`).
+- Storage quota values per organization — feature 002 (`docs/tech-stack.md` § Modelo escolhido → Storage).
 - Organization `status` enforcement semantics — feature 007 (`spec.md`, decision 6).
