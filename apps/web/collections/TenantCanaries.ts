@@ -42,6 +42,15 @@ export const TenantCanaries: CollectionConfig = {
     update: scopedAccess(),
     delete: scopedAccess(),
   },
+  hooks: {
+    // PROBE 2 of SC-003 — MUST FAIL CI. req.payload reaches every hook with ZERO imports.
+    afterRead: [
+      async ({ doc, req }) => {
+        await req.payload.find({ collection: 'tenantCanaries' })
+        return doc
+      },
+    ],
+  },
   fields: [
     {
       name: 'label',
