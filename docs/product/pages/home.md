@@ -24,12 +24,14 @@ deslogado** — só o **progresso pessoal** das missões (e curtir) exige conta.
 
 ### Header (fundo navy; fixação no topo ao rolar **(proposta)**)
 
-- Logo-chip extrudado à esquerda, sempre com letras navy: no v1 chip laranja e cubo isométrico
-  **entre** as palavras ("FAB [cubo] LAB / CITE BAURU"); no v2 chip rosa e cubo (aresta teal)
-  **à esquerda** de "FAB LAB / CITE BAURU".
+- Logo-chip extrudado à esquerda, sempre com letras navy: chip **laranja** com o cubo
+  isométrico **entre** as palavras ("FAB [cubo] LAB / CITE BAURU").
   **Decidido (rodada 2, 2026-08-23):** o chip **canônico do header** é o **laranja com o cubo
-  isométrico entre `FAB` e `LAB`** (como em `design/criar-conta-passo-1.png`). A descrição do chip
-  rosa com cubo à esquerda (mockup v2) fica como **registro histórico**.
+  isométrico entre `FAB` e `LAB`** (como em `design/criar-conta-passo-1.png`).
+  **Arte corrigida (2026-08-26):** a designer reentregou `design/home-desktop.png` com o chip
+  canônico. ~~No v2 o chip era rosa, com o cubo (aresta teal) **à esquerda** de "FAB LAB /
+  CITE BAURU"~~ — a divergência entre a arte e a decisão da rodada 2 **deixou de existir**,
+  e nenhum mockup restante mostra o chip rosa no header.
 - Navegação em caps display:
   - **Canônica (decidido 2026-08-23):** `BIBLIOTECA 3D` · `PROJETOS` · `CALENDÁRIO` · `AULAS` ·
     `INSTAGRAM` · `ARTIGOS`, nesta ordem e com todos os itens **alinhados** (o `AULAS` torto

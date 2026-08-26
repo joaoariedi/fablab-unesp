@@ -32,7 +32,7 @@ models require no account. An account is for *making* — publishing, liking, an
 earning XP.
 
 <div align="center">
-  <img src="docs/product/design/home-desktop.png" alt="Planned home page — the lab drawn as an isometric pixel-art night map" width="800">
+  <img src="docs/product/design/home-desktop.png" alt="Planned home page — the lab drawn as an isometric pixel-art night map, with the canonical orange FAB ● LAB logo-chip in the header" width="800">
   <p><sub>How the home is planned to look: the lab as a pixel-art night map (official hero) — <a href="docs/product/design/home-mobile.png">mobile art</a> · <a href="docs/product/pages/home.md">full page spec</a></sub></p>
 </div>
 

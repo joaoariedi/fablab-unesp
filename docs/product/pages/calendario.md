@@ -36,8 +36,9 @@ escopo v1, para revisitar com o jogo rodando.
   rótulo de navegação e o padrão de header (o footer **não** aparece nessa imagem).
   **Decidido (2026-08-23):** esse header v2 é o canônico **quanto à navegação** — o
   `CALENDÁRIO` aparecer só nele não é divergência entre mockups, e sim a versão oficial da
-  navegação. **Rodada 2 (2026-08-23):** o **logo-chip** desse mockup (rosa) **não** é o
-  canônico — vale o chip **laranja** (ver Header).
+  navegação. ~~**Rodada 2 (2026-08-23):** o **logo-chip** desse mockup (rosa) **não** é o
+  canônico — vale o chip **laranja** (ver Header).~~ **Arte corrigida (2026-08-26):** o
+  mockup passou a trazer o **chip laranja canônico**; a ressalva não se aplica mais.
 - Padrões visuais herdados (hero teal, lista de cards escuros, chips de filtro, busca, footer
   de pilares): `visual-identity.md` e os mockups descritos em `pages/aulas.md`,
   `pages/projetos.md`.
@@ -52,12 +53,14 @@ Toda a estrutura abaixo é **(proposta)**, derivada dos padrões das demais tela
 
 ### Header (faixa navy no topo)
 
-- Logo-chip extrudado à esquerda — no mockup do mapa (v2) o chip é **rosa**, com o cubo
-  isométrico **à esquerda** de `FAB LAB` / `CITE BAURU` (no v1 o chip é laranja e o cubo fica
-  entre as palavras; ver `pages/home.md`).
+- Logo-chip extrudado **laranja** à esquerda, com o cubo isométrico **entre** `FAB` e `LAB`
+  (`FAB ● LAB` / `CITE BAURU`), com hachura de sombra 3D.
   - **Decidido (rodada 2, 2026-08-23):** o chip canônico do header é a versão **laranja**,
-    com o cubo isométrico **entre** `FAB` e `LAB` (como em `design/criar-conta-passo-1.png`). O
-    chip rosa do mockup do mapa fica como **registro de mockup**, não é o header oficial.
+    com o cubo isométrico **entre** `FAB` e `LAB` (como em `design/criar-conta-passo-1.png`).
+  - **Arte corrigida (2026-08-26):** ~~no mockup do mapa (v2) o chip é **rosa**, com o cubo
+    isométrico **à esquerda** de `FAB LAB` / `CITE BAURU`~~ — a designer reentregou
+    `design/home-desktop.png` com o chip canônico, então o mockup e a decisão da rodada 2
+    **passaram a concordar**.
   - **Decidido (rodada 3, 2026-08-23):** tocar no **logo leva à Home** (deixa de ser
     proposta) — vale em todos os tamanhos de tela.
 - Navegação canônica em caps display (v2 do mockup do mapa) — **confirmada pela designer em
