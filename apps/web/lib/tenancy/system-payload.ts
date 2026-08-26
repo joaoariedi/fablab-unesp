@@ -82,6 +82,13 @@ export async function getSystemScopedPayload(
         ...(req ? { req } : {}),
       })
 
+      // The tenant id travels as a string through this module (hosts, params and headers are
+      // all strings), but `organizations` uses Postgres integer ids. The scalar `tenant`
+      // field coerces `"1"`, an **array row's** relationship does not — it fails with
+      // `Orgs N > Organization is invalid`, naming the row rather than the type. Coerce here,
+      // guarded so string ids (uuid, if the adapter ever changes) pass through untouched.
+      const orgRef: string | number = /^\d+$/.test(tenantId) ? Number(tenantId) : tenantId
+
       const existing = (user as { orgs?: { organization?: unknown; role?: string }[] }).orgs ?? []
       const already = existing.some((row) => {
         const ref = row?.organization
@@ -103,7 +110,7 @@ export async function getSystemScopedPayload(
               const id = typeof ref === 'object' && ref !== null && 'id' in ref ? ref.id : ref
               return { organization: id, role: row?.role }
             }),
-            { organization: tenantId, role },
+            { organization: orgRef, role },
           ],
         } as never,
       })

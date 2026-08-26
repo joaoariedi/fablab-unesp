@@ -55,6 +55,16 @@ export {
   type Scope,
 } from './scope-registry'
 
+// Invite orchestration. [CF-7] The route handler calls this and imports nothing fenced —
+// the dangerous functions it needs stay inside this directory.
+export {
+  canInvite,
+  invitableOrganizations,
+  resolveInvite,
+  type InviteInput,
+  type InviteOutcome,
+} from './invite'
+
 // Seed-on-create: features 005+ register their defaults through this.
 export {
   revalidateTenantResolution,
