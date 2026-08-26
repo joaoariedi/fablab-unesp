@@ -1,4 +1,4 @@
-import { getPayload } from 'payload'
+import { getPayload, type PayloadRequest } from 'payload'
 
 import { buildTenantClient, type TenantScopedPayload } from './client'
 
@@ -42,13 +42,33 @@ export type SystemScopedPayload = TenantScopedPayload & {
   addMembership: (userId: string | number, role: MembershipRole) => Promise<boolean>
 }
 
-export async function getSystemScopedPayload(tenantId: string): Promise<SystemScopedPayload> {
+export type SystemClientOptions = {
+  /**
+   * **Propagate the `req` when calling from inside a hook.** Payload runs each operation in
+   * a transaction, and a client built without `req` opens its own connection — so a hook
+   * writing a child row cannot see the parent row its own operation just inserted, and
+   * Postgres rejects the write with a foreign-key violation.
+   *
+   * Measured, not theorised: seed-on-create failed with
+   * `Key (tenant_id)=(2) is not present in table "organizations"` until this was threaded
+   * through. `docs/tech-stack.md` names this as mandatory fix #1 for exactly the same
+   * reason on the XP ledger — the hook must share the transaction of the action that
+   * caused it.
+   */
+  req?: PayloadRequest
+}
+
+export async function getSystemScopedPayload(
+  tenantId: string,
+  options: SystemClientOptions = {},
+): Promise<SystemScopedPayload> {
   if (!tenantId) {
     throw new Error('getSystemScopedPayload requires an explicit tenant id — it never infers one.')
   }
 
   const payload = await getPayload({ config: (await import('../../payload.config')).default })
-  const base = buildTenantClient({ payload, tenantId, overrideAccess: true })
+  const req = options.req
+  const base = buildTenantClient({ payload, tenantId, overrideAccess: true, req })
 
   return {
     ...base,
@@ -59,6 +79,7 @@ export async function getSystemScopedPayload(tenantId: string): Promise<SystemSc
         id: userId,
         depth: 0,
         overrideAccess: true,
+        ...(req ? { req } : {}),
       })
 
       const existing = (user as { orgs?: { organization?: unknown; role?: string }[] }).orgs ?? []
@@ -74,6 +95,7 @@ export async function getSystemScopedPayload(tenantId: string): Promise<SystemSc
         id: userId,
         depth: 0,
         overrideAccess: true,
+        ...(req ? { req } : {}),
         data: {
           orgs: [
             ...existing.map((row) => {

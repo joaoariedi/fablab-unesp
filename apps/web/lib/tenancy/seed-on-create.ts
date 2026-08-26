@@ -30,11 +30,15 @@ export const SEED_ON_CREATE: SeedFn[] = []
  * tenant here must be `doc.id`, named explicitly, which is the whole reason
  * `getSystemScopedPayload` exists.
  */
-export const seedNewOrganization: CollectionAfterChangeHook = async ({ doc, operation }) => {
+export const seedNewOrganization: CollectionAfterChangeHook = async ({ doc, operation, req }) => {
   if (operation !== 'create') return doc
 
   const organizationId = String((doc as { id: string | number }).id)
-  const sys = await getSystemScopedPayload(organizationId)
+  // `req` is passed so the seeded rows join the SAME transaction that created the
+  // organization. Without it this hook opens its own connection, cannot see the still
+  // uncommitted organization row, and Postgres rejects every seeded child with a
+  // foreign-key violation — which is exactly how this was found.
+  const sys = await getSystemScopedPayload(organizationId, { req })
 
   for (const seed of SEED_ON_CREATE) {
     await seed(sys, organizationId)

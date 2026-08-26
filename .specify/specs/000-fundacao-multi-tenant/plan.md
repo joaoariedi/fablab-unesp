@@ -465,6 +465,20 @@ export const seedNewOrganization: CollectionAfterChangeHook = async ({ doc, oper
 }
 ```
 
+**[Measured 2026-08-26] The hook MUST propagate `req`, or every seeded row is rejected.**
+The sketch called `getSystemScopedPayload(doc.id)` with no request. A client built that way
+opens its **own database connection**, so it cannot see the organization row the very
+operation that triggered it has inserted but not yet committed — Postgres rejected the first
+real seed with `Key (tenant_id)=(2) is not present in table "organizations"`. The signature
+is now `getSystemScopedPayload(doc.id, { req })`, and the write joins the caller's
+transaction.
+
+This is the same defect `docs/tech-stack.md` lists as **mandatory fix #1** for the XP ledger
+("o hook `afterChange` deve propagar o `req` … para compartilhar a transação da ação que o
+causou"). It was written down as a known trap for feature 005 and then walked into here
+first, which is a useful reminder that a documented trap is not a closed one. Feature 005's
+registered seeds inherit the fix for free because the mechanism now carries `req`.
+
 **Why this shape:** spec decision 3 promises feature 005 something to plug into; the first
 draft had no artifact for it at all. Copy-on-create keeps reads unambiguous — there is no
 "is this null or inherited?" resolution order to debug later. **[N1] The system client is

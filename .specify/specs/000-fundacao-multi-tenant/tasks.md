@@ -134,8 +134,8 @@ should be exercised on Node 22 with pnpm.
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T047 | Idempotent CITe bootstrap — re-running duplicates neither organization nor master | FR-026, US1 edge | `apps/web/seed/index.ts` | T038 |
-| T048 | Dev-only master from `SEED_MASTER_*`; production uses Payload's create-first-user screen and **ships no credential in configuration** | FR-026, CLR-003 | `apps/web/seed/index.ts` | T047 |
+| T047 | ✅ Idempotent CITe bootstrap — re-running duplicates neither organization nor master | FR-026, US1 edge | `apps/web/seed/index.ts` | T038 |
+| T048 | ✅ Dev-only master from `SEED_MASTER_*`; production uses Payload's create-first-user screen and **ships no credential in configuration** | FR-026, CLR-003 | `apps/web/seed/index.ts` | T047 |
 
 **Isolation harness — the point of the feature**
 
@@ -154,7 +154,7 @@ should be exercised on Node 22 with pnpm.
 | T054 | [P] Host test: two different hosts both resolve to the single organization with no master user | SC-006 | `apps/web/tests/tenancy/host.test.ts` | T043 |
 | T055 | [P] Spoofing test: forged `x-tenant` ignored, resolution comes from the host | SC-012 | `apps/web/tests/tenancy/host.test.ts` | T040 |
 | T056 | [P] Invite test: identical status/body/timing class for both cases; membership row created in the existing-e-mail case; **no `users` row** for an unknown e-mail | SC-007, FR-029 | `apps/web/tests/tenancy/invite.test.ts` | T046 |
-| T057 | [P] Seed-on-create test registering a **fixture seed**, proving a copy rather than an empty loop | FR-031 | `apps/web/tests/tenancy/seed-on-create.test.ts` | T038 |
+| T057 | ✅ [P] Seed-on-create test registering a **fixture seed**, proving a copy rather than an empty loop | FR-031 | `apps/web/tests/tenancy/seed-on-create.test.ts` | T038 |
 | T058 | [P] **System-client isolation test (CF-9)** — asserts it scopes to the id it was given; file named for FR-032 | FR-032, CF-9 | `apps/web/tests/tenancy/system-payload.test.ts` | T031 |
 | T059 | [P] `unscoped*` isolation tests — one per allowlisted function | FR-013 | `apps/web/tests/tenancy/unscoped.test.ts` | T032 |
 
