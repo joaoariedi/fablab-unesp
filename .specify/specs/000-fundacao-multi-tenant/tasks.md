@@ -175,8 +175,8 @@ should be exercised on Node 22 with pnpm.
 | T065 | ✅ Drift gate: apply committed migrations to an empty database, diff against the schema the code declares | FR-027, SC-010, CLR-004 | `.github/workflows/ci.yml` | T030 |
 | T066 | ✅ Fix the stale CI comment assigning lint/test to feature 001 — FR-023 moved that to 000 | FR-023 | `.github/workflows/ci.yml` | T062 |
 | T067 | ✅ Add every new job name to branch protection on `dev` **and** `main` (job names are the required-status-check contexts) | SC-009 | GitHub branch protection | T064, T065 |
-| T068 | **SC-003 probe commits — all three must fail CI**: importing `getPayload`; `req.payload.find` inside a hook; `const { payload } = req` | SC-003 | throwaway branch | T020 |
-| T069 | SC-004 probe commit: add an unregistered collection, registry test must fail naming it | SC-004 | throwaway branch | T023 |
+| T068 | ⚠ **Locally proven, CI re-run pending.** All three probes rejected by eslint with exactly three distinct errors (import / member / ObjectPattern). GitHub fired no `pull_request` run for the probe branch across four attempts, so the CI half of SC-003 is unproven — see PR #3.<br><br>**SC-003 probe commits — all three must fail CI**: importing `getPayload`; `req.payload.find` inside a hook; `const { payload } = req` | SC-003 | throwaway branch | T020 |
+| T069 | ⚠ **Locally proven, CI re-run pending.** Registry test failed naming `unregisteredProbe`. Same missing-CI-trigger caveat as T068 — see PR #3.<br><br>SC-004 probe commit: add an unregistered collection, registry test must fail naming it | SC-004 | throwaway branch | T023 |
 | T070 | ✅ Record red→green evidence in the PR description | FR-020 | PR body | T049, T050 |
 | T071 | Record CLR-002 naming decision beside the tenancy section | FR-025 | `docs/tech-stack.md` | T030 |
 | T072 | Reconcile `contracts/tenancy.md` with what shipped: `addMembership` in the type (CF-1), registry-aware clauses 2–3 (CF-8), RSC calling convention (CF-4) | CF-1, CF-4, CF-8 | `contracts/tenancy.md` | T034, T044 |
