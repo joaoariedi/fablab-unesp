@@ -336,7 +336,29 @@ deletion of the canary cannot silently re-vacuate the harness. **[N9]** `customE
 gets its subject from a read endpoint declared on the `TenantCanaries` collection config —
 otherwise that surface has nothing to exercise.
 
-**[N8] How the mutation job actually works.** A dedicated CI job on a throwaway checkout
+**[N8-corrected, measured 2026-08-26] A single mutation point proves nothing — there are
+three independent layers.** Implementation measured what the plan assumed. Removing the
+tenant constraint from `access.ts` (the plan's designated mutation point) left the harness
+**fully green**, because the plugin AND-combines its own constraint. Removing the plugin's
+gate instead (`userHasAccessToAllTenants: () => true`) *also* left it green, because our
+`access.ts` constraint still held. Only removing **both** turned it red — and even then the
+`chokePoint` surface stayed green, because `client.ts`'s tenant filter is a third layer.
+
+The layers, and what proves each:
+
+| Layer | Where | Surface that proves it |
+|---|---|---|
+| Plugin access composition | `payload.config.ts` `userHasAccessToAllTenants` | `localApiAsRsc`, with `access.ts` also mutated |
+| Our access constraint | `lib/tenancy/access.ts` | `localApiAsRsc`, with the plugin gate also mutated |
+| Choke-point filter | `lib/tenancy/client.ts` `byTenant` | `chokePoint` |
+
+Defense in depth is working exactly as intended — but it means **the mutation job must
+target one layer at a time and assert the surface that layer protects**, not flip one line
+and expect a global failure. A job written the plan's original way would have passed
+forever while proving nothing, which is the same false-assurance failure as a harness with
+no scoped collections. T064 is respecified accordingly.
+
+**How the mutation job actually works.** A dedicated CI job on a throwaway checkout
 patches a single marked line — `/* @isolation-mutation-point */` above the tenant constraint
 in `access.ts` — runs the harness, and asserts it **fails with the isolation test IDs**, not
 merely that the process exited non-zero (a database that failed to start would otherwise

@@ -1,5 +1,8 @@
 import type { CollectionConfig } from 'payload'
 
+import { scopedAccess } from '../lib/tenancy/access'
+import { sameTenant } from '../lib/tenancy/same-tenant-validator'
+
 /**
  * DO NOT DELETE — this collection is the isolation harness's subject (FR-028).
  *
@@ -28,6 +31,14 @@ export const TenantCanaries: CollectionConfig = {
     description: 'Coleção de teste dos guardrails de isolamento. Não remover sem atualizar o registro de escopo.',
     hidden: ({ user }) => (user as { role?: string })?.role !== 'master',
   },
+  // Returns a query constraint, never a boolean (FR-015). Spike S3 confirmed the plugin
+  // AND-combines this with its own tenant clause rather than replacing it.
+  access: {
+    read: scopedAccess(),
+    create: scopedAccess(),
+    update: scopedAccess(),
+    delete: scopedAccess(),
+  },
   fields: [
     {
       name: 'label',
@@ -44,9 +55,10 @@ export const TenantCanaries: CollectionConfig = {
         description:
           'Aresta scoped→scoped que o validador de mesmo-tenant precisa ter para ser testado.',
       },
-      // The same-tenant validator is attached in feature-000 task T037. Spike S4c proved the
-      // plugin accepts a cross-tenant relationship on its own: a row in org A was updated to
-      // point at a row in org B and the write succeeded.
+      // Spike S4c proved the plugin accepts a cross-tenant relationship on its own: a row
+      // in org A was updated to point at a row in org B and the write SUCCEEDED. This
+      // validator is the only thing standing between that and a hole through the model.
+      validate: sameTenant,
     },
   ],
 }

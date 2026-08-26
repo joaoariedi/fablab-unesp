@@ -1,6 +1,8 @@
 import type { CollectionConfig } from 'payload'
 import { APIError } from 'payload'
 
+import { masterOnly, masterOrSelf } from '../lib/tenancy/access'
+
 /**
  * Identity (FR-009). Declared `global`: one e-mail is one account across the whole
  * platform, and the *role* is what varies per organization.
@@ -24,6 +26,16 @@ export const Users: CollectionConfig = {
     useAsTitle: 'email',
     defaultColumns: ['email', 'role'],
     description: 'Identidade é global; o papel vive em cada vínculo com uma organização.',
+    // FR-022: org admins cannot browse the platform's user list — knowing which addresses
+    // hold accounts is the enumeration US8 forbids.
+    hidden: ({ user }) => (user as { role?: string })?.role !== 'master',
+  },
+  access: {
+    // A signed-in user must still read their own row; everything else is master.
+    read: masterOrSelf(),
+    create: masterOnly(),
+    update: masterOrSelf(),
+    delete: masterOnly(),
   },
   hooks: {
     beforeValidate: [

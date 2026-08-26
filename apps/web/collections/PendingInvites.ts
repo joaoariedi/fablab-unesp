@@ -1,5 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
+import { scopedAccess } from '../lib/tenancy/access'
+
 /**
  * An invitation to an e-mail that has **no account yet** (FR-029).
  *
@@ -23,6 +25,12 @@ export const PendingInvites: CollectionConfig = {
     useAsTitle: 'email',
     defaultColumns: ['email', 'role', 'createdAt'],
     description: 'Convites para e-mails sem conta. Entrega e aceite: feature 004.',
+  },
+  access: {
+    read: scopedAccess(),
+    create: scopedAccess(),
+    update: scopedAccess(),
+    delete: scopedAccess(),
   },
   // Unique per (tenant, email) — FR-021's idempotence, enforced by Postgres.
   //

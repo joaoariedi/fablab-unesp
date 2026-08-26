@@ -1,6 +1,9 @@
 import type { CollectionConfig } from 'payload'
 import { APIError } from 'payload'
 
+import { masterOnly } from '../lib/tenancy/access'
+import { revalidateTenantResolution, seedNewOrganization } from '../lib/tenancy/seed-on-create'
+
 /**
  * The tenant (FR-008). Declared `global` in the scope registry — it *is* the tenant, so
  * scoping it to itself would be circular.
@@ -18,8 +21,21 @@ export const Organizations: CollectionConfig = {
     useAsTitle: 'name',
     defaultColumns: ['name', 'slug', 'status'],
     description: 'Cada organização é um fab lab na plataforma.',
+    // FR-022: organization admins must not even see that other organizations exist.
+    hidden: ({ user }) => (user as { role?: string })?.role !== 'master',
+  },
+  // Global collection: no tenant constraint is possible, so the gate is the role.
+  // Host resolution reads this collection on the allowlisted path inside lib/tenancy.
+  access: {
+    read: masterOnly(),
+    create: masterOnly(),
+    update: masterOnly(),
+    delete: masterOnly(),
   },
   hooks: {
+    // Order matters: seed first so a new organization is complete before anything can
+    // resolve to it, then invalidate so it becomes reachable by host immediately.
+    afterChange: [seedNewOrganization, revalidateTenantResolution],
     beforeChange: [
       ({ data, operation, originalDoc }) => {
         // FR-008: the slug is immutable after creation. This is enforcement, not advice —

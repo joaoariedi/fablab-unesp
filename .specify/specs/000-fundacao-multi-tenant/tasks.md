@@ -171,7 +171,7 @@ should be exercised on Node 22 with pnpm.
 |---|---|---|---|---|
 | T062 | CI jobs: lint, typecheck, test, build — docs-stage gates **retained** | FR-023, SC-009 | `.github/workflows/ci.yml` | T050 |
 | T063 | Isolation harness as a CI job | FR-019, FR-023 | `.github/workflows/ci.yml` | T062 |
-| T064 | **Mutation job**: throwaway checkout patches the marked line `/* @isolation-mutation-point */` in `access.ts`, runs the harness, and asserts it fails **with the isolation test IDs** — not merely a nonzero exit, which a database that failed to start would also produce | SC-011 | `.github/workflows/ci.yml` | T063 |
+| T064 | **Mutation job, per layer.** Measured 2026-08-26: isolation has **three independent layers** (plugin composition, `access.ts` constraint, `client.ts` filter) and mutating any one leaves the harness green — the plan's single-point design would have passed forever while proving nothing. The job must mutate **one layer at a time** and assert the specific surface that layer protects fails, by test ID rather than by exit code (a database that failed to start also exits nonzero). See plan [N8-corrected] for the layer/surface table | SC-011 | `.github/workflows/ci.yml` | T063 |
 | T065 | Drift gate: apply committed migrations to an empty database, diff against the schema the code declares | FR-027, SC-010, CLR-004 | `.github/workflows/ci.yml` | T030 |
 | T066 | Fix the stale CI comment assigning lint/test to feature 001 — FR-023 moved that to 000 | FR-023 | `.github/workflows/ci.yml` | T062 |
 | T067 | Add every new job name to branch protection on `dev` **and** `main` (job names are the required-status-check contexts) | SC-009 | GitHub branch protection | T064, T065 |

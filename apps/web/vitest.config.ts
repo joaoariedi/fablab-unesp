@@ -1,5 +1,15 @@
 import { defineConfig } from 'vitest/config'
 
+// Load the workspace .env before computing fallbacks, so a developer's real DATABASE_URI
+// wins. Without this the fallbacks below would take precedence — Vitest's `env` block is
+// applied to process.env, and process.loadEnvFile never overwrites what is already set —
+// and integration tests would quietly point at the wrong database.
+try {
+  process.loadEnvFile(new URL('../../.env', import.meta.url).pathname)
+} catch {
+  // No .env: the fallbacks below carry the config-shape tests.
+}
+
 export default defineConfig({
   test: {
     // Integration tests drive a real Postgres through Payload's Local API, so they are not
