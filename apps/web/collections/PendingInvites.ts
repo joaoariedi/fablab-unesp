@@ -1,6 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 import { scopedAccess } from '../lib/tenancy/access'
+import { scopedListEndpoint } from '../lib/tenancy/scoped-endpoint'
 
 /**
  * An invitation to an e-mail that has **no account yet** (FR-029).
@@ -26,6 +27,8 @@ export const PendingInvites: CollectionConfig = {
     defaultColumns: ['email', 'role', 'createdAt'],
     description: 'Convites para e-mails sem conta. Entrega e aceite: feature 004.',
   },
+  // The custom-endpoint surface of the isolation harness (FR-019, CF-9).
+  endpoints: [scopedListEndpoint('pendingInvites')],
   access: {
     read: scopedAccess(),
     create: scopedAccess(),

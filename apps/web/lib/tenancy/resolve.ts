@@ -140,13 +140,25 @@ export async function resolveTenant(
  * `next/cache` into a non-Next runtime. Tests inject their own lookup and never reach here.
  */
 const cachedDefiniteLookup: HostLookup = async (host) => {
-  const { unstable_cache } = await import('next/cache')
-  const cached = unstable_cache(
-    async (h: string) => lookupOrganizationByHost(h),
-    ['tenant-by-host'],
-    { tags: [TENANT_RESOLUTION_TAG] },
-  )
-  const result = await cached(host)
-  // Re-run uncacheable answers so a sovereign fallback or a miss is never served stale.
-  return result.cacheable ? result : lookupOrganizationByHost(host)
+  try {
+    const { unstable_cache } = await import('next/cache')
+    const cached = unstable_cache(
+      async (h: string) => lookupOrganizationByHost(h),
+      ['tenant-by-host'],
+      { tags: [TENANT_RESOLUTION_TAG] },
+    )
+    const result = await cached(host)
+    // Re-run uncacheable answers so a sovereign fallback or a miss is never served stale.
+    return result.cacheable ? result : lookupOrganizationByHost(host)
+  } catch {
+    // **The cache is an optimisation; resolution is not.** Outside a Next request scope
+    // `unstable_cache` throws `Invariant: incrementalCache missing` (spike S8), which would
+    // otherwise turn "no cache available" into "no tenant" — a 404 for a request that should
+    // have resolved. Falling back to the uncached lookup keeps the answer correct wherever
+    // this runs: Payload's CLI, a collection endpoint driven by tests, a background job.
+    //
+    // In production inside Next the cache is always present, so this path is not a silent
+    // way to lose caching — it is the path that makes the code runnable outside Next at all.
+    return lookupOrganizationByHost(host)
+  }
 }

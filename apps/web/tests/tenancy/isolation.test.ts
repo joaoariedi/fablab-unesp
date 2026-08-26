@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 
+import configPromise from '../../payload.config'
 import { lookupOrganizationByHost } from '../../lib/tenancy/resolve'
 import { getTenantScopedPayload } from '../../lib/tenancy/scoped-payload'
 import { scopedCollections } from '../../lib/tenancy/scope-registry'
@@ -17,15 +18,17 @@ import { buildWorld, type Fixture } from './fixtures'
  *
  * In-process surfaces are driven directly:
  *   - `chokePoint`    — `getTenantScopedPayload`, the sanctioned path all app code uses
- *   - `localApiAsRsc` — Payload's Local API called the way a server component calls it:
- *                       `overrideAccess: false` with a user. **Not** a rendered RSC; the
- *                       name says what it is so nobody mistakes this for UI coverage.
+ *   - `localApiAsRsc`  — Payload's Local API called the way a server component calls it:
+ *                        `overrideAccess: false` with a user. **Not** a rendered RSC; the
+ *                        name says what it is so nobody mistakes this for UI coverage.
+ *   - `customEndpoint` — the collection's own `/mine` endpoint, invoked exactly as Payload
+ *                        invokes it, on every scoped collection (T051).
  *
- * **Not yet covered: `restApi`, `adminRest` and `customEndpoint`.** Those need an HTTP
- * server and, for the custom endpoint, a read endpoint declared on each scoped collection
- * (T051). They are tracked as remaining feature-000 work, and the count assertion below is
- * what stops this file from quietly looking complete while covering two surfaces.
- * Genuine rendered-UI coverage arrives with Playwright in feature 003.
+ * **Not yet covered: `restApi` and `adminRest`.** Both need a running HTTP server in the
+ * test setup, which is real work rather than a line change. They are tracked as remaining
+ * feature-000 work, and the surface-count assertion below is what stops this file from
+ * quietly looking complete. Genuine rendered-UI coverage arrives with Playwright in
+ * feature 003.
  */
 
 let world: Fixture
@@ -58,9 +61,32 @@ const localApiAsRsc: Surface = async ({ as, collection }) => {
   return result.docs as Record<string, unknown>[]
 }
 
+/**
+ * The collection's own custom endpoint (CF-9), invoked exactly as Payload invokes it. This
+ * is the surface `docs/tech-stack.md:151` names and the plan flagged as having no subject —
+ * `scopedListEndpoint` is that subject, declared on every scoped collection.
+ */
+const customEndpoint: Surface = async ({ as, host, collection }) => {
+  const config = await configPromise
+  const collectionConfig = config.collections.find((c) => c.slug === collection)
+  const endpoint = (collectionConfig?.endpoints || []).find((e) => e.path === '/mine')
+  if (!endpoint) {
+    throw new Error(
+      `${collection} declares no /mine endpoint, so the customEndpoint surface would assert ` +
+        `nothing. Add scopedListEndpoint('${collection}') to the collection.`,
+    )
+  }
+
+  const req = { user: as, headers: new Headers({ 'x-tenant-host': host }) }
+  const response = (await endpoint.handler(req as never)) as Response
+  const body = (await response.json()) as { docs?: Record<string, unknown>[] }
+  return body.docs ?? []
+}
+
 const SURFACES: [string, Surface][] = [
   ['chokePoint', chokePoint],
   ['localApiAsRsc', localApiAsRsc],
+  ['customEndpoint', customEndpoint],
 ]
 
 const tenantOf = (row: Record<string, unknown>): string => {
@@ -80,7 +106,7 @@ describe('cross-tenant isolation', () => {
   })
 
   it('drives more than one surface', () => {
-    expect(SURFACES.length, 'A single-surface harness is not an isolation harness.').toBeGreaterThan(1)
+    expect(SURFACES.length, 'A single-surface harness is not an isolation harness.').toBeGreaterThan(2)
   })
 
   for (const collection of scopedCollections()) {

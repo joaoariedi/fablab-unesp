@@ -1,6 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 import { scopedAccess } from '../lib/tenancy/access'
+import { scopedListEndpoint } from '../lib/tenancy/scoped-endpoint'
 import { sameTenant } from '../lib/tenancy/same-tenant-validator'
 
 /**
@@ -33,6 +34,8 @@ export const TenantCanaries: CollectionConfig = {
   },
   // Returns a query constraint, never a boolean (FR-015). Spike S3 confirmed the plugin
   // AND-combines this with its own tenant clause rather than replacing it.
+  // The custom-endpoint surface of the isolation harness (FR-019, CF-9).
+  endpoints: [scopedListEndpoint('tenantCanaries')],
   access: {
     read: scopedAccess(),
     create: scopedAccess(),

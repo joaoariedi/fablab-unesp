@@ -143,7 +143,7 @@ should be exercised on Node 22 with pnpm.
 |---|---|---|---|---|
 | T049 | **Write the harness and observe it RED** with the tenant constraint removed; capture the output for the PR | FR-020, SC-002 | `apps/web/tests/tenancy/isolation.test.ts` | T035, T037 |
 | T050 | Restore the constraint; harness green. Matrix over `scopedCollections()` × `{restApi, localApiAsRsc, adminRest, customEndpoint}`, with `expect(scopedCollections().length).toBeGreaterThan(0)` so an empty matrix is itself a failure | FR-019, SC-002 | same as T049 | T049 |
-| T051 | **`customEndpoint` subjects (CF-9)** — declare a read endpoint on `TenantCanaries` **and** on `pendingInvites`, else that surface exercises nothing | FR-019, CF-9 | `apps/web/collections/{TenantCanaries,PendingInvites}.ts` | T050 |
+| T051 | ✅ **`customEndpoint` subjects (CF-9)** — declare a read endpoint on `TenantCanaries` **and** on `pendingInvites`, else that surface exercises nothing | FR-019, CF-9 | `apps/web/collections/{TenantCanaries,PendingInvites}.ts` | T050 |
 | T052 | Header in the test file recording that genuine rendered-RSC and admin-UI surfaces are closed by Playwright in feature 003 — `localApiAsRsc` is the Local API called as an RSC would, not a rendered RSC | FR-019 | same as T049 | T050 |
 
 **Guardrail tests — one per mechanism**
@@ -162,8 +162,8 @@ should be exercised on Node 22 with pnpm.
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T060 | Admin scoping by role: tenant selector locked to the user's organizations; `organizations` and `users` hidden from org admins; master sees all (S5) | FR-022, US9 | `apps/web/collections/*` `admin.hidden` | T035, T005 |
-| T061 | Admin-visibility test, including a user who is admin of exactly two organizations | FR-022 | `apps/web/tests/tenancy/admin-visibility.test.ts` | T060 |
+| T060 | ✅ Admin scoping by role: tenant selector locked to the user's organizations; `organizations` and `users` hidden from org admins; master sees all (S5) | FR-022, US9 | `apps/web/collections/*` `admin.hidden` | T035, T005 |
+| T061 | ✅ Admin-visibility test, including a user who is admin of exactly two organizations | FR-022 | `apps/web/tests/tenancy/admin-visibility.test.ts` | T060 |
 
 ## Phase 4: Polish
 

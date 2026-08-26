@@ -55,6 +55,10 @@ export {
   type Scope,
 } from './scope-registry'
 
+// The shared tenant-scoped read endpoint — gives the harness's customEndpoint surface a
+// real subject on every scoped collection (CF-9).
+export { scopedListEndpoint } from './scoped-endpoint'
+
 // Invite orchestration. [CF-7] The route handler calls this and imports nothing fenced —
 // the dangerous functions it needs stay inside this directory.
 export {
