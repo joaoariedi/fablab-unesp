@@ -146,7 +146,11 @@ jobs:
       - run: pnpm --filter @fablab/web exec vitest run tests/tenancy/isolation.test.ts
 
   isolation-mutation:
-    name: Isolation harness can fail
+    # The name is interpolated per matrix value ON PURPOSE. Left implicit, GitHub derives the
+    # check name from the matrix and the exact string becomes something you have to observe
+    # before you can require it — and a required context that never appears blocks every
+    # merge forever. Writing it here makes the branch-protection contexts deterministic.
+    name: Isolation harness can fail (${{ matrix.layer }})
     # SC-011. A harness only ever observed green is evidence of nothing, so every run breaks
     # the isolation on purpose and asserts the harness notices — by test name and leak
     # message, never by exit code alone, since a database that failed to start also exits
