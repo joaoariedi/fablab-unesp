@@ -1,0 +1,25 @@
+{
+  "name": "fablab-unesp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Plataforma gamificada do Fab Lab CITe Bauru (UNESP)",
+  "license": "MIT",
+  "packageManager": "pnpm@10.34.5",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @fablab/web dev",
+    "build": "pnpm --filter @fablab/web build",
+    "lint": "eslint .",
+    "typecheck": "pnpm -r --no-bail typecheck",
+    "test": "pnpm -r --no-bail test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "eslint": "^9.39.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.4"
+  }
+}

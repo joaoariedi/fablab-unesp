@@ -1,11 +1,18 @@
 # Project Constitution
-<!-- Version: 1.0.0 | Date: 2026-08-25 -->
+<!-- Version: 1.2.0 | Date: 2026-08-25 -->
 <!-- Updated by /speckit.constitution -->
 
 Governing principles for the Fab Lab CITe Bauru platform. Every spec, plan and pull
 request is checked against these. They codify decisions already recorded in
 `docs/tech-stack.md`, `docs/product/` and `docs/sdd-strategy.md` — when this file and a
 decision record disagree, the dated decision record wins and this file is amended.
+
+**Amendment policy.** A substantive change to a principle or constraint **bumps the minor
+version** and is logged under [Amendments](#amendments) with its date and source. The
+amended text also carries an inline `(amended <date>: …)` note so the reasoning stays
+readable where the rule lives. Editorial changes — typos, rewrapping, formatting — bump
+nothing and are not logged. **Cite this file by section, never by line number:** an
+amendment shifts every line below it, and stale line citations still read as authoritative.
 
 ## Principles
 
@@ -25,9 +32,12 @@ decision record disagree, the dated decision record wins and this file is amende
    `scoped` or `global` in a versioned registry, and CI fails on a collection missing
    from it. Access control on scoped collections **returns a query constraint, never a
    boolean**. No code outside `lib/tenancy/` calls `payload.find/findByID/create/update/
-   delete` or raw SQL — everything passes through `getTenantScopedPayload(req)`, linted
-   by method name because Payload's Local API skips access control by default (the
-   dangerous call carries no suspicious flag). Every relationship between scoped
+   delete` or raw SQL — everything passes through `getTenantScopedPayload(req)`, enforced
+   by an **import boundary plus syntax rules covering `req.payload`** (amended 2026-08-25:
+   method-name matching is defeated by aliasing, and `req.payload` reaches every hook with
+   no import at all). Payload's Local API skips access control by default, so the dangerous
+   call carries no suspicious flag. Operations with no request tenant use the explicit-tenant
+   system client inside `lib/tenancy/`. Every relationship between scoped
    collections uses the shared same-tenant validator. **Identity is global, role is per
    organization.**
 
@@ -92,8 +102,12 @@ decision record disagree, the dated decision record wins and this file is amende
   approval**. Human moderation is the accepted antivirus for public downloads; ClamAV
   becomes mandatory before hosting an external tenant.
 - **Routing:** one subdomain per organization; path-based tenancy is prohibited.
-  Host→organization resolution in middleware, falling back to the single organization
-  when only one exists.
+  The **proxy layer** (Next 16's `proxy.ts`, formerly `middleware.ts`) performs **header
+  hygiene only** — it strips any inbound tenant header and forwards the host on the
+  **request** headers; host→organization resolution is a **cached server-side lookup, never a
+  database call in the proxy**. Falls back to the single organization when only one exists.
+  *(Amended 2026-08-25 twice — see Amendments 1.1.0 and 1.2.0. The rule is unchanged; two of
+  its original justifications were measured and found wrong.)*
 - **LGPD:** deletion operates per `(tenant, user)` and purges draft/version history and
   the storage prefix; terms acceptance gates signup; export produces a documented
   artifact. **No external tenant before a signed legal instrument** (controller/operator,
@@ -114,3 +128,14 @@ decision record disagree, the dated decision record wins and this file is amende
 - **Open items:** `docs/backlog.md`
 - **Global engineering rules:** the maintainer's `.claude/rules/` (code quality, git
   workflow, LLM security, agent workflow) — referenced, not duplicated here.
+
+## Amendments
+
+Substantive changes only, newest first. See the **Amendment policy** in the preamble.
+
+| Version | Date | Change |
+|---|---|---|
+| 1.1.0 | 2026-08-25 | **Principle 2 — enforcement mechanism.** Linting by **method name** replaced by an **import boundary plus syntax rules covering `req.payload`**. Name matching is defeated by aliasing (`const p = await getPayload(); p.find()`), `req.payload` reaches every hook with no import at all, and raw SQL has no method name. Source: feature 000 plan review, round 2 |
+| 1.1.0 | 2026-08-25 | **Architecture Constraints — routing.** Host→organization resolution moved **out of middleware** to a cached server-side lookup; middleware does header hygiene only. The Edge runtime cannot hold a Postgres connection, and `NextResponse.next()` response headers never reach the server. Source: feature 000 plan, Sketch 4 |
+| 1.2.0 | 2026-08-25 | **Architecture Constraints — routing, correction.** Spike S9 measured two claims from 1.1.0 and both were wrong. `NextResponse.next()` response headers **do** reach the server (readable via `headers()` in a Route Handler *and* an RSC) as well as the client — leaky in both directions, not inert. And the Edge-runtime argument no longer binds: Next 16 renames `middleware` to **`proxy`**, which runs on **`nodejs`**. The constraint stands on its own merits — no per-request database round trip in the proxy — and gains a new reason: spike S8 shows the cached path cannot be tested at all without an injected seam. Source: feature 000 spike, S8 + S9 |
+| 1.0.0 | 2026-08-25 | Ratified — five principles, tech stack, architecture constraints |

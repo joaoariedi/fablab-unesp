@@ -99,7 +99,7 @@ Incorporar à spec da feature correspondente — não são opcionais:
 - **Princípio central: tenancy é propriedade dos DADOS, nunca modo de deploy.** Não
   existe `TENANCY_MODE` nem ramo condicional: uma instância soberana (lab que se hospeda
   sozinho) é um deploy multi-tenant com **exatamente uma org e nenhum usuário master** —
-  o middleware host→org resolve para a org única. Um caminho de código, um runbook, uma
+  a resolução host→org devolve a org única (~~no middleware~~ → **superado 2026-08-25:** lookup server-side cacheado, sem banco no middleware). Um caminho de código, um runbook, uma
   matriz de testes; a porta "distribuir para self-host" fica aberta de graça.
 - **Identidade global, papel por organização**: um e-mail = um `usuario`;
   `usuarios.orgs[]: {org, papel: admin|staff|maker}`; `master` é papel global. Convite por
@@ -139,10 +139,17 @@ Na **Local API do Payload o access control é pulado por padrão** — o vazamen
 `payload.find()` "limpo" dentro de um RSC ou hook, sem flag suspeita nenhuma, devolvendo
 dados do vizinho com HTTP 200. Defesas obrigatórias na fundação, antes de existir a 2ª org:
 
+> **Superado (2026-08-25, revisão do plano da feature 000):** o lint por **nome de método**
+> era defeito — `const p = await getPayload(); p.find()` escapa por renomeação, `req.payload`
+> chega a todo hook **sem import nenhum**, e SQL cru não tem nome de método. O mecanismo
+> primário passa a ser **fronteira de import** (`getPayload`, `@payloadcms/db-*`,
+> `drizzle-orm`) somada a regras de sintaxe para `req.payload`/`.drizzle`. O choke point e o
+> restante da lista seguem valendo. Ver `.specify/specs/000-fundacao-multi-tenant/plan.md`.
+
 1. **Choke point único**: nada fora de `lib/tenancy/` chama
    `payload.find/findByID/create/update/delete` nem Drizzle cru; tudo passa por
-   `getTenantScopedPayload(req)`; lint pelo **nome do método** (o bug real não contém a
-   string `overrideAccess`).
+   `getTenantScopedPayload(req)`; ~~lint pelo **nome do método**~~ → **fronteira de import +
+   regras de sintaxe** (ver nota "Superado" acima; o bug real não contém `overrideAccess`).
 2. **Access de collection scoped retorna query constraint, nunca booleano.**
 3. **Validator compartilhado de mesmo-tenant** em todo relationship — o plugin **não**
    valida relationship cruzando tenants.
@@ -155,7 +162,7 @@ dados do vizinho com HTTP 200. Defesas obrigatórias na fundação, antes de exi
 ### Sequenciamento
 
 - **Feature 000 (nova, curta, antes/junto da 002)**: plugin + `organizacoes` + papéis +
-  seed do CITe + middleware host→slug com fallback de org única + choke point + validator
+  seed do CITe + proxy host→slug (resolução cacheada server-side) com fallback de org única + choke point + validator
   + harness de vazamento + fluxo de convite. Roda em paralelo com a 001 e **não atrasa o
   lançamento do CITe**.
 - **Features 001–006**: escopo inalterado; toda collection nasce com `tenant`; a 004 cria

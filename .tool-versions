@@ -1,0 +1,10 @@
+# asdf toolchain pin. `asdf install` provisions both after:
+#   asdf plugin add nodejs && asdf plugin add pnpm
+#
+# This is the operative file on this project's machines: .nvmrc is only read by nvm/fnm,
+# and the maintainers use asdf (python, poetry and rust are already pinned this way).
+# tests/toolchain.test.ts fails if this file, .nvmrc and package.json#packageManager
+# ever disagree — three places naming a version is a drift bug waiting to happen, so the
+# agreement is a gate rather than a habit.
+nodejs 22.23.2
+pnpm 10.34.5

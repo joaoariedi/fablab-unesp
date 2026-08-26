@@ -5,6 +5,18 @@ redesenhos e ajustes que ficaram combinados nas suas respostas
 e as artes atualizadas servem de conferência visual.
 
 ====================================================================
+JA ENTREGUE PELA DESIGNER
+====================================================================
+
+HOME DESKTOP — logo-chip corrigido (recebido 2026-08-26)
+[x] O header de `design/home-desktop.png` passou do chip ROSA (cubo à
+    esquerda de "FAB LAB") para o chip LARANJA canônico, extrudado,
+    com o cubo ENTRE as palavras: "FAB [cubo] LAB / CITE BAURU".
+    Isso fecha a ressalva da rodada 2 que estava registrada em
+    pages/home.md e pages/calendario.md. Mesma dimensão (1536x1024),
+    resto da arte inalterado.
+
+====================================================================
 AJUSTES DE ARTE COMBINADOS (das suas respostas das rodadas 4–5)
 ====================================================================
 
@@ -53,5 +65,12 @@ NOTAS COSMÉTICAS — DECIDIDAS (sem pressa, só quando mexer nas artes)
 - Quadro no gradil: vale a grafia IMPERATIVA
   ("CRIE./EXPERIMENTE./TRANSFORME.", como na arte mobile) — ajustar a
   arte desktop quando for retocada.
+  >> AINDA PENDENTE (conferido em 2026-08-26): a arte desktop FOI
+     retocada nessa data (correção do logo-chip), mas o quadro no
+     gradil continua no infinitivo "CRIAR / EXPERIMENTAR /
+     TRANSFORMAR". Este ajuste era para pegar carona no retoque e não
+     pegou. O título grande do hero já está correto no imperativo
+     ("CRIE. EXPERIMENTE. TRANSFORME.") — a divergência é só no
+     quadrinho do gradil, embaixo à esquerda.
 - Personagem do banco (celular vs tablet): divergência aceita — não
   precisa retocar.

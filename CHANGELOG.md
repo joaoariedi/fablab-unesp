@@ -24,6 +24,12 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) �
 
 - Four documentation lines where a wrapped prose `+` had been auto-rewritten as a list
   marker, inverting the meaning (e.g. "nome + `@nomesobrenome`").
+- **Home hero art now carries the canonical logo-chip.** The designer redelivered
+  `docs/product/design/home-desktop.png` with the orange extruded `FAB ● LAB` chip (cube
+  *between* the words) in place of the pink one with the cube at the left. This closes the
+  round-2 discrepancy that `pages/home.md` and `pages/calendario.md` had been carrying as
+  an explicit caveat — the mockup and the decision now agree, so the caveats are struck
+  through and dated rather than left to mislead.
 
 ## [0.1.0] — 2026-08-25
 

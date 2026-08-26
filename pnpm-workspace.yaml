@@ -1,0 +1,8 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Payload's admin bundle and Next's compiler need these built at install time.
+onlyBuiltDependencies:
+  - esbuild
+  - sharp

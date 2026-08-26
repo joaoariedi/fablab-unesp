@@ -1,8 +1,13 @@
 name: CI
 
-# Verification gates (constitution, principle 5). This set is the docs stage:
-# secrets, markdown, link integrity. It GROWS with each feature and never shrinks —
-# feature 000 adds the cross-tenant isolation harness; 001 adds lint/typecheck/test/build.
+# Verification gates (constitution, principle 5). "Ready" is a command list, not a feeling.
+#
+# The set GROWS with each feature and never shrinks. Feature 000 added lint, type check,
+# tests, build, the cross-tenant isolation harness, the proof that the harness can fail, and
+# the migration drift gate — on top of the docs-stage gates, which are retained.
+#
+# Job NAMES are the required-status-check contexts on `dev` and `main`. Renaming one silently
+# un-protects the branch, so treat these strings as an interface.
 
 on:
   pull_request:
@@ -16,7 +21,13 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # Matches infra/docker-compose.yml so local and CI agree.
+  DATABASE_URI: postgres://fablab:fablab@localhost:5432/fablab
+  PAYLOAD_SECRET: ci-secret-not-used-outside-this-job-at-least-32-chars
+
 jobs:
+  # ── docs stage ──────────────────────────────────────────────────────────────────────────
   secrets:
     name: Secret scan
     runs-on: ubuntu-latest
@@ -50,3 +61,180 @@ jobs:
           # repo. External URLs are not fetched — they make CI flaky, not safer.
           args: --offline --no-progress --include-fragments '**/*.md'
           fail: true
+
+  # ── code stage ──────────────────────────────────────────────────────────────────────────
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # This is a SECURITY gate, not style: it is the import boundary that keeps unscoped
+      # Payload clients out of application code (FR-014).
+      - run: pnpm lint
+
+  typecheck:
+    name: Type check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: fablab
+          POSTGRES_PASSWORD: fablab
+          POSTGRES_DB: fablab
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U fablab -d fablab"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Apply committed migrations
+        run: pnpm --filter @fablab/web migrate
+      - run: pnpm test
+
+  isolation:
+    name: Cross-tenant isolation
+    # Its own merge-blocking job rather than a line inside `Tests`: this is the gate the
+    # whole feature exists for, and a required check named after it cannot be quietly
+    # dropped by editing a test glob.
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: fablab
+          POSTGRES_PASSWORD: fablab
+          POSTGRES_DB: fablab
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U fablab -d fablab"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @fablab/web migrate
+      - run: pnpm --filter @fablab/web exec vitest run tests/tenancy/isolation.test.ts
+
+  isolation-mutation:
+    # The name is interpolated per matrix value ON PURPOSE. Left implicit, GitHub derives the
+    # check name from the matrix and the exact string becomes something you have to observe
+    # before you can require it — and a required context that never appears blocks every
+    # merge forever. Writing it here makes the branch-protection contexts deterministic.
+    name: Isolation harness can fail (${{ matrix.layer }})
+    # SC-011. A harness only ever observed green is evidence of nothing, so every run breaks
+    # the isolation on purpose and asserts the harness notices — by test name and leak
+    # message, never by exit code alone, since a database that failed to start also exits
+    # non-zero.
+    #
+    # One job per LAYER, because isolation has three independent ones and mutating any single
+    # one leaves the harness green. See scripts/isolation-mutation.sh for the measurement.
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        layer: [access-composition, choke-point]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: fablab
+          POSTGRES_PASSWORD: fablab
+          POSTGRES_DB: fablab
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U fablab -d fablab"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @fablab/web migrate
+      - name: Break the ${{ matrix.layer }} layer and require the harness to notice
+        run: bash scripts/isolation-mutation.sh ${{ matrix.layer }}
+
+  drift:
+    name: Migration drift
+    # FR-027 / CLR-004. The architecture document calls dev/prod migration drift risk number
+    # one; its mitigation used to be a ritual, and rotating volunteers drop rituals.
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: fablab
+          POSTGRES_PASSWORD: fablab
+          POSTGRES_DB: fablab
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U fablab -d fablab"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: bash scripts/migration-drift.sh
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: fablab
+          POSTGRES_PASSWORD: fablab
+          POSTGRES_DB: fablab
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U fablab -d fablab"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @fablab/web migrate
+      # payload.config reads the environment at load, and `next build` loads it — so the
+      # build needs a reachable database, not just the variables.
+      - run: pnpm build

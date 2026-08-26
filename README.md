@@ -32,7 +32,7 @@ models require no account. An account is for *making* — publishing, liking, an
 earning XP.
 
 <div align="center">
-  <img src="docs/product/design/home-desktop.png" alt="Planned home page — the lab drawn as an isometric pixel-art night map" width="800">
+  <img src="docs/product/design/home-desktop.png" alt="Planned home page — the lab drawn as an isometric pixel-art night map, with the canonical orange FAB ● LAB logo-chip in the header" width="800">
   <p><sub>How the home is planned to look: the lab as a pixel-art night map (official hero) — <a href="docs/product/design/home-mobile.png">mobile art</a> · <a href="docs/product/pages/home.md">full page spec</a></sub></p>
 </div>
 
@@ -97,9 +97,71 @@ a deploy with one organization and no master user. Cross-tenant isolation is enf
 a single query choke point plus a CI leak-test harness — the full principle list lives in
 the multi-tenancy section of [`docs/tech-stack.md`](docs/tech-stack.md).
 
+## 🚀 Quick start
+
+You need **Node 22 LTS**, **pnpm 10** and **Docker**. Nothing else — Postgres and MinIO
+run in containers.
+
+The exact versions are pinned in [`.tool-versions`](.tool-versions). If you use
+[asdf](https://asdf-vm.com/) (recommended — it is what the maintainers run), the toolchain
+installs itself:
+
+```bash
+asdf plugin add nodejs && asdf plugin add pnpm
+asdf install          # reads .tool-versions
+```
+
+Then:
+
+```bash
+git clone https://github.com/joaoariedi/fablab-unesp.git
+cd fablab-unesp
+
+cp .env.example .env                          # defaults match the compose file
+docker compose -f infra/docker-compose.yml up -d   # Postgres + MinIO + bucket
+pnpm install
+pnpm --filter @fablab/web migrate             # apply committed migrations
+pnpm dev
+```
+
+Open **<http://localhost:3000/admin>** and create the first user — that account is your
+`master`. The public site is at <http://localhost:3000/>.
+
+> **Two things that trip people up.**
+>
+> - **Port 5432 already in use?** If you run Postgres locally, set `DB_PORT=55432` in
+>   `.env` and update `DATABASE_URI` to match. `S3_PORT` and `S3_CONSOLE_PORT` work the
+>   same way.
+> - **Run `migrate` before `dev`, not after.** In development Payload pushes schema changes
+>   straight to the database. If it has done that, a later `migrate` stops and asks whether
+>   you accept data loss — a prompt that looks like a hang in a non-interactive shell. On a
+>   fresh database, in the order above, it just runs.
+
+**Useful commands**
+
+| Command | What it does |
+|---|---|
+| `pnpm lint` | Import boundary + tenancy syntax rules (this is a security gate, not style) |
+| `pnpm typecheck` | `tsc --noEmit` across the workspace |
+| `pnpm test` | Vitest — includes the scope-registry gate |
+| `pnpm --filter @fablab/web migrate:create <name>` | Generate a migration after a schema change |
+| `pnpm --filter @fablab/web generate:types` | Regenerate `payload-types.ts` from the config |
+
+Schema changes are **committed migrations**, never `push` in production — dev/prod
+migration drift is the architecture's number-one risk and CI fails on it.
+
 ## 🗂️ Repository layout
 
 ```text
+apps/web/                 Next.js App Router + Payload CMS 3 in one process (admin at /admin)
+├── collections/            Organizations, Users, TenantCanaries, PendingInvites
+├── lib/tenancy/            The ONLY module allowed to touch Payload data operations
+├── migrations/             Committed Payload migrations
+└── tests/tenancy/          Guardrail tests, incl. the cross-tenant isolation harness
+packages/
+├── game/                  Pure XP/level/mission rules — no Payload, no IO (feature 005)
+└── ui/                    Identity tokens + components (feature 001)
+infra/                    docker-compose (Postgres + MinIO), bucket bootstrap
 docs/
 ├── product/               Product vision — the spec-generation sources
 │   ├── concept.md           Vision, IA, audiences, platform requirements
