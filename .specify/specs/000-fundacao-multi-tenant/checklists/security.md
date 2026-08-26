@@ -12,36 +12,36 @@ rule cannot be satisfied accidentally: the constitution's leak vector is a **cle
 
 | ID | Check | Dimension | FR/US Ref | Status |
 |----|-------|-----------|-----------|--------|
-| CHK050 | Authentication is assigned to a named mechanism (Payload auth on `users`), not left implicit in "minimal users collection" | [authentication] | FR-009 | [ ] |
-| CHK051 | E-mail uniqueness is stated as **platform-wide**, so one identity cannot be duplicated per organization | [authentication] | FR-009, US8 | [ ] |
-| CHK052 | The spec states that **every `users` row has a password** — no password-less account is created by the invite path | [authentication] | FR-029 | [ ] |
-| CHK053 | Production bootstrap is specified as Payload's create-first-user screen, with **no credential in configuration** | [authentication] | FR-026, CLR-003 | [ ] |
-| CHK054 | The env-seeded master is explicitly **dev-only**, with the gate named rather than left to convention | [authentication] | FR-026, CLR-003 | [ ] |
-| CHK055 | Account creation is stated to require terms acceptance, so an invited person who never consented has no account | [authentication] | FR-029 | [ ] |
-| CHK056 | The permission model names every role and its scope: `master \| user` globally, `admin \| staff \| maker` per membership | [authorization] | FR-009, US8 | [ ] |
-| CHK057 | "Identity is global, role is per organization" is stated as an invariant, not an example | [authorization] | FR-009, US8 | [ ] |
-| CHK058 | Access on scoped collections is required to return a **query constraint, never a boolean**, with master named as the sole exception | [authorization] | FR-015, US3 | [ ] |
-| CHK059 | Master is stated as the **only** cross-tenant reader — no second role, no configuration flag, no `allTenants` for anyone else | [authorization] | FR-015, US3 edge | [ ] |
-| CHK060 | `update`/`delete` are specified as tenant-constrained **in the operation itself**, so a foreign document matches zero rows rather than being read then rejected (no read-modify race) | [authorization] | FR-013 | [ ] |
-| CHK061 | The invite endpoint's caller check is stated (org admin of *that* organization, or master) together with its failure code | [authorization] | FR-021, US8 | [ ] |
-| CHK062 | The system client's blast radius is bounded in writing: never exported from the module index, import-fenced, consumers enumerated | [authorization] | FR-032, CF-1 | [ ] |
-| CHK063 | The allowlist is stated as **exhaustive**, so a future bypass requires editing a list that shows up in review | [authorization] | FR-013, FR-014 | [ ] |
-| CHK064 | Org-admin admin-UI visibility is specified for both directions: their organizations shown, `organizations`/`users` hidden | [authorization] | FR-022, US9 | [ ] |
-| CHK065 | The spec states that an unresolved tenant is an **error**, never a silent "all tenants" | [authorization] | FR-012, US4 error | [ ] |
-| CHK066 | Anti-enumeration is specified concretely: identical status, identical body **and** identical timing class across all three invite branches | [data-protection] | FR-021, SC-007, US8 error | [ ] |
-| CHK067 | The relationship validator's message is required to name the field and **not** the owning organization — otherwise any relationship input becomes an ID-ownership oracle | [data-protection] | SC-005, US6 | [ ] |
-| CHK068 | An unknown host with multiple organizations is specified to 404, never to fall back to "the first organization" | [data-protection] | FR-012, US4 error | [ ] |
-| CHK069 | The sovereign-fallback and `null` caching prohibition is stated as **correctness**: caching either serves org A's context on org B's subdomain for a whole TTL | [data-protection] | FR-011, FR-012 | [ ] |
-| CHK070 | Only `active` organizations resolve by host, and this is stated for the sovereign fallback too | [data-protection] | FR-008, spec decision 6 | [ ] |
-| CHK071 | Per-organization LGPD contact is declared, and deletion/export semantics are assigned to their owning feature rather than left blank | [data-protection] | FR-008 | [ ] |
-| CHK072 | The startup error is required to name `DATABASE_URI` and its shape without echoing the connection string's credentials | [data-protection] | US1 error case | [ ] |
-| CHK073 | Inbound `x-tenant` is specified as **stripped**, not merely ignored — a downstream reader cannot pick up a forged value | [input-sanitization] | FR-011, SC-012 | [ ] |
-| CHK074 | Tenant derives from the forwarded host only; the spec names no other input that can influence resolution | [input-sanitization] | FR-011, SC-012 | [ ] |
-| CHK075 | The caller is stated to be unable to **widen** the tenant constraint by supplying its own `where` | [input-sanitization] | FR-013, FR-015 | [ ] |
-| CHK076 | The validator is required to handle every relationship shape — `hasMany`, polymorphic `{relationTo, value}`, populated objects — not just the scalar case | [input-sanitization] | FR-016, US6 | [ ] |
-| CHK077 | Slug immutability after creation is stated, since storage keys (`org/<slug>/…`) and hosts derive from it | [input-sanitization] | FR-008 | [ ] |
-| CHK078 | The import boundary is named as the **primary** mechanism, with the reason method-name matching was rejected recorded (aliasing, `req.payload`, raw SQL) | [input-sanitization] | FR-014, US5 error | [ ] |
-| CHK079 | The three SC-003 probes are enumerated individually — `getPayload` import, `req.payload.find` in a hook, `const { payload } = req` — so partial coverage is visible | [input-sanitization] | SC-003, FR-014 | [ ] |
+| CHK050 | Authentication is assigned to a named mechanism (Payload auth on `users`), not left implicit in "minimal users collection" | [authentication] | FR-009| [x] |
+| CHK051 | E-mail uniqueness is stated as **platform-wide**, so one identity cannot be duplicated per organization | [authentication] | FR-009, US8| [x] |
+| CHK052 | The spec states that **every `users` row has a password** — no password-less account is created by the invite path | [authentication] | FR-029| [x] |
+| CHK053 | Production bootstrap is specified as Payload's create-first-user screen, with **no credential in configuration** | [authentication] | FR-026, CLR-003| [x] |
+| CHK054 | The env-seeded master is explicitly **dev-only**, with the gate named rather than left to convention | [authentication] | FR-026, CLR-003| [x] |
+| CHK055 | Account creation is stated to require terms acceptance, so an invited person who never consented has no account | [authentication] | FR-029| [x] |
+| CHK056 | The permission model names every role and its scope: `master \| user` globally, `admin \| staff \| maker` per membership | [authorization] | FR-009, US8| [x] |
+| CHK057 | "Identity is global, role is per organization" is stated as an invariant, not an example | [authorization] | FR-009, US8| [x] |
+| CHK058 | Access on scoped collections is required to return a **query constraint, never a boolean**, with master named as the sole exception | [authorization] | FR-015, US3| [x] |
+| CHK059 | Master is stated as the **only** cross-tenant reader — no second role, no configuration flag, no `allTenants` for anyone else | [authorization] | FR-015, US3 edge| [x] |
+| CHK060 | `update`/`delete` are specified as tenant-constrained **in the operation itself**, so a foreign document matches zero rows rather than being read then rejected (no read-modify race) | [authorization] | FR-013| [x] |
+| CHK061 | The invite endpoint's caller check is stated (org admin of *that* organization, or master) together with its failure code | [authorization] | FR-021, US8| [x] |
+| CHK062 | The system client's blast radius is bounded in writing: never exported from the module index, import-fenced, consumers enumerated | [authorization] | FR-032, CF-1| [x] |
+| CHK063 | The allowlist is stated as **exhaustive**, so a future bypass requires editing a list that shows up in review | [authorization] | FR-013, FR-014| [x] |
+| CHK064 | Org-admin admin-UI visibility is specified for both directions: their organizations shown, `organizations`/`users` hidden | [authorization] | FR-022, US9| [x] |
+| CHK065 | The spec states that an unresolved tenant is an **error**, never a silent "all tenants" | [authorization] | FR-012, US4 error| [x] |
+| CHK066 | Anti-enumeration is specified concretely: identical status, identical body **and** identical timing class across all three invite branches | [data-protection] | FR-021, SC-007, US8 error| [x] |
+| CHK067 | The relationship validator's message is required to name the field and **not** the owning organization — otherwise any relationship input becomes an ID-ownership oracle | [data-protection] | SC-005, US6| [x] |
+| CHK068 | An unknown host with multiple organizations is specified to 404, never to fall back to "the first organization" | [data-protection] | FR-012, US4 error| [x] |
+| CHK069 | The sovereign-fallback and `null` caching prohibition is stated as **correctness**: caching either serves org A's context on org B's subdomain for a whole TTL | [data-protection] | FR-011, FR-012| [x] |
+| CHK070 | Only `active` organizations resolve by host, and this is stated for the sovereign fallback too | [data-protection] | FR-008, spec decision 6| [x] |
+| CHK071 | Per-organization LGPD contact is declared, and deletion/export semantics are assigned to their owning feature rather than left blank | [data-protection] | FR-008| [x] |
+| CHK072 | The startup error is required to name `DATABASE_URI` and its shape without echoing the connection string's credentials | [data-protection] | US1 error case| [x] |
+| CHK073 | Inbound `x-tenant` is specified as **stripped**, not merely ignored — a downstream reader cannot pick up a forged value | [input-sanitization] | FR-011, SC-012| [x] |
+| CHK074 | Tenant derives from the forwarded host only; the spec names no other input that can influence resolution | [input-sanitization] | FR-011, SC-012| [x] |
+| CHK075 | The caller is stated to be unable to **widen** the tenant constraint by supplying its own `where` | [input-sanitization] | FR-013, FR-015| [x] |
+| CHK076 | The validator is required to handle every relationship shape — `hasMany`, polymorphic `{relationTo, value}`, populated objects — not just the scalar case | [input-sanitization] | FR-016, US6| [x] |
+| CHK077 | Slug immutability after creation is stated, since storage keys (`org/<slug>/…`) and hosts derive from it | [input-sanitization] | FR-008| [x] |
+| CHK078 | The import boundary is named as the **primary** mechanism, with the reason method-name matching was rejected recorded (aliasing, `req.payload`, raw SQL) | [input-sanitization] | FR-014, US5 error| [x] |
+| CHK079 | The three SC-003 probes are enumerated individually — `getPayload` import, `req.payload.find` in a hook, `const { payload } = req` — so partial coverage is visible | [input-sanitization] | SC-003, FR-014| [x] |
 
 **Dimensions**: `[authentication]` `[authorization]` `[data-protection]`
 `[input-sanitization]`. Companion checklists: [`requirements.md`](requirements.md),
