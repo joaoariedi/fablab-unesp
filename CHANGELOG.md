@@ -15,10 +15,41 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) �
   (locked stack with swappable services; tenancy as a property of the data; pure game
   rules over an immutable ledger; design and content fidelity; enumerated CI
   verification gates), plus tech stack and architecture constraints.
-- **CI** (`.github/workflows/ci.yml`): docs-stage merge-blocking gates — secret scan
-  (gitleaks), markdown lint and relative-link integrity. The gate set grows with each
-  feature (000 adds the cross-tenant isolation harness; 001 adds
-  lint/typecheck/test/build) and never shrinks.
+- **CI** (`.github/workflows/ci.yml`): eleven merge-blocking gates on `dev` and `main` —
+  secret scan (gitleaks), markdown lint, relative-link integrity, lint, type check, tests,
+  build, the cross-tenant isolation harness, two per-layer proofs that the harness can
+  fail, and the migration drift gate. The set grows with each feature and never shrinks.
+- **Feature 000 — multi-tenant foundation.** The workspace (pnpm workspaces, `apps/web`
+  with Next 16 + Payload CMS 3 embedded, `packages/game`, `packages/ui`, `infra/`) and the
+  tenancy guardrails every later feature inherits:
+  - **One choke point.** `lib/tenancy` is the only module allowed to reach Payload data,
+    enforced by an ESLint **import boundary** plus syntax rules for `req.payload` — because
+    Payload's Local API skips access control by default, so the dangerous call is a clean
+    `payload.find()` with no suspicious token. Reproduced live during the spike: a bare
+    find returned two organizations' rows.
+  - **Versioned scope registry** — every collection declared `scoped` or `global`, with CI
+    failing in both directions if the registry and the config disagree.
+  - **Same-tenant relationship validator** — project code, because the plugin does not do
+    it: a row in org A was updated to point at a row in org B and the write succeeded.
+  - **Isolation harness** over four surfaces (choke point, Local API as an RSC calls it,
+    the collection's own endpoint, and REST under both bearer and cookie auth),
+    demonstrated **failing before passing** and re-proved on every CI run by a mutation
+    job that breaks one layer at a time.
+  - **Invite flow** that adds a membership for an existing address and records a pending
+    invite for an unknown one — never creating an account before terms acceptance, and
+    never disclosing which branch it took.
+  - Host→organization resolution with a sovereign fallback, an idempotent seed, and
+    committed migrations with a drift gate.
+
+### Changed
+
+- **Next is pinned to `>=16.2.6 <17`,** not the `>=15.5` the plan chose. Payload 3.88's
+  peer range excludes the whole 15.5.x line, so the original pin was unsatisfiable. Next 16
+  also renames `middleware` to `proxy` (and moves it from the `edge` runtime to `nodejs`),
+  and `revalidateTag` now requires a cache-life profile.
+- **Constitution v1.2.0** — two amendments, each because a claim was measured and found
+  wrong: linting by method name replaced by an import boundary, and host resolution moved
+  out of the proxy layer to a cached server-side lookup.
 
 ### Fixed
 
