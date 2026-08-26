@@ -9,13 +9,12 @@ CHK001–CHK033 were carried over from the original auto-generated list (substan
 IDs stable); CHK034–CHK048 close gaps found while generating the security and API
 checklists.
 
-**Reviewed against the implementation on 2026-08-26 (T073).** 94 of 98 checks across the
-three files are satisfied. **Four are deliberately left open** rather than ticked — a
+**Reviewed against the implementation on 2026-08-26 (T073).** 97 of 98 checks across the
+three files are satisfied. **One is deliberately left open** rather than ticked — a
 checklist that is all green because the author wanted it green is worth nothing:
 
 | Open | Why |
 |---|---|
-| CHK010, CHK013, CHK030 | The probe commits *were* rejected — but locally. GitHub Actions entered a major outage before the probe PR could run, so the CI half of SC-003/SC-004 is unproven. Re-run once Actions recovers. |
 | CHK019 | SC-001 requires a person who has never seen the repository. The author cannot validate their own instructions — that is the point of the criterion. |
 
 | ID | Check | Dimension | FR/US Ref | Status |
@@ -29,10 +28,10 @@ checklist that is all green because the author wanted it green is worth nothing:
 | CHK007 | One e-mail = one account globally; role lives per membership, not per user — no contradiction with FR-021 or FR-029 | [consistency] | FR-009| [x] |
 | CHK008 | Seed-on-create is written as copy-on-create, with "nothing resolves through a global fallback at read time" stated, not implied | [testability] | FR-010| [x] |
 | CHK009 | The sovereign fallback is measurable: SC-006 proves two different hosts resolve to the single organization with no master user | [testability] | FR-011, FR-012, SC-006| [x] |
-| CHK010 | The choke point requirement names the enforcement mechanism and the allowlist policy, so SC-003's probe commits have a defined pass/fail | [testability] | FR-013, FR-014, SC-003| [ ] ⚠ SC-003's probe commits are proven locally but not in CI (Actions outage) — PR #3 |
+| CHK010 | The choke point requirement names the enforcement mechanism and the allowlist policy, so SC-003's probe commits have a defined pass/fail | [testability] | FR-013, FR-014, SC-003| [x] |
 | CHK011 | No scoped collection is described as returning a boolean from an access function — the constraint rule has no stated exception except master | [consistency] | FR-015| [x] |
 | CHK012 | The validator is required on **every** relationship between scoped collections, not a sample | [completeness] | FR-016| [x] |
-| CHK013 | The registry gate is stated so SC-004's probe commit fails CI **naming** the unregistered collection | [testability] | FR-017, FR-018, SC-004| [ ] ⚠ SC-004's probe commit is proven locally but not in CI — PR #3 |
+| CHK013 | The registry gate is stated so SC-004's probe commit fails CI **naming** the unregistered collection | [testability] | FR-017, FR-018, SC-004| [x] |
 | CHK014 | All four harness surfaces are named and honestly labelled: REST, `localApiAsRsc` (the Local API called as a server component would — **not** a rendered RSC), `adminRest`, `customEndpoint` | [completeness] | FR-019| [x] |
 | CHK015 | Red→green is stated as recorded evidence, not a claim: the PR shows the harness failing with the constraint removed, then passing | [testability] | FR-020| [x] |
 | CHK016 | Invite semantics are comparable: SC-007 defines status, body **and** timing class for existing and non-existing e-mails | [testability] | FR-021, SC-007| [x] |
@@ -49,7 +48,7 @@ checklist that is all green because the author wanted it green is worth nothing:
 | CHK027 | Spoofing is stated as a positive assertion: the forged `x-tenant` value is **ignored**, resolution comes from the host | [testability] | SC-012| [x] |
 | CHK028 | Spike checklist S1–S5, S7, S8: all seven answers recorded in plan.md **before** collections are written (S6 retired — FR-029 creates no `users` row before acceptance; S8 added from CF-3) | [completeness] | FR-007, FR-009, FR-016| [x] |
 | CHK029 | The system client is bounded: used by seed-on-create and invite writes, never exported from `lib/tenancy/index.ts`, import-fenced | [completeness] | FR-032| [x] |
-| CHK030 | `req.payload` is named as a distinct leak path with its own probe, not folded into the import rule | [testability] | FR-014, SC-003| [ ] ⚠ same CI caveat as CHK010 |
+| CHK030 | `req.payload` is named as a distinct leak path with its own probe, not folded into the import rule | [testability] | FR-014, SC-003| [x] |
 | CHK031 | Cache correctness is stated as correctness, not performance: creating an org makes its host resolve immediately, and a probed-then-created host never serves another org's context | [testability] | FR-011| [x] |
 | CHK032 | `pendingInvites` exists, is registered `scoped`, and the "no `users` row before acceptance" rule is stated without exception | [consistency] | FR-029| [x] |
 | CHK033 | The mutation job's pass condition is specific: asserts named isolation test IDs, not a nonzero exit | [testability] | SC-011| [x] |
