@@ -8,6 +8,7 @@ import { buildConfig } from 'payload'
 import { Organizations } from './collections/Organizations'
 import { PendingInvites } from './collections/PendingInvites'
 import { TenantCanaries } from './collections/TenantCanaries'
+import { UnregisteredProbe } from './collections/UnregisteredProbe'
 import { isMaster, Users } from './collections/Users'
 import { readEnv } from './lib/env'
 
@@ -40,7 +41,7 @@ export default buildConfig({
   // Order is load-bearing: the multi-tenant plugin must be registered before the first
   // content collection exists (FR-007). Adopting it later means renaming fields, rewriting
   // access control and migrating data. Feature 000 exists to get this ordering right once.
-  collections: [Organizations, Users, TenantCanaries, PendingInvites],
+  collections: [Organizations, Users, TenantCanaries, PendingInvites, UnregisteredProbe],
 
   plugins: [
     multiTenantPlugin({
