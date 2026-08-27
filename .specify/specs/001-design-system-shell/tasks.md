@@ -138,7 +138,7 @@ assumed), so dependencies live in the **Blocked by** column. Keep them accurate 
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T039 | Public surface: replace the placeholder `export {}` with the real exports | FR-018 | `packages/ui/src/index.ts` | T034, T035 |
+| T039 | Public surface: replace the placeholder `export {}` with the real exports. **Also add the strict export-map completeness assertion here** — every entry resolves to a real file, **with no skip for absent or empty directories**. T001's version has to skip those (a half-built tree is the normal in-flight state, and treating an empty `src/components/` as a defect deadlocked the run: the Phase 1 gate blocked Phase 2 while only Phase 3 could satisfy it). By Phase 4 nothing is in flight, so the invariant can finally be asserted without an escape hatch. Watch it go red by renaming one target | FR-018, SC-009 | `packages/ui/src/index.ts`, `packages/ui/tests/package-exports.test.ts` | T034, T035 |
 | T040 | Workbench composes a representative page from **public exports only** — which is what proves feature 003 can build on this | SC-009 | `apps/web/app/(frontend)/workbench/page.tsx` | T039 |
 | T041 | **Probe commit**, **four** violations so no shape of the fence is assumed: a hex in a `.tsx`, a hex in a **template literal** in a `.tsx`, a hex in a `.module.css`, and `var(--color-rosa-raw)` in a `.module.css`. The last two were unenforced before round 2 and the second evaded the TS half. Confirm CI names file and value for each, close unmerged | SC-001 | throwaway branch | T007, T007b |
 | T042 | [P] Rewrite `packages/ui/README.md` — it currently says "Filled by feature 001" | — | `packages/ui/README.md` | T039 |

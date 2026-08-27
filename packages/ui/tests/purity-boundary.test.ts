@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { builtinModules } from 'node:module'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -51,8 +52,21 @@ const BOUNDARY_RULE = 'no-restricted-imports'
  * on this list: it is a client-safe component and banning it would be copying the
  * `packages/game` block rather than mirroring it.
  *
- * The `node:` entries are FR-018's "no IO" clause. They are also exactly what `tests/**` needs,
- * which is why the scope assertion below exists.
+ * **The general-form entries below are the point of this list, not padding.** The first
+ * attempt at this boundary was rejected because rule and probe were written from the same
+ * short list, so each confirmed the other and neither described FR-018:
+ *
+ *   - "no IO" was `node:*` plus a hand-picked bare list whose only IO member was `fs` — the
+ *     one probed here. Measured: bare `https`, `net`, `stream` and `worker_threads` were
+ *     ALLOWED, so a component could do network IO straight through the gate that exists to
+ *     forbid IO. They are probed now, and every Node builtin is swept below.
+ *   - "no Next server APIs" was the four specifiers probed here, so `next/og` — server/edge
+ *     only, and a plausible reach for a UI package building an OG card — and bare `next`
+ *     itself were both allowed. Both are probed now.
+ *
+ * This is feature 000's method-name lesson twice over: a rule that matches a form the problem
+ * does not take. A probe list is only evidence when it contains specifiers nobody wrote the
+ * rule against.
  */
 const FORBIDDEN_IN_SRC = [
   'payload',
@@ -67,10 +81,38 @@ const FORBIDDEN_IN_SRC = [
   'node:fs/promises',
   'node:child_process',
   'fs',
+  // Next is deny-by-default: the package root and a server-only entry point no enumeration
+  // of "the server APIs" would have thought to include.
+  'next',
+  'next/og',
+  // Bare builtins that are not `fs`. Network and concurrency, i.e. the IO that the rejected
+  // first attempt let through while reporting a green "no IO" boundary.
+  'https',
+  'http',
+  'net',
+  'stream',
+  'worker_threads',
 ]
 
-/** React is the whole point of the package; a boundary that banned it would be wrong. */
-const ALLOWED_IN_SRC = ['react', 'react/jsx-runtime']
+/**
+ * Every Node builtin, taken from Node itself rather than retyped.
+ *
+ * The sweep below asserts the "no IO" clause as the general rule it claims to be: nothing a
+ * browser cannot provide is importable from `src/**`. Deriving the list from
+ * `builtinModules` is what makes it survive a Node release adding a module — and reading it
+ * here, in `tests/**`, is itself the scope assertion this file makes further down.
+ */
+const NODE_BUILTINS: readonly string[] = builtinModules
+
+/**
+ * React is the whole point of the package; a boundary that banned it would be wrong.
+ *
+ * `next/link` and `next/image` are the deny-by-default rule's only exemptions: both render on
+ * the client, so neither costs the package its reusability. They are asserted because a regex
+ * written slightly wrong — or a `!next/link` negation, which `group` does NOT honour
+ * (measured) — bans them along with the server APIs and breaks every consumer.
+ */
+const ALLOWED_IN_SRC = ['react', 'react/jsx-runtime', 'next/link', 'next/image']
 
 /** What T011 needs from `tests/**`, verbatim: read the filesystem, shell out to git. */
 const ALLOWED_IN_TESTS = ['node:fs', 'node:child_process', 'node:path']
@@ -102,7 +144,9 @@ function probeFileName(moduleName: string): string {
 
 function writeProbes(dir: string, moduleNames: readonly string[]): void {
   mkdirSync(dir, { recursive: true })
-  for (const moduleName of moduleNames) {
+  // Deduplicated: the builtin sweep and the hand-written list deliberately overlap on `fs`
+  // and the network builtins, and writing one probe twice would report it twice.
+  for (const moduleName of new Set(moduleNames)) {
     writeFileSync(join(dir, probeFileName(moduleName)), probeSource(moduleName), 'utf8')
   }
 }
@@ -157,7 +201,7 @@ function boundaryMessagesFor(dir: string, moduleName: string): readonly EslintMe
 }
 
 beforeAll(() => {
-  writeProbes(SRC_PROBE_DIR, [...FORBIDDEN_IN_SRC, ...ALLOWED_IN_SRC])
+  writeProbes(SRC_PROBE_DIR, [...FORBIDDEN_IN_SRC, ...NODE_BUILTINS, ...ALLOWED_IN_SRC])
   writeProbes(TESTS_PROBE_DIR, ALLOWED_IN_TESTS)
   results = lintProbeDirs()
 }, ESLINT_TIMEOUT_MS)
@@ -183,6 +227,30 @@ describe('packages/ui/src purity boundary (FR-018)', () => {
     // contributor's fix is a targeted eslint-disable.
     const [first] = boundaryMessagesFor(SRC_PROBE_DIR, m)
     expect(first?.message ?? '').toMatch(/packages\/ui/)
+  })
+
+  it('refuses EVERY Node builtin, not the handful a reviewer thought of', () => {
+    // The clause is "packages/ui does no IO", so the rule has to be derived from
+    // `builtinModules`, not enumerated. Enumerations rot in two directions at once: a Node
+    // release adds a module, and a reviewer's list omits the specifier an author actually
+    // reaches for. Asserted as one set difference rather than 66 cases so the failure names
+    // the modules that got through instead of the first one alphabetically.
+    const reachable = NODE_BUILTINS.filter(
+      (moduleName) => boundaryMessagesFor(SRC_PROBE_DIR, moduleName).length === 0,
+    )
+    expect(
+      reachable,
+      'these Node builtins are importable from packages/ui/src, so the "no IO" clause is ' +
+        'matching a form the problem does not take — derive the rule from ' +
+        "module.builtinModules rather than listing specifiers by hand: " +
+        reachable.join(', '),
+    ).toEqual([])
+  })
+
+  it('sweeps a builtin list big enough to be evidence', () => {
+    // Guards the assertion above against passing vacuously: an empty or truncated
+    // `builtinModules` would make the set difference trivially empty and the sweep silent.
+    expect(NODE_BUILTINS.length).toBeGreaterThan(30)
   })
 
   it.each(ALLOWED_IN_SRC)('leaves `import from "%s"` alone under src/', (moduleName) => {

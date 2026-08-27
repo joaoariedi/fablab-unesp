@@ -150,13 +150,10 @@ export default tseslint.config(
                 'payload/*',
                 '@payloadcms/*',
                 '@payloadcms/*/*',
-                // Next is DENIED BY DEFAULT with a short allowlist, not an enumeration of
-                // the server entry points. The first draft banned exactly the four the test
-                // probed — next/headers, next/server, next/cache, server-only — and let
-                // `next/og` (a server/edge-only API, and a plausible reach for a UI package
-                // building an OG card) straight through. An allowlist cannot rot that way:
-                // a Next release adding a server API is blocked on arrival, and every
-                // exemption below is one line a reviewer can see.
+                // `server-only` is the explicit "this module may not reach the client"
+                // marker; a component carrying it has already left the boundary. Next
+                // itself is denied by default one entry down — this group holds no `next`
+                // specifier on purpose, because an enumeration is what failed the first time.
                 'server-only',
               ],
               message:

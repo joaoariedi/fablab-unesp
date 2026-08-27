@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
@@ -92,6 +92,70 @@ describe('@fablab/ui package manifest', () => {
       expect(targets.length).toBeGreaterThan(0)
       for (const target of targets) {
         expect(target).toMatch(/^\.\/src\//)
+      }
+    })
+  })
+
+  /**
+   * The three assertions above compare the manifest against `EXPECTED_EXPORTS` — a hardcoded
+   * restatement of the manifest written by the same author. Measured on 2026-08-27: renaming
+   * `src/styles.css` away leaves **all six** of those tests green while
+   * `import '@fablab/ui/styles.css'` is broken for the app, because nothing here ever asks the
+   * filesystem whether a target is real. That is the exact failure T001d names — "a dangling
+   * `@import` is silent, so the test must assert each target exists on disk (`existsSync`), not
+   * merely that the parsed paths match a hardcoded list" — and the export map is the same
+   * shape of contract, so it earns the same rule.
+   *
+   * **The rule is derived, not listed.** A hardcoded "these targets are allowed to be missing"
+   * set would be another restatement, and it would rot: nothing forces its removal once the
+   * file lands. Instead the rule keys off the target's *directory*:
+   *
+   *   - the directory does not exist  → the module has not been written yet (`./tokens` is
+   *     T006, `./components` is T032). Nothing to assert, and no exemption to retire later.
+   *   - the directory *does* exist    → the entry file must be in it.
+   *
+   * This tightens itself with no edit. The moment T006 creates `packages/ui/src/tokens/`, that
+   * subpath starts requiring `index.ts` — so a barrel landed as `tokens.ts`, or later renamed,
+   * goes red against the task that did it rather than staying silent until a production build.
+   */
+  describe('export targets resolve to real files', () => {
+    /** `'./src/styles.css'` → absolute path, relative to the package root. */
+    function absoluteTarget(target: string): string {
+      return fileURLToPath(new URL(`../${target.replace(/^\.\//, '')}`, import.meta.url))
+    }
+
+    it('points every export at a file that exists, once its directory is there', () => {
+      const exports = readManifest(UI_PACKAGE_PATH).exports ?? {}
+      expect(Object.keys(exports).length).toBeGreaterThan(0)
+
+      const dangling: string[] = []
+      for (const [subpath, target] of Object.entries(exports)) {
+        const absolute = absoluteTarget(target)
+        // A directory that does not exist yet means the module is a later task's, not a
+        // defect. An EMPTY directory means exactly the same thing and must skip too: an
+        // agent that creates `src/components/` before writing `index.ts` leaves precisely
+        // that state, and treating it as a defect deadlocked the run — the phase gate
+        // blocked Phase 2, and only Phase 3 could have satisfied it. An empty directory
+        // carries no more information than an absent one.
+        const parent = dirname(absolute)
+        if (!existsSync(parent) || readdirSync(parent).length === 0) continue
+        if (!existsSync(absolute) || !statSync(absolute).isFile()) {
+          dangling.push(`"${subpath}" → ${target} (no file at ${absolute})`)
+        }
+      }
+
+      expect(dangling, `export targets whose directory exists but whose file does not:\n${dangling.join('\n')}`).toEqual([])
+    })
+
+    it('ships the two entries this package already owns — the root barrel and the stylesheet', () => {
+      // Guards the rule above against its own escape hatch: if `src/` itself vanished, every
+      // target would be skipped as "not written yet" and the suite would pass over an empty
+      // package. These two are T001's and T001d's own deliverables and must always be real.
+      const exports = readManifest(UI_PACKAGE_PATH).exports ?? {}
+      for (const subpath of ['.', './styles.css']) {
+        const target = exports[subpath]
+        expect(target, `export map lost its "${subpath}" entry`).toBeTypeOf('string')
+        expect(existsSync(absoluteTarget(target ?? '')), `"${subpath}" → ${target} does not exist`).toBe(true)
       }
     })
   })
