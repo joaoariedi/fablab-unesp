@@ -7,7 +7,7 @@ Derived from [`spec.md`](spec.md), [`plan.md`](plan.md) and
 
 ## Read before starting
 
-Six things are load-bearing, and five of them fail quietly.
+Seven things are load-bearing. Five fail quietly; the last one fails immediately.
 
 1. **The hex-literal rule lands with the tokens, before any component exists** (T007, right
    after T004–T006). Write components first and you write hex literals first, and the rule
@@ -40,9 +40,15 @@ Six things are load-bearing, and five of them fail quietly.
    component. Before trusting any "asserts absence" gate, plant a violation and watch it go
    red — T041, T011b, and T001c's deliberate break exist for exactly that.
 
-   The two round-3 instances are worth separating from the rest: those gates were not wrong,
-   they were **unreachable**. Reviewing the rule tells you nothing about whether anything
-   runs it.
+   The later instances are worth separating from the rest: those gates were not wrong, they
+   were **unreachable** (round 3 — in no pipeline) or **non-binding** (round 4 — running but
+   absent from branch protection's 11 named required checks). Reviewing a rule tells you
+   nothing about whether anything runs it, and running tells you nothing about whether
+   anything is blocked by it.
+7. **Nothing imports until T000 lands.** `apps/web` does not depend on `@fablab/ui` and
+   cannot resolve it — measured, not assumed. The export map and `transpilePackages` both
+   describe the *provider*; the missing line is on the consumer. Do T000 first or every
+   subsequent task fails at its first import.
 
 **No task tracker.** `TaskCreate`/`TaskUpdate` are unavailable in this session (checked, not
 assumed), so dependencies live in the **Blocked by** column. Keep them accurate by hand.
@@ -51,9 +57,10 @@ assumed), so dependencies live in the **Blocked by** column. Keep them accurate 
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T001 | React as a **peer** dependency (the app owns the React instance); export map for `./tokens`, `./components`, `./styles.css` | FR-018 | `packages/ui/package.json` | — |
-| T001b | `transpilePackages: ['@fablab/ui']` — the package exports raw TS and CSS, so Next must compile it (round 2: `next.config.mjs` was missing from the plan entirely) | FR-018 | `apps/web/next.config.mjs` | T001 |
-| T001c | **Make the tsconfig able to see a component.** `include` gains `src/**/*.tsx`, `lib` gains `DOM`, add `"jsx": "react-jsx"`, and add `@types/react` as a **devDependency** (pnpm does not install a package's own peers). Measured in round 3: the inherited config matched **zero** `.tsx` files, so `pnpm typecheck` passed having compiled nothing. **Verify by breaking a component on purpose** — `tsc` must exit non-zero | FR-018, FR-020 | `packages/ui/tsconfig.json`, `packages/ui/package.json` | T001 |
+| T000 | **`"@fablab/ui": "workspace:*"` in the app's dependencies**, then `pnpm install`. Round 4 measured that `apps/web` cannot resolve the package at all — `require.resolve('@fablab/ui')` returns `MODULE_NOT_FOUND` and `apps/web/node_modules/@fablab/` does not exist. Every import in this feature depends on this one line, and no other task added it. **Acceptance: `require.resolve` succeeds from `apps/web`** | FR-018 | `apps/web/package.json` | — |
+| T001 | React as a **peer** dependency (the app owns the React instance); export map for `./tokens`, `./components`, `./styles.css` | FR-018 | `packages/ui/package.json` | T000 |
+| T001b | `transpilePackages: ['@fablab/ui']` — the package exports raw TS and CSS, so Next must compile it (round 2: `next.config.mjs` was missing from the plan entirely). **Acceptance is a real `pnpm --filter @fablab/web build` that imports a token and a component** — a config edit proves nothing, and this is the last assumption in the plan resting on reading rather than execution | FR-018 | `apps/web/next.config.mjs` | T000, T001 |
+| T001c | **Make the tsconfig able to see a component.** `include` gains `src/**/*.tsx` **and `tests/**/*.ts`** (round 4 — `apps/web` includes `**/*.ts`/`**/*.tsx` with no test exclusion; the precedent was in the repo and unfollowed, and five planned test files would otherwise never be typechecked), `lib` gains `DOM`, add `"jsx": "react-jsx"`, and add `@types/react` as a **devDependency** (pnpm does not install a package's own peers). Measured in round 3: the inherited config matched **zero** `.tsx` files, so `pnpm typecheck` passed having compiled nothing. **Verify by breaking a component on purpose** — `tsc` must exit non-zero | FR-018, FR-020 | `packages/ui/tsconfig.json`, `packages/ui/package.json` | T001 |
 | T001d | [P] `src/styles.css` — the entry the `./styles.css` export points at; `@import`s palette, typography and layout so the app has one import (round 3: the export map named a file no task created) | FR-001 | `packages/ui/src/styles.css` | T004, T005, T010 |
 | T002 | Real Vitest config, replacing `--passWithNoTests` | FR-020 | `packages/ui/vitest.config.ts` | T001 |
 | T003 | Purity boundary **scoped to `packages/ui/src/**`** — React allowed, `payload`/`@payloadcms/*`/Next **server** APIs forbidden. Mirrors the `packages/game` block, does not copy it. **Scope matters:** `packages/ui/tests/**` must stay free to use `node:fs` and `git ls-files`, which T011 needs | FR-018 | `eslint.config.mjs` | — |
@@ -67,6 +74,7 @@ assumed), so dependencies live in the **Blocked by** column. Keep them accurate 
 | T006 | Token names and `DOCUMENTED_PAIRS` as data, so tests can iterate them rather than restate them | FR-001, FR-017 | `packages/ui/src/tokens/index.ts` | T004, T005 |
 | T007 | **The hex fence, TS half.** `no-restricted-syntax` with **four** selectors: hex in a `Literal`, hex in a `TemplateElement`, `--color-rosa-raw` in either. `ignores` covering `tokens/**` **and `apps/web/tests/**` + `packages/ui/tests/**`** — fixtures must be able to do the forbidden thing (T016 needs two orgs with different hexes), and the tenancy fence in the same file already exempts tests for that reason (round 3). Every exemption stays a path visible in review. **The template-literal selectors are not optional** — styled-jsx ships with Next and a `Literal` selector misses `` <style jsx>{`…#EE703E`}</style> `` entirely (round 2, measured). **Land this before any component exists** | FR-002, CLR-001 | `eslint.config.mjs` | T006 |
 | T007b | **The hex fence, CSS half.** ESLint does not lint `.css`, and CSS Modules is where component colour is actually written. Scan `.css` outside `tokens/` for hex, `rgb()`, `hsl()` **and `--color-rosa-raw`** — the private token was banned only in TypeScript, leaving it free in the one file type it would be used in (round 2). **Capture into a variable and branch on emptiness; do not pipe grep into the exit status** — the first draft exited 1 on a clean tree, so it could never distinguish pass from fail (same class as feature 000's `grep \| head`) | FR-002, CLR-001 | `scripts/check-colour-tokens.sh` | T006 |
+| T007c | [P] `contrastRatio()` — sRGB linearisation and the WCAG ratio, ~15 lines, **exported** so T008 imports it rather than restating it. Round 4: SC-006 rested on a function no task assigned a file | FR-017, SC-006 | `packages/ui/src/tokens/contrast.ts` | T006 |
 | T008 | [P] Contrast test over `DOCUMENTED_PAIRS` — AA thresholds by size class. A pair that fails cannot be documented, which finally answers the open pink-on-navy question in `visual-identity.md` | FR-017, SC-006 | `packages/ui/tests/contrast.test.ts` | T006 |
 | T009 | Convert Comfortaa + Aldo to WOFF2 **locally** into **`apps/web/public/fonts/`** — that is the complete font set, and it is the only location the runtime can serve. The `.ttf` sources stay in `docs/product/fonts/` as the provenance record with their licence notice. No converter joins the stack (Principle 1) | FR-005 | `apps/web/public/fonts/*.woff2` | — |
 | T010 | `@font-face` for the **two** faces with `font-display: swap` and real fallback stacks, using **absolute `url('/fonts/…')`** so no bundler has to resolve the asset and `packages/ui` needs no build step (Sketch 8). `--font-display` (Aldo) covers logo, logotype and headings; `--font-body` is Comfortaa. **Do not add `--font-logotype`** — it would alias `--font-display` and no test could catch a component picking the wrong one | FR-005, CLR-002 | `packages/ui/src/tokens/typography.css` | T006, T009 |
@@ -108,11 +116,12 @@ assumed), so dependencies live in the **Blocked by** column. Keep them accurate 
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T028 | `HeaderNav` — **server component**. Six tabs desktop, no menu button; breakpoint sets expressed in CSS | FR-008, US3 | `packages/ui/src/shell/HeaderNav.tsx` | T018, T025 |
+| T027b | The three tab sets as **data in a plain `.ts`** — desktop six in canonical order, tablet four, mobile five ending `PERFIL`, plus the menu set. Round 4: if these live in `HeaderNav.tsx`, T032 must import a `.tsx` and Vitest then needs a JSX transform — contradicting both "no test renders a component" and "no dependency is added". Same extraction as `clampScale()`, same reason | FR-008 | `packages/ui/src/shell/tabs.ts` | T007 |
+| T028 | `HeaderNav` — **server component**, importing its sets from `tabs.ts`. Six tabs desktop, no menu button; breakpoint sets expressed in CSS | FR-008, US3 | `packages/ui/src/shell/HeaderNav.tsx` | T018, T025, T027b |
 | T029 | `MobileTabBar` — five positions ending `PERFIL`, appearing on scroll (round 5) | FR-008 | `packages/ui/src/shell/MobileTabBar.tsx` | T028 |
 | T030 | `MenuSheet` — **the only client island in the shell**; contains *all* tabs including `BIBLIOTECA 3D` and `INSTAGRAM`; button top-right, logo left | FR-008, US6 | `packages/ui/src/shell/MenuSheet.tsx` | T028 |
 | T031 | Logo → Home; `PERFIL` → login when signed out, Minha Conta when signed in | FR-009 | `packages/ui/src/shell/HeaderNav.tsx` | T028 |
-| T032 | Assert the **tab-set data** (six desktop in canonical order, four tablet, five mobile ending `PERFIL`) and that the CSS text carries the switching media queries; plus the negative — `BIBLIOTECA 3D`/`INSTAGRAM` absent from both compact sets and present in the menu set. Whether the cascade actually shows/hides at those widths is feature 003's Playwright (review round 1: not reachable from Vitest) | SC-004, SC-005 | `packages/ui/tests/shell.test.ts` | T029, T030 |
+| T032 | Assert the **tab-set data** by importing `tabs.ts` — never `HeaderNav.tsx` (six desktop in canonical order, four tablet, five mobile ending `PERFIL`) and that the CSS text carries the switching media queries; plus the negative — `BIBLIOTECA 3D`/`INSTAGRAM` absent from both compact sets and present in the menu set. Whether the cascade actually shows/hides at those widths is feature 003's Playwright (review round 1: not reachable from Vitest) | SC-004, SC-005 | `packages/ui/tests/shell.test.ts` | T029, T030 |
 | T033 | Islands audit: list every `'use client'` component and require each to carry a stated reason | FR-014, SC-007 | `packages/ui/tests/islands.test.ts` | T030 |
 
 ### P2 — Should Have
@@ -135,7 +144,8 @@ assumed), so dependencies live in the **Blocked by** column. Keep them accurate 
 | T042 | [P] Rewrite `packages/ui/README.md` — it currently says "Filled by feature 001" | — | `packages/ui/README.md` | T039 |
 | T043 | [P] CHANGELOG entry for the design system | — | `CHANGELOG.md` | T039 |
 | T044 | Tick CHK001–CHK028 against the implementation; leave open anything not genuinely satisfied | all | `checklists/requirements.md` | T041 |
-| T045 | Confirm every feature-000 gate still passes and the new ones are merge-blocking. **Check by reading the workflow, not by trusting the plan** — round 3 found the colour scan wired to nothing while the plan asserted "existing jobs cover the new gates" | SC-010 | `.github/workflows/ci.yml` | T041, T045b |
+| T045 | Confirm every feature-000 gate still passes and the new ones are merge-blocking. **Verify against the live protection API** (`gh api repos/.../branches/{main,dev}/protection`), not the workflow file — round 3 found the colour scan wired to nothing, and round 4 found that being wired is still not being *required* | SC-010 | protection API + `.github/workflows/ci.yml` | T041, T045b, T046 |
+| T046 | **Add `check-colour-tokens` to the required status checks on `main` and `dev`**, matching the job's `name:` exactly. Protection lists 11 contexts by name and a new job joins none of them automatically — until this lands the job is advisory, however red it goes. **Needs repo-admin rights: this is the user's action, not a commit** | SC-010 | branch protection (no file) | T045b |
 | T045b | **A `check-colour-tokens` CI job**, merge-blocking, modelled on `drift` (checkout → pnpm → `bash scripts/check-colour-tokens.sh`; no database needed). Without it the CSS half of the fence runs nowhere: `pnpm lint` is `eslint .` and executes no shell scripts (round 3) | FR-002, SC-001, SC-010 | `.github/workflows/ci.yml` | T007b |
 
 ## Coverage
@@ -147,15 +157,15 @@ assumed), so dependencies live in the **Blocked by** column. Keep them accurate 
 | FR-005 | T009, T010, T010b |
 | FR-006 | T019–T025 |
 | FR-007 | T018 |
-| FR-008, FR-009 | T028–T032 |
+| FR-008, FR-009 | T027b, T028–T032 |
 | FR-010, FR-015 | T034, T035 |
 | FR-011 | T036 |
 | FR-012 | T005 |
 | FR-013 | T026, T027 |
 | FR-014 | T033 |
 | FR-016 | T037, T038 |
-| FR-017 | T008 |
-| FR-018 | T001, T001b, T001c, T003, T039 |
+| FR-017 | T007c, T008 |
+| FR-018 | T000, T001, T001b, T001c, T003, T039 |
 | FR-020 | T002, T001c |
 
 | Success criterion | Task | Success criterion | Task |
@@ -163,7 +173,7 @@ assumed), so dependencies live in the **Blocked by** column. Keep them accurate 
 | SC-001 hex probe | T041, T045b | SC-007 islands audit | T033 |
 | SC-002 co-branding | T016 | SC-008 pixel clamp | T027 |
 | SC-003 theme fallback | T017 | SC-009 built from exports | T040 |
-| SC-004 header layout | T032 | SC-010 gates grow | T045, T045b |
+| SC-004 header layout | T032 | SC-010 gates grow | T045, T045b, T046 |
 | SC-005 compact bars | T032 | SC-011 hostile colour | T014 |
 | SC-006 WCAG AA | T008 | SC-012 no SquareFont | T011, T011b |
 

@@ -31,6 +31,16 @@ Full Truth Map in [`research.md`](research.md). The load-bearing findings:
 - **`pnpm lint` is `eslint .` and runs no shell scripts.** Round 3: the CSS half of the fence
   was reachable from nothing — not CI, not lint, not a test. It needs its own job, the way
   `migration-drift.sh` has one.
+- **`apps/web` does not depend on `@fablab/ui` and cannot resolve it.** Measured:
+  `apps/web/package.json` lists no `@fablab/*` dependency, `apps/web/node_modules/@fablab/`
+  does not exist, and `require.resolve('@fablab/ui')` from `apps/web` returns
+  `MODULE_NOT_FOUND`. Round 4: this is upstream of every other task — the export map and
+  `transpilePackages` both describe the *provider* side, and the missing piece is one line on
+  the consumer's. No precedent exists to copy: `apps/web` does not depend on `@fablab/game`
+  either, so no workspace package has ever been consumed in this repo.
+- **Branch protection lists 11 required checks by name**, identically on `main` and `dev`
+  (queried through the API). A new CI job runs but **does not block** until its exact `name:`
+  joins that list — which lives in a GitHub setting, not in any file this plan touches.
 - **`packages/ui/tsconfig.json` compiles no `.tsx` at all** — `include` is `["src/**/*.ts"]`,
   there is no `jsx` setting, `lib` omits DOM, and `@types/react` is absent. Measured:
   `tsc --listFiles` matched **zero** component files, so `pnpm typecheck` would have reported
@@ -40,7 +50,10 @@ Full Truth Map in [`research.md`](research.md). The load-bearing findings:
 
 | File | Change Type | Description |
 |------|------------|-------------|
-| `packages/ui/package.json` | modify | React as **peer** dependency; real `test` script; export map for `./tokens`, `./components`, `./styles.css` |
+| `apps/web/package.json` | modify | **`"@fablab/ui": "workspace:*"`.** Round 4: the app could not resolve the package at all, which is upstream of every other task |
+| `packages/ui/package.json` | modify | React as **peer** dependency, `@types/react` as a devDependency; real `test` script; export map for `./tokens`, `./components`, `./styles.css` |
+| `packages/ui/src/shell/tabs.ts` | create | The three tab sets as **data in a `.ts`**, so T032 never imports a `.tsx` and Vitest never needs a JSX transform |
+| `packages/ui/src/tokens/contrast.ts` | create | `contrastRatio()` — the ~15 lines of sRGB arithmetic SC-006 rests on, exported so the test imports rather than restates it |
 | `packages/ui/src/tokens/palette.css` | create | **The only file allowed to contain hex literals.** Seven palette colours as custom properties on `:root` |
 | `packages/ui/src/tokens/typography.css` | create | `@font-face` for the **two** faces + type-scale tokens + fallback stacks |
 | `packages/ui/src/tokens/layout.css` | create | Breakpoint, spacing and radius tokens — 390 / 834 / 1440 as named tokens, never magic numbers |
@@ -63,6 +76,7 @@ Full Truth Map in [`research.md`](research.md). The load-bearing findings:
 | `apps/web/public/fonts/*.woff2` | create | Comfortaa + Aldo, converted once locally, **served at `/fonts/`**; no converter joins the stack |
 | `apps/web/next.config.mjs` | modify | `transpilePackages: ['@fablab/ui']` — the package exports raw TS and CSS |
 | `.github/workflows/ci.yml` | modify | **A `check-colour-tokens` job.** Round 3 correction: this row previously said "nothing new — existing Lint/Tests jobs cover the new gates", which was false. `pnpm lint` is `eslint .` and runs no shell scripts; nothing else invoked the CSS half of the fence |
+| *(no file)* **branch protection** | modify | The new job must join the **11 named required checks** on `main` and `dev`, or it runs without blocking. Round 4 — repo-admin action, not a commit |
 
 ## Data Model
 
@@ -500,7 +514,11 @@ a convenience.
 - [x] **Principle 4 — Design and content fidelity:** this feature **is** Principle 4. Zero hex
   literals enforced by lint, identity from the organization record, mobile-first across the
   three targets, islands discipline, PT-BR content with English code.
-- [x] **Principle 5 — Enumerated verification gates:** the gate set grows — hex-literal lint,
+- [x] **Principle 5 — Enumerated verification gates:** *(round 4: "merge-blocking" is a
+  **branch-protection** property, not a workflow one. Protection names 11 required checks and
+  a new job joins none of them automatically — so a gate can be written, wired and red while
+  merges sail past. T046 adds it; T045 verifies against the live API.)* The gate set grows —
+  hex-literal lint,
   contrast maths, the islands audit, the pixel clamp, and SC-012's SquareFont-exclusion
   check. No existing gate is removed or made advisory. **SC-012 changed subject rather than
   disappearing** when the font left: a criterion whose subject vanishes goes vacuous, not
@@ -525,17 +543,24 @@ a convenience.
 | Aldo is now the only non-body face | An author objection degrades the whole display layer, not half | Accepted and recorded in `THIRD-PARTY-NOTICE.md`. The fallback keeps the build standing; written permission from AJ Paglia is the durable fix (ISS-001 residue) |
 | Workbench reachable in production | An unintended public page | `NODE_ENV === 'production' → notFound()` (Sketch 9), asserted by T038 against a production build. **Round 2 replaced the previous mitigation**, which put the page at `_workbench/` — a path Next drops from routing everywhere, so the workbench would not have worked in dev and the test would have passed vacuously |
 | A gate asserts the absence of something that never existed | Green CI reporting a check that ran over nothing | **The failure mode this plan keeps producing** — five instances across three review rounds: SC-012 v2, T038's original form, T027's clamp, the colour scan reachable from no pipeline, and a tsconfig compiling zero components. Every "asserts absence" gate must be seen failing once against a deliberately planted violation before it is trusted (T041, T011b) |
-| A gate exists in a file but in no pipeline | Indistinguishable from a gate that passes | Round 3: `pnpm lint` is `eslint .` and runs no scripts. Each script gate gets its **own merge-blocking job**, the way `drift` and `isolation-mutation` already do. T045 checks this explicitly rather than assuming it |
+| A gate exists in a file but in no pipeline | Indistinguishable from a gate that passes | Round 3: `pnpm lint` is `eslint .` and runs no scripts. Each script gate gets its **own merge-blocking job**, the way `drift` and `isolation-mutation` already do (T045b) |
+| A gate runs in CI but is not **required** | Red and merged anyway — advisory dressed as a gate | Round 4: protection lists 11 checks **by name**, and a new job joins nothing automatically. T046 adds it; T045 verifies against the **live protection API**, not the workflow file. This is the same mechanism failing for the fourth consecutive round — created (R1), exit contract wrong (R2), in no pipeline (R3), not required (R4) |
+| A dependency the plan never states because it is on the *consumer* side | Nothing imports; the first task fails | Round 4: `apps/web` could not resolve `@fablab/ui` at all. T000 lands the `workspace:*` entry **before** anything else, and T001b's acceptance is a real build rather than a config edit |
 | Custom faces hurt LCP, which feature 003 must measure | 003 inherits a budget it cannot meet | `font-display: swap`, fallback stacks declared, WOFF2 only, no runtime JS in the token layer — and **two faces instead of three** since 2026-08-27, which makes the budget strictly easier |
 | Pixel art at fractional device pixel ratios | Muddy art on some devices | Integer clamp in `PixelImage`, asserted by SC-008 |
 | **Rendering is unverified by CI** (accepted, CLR-003) | A component can be visually broken while every gate is green | The workbench (FR-016) is the human check; feature 003's Playwright is where rendering becomes machine-verified. Named here so nobody mistakes green CI for visual correctness |
 
 ## Quick Start
 
+0. **Make the app able to import the package at all** — `"@fablab/ui": "workspace:*"` in
+   `apps/web/package.json`, then `pnpm install`. Acceptance is `require.resolve('@fablab/ui')`
+   succeeding from `apps/web`, which it does not today.
 1. Add React as a peer dependency of `packages/ui` **plus `@types/react` as a devDependency**,
-   fix its tsconfig so `.tsx` compiles at all (Sketch 7b), give it a real `vitest.config.ts`,
-   and add `transpilePackages: ['@fablab/ui']` to `apps/web/next.config.mjs`. Prove the
-   typecheck works by breaking a component on purpose — it must exit non-zero.
+   fix its tsconfig so `.tsx` and `tests/` compile at all (Sketch 7b), give it a real
+   `vitest.config.ts`, and add `transpilePackages: ['@fablab/ui']` to
+   `apps/web/next.config.mjs`. Prove the typecheck works by breaking a component on purpose —
+   it must exit non-zero — and prove the wiring with a real `pnpm --filter @fablab/web build`,
+   which is what actually settles the `transpilePackages` question.
 2. Write `tokens/*.css` and `tokens/index.ts`, then **immediately** add both halves of the
    fence (Sketch 2) — before any component exists to violate them. Run the script against a
    clean tree *and* a planted violation; the first draft passed neither test.
@@ -552,3 +577,6 @@ a convenience.
 7. Workbench at `workbench/` — a **real route** with a production guard (Sketch 9) — composed
    from public exports only (SC-009), then the probe commit proving the fence rejects all
    four violation shapes in CI (SC-001).
+8. **Add `check-colour-tokens` to the required checks on `main` and `dev`** (T046, repo-admin).
+   Until that happens the job is advisory, and the probe in step 7 proves only that it goes
+   red — not that red stops anything.
