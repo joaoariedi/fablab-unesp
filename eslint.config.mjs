@@ -1,3 +1,5 @@
+import { builtinModules } from 'node:module'
+
 import js from '@eslint/js'
 import tseslint from 'typescript-eslint'
 
@@ -113,6 +115,88 @@ export default tseslint.config(
               group: ['payload', 'payload/*', '@payloadcms/*', 'next', 'next/*'],
               message:
                 'packages/game is pure rules: no Payload, no framework, no IO. Pass data in as arguments.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+
+  // ---------------------------------------------------------------------------------------
+  // FR-018: packages/ui receives resolved values as props or CSS custom properties.
+  //
+  // This mirrors the packages/game block above; it deliberately does not copy it. The list
+  // differs because the packages are different: `@fablab/ui` IS React, so React stays, and
+  // client-safe Next entry points (next/link, next/image) are not the hazard. What breaks the
+  // promise is a component reaching for the request — `next/headers` or `getPayload()` — which
+  // makes it unrenderable anywhere but inside a Next server request, and unreusable by the
+  // workbench, by tests, and by any second consumer.
+  //
+  // SCOPE IS LOAD-BEARING: `src/**`, not `packages/ui/**`. The tests directory must keep
+  // `node:fs` and `node:child_process` — T011 asserts no SquareFont artefact is *tracked*,
+  // which it can only do by reading the git index. A boundary written one directory wider
+  // would look identical in review and make that gate unwritable.
+  // ---------------------------------------------------------------------------------------
+  {
+    files: ['packages/ui/src/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                'payload',
+                'payload/*',
+                '@payloadcms/*',
+                '@payloadcms/*/*',
+                // Next is DENIED BY DEFAULT with a short allowlist, not an enumeration of
+                // the server entry points. The first draft banned exactly the four the test
+                // probed — next/headers, next/server, next/cache, server-only — and let
+                // `next/og` (a server/edge-only API, and a plausible reach for a UI package
+                // building an OG card) straight through. An allowlist cannot rot that way:
+                // a Next release adding a server API is blocked on arrival, and every
+                // exemption below is one line a reviewer can see.
+                'server-only',
+              ],
+              message:
+                'packages/ui renders from props and CSS custom properties: no Payload, no Next ' +
+                'server APIs. Resolve the value in apps/web and pass it in. Only next/link and ' +
+                'next/image are allowed — they render on the client too.',
+            },
+            {
+              // Next is DENIED BY DEFAULT with a two-entry allowlist, expressed as a regex
+              // because `group`'s gitignore-style `!` negation is NOT honoured here —
+              // measured: '!next/link' still blocked next/link.
+              //
+              // The first draft banned exactly the four specifiers the test probed
+              // (next/headers, next/server, next/cache, server-only) and let `next/og` — a
+              // server/edge-only API, and a plausible reach for a UI package building an OG
+              // card — straight through. An allowlist cannot rot that way: a Next release
+              // adding a server API is blocked on arrival, and the exemption is one visible
+              // line. next/link and next/image stay because they render on the client too.
+              regex: '^next(?!/link$|/image$)(/.*)?$',
+              message:
+                'packages/ui renders from props and CSS custom properties: no Next server ' +
+                'APIs. Only next/link and next/image are allowed. Resolve the value in ' +
+                'apps/web and pass it in.',
+            },
+            {
+              // FR-018's "no IO" clause, derived rather than listed. The first draft paired
+              // a general `node:*` glob with a hand-picked list of bare specifiers whose only
+              // IO-relevant member was `fs` — the one the test happened to probe. Measured:
+              // `node:http` was blocked while bare `https`, `net`, `stream` and
+              // `worker_threads` were allowed, so a component could do network IO through
+              // the gate that exists to forbid IO. This is feature 000's method-name lesson
+              // again: a rule matching a form the problem does not take.
+              //
+              // builtinModules covers every bare builtin by construction; the `node:` globs
+              // cover the prefixed spelling. No Node builtin is legitimate in a package that
+              // must render in a browser, so the general rule is also the correct one.
+              group: [...builtinModules, 'node:*', 'node:*/*'],
+              message:
+                'packages/ui does no IO. Node builtins belong in apps/web or in ' +
+                'packages/ui/tests, which is outside this boundary on purpose.',
             },
           ],
         },

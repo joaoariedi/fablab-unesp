@@ -1,0 +1,18 @@
+/*
+ * @fablab/ui — the single stylesheet entry (FR-001).
+ *
+ * The app imports this one file and gets the whole token layer. It is an aggregator and
+ * nothing else: no selectors, no declarations, no at-rules beyond the imports below.
+ *
+ * Why nothing else may live here: this file sits outside `tokens/`, and the colour fence
+ * (scripts/check-colour-tokens.sh) scans exactly there for raw colours. A value written
+ * here would be a token nobody guards. Add tokens to the imported files, not to this one.
+ *
+ * Order is cascade order, not alphabetical — palette first, because the other two resolve
+ * colours from it. Per the CSS spec, at-rules must precede any other rule, which is a
+ * second reason this file stays import-only.
+ */
+
+@import './tokens/palette.css';
+@import './tokens/typography.css';
+@import './tokens/layout.css';
