@@ -7,20 +7,25 @@ Derived from [`spec.md`](spec.md), [`plan.md`](plan.md) and
 
 ## Read before starting
 
-Four things are load-bearing, and three of them fail quietly.
+Five things are load-bearing, and four of them fail quietly.
 
 1. **The hex-literal rule lands with the tokens, before any component exists** (T007, right
    after T004–T006). Write components first and you write hex literals first, and the rule
    ships with a backlog of exemptions on day one.
-2. **`--color-rosa` is not the accent; `--color-primary` is.** A CTA styled with
-   `--color-rosa` renders identically for CITe, passes every test, and silently fails to
-   co-brand for the second organization. This is the single most likely way feature 001
-   breaks feature 007. See `contracts/tokens.md`.
-3. **CI never has SquareFont, permanently** (CLR-002). The fallback is not a temporary state
-   to be lifted — T011 makes it a tested path so it cannot rot unnoticed.
+2. **There is no `--color-rosa`.** The raw pink is `--color-rosa-raw`, private, and lint
+   rejects it in components (review round 1 — the first draft had only a convention here,
+   and the failure is invisible: a CTA using it renders identically for CITe and fails to
+   co-brand only once org #2 exists).
+3. **CI never has SquareFont, permanently** (CLR-002) — which is why "build with it absent"
+   proves nothing on its own. T011 asserts the real risk instead: that **no code path
+   requires** a file the repository does not have.
 4. **Which tabs show at which breakpoint is CSS, not JavaScript.** The three sets are static
    and decided; a breakpoint hook would ship the whole header to the browser to express a
    media query. Only `MenuSheet` is a client island.
+5. **No test renders a component.** There is no DOM environment in the workspace and none is
+   added, so tests assert data, arithmetic and file text. Rendering is verified by the
+   workbench and by feature 003's Playwright — see plan § *What these tests can and cannot
+   prove*. Green CI here does **not** mean visually correct.
 
 **No task tracker.** `TaskCreate`/`TaskUpdate` are unavailable in this session (checked, not
 assumed), so dependencies live in the **Blocked by** column. Keep them accurate by hand.
@@ -37,14 +42,15 @@ assumed), so dependencies live in the **Blocked by** column. Keep them accurate 
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T004 | Palette as custom properties, with `--color-primary` defaulting to `var(--color-rosa)` so an unthemed page is already correct | FR-001, CLR-001 | `packages/ui/src/tokens/palette.css` | T001 |
+| T004 | Palette as custom properties, with `--color-primary` defaulting to `var(--color-rosa-raw)` so an unthemed page is already correct; the raw pink is **private** | FR-001, CLR-001 | `packages/ui/src/tokens/palette.css` | T001 |
 | T005 | [P] Layout tokens: breakpoints **390 / 834 / 1440**, spacing, radius, the hard offset shadow | FR-012 | `packages/ui/src/tokens/layout.css` | T001 |
 | T006 | Token names and `DOCUMENTED_PAIRS` as data, so tests can iterate them rather than restate them | FR-001, FR-017 | `packages/ui/src/tokens/index.ts` | T004, T005 |
-| T007 | **The hex-literal fence.** `no-restricted-syntax` on complete hex-colour literals, `ignores` scoped to `tokens/**` so the exemption is a path visible in review. **Land this before any component exists** | FR-002 | `eslint.config.mjs` | T006 |
+| T007 | **The hex-literal fence**, TS half. `no-restricted-syntax` on complete hex-colour literals **and on `--color-rosa-raw`**, `ignores` scoped to `tokens/**` so the exemption is a path visible in review. **Land this before any component exists** | FR-002, CLR-001 | `eslint.config.mjs` | T006 |
+| T007b | **The hex fence, CSS half.** ESLint does not lint `.css`, and CSS Modules is where the hexes will actually be written — so a script scans `.css` outside `tokens/` for hex, `rgb()` and `hsl()`. Without this the rule guarding against hexes is blind to the likeliest hex (review round 1) | FR-002 | `scripts/check-colour-tokens.sh` | T006 |
 | T008 | [P] Contrast test over `DOCUMENTED_PAIRS` — AA thresholds by size class. A pair that fails cannot be documented, which finally answers the open pink-on-navy question in `visual-identity.md` | FR-017, SC-006 | `packages/ui/tests/contrast.test.ts` | T006 |
 | T009 | Convert Comfortaa + Aldo to WOFF2 **locally** and commit the output. No converter joins the stack (Principle 1) | FR-005 | `docs/product/fonts/*.woff2` | — |
 | T010 | `@font-face` for the three faces with `font-display: swap` and real fallback stacks; `--font-logotype` must look acceptable in fallback because CI always renders it that way | FR-005, CLR-002 | `packages/ui/src/tokens/typography.css` | T006, T009 |
-| T011 | **Build and test with SquareFont absent.** This is the permanent CI condition, not a temporary allowance | SC-012 | `packages/ui/tests/fonts.test.ts` | T010 |
+| T011 | Assert **no code path requires** a non-committed font: every `@font-face` for such a face declares a fallback stack, and nothing imports or resolves `Square.woff2`. Guards against a developer who *has* the file locally committing a dependency on it | SC-012 | `packages/ui/tests/fonts.test.ts` | T010 |
 
 ## Phase 3: User Stories (by priority)
 
@@ -55,9 +61,9 @@ assumed), so dependencies live in the **Blocked by** column. Keep them accurate 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
 | T012 | Hex `validate` on `theme.primaryColor` — CLR-004's **first** checkpoint. Config, not schema: **no migration**, so the drift gate stays green | FR-019, CLR-004 | `apps/web/collections/Organizations.ts` | — |
-| T013 | `themeStyle()` returning a React **style object**, never a `<style>` string — React sets it as a property, so there is no stylesheet text for a payload to escape | FR-003, FR-004, FR-019 | `apps/web/lib/theme.ts` | T012 |
+| T013 | `themeStyle()` returning a React **style object**, never a `<style>` string. **The regex is the primary defence; the object only limits blast radius** — in SSR React emits `style="--color-primary:VALUE"`, so `red; display:none` still injects a second declaration on `<body>` (review round 1 corrected the attribution) | FR-003, FR-004, FR-019 | `apps/web/lib/theme.ts` | T012 |
 | T014 | Hostile-payload test: write `red;}body{display:none` and friends through the **REST API**, assert the stored value is rejected and the rendered CSS carries the default | SC-011 | `apps/web/tests/theme.test.ts` | T013 |
-| T015 | `currentOrganization()` + layout injection: import `styles.css`, set the validated `--color-primary` on `<body>`. Server component — the theme costs no client JS | FR-003, US2 | `apps/web/app/(frontend)/layout.tsx` | T013 |
+| T015 | `currentOrganization()` + layout injection: import `styles.css`, set the validated `--color-primary` on `<body>`. Server component — the theme costs no client JS. **Catch `TenantUnresolvedError` → `notFound()`**: the choke point throws, this layout wraps every page, and falling back to CITe's identity is forbidden by feature 000's US4 error case (review round 1) | FR-003, US2 | `apps/web/app/(frontend)/layout.tsx` | T013 |
 | T016 | Two organizations rendered from different records in one run; assert the accent differs **and** the tracked-source fingerprint is unchanged (the method that validated SC-008 in feature 000) | SC-002 | `apps/web/tests/theme.test.ts` | T015 |
 | T017 | [P] Absent, empty and malformed `theme` are three distinct cases; all three render the CITe defaults | FR-004, SC-003 | `apps/web/tests/theme.test.ts` | T013 |
 
@@ -84,7 +90,7 @@ assumed), so dependencies live in the **Blocked by** column. Keep them accurate 
 | T029 | `MobileTabBar` — five positions ending `PERFIL`, appearing on scroll (round 5) | FR-008 | `packages/ui/src/shell/MobileTabBar.tsx` | T028 |
 | T030 | `MenuSheet` — **the only client island in the shell**; contains *all* tabs including `BIBLIOTECA 3D` and `INSTAGRAM`; button top-right, logo left | FR-008, US6 | `packages/ui/src/shell/MenuSheet.tsx` | T028 |
 | T031 | Logo → Home; `PERFIL` → login when signed out, Minha Conta when signed in | FR-009 | `packages/ui/src/shell/HeaderNav.tsx` | T028 |
-| T032 | Tab-set assertions at 390 / 834 / 1440, **plus** the negative: `BIBLIOTECA 3D` and `INSTAGRAM` never appear in a compact bar | SC-004, SC-005 | `packages/ui/tests/shell.test.ts` | T029, T030 |
+| T032 | Assert the **tab-set data** (six desktop in canonical order, four tablet, five mobile ending `PERFIL`) and that the CSS text carries the switching media queries; plus the negative — `BIBLIOTECA 3D`/`INSTAGRAM` absent from both compact sets and present in the menu set. Whether the cascade actually shows/hides at those widths is feature 003's Playwright (review round 1: not reachable from Vitest) | SC-004, SC-005 | `packages/ui/tests/shell.test.ts` | T029, T030 |
 | T033 | Islands audit: list every `'use client'` component and require each to carry a stated reason | FR-014, SC-007 | `packages/ui/tests/islands.test.ts` | T030 |
 
 ### P2 — Should Have
@@ -103,7 +109,7 @@ assumed), so dependencies live in the **Blocked by** column. Keep them accurate 
 |---|---|---|---|---|
 | T039 | Public surface: replace the placeholder `export {}` with the real exports | FR-018 | `packages/ui/src/index.ts` | T034, T035 |
 | T040 | Workbench composes a representative page from **public exports only** — which is what proves feature 003 can build on this | SC-009 | `apps/web/app/(frontend)/_workbench/page.tsx` | T039 |
-| T041 | **Probe commit**: add a hex literal to a component, confirm CI rejects it naming file and value, close unmerged | SC-001 | throwaway branch | T007 |
+| T041 | **Probe commit**, three violations so neither half of the fence is assumed: a hex in a `.tsx`, a hex in a `.module.css`, and a `--color-rosa-raw` reference in a component. Confirm CI rejects all three, close unmerged | SC-001 | throwaway branch | T007, T007b |
 | T042 | [P] Rewrite `packages/ui/README.md` — it currently says "Filled by feature 001" | — | `packages/ui/README.md` | T039 |
 | T043 | [P] CHANGELOG entry for the design system | — | `CHANGELOG.md` | T039 |
 | T044 | Tick CHK001–CHK028 against the implementation; leave open anything not genuinely satisfied | all | `checklists/requirements.md` | T041 |

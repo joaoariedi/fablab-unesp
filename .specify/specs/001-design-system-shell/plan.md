@@ -38,7 +38,8 @@ Full Truth Map in [`research.md`](research.md). The load-bearing findings:
 | `apps/web/app/(frontend)/layout.tsx` | modify | Import `styles.css`, inject the validated per-organization `--color-primary` |
 | `apps/web/collections/Organizations.ts` | modify | Add the hex `validate` to `theme.primaryColor` — CLR-004's **first** checkpoint |
 | `apps/web/app/(frontend)/_workbench/page.tsx` | create | Component workbench, dev-only (FR-016) |
-| `eslint.config.mjs` | modify | Hex-literal rule for `packages/ui`; purity boundary for `packages/ui` |
+| `eslint.config.mjs` | modify | Hex-literal rule + `--color-rosa-raw` ban for `packages/ui`; purity boundary for `packages/ui` |
+| `scripts/check-colour-tokens.sh` | create | The half ESLint cannot see: raw colours in **CSS** files outside `tokens/` (review round 1) |
 | `docs/product/fonts/*.woff2` | create | Comfortaa + Aldo, converted once locally; **no converter joins the stack** |
 | `.github/workflows/ci.yml` | modify | Nothing new — existing Lint/Tests jobs cover the new gates |
 
@@ -71,9 +72,10 @@ Order follows the dependency chain, and every guardrail lands before the thing i
 5. **Workbench last**, composed only from public exports — which is what proves SC-009.
 
 **The one thing that could go wrong quietly:** `--color-primary` is per-organization while
-the other six are fixed (CLR-001). A component that reaches for `--color-rosa` instead of
-`--color-primary` for a CTA will look correct in every test and fail to co-brand. The token
-file names them distinctly and `contracts/tokens.md` states which is which.
+the rest are fixed (CLR-001). A component reaching for the raw pink instead of
+`--color-primary` looks correct in every test and fails to co-brand. Review round 1 found
+this had only a convention behind it; the raw token is now named `--color-rosa-raw`, is
+private, and lint rejects its use in components.
 
 ## Code Sketches (Mental Alignment)
 
@@ -88,16 +90,24 @@ file names them distinctly and `contracts/tokens.md` states which is which.
   --color-navy:   #191C37;  --color-azul:   #3760AA;
   --color-teal:   #74B7A5;  --color-amarelo:#F8C810;
   --color-laranja:#EE703E;  --color-claro:  #DCE7E3;
-  --color-rosa:   #EE9DC4;  /* the DEFAULT accent, not the accent itself */
+
+  /* PRIVATE. The default accent, never the accent itself. Components may not use it —
+     the `-raw` suffix exists so that reaching for it is visibly wrong, and the lint rule
+     in Sketch 2 rejects it outright. */
+  --color-rosa-raw: #EE9DC4;
 
   /* Per-organization. layout.tsx overrides this and nothing else. */
-  --color-primary: var(--color-rosa);
+  --color-primary: var(--color-rosa-raw);
 }
 ```
 
-**Why this shape:** `--color-primary` defaulting to `--color-rosa` means a page with no
-organization theme is already correct, so the fallback (FR-004) costs no extra code path.
-Components use `--color-primary` for CTAs and never `--color-rosa` directly.
+**Why this shape:** *(revised after review round 1.)* The first draft exported
+`--color-rosa` to components and relied on a documented convention to stop them using it for
+CTAs. That is unenforceable, and the failure is silent: a CTA using `--color-rosa` renders
+**identically** for CITe, passes every test, and fails to co-brand only once a second
+organization exists — which is the plan's own top risk with nothing behind it. Renaming it
+`--color-rosa-raw` and banning that token in components turns a convention into a rule.
+`--color-primary` still defaults to it, so an unthemed page costs no extra code path (FR-004).
 
 ### Sketch 2: the hex-literal fence
 
@@ -118,10 +128,27 @@ Components use `--color-primary` for CTAs and never `--color-rosa` directly.
 }
 ```
 
-**Why this shape:** an import boundary cannot catch this — a hex is a *value*, not an import
-— so `no-restricted-syntax` is the right instrument, exactly as it was for `req.payload`.
-Scoping `ignores` to the token directory means the exemption is a path, visible in review,
-rather than a per-line disable.
+Plus the half ESLint cannot see, as a script the way `scripts/isolation-mutation.sh` is:
+
+```bash
+# scripts/check-colour-tokens.sh — CSS is where the hexes will actually be written.
+grep -rnEi '#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(' \
+     --include='*.css' packages/ui/src apps/web \
+  | grep -v '^packages/ui/src/tokens/' && { echo "raw colour outside tokens/"; exit 1; }
+```
+
+**Why this shape:** *(revised after review round 1.)* The ESLint selector alone repeats
+feature 000's method-name mistake — it matches a form the problem does not take. Components
+are styled with **CSS Modules**, and ESLint does not lint `.css` at all, so the likeliest
+hex in the codebase would have been invisible to the rule guarding against hexes. The script
+also covers `rgb()`/`hsl()`, which are the same defect wearing a different notation. Two
+instruments because the code has two languages; a single one would have been the comfortable
+answer rather than the correct one.
+
+An import boundary cannot do this job — a hex is a *value*, not an import — so
+`no-restricted-syntax` remains right for the TS half, exactly as it was for `req.payload`.
+Scoping `ignores` to the token directory keeps the exemption a **path**, visible in review,
+rather than a per-line disable. `--color-rosa-raw` joins the same rule (R1).
 
 ### Sketch 3: validated theme resolution
 
@@ -139,10 +166,16 @@ export function themeStyle(org: { theme?: { primaryColor?: unknown } } | null) {
 }
 ```
 
-**Why this shape:** returning a **style object** rather than a `<style>` string is what
-actually closes SC-011 — React sets it as a property, so a payload like `red;}body{...}`
-cannot escape a stylesheet context because there is no stylesheet text to escape. The regex
-is then defence in depth rather than the only defence.
+**Why this shape:** *(reasoning corrected after review round 1 — the conclusion stands, the
+attribution was backwards.)* The first draft claimed the style object "is what actually
+closes SC-011". It does not. In SSR React renders `style="--color-primary:VALUE"`, so a value
+of `red; display:none` produces a **second declaration on `<body>`** — element-scoped
+injection, which is smaller than a stylesheet break-out but is not nothing.
+
+**The regex is the primary defence; the style object limits blast radius.** Stating it the
+other way round is how someone later "simplifies away" the validation believing React handles
+it. Feature 000 learned this exact lesson by mutation-testing which layer actually held —
+two of three layers could be removed with the harness still green.
 
 ### Sketch 4: the layout injects one token and nothing else
 
@@ -150,11 +183,18 @@ is then defence in depth rather than the only defence.
 **Intent:** per-organization identity reaches the page through the sanctioned data path.
 
 ```tsx
+import { notFound } from 'next/navigation'
 import '@fablab/ui/styles.css'
-import { getTenantScopedPayloadForRSC } from '@/lib/tenancy'
 
 export default async function FrontendLayout({ children }: { children: React.ReactNode }) {
-  const org = await currentOrganization()      // wraps the choke point; null-safe
+  let org
+  try {
+    org = await currentOrganization()          // wraps getTenantScopedPayloadForRSC
+  } catch (err) {
+    // An unresolved host is a 404 for the whole site, NOT a fall back to CITe's identity.
+    if (err instanceof TenantUnresolvedError) notFound()
+    throw err
+  }
   return (
     <html lang="pt-BR">
       <body style={themeStyle(org)}>{children}</body>
@@ -163,10 +203,18 @@ export default async function FrontendLayout({ children }: { children: React.Rea
 }
 ```
 
-**Why this shape:** the layout is a server component, so the theme costs no client
-JavaScript. `currentOrganization()` goes through `getTenantScopedPayloadForRSC`
-(`research.md` § Relevant Truths) because the import boundary forbids any other route to
-Payload data — feature 001 must not become the first exception.
+**Why this shape:** *(decided after review round 1 — the first draft said `// null-safe` and
+left the decision unmade.)* `getTenantScopedPayloadForRSC` **throws**
+`TenantUnresolvedError` (`scoped-payload.ts`), and this layout wraps *every* public page — so
+an unresolved host would 500 the entire site rather than 404 a page.
+
+The tempting fix, rendering CITe's defaults, is **forbidden**: feature 000's US4 error case
+requires a clear 404 and "never a silent fallback to the first organization". Serving one
+organization's identity on another's hostname is the exact failure the tenancy work exists to
+prevent, and it would be worse here than a 500 because nobody would notice. So the layout
+converts the throw into `notFound()` — the site 404s, loudly and correctly. The sovereign
+fallback still applies *inside* resolution, so a single-organization deploy never reaches
+this path.
 
 ### Sketch 5: the responsive shell, split by interactivity
 
@@ -233,12 +281,40 @@ navy in small text. A computed ratio either clears AA or it does not, and if it 
 pair simply cannot be documented. This is the check that turns "validar contraste WCAG AA
 restante" into a gate.
 
+## What these tests can and cannot prove
+
+*(Added after review round 1, which found two success criteria that could not execute.)*
+
+CLR-003 chose Vitest with no new tool. That is still right, but it draws a hard line and the
+plan must say where it falls rather than imply full coverage:
+
+| Provable in Vitest | Not provable without a browser |
+|---|---|
+| Token values and names; `DOCUMENTED_PAIRS` contrast maths | That the cascade resolves as intended on a real page |
+| The **tab-set data** — six desktop entries in canonical order, four tablet, five mobile ending `PERFIL`, and `BIBLIOTECA 3D`/`INSTAGRAM` absent from both compact sets | That CSS actually **shows and hides** them at 390 / 834 / 1440 |
+| That the CSS text contains the expected media queries and token references | Layout, overflow, and whether the result looks right |
+| The pixel clamp (pure arithmetic), the islands audit (file contents), the colour-token scan (file contents) | Rendered pixel output |
+
+**No DOM environment is added.** Verified during review: the workspace has no `jsdom` or
+`happy-dom` and `apps/web/vitest.config.ts` sets none. Every assertion above works on data,
+arithmetic or file text, so no component is rendered in a test — and the moment one needs to
+be, that is feature 003's Playwright, not a new devDependency here.
+
+**Consequence, stated plainly:** feature 001 ships a component library whose *rendering* is
+verified by human eyes and the workbench, not by CI. That is an accepted limitation of
+CLR-003, not an oversight — and it is why the workbench (FR-016) is a requirement rather than
+a convenience.
+
 ## Constitution Compliance
 
-- [x] **Principle 1 — Locked stack, swappable services:** **no dependency is added.** React
-  is a peer of a package that already lives in the workspace; CSS is native to Next 16;
-  contrast maths is ~15 lines of arithmetic. The one-off TTF→WOFF2 conversion uses a tool
-  run locally and documented, **not** a project dependency.
+- [x] **Principle 1 — Locked stack, swappable services:** **no dependency is added** —
+  and the review checked the claim rather than taking it. React is a peer of a package
+  already in the workspace; CSS is native to Next 16; contrast maths is ~15 lines of
+  arithmetic; the colour-token scan is a shell script like `scripts/isolation-mutation.sh`.
+  The one-off TTF→WOFF2 conversion runs locally and is documented, **not** a project
+  dependency. The claim holds *only because* no test renders a component — see the section
+  above; had rendering been needed, a DOM environment would have been required and this
+  bullet would have had to say so.
 - [~] **Principle 2 — Tenancy is a property of the data:** partially applicable. This feature
   reads `organizations.theme` through the existing choke point and adds no new data path.
   Its contribution is negative — `packages/ui` gets a purity boundary so it can never reach
@@ -256,12 +332,13 @@ restante" into a gate.
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| A component uses `--color-rosa` where it means `--color-primary` | Silent co-branding failure — correct in every test, wrong for the second organization | Distinct names; `contracts/tokens.md` states the rule; SC-002 renders two organizations and diffs |
+| A component uses the raw pink where it means `--color-primary` | Silent co-branding failure — correct in every test, wrong for the second organization | **Now enforced, not just documented** (review round 1): the token is `--color-rosa-raw`, private, and rejected by lint outside `tokens/`. SC-002 renders two organizations and diffs as a second line |
 | The hex rule fires on legitimate non-colour strings (an id, a URL fragment) | Contributors learn to disable the rule | Selector matches only complete hex-colour literals; the escape valve is a disable **with a written reason**, visible in review |
 | CI never renders SquareFont, so its absence is never noticed | The logotype silently degrades in production too | SC-012 makes the fallback a tested path; production delivery is named as feature 007's concern rather than assumed |
 | Workbench leaks into the production bundle | Ships dead code and an unintended public page | Dev-only route guard plus a test asserting it is absent from a production build |
 | Three custom faces hurt LCP, which feature 003 must measure | 003 inherits a budget it cannot meet | `font-display: swap`, fallback stacks declared, WOFF2 only, and no runtime JS in the token layer |
 | Pixel art at fractional device pixel ratios | Muddy art on some devices | Integer clamp in `PixelImage`, asserted by SC-008 |
+| **Rendering is unverified by CI** (accepted, CLR-003) | A component can be visually broken while every gate is green | The workbench (FR-016) is the human check; feature 003's Playwright is where rendering becomes machine-verified. Named here so nobody mistakes green CI for visual correctness |
 
 ## Quick Start
 

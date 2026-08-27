@@ -134,15 +134,15 @@ preventing structurally.
 | SC-001 | No component contains a hexadecimal colour literal | Lint rule, plus a deliberate probe commit adding one — CI must fail naming file and value |
 | SC-002 | Changing one organization's `primaryColor` restyles its pages with **zero source diffs** | Two organizations rendered from different records in the same test run; tracked-source fingerprint unchanged |
 | SC-003 | A missing or malformed `theme` never produces a broken page | Test with `theme` absent, empty, and containing an invalid colour — all render the CITe defaults |
-| SC-004 | The header matches the decided layout at each design target | Test asserting tab sets and menu-button presence at 390 / 834 / 1440 |
-| SC-005 | `BIBLIOTECA 3D` and `INSTAGRAM` never appear in a compact bar | Assertion at 834 and 390 |
+| SC-004 | The header matches the decided layout at each design target | Assert the **tab-set data** (six desktop in canonical order, four tablet, five mobile ending `PERFIL`) **and** that the CSS contains the media queries that switch them. Whether the cascade actually shows/hides at those widths needs a browser — feature 003's Playwright (see plan § *What these tests can and cannot prove*) |
+| SC-005 | `BIBLIOTECA 3D` and `INSTAGRAM` never appear in a compact bar | Assert both are absent from the tablet and mobile tab-set data **and** present in the menu set — a data assertion, so it holds without a browser |
 | SC-006 | Every documented token pair passes WCAG AA | Automated contrast calculation over the documented pairs; a failing pair fails CI |
 | SC-007 | No component ships JavaScript without stated interactivity | Test listing `'use client'` components; each must carry a reason comment |
 | SC-008 | Pixel art is never rendered at a non-integer scale | Test asserting the clamp |
 | SC-009 | Feature 003 can build a page using only `@fablab/ui` exports | The workbench composes a representative page from library exports alone |
 | SC-010 | The gate set still grows, never shrinks | CI retains every feature-000 gate and adds the hex-literal and contrast gates |
 | SC-011 | A hostile `primaryColor` cannot escape its custom property | Test writing `red;} body{display:none` and similar payloads through the REST API; the stored value is rejected and the rendered CSS carries the default |
-| SC-012 | The design system renders with the licensed fallbacks alone | Build and test with no Aldo/Square binaries present. This is the **permanent** CI condition, not a temporary one: CI has no licensed way to obtain those files and must never scrape dafont |
+| SC-012 | **No code path requires a font file that is not in the repository** | Assert that every `@font-face` for a non-committed face declares a fallback stack, and that no import or build step resolves `Square.woff2`. *(Reframed after review round 1: "build with the fonts absent" was tautological — CI never has SquareFont, so that was simply the ordinary build asserting nothing. The real risk is a developer who DOES have the file locally committing something that depends on it.)* |
 
 ## Decisions taken while writing this spec
 

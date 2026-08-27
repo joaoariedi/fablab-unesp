@@ -10,15 +10,18 @@ token is additive, **renaming or removing one is a breaking change** for every c
 
 | Token | Value | Who sets it |
 |---|---|---|
-| `--color-primary` | `theme.primaryColor`, defaulting to `--color-rosa` | **Per organization** (CLR-001) |
-| `--color-navy` `--color-azul` `--color-teal` `--color-amarelo` `--color-laranja` `--color-rosa` `--color-claro` | fixed hexes | Platform — identical for every organization |
+| `--color-primary` | `theme.primaryColor`, defaulting to `--color-rosa-raw` | **Per organization** (CLR-001) |
+| `--color-navy` `--color-azul` `--color-teal` `--color-amarelo` `--color-laranja` `--color-claro` | fixed hexes | Platform — identical for every organization |
+| `--color-rosa-raw` | `#EE9DC4` | **Private.** The default for `--color-primary`. Components may not use it and lint rejects them if they try |
 
-> **`--color-rosa` is not the accent; `--color-primary` is.** A CTA styled with
-> `--color-rosa` renders identically for the CITe organization and therefore passes every
-> test — and silently fails to co-brand for the second one. This is the single most likely
-> way feature 001 breaks feature 007, so components use `--color-primary` for anything that
-> means *"this organization's accent"*, and `--color-rosa` only where the literal Fab Lab
-> pink is intended regardless of tenant.
+> **There is no `--color-rosa` for components to reach for.** The raw pink is
+> `--color-rosa-raw`, it is private, and lint rejects its use outside `tokens/`.
+>
+> *(Revised after review round 1.)* The first draft exported `--color-rosa` and relied on a
+> documented convention. That was unenforceable and the failure mode is invisible: a CTA
+> using it renders **identically** for CITe, passes every test, and fails to co-brand only
+> once a second organization exists. It was the plan's own top risk with nothing behind it.
+> Renaming the token makes reaching for it visibly wrong, and the lint rule makes it fail.
 
 ## Colour
 
@@ -28,7 +31,7 @@ token is additive, **renaming or removing one is a breaking change** for every c
 --color-teal    /* #74B7A5  hero band, progress detail, status chips */
 --color-amarelo /* #F8C810  XP, rewards, mission icons, numbering */
 --color-laranja /* #EE703E  the canonical logo chip */
---color-rosa    /* #EE9DC4  Fab Lab pink — default for --color-primary */
+--color-rosa-raw /* #EE9DC4  PRIVATE — the default for --color-primary; not for components */
 --color-claro   /* #DCE7E3  light surfaces, text on dark */
 --color-primary /* per-organization accent: CTAs, active tabs, card titles */
 ```
