@@ -49,15 +49,28 @@ Backgrounds are named by role rather than colour, so the white-background pages
 ## Typography
 
 ```css
---font-display  /* Aldo the Apache → condensed sans fallback */
---font-logotype /* SquareFont     → condensed sans fallback (NOT in repo — CLR-002) */
---font-body     /* Comfortaa      → system-ui, sans-serif   */
+--font-display  /* Aldo the Apache → condensed sans fallback. Logo, logotype, headings */
+--font-body     /* Comfortaa      → system-ui, sans-serif                              */
 --text-xs … --text-3xl
 ```
 
-Every face declares `font-display: swap` and a real fallback stack. `--font-logotype` **must
-look acceptable in fallback**, because CI and any deployment without the licensed file will
-always render it that way (SC-012).
+**There are two faces and two tokens.** Both ship in the repository, so CI renders the same
+typography production does.
+
+> **`--font-logotype` was removed** *(designer decision, 2026-08-27)*. It named SquareFont
+> for the "CITE BAURU" logotype; Aldo the Apache now covers that role, so the token would
+> have held the same value as `--font-display`.
+>
+> Keeping both would repeat the `--color-rosa` mistake one section above: two names for one
+> value, where picking the wrong one renders **identically** and no test can tell. And unlike
+> the colour case there is no future divergence to reserve a seam for — CLR-001 already fixed
+> that exactly one token varies per organization, and it is `--color-primary`.
+>
+> This is a breaking change to the contract, made when the contract has **zero consumers**
+> (`packages/ui` still exports `{}`). It is free today and expensive after the components exist.
+
+Both faces declare `font-display: swap` and a real fallback stack — now for latency (feature
+003's LCP budget) rather than for a missing file, since no file is missing.
 
 ## Layout
 

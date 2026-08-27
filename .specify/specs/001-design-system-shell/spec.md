@@ -110,7 +110,7 @@ preventing structurally.
 | FR-002 | **Zero hexadecimal literals in any component.** A lint rule fails the build on a hex value outside the token definition file | P1 | US1 |
 | FR-003 | **Exactly one colour token is per-organization:** `--color-primary` resolves from `theme.primaryColor` (default rosa `#EE9DC4`) and drives CTAs, active tabs and card titles. `logoUrl` and `heroImageUrl` are also per-organization. **Every other colour is platform-fixed** — the logo chip stays laranja, the hero band teal, the base navy (CLR-001) | P1 | US2 |
 | FR-004 | An organization with an absent or partial `theme` falls back to the CITe defaults; a malformed value is rejected before it reaches the stylesheet | P1 | US2 |
-| FR-005 | Typography tokens and `@font-face` declarations for **Aldo the Apache** (display/logo), **Square Font** (logotype) and **Comfortaa** (body), with `font-display: swap` and declared fallbacks (display → condensed sans; body → `system-ui, sans-serif`). Comfortaa ships in-repo (OFL). **Aldo and SquareFont are never committed** — used freely, redistribution undocumented (CLR-002); developers fetch them per `docs/product/fonts/README.md` | P1 | US1 |
+| FR-005 | Typography tokens and `@font-face` declarations for **two** faces — **Aldo the Apache** (`--font-display`: logo, logotype, headings) and **Comfortaa** (`--font-body`) — with `font-display: swap` and declared fallbacks (display → condensed sans; body → `system-ui, sans-serif`). **Both ship in-repo**, so CI renders what production renders. There is no `--font-logotype` (CLR-002, revised 2026-08-27) | P1 | US1 |
 | FR-006 | Base components: `Card`, `Button` (primary = pink filled, navy text, hard offset shadow), `Chip`, `SkillPips` (**10** levels), `ProgressBar` (continuous, with %), `SearchInput`, `Tabs` | P1 | US1 |
 | FR-007 | `LogoChip` renders the canonical **orange** extruded chip with the cube between `FAB` and `LAB`, and accepts the other palette colours for non-header use | P1 | US4 |
 | FR-008 | Responsive shell: desktop 6 tabs in canonical order and **no menu button**; tablet 4 tabs; mobile 5-position bottom bar appearing on scroll; menu button top-right with logo left, containing **all** tabs | P1 | US3 |
@@ -142,7 +142,25 @@ preventing structurally.
 | SC-009 | Feature 003 can build a page using only `@fablab/ui` exports | The workbench composes a representative page from library exports alone |
 | SC-010 | The gate set still grows, never shrinks | CI retains every feature-000 gate and adds the hex-literal and contrast gates |
 | SC-011 | A hostile `primaryColor` cannot escape its custom property | Test writing `red;} body{display:none` and similar payloads through the REST API; the stored value is rejected and the rendered CSS carries the default |
-| SC-012 | **No code path requires a font file that is not in the repository** | Assert that every `@font-face` for a non-committed face declares a fallback stack, and that no import or build step resolves `Square.woff2`. *(Reframed after review round 1: "build with the fonts absent" was tautological — CI never has SquareFont, so that was simply the ordinary build asserting nothing. The real risk is a developer who DOES have the file locally committing something that depends on it.)* |
+| SC-012 | **No SquareFont artefact ever enters the repository** | Assert no tracked file matches `Square*.{ttf,otf,woff,woff2}` and no source, stylesheet or config names SquareFont. *(Repurposed 2026-08-27 — third version; see the note below.)* |
+
+> **SC-012 has now been rewritten twice, and the reason it kept moving is worth recording.**
+>
+> **v1** — "the build succeeds with the fonts absent." Tautological: CI never had SquareFont,
+> so this was the ordinary build asserting nothing.
+> **v2** (review round 1) — "no code path requires a non-committed font." Real at the time.
+> **v3** (this revision) — the designer removed SquareFont, so **every** face is committed,
+> the set of non-committed faces is empty, and v2 now passes vacuously over nothing.
+>
+> What survives is a different risk, and it is live rather than hypothetical: the previous
+> `fonts/README.md` **instructed** developers to place `Square.ttf` in `docs/product/fonts/`.
+> Working trees still contain it — a binary whose own metadata says `All Rights Reserved`,
+> sitting one `git add -A` away from a public MIT repository. `.gitignore` covers it; this
+> criterion is the assertion that the cover held.
+>
+> The pattern to notice: v1 and v2 were criteria about a **fallback path**. Removing the font
+> deleted the path, and a criterion whose subject no longer exists does not become easy —
+> it becomes silent. Vacuous truth is the failure mode a passing test cannot report.
 
 ## Decisions taken while writing this spec
 
@@ -172,44 +190,52 @@ the logo chip too would leave a half-rebranded page — the shared pixel art and
 vocabulary still read as Fab Lab — which is worse than either extreme.
 **Impact**: FR-003, SC-002, US2; sets the token layer's split between per-org and fixed.
 
-### CLR-002: Font files are used but never redistributed [integration]
+### CLR-002: Two fonts, both in the repository [integration]
 
-**Decision** *(revised 2026-08-27, PO)*: **Comfortaa and Aldo the Apache ship in-repo;
-SquareFont does not.** Comfortaa carries its OFL; Aldo carries
-[`THIRD-PARTY-NOTICE.md`](../../../docs/product/fonts/THIRD-PARTY-NOTICE.md) recording a
-documented risk acceptance and stating that the repository's MIT licence does **not** cover
-it. SquareFont stays gitignored and is fetched locally per
-[`fonts/README.md`](../../../docs/product/fonts/README.md).
+**Decision** *(superseded 2026-08-27 — designer, round 7)*: **the design uses two faces,
+Aldo the Apache and Comfortaa, and both ship in-repo.** SquareFont is **removed from the
+project**; Aldo takes over the "CITE BAURU" logotype it used to draw.
 
-The two fonts separated once all three sources dafont names were actually checked: neither
-archive contains a readme, Aldo's author site is unreachable — but the **embedded metadata
-differs**. Aldo asserts **no restriction at all**; SquareFont asserts
-`© Bou Fonts. 2011. All Rights Reserved`, the only author-authored statement that exists for
-it. Likely FontCreator boilerplate, but a redistribution decision cannot rest on a guess
-about which metadata fields an author bothered to edit.
+~~Earlier decision (2026-08-27, PO): Comfortaa and Aldo ship in-repo, SquareFont stays
+gitignored and is fetched locally per `fonts/README.md`.~~ That arrangement is obsolete.
 
-**Rationale**: *(corrected 2026-08-27 — the first draft of this clarification said the
-licence was unconfirmed and that ISS-001 gated this feature. Both were wrong. **ISS-001 was
-already RESOLVED on 2026-08-25**, the TTFs were already removed from the repo and its
-history, and the reason is more specific than "unknown licence".)*
+**Rationale**: the licensing problem is closed **at its source rather than worked around**.
+The investigation had established an asymmetry: neither archive carries a readme and Aldo's
+author site was unreachable, but the embedded metadata differs — Aldo asserts **no
+restriction at all**, while SquareFont asserts `© Bou Fonts. 2011. All Rights Reserved`, the
+only author-authored statement that exists for it. Everything downstream — the gitignore, the
+local setup step, the permanent CI/production divergence, feature 007's asset-delivery
+problem — existed to route around **that one string**. Dropping the face deletes all of it,
+and it cost nothing the designer valued, because Aldo already covered the logo and headings.
 
-Verified on dafont: **Aldo the Apache** (AJ Paglia) is listed **"100% Grátis"**, and
-**SquareFont** (Bou Fonts) is listed **"100% Free"**. Neither author publishes a licence
-text. So the two rights come apart: **use** is covered by the listing, while **redistribution**
-in a public MIT repository is simply undocumented — and an undocumented right is not a
-granted one. Using them and not shipping them is therefore not a compromise, it is the
-accurate reading.
+Note what this does *not* rest on: no guess about whether the `All Rights Reserved` string
+was untouched FontCreator boilerplate. That guess was the weakest joint in the previous
+decision, and it is now load-bearing for nothing.
 
-**Impact**: FR-005 (nothing visual is deferred); SC-012 changes meaning — it is not a
-temporary state to be lifted later but the **permanent CI condition**, because CI has no
-licensed way to obtain the two files and must never scrape dafont. ISS-001 stays closed and
-gates nothing.
+**Impact**:
 
-**Consequence this raises, deliberately left to feature 007**: production must obtain the
-WOFF2 files from somewhere that is not this repository (the campus VM, a private asset store,
-or a mounted volume). Feature 001 ships the token layer and `@font-face` declarations
-pointing at a path; **populating that path is a deployment concern**, and the fallbacks make
-an unpopulated path degrade rather than break.
+- **FR-005** — two `@font-face` declarations, not three.
+- **`--font-logotype` is deleted** from the token contract. With SquareFont gone it would
+  have duplicated `--font-display`, and two names for one value is the `--color-rosa` trap
+  from CLR-001: picking the wrong one renders identically and no test can catch it. Free to
+  do now — the contract has zero consumers.
+- **SC-012 is repurposed** (third revision — see the note under Success Criteria). It no
+  longer guards a fallback path, because there is no missing file to fall back from. It now
+  asserts SquareFont never *enters* the repo.
+- **Feature 007 loses a requirement.** Production no longer needs to obtain a WOFF2 from
+  outside this repository — no campus VM path, no private asset store, no mounted volume.
+  CI and production now render identical typography.
+- **ISS-001 closes for good**, with a smaller residue: written permission from AJ Paglia
+  remains desirable and is now the only open licensing item.
+
+**One risk moves in the wrong direction, recorded rather than hidden**: Aldo is now the
+*only* non-body face, so an objection from its author would degrade the entire display layer
+instead of half of it. The fallback keeps the build standing; the brand would look generic
+until a replacement is chosen.
+
+**Open for the designer, not for the plan**: the lockup's two lines are now the same face, so
+`FAB ◆ LAB` and `CITE BAURU` differentiate by size, weight and tracking alone. Those values
+are undecided and belong with the `LogoChip` review.
 
 ### CLR-003: What "tested" means for a design system [scope boundaries]
 

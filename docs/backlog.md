@@ -6,7 +6,8 @@ Um item por seção, com ID sequencial; ao resolver, registrar a data e mover pa
 
 ## ISS-001 — Licenças das fontes Aldo the Apache e SquareFont
 
-- **Status:** RESOLVIDA (2026-08-25) — ver seção Resolvidos.
+- **Status:** RESOLVIDA (2026-08-25) — **encerrada em definitivo em 2026-08-27**, ver
+  seção Resolvidos.
 - **O quê:** os arquivos `product/fonts/AldotheApache.ttf` (AJ Paglia) e
   `product/fonts/Square.ttf` (© Bou Fonts 2011) vieram **sem arquivo de licença**;
   fontes desses acervos costumam ser "free for personal use". Comfortaa é OFL — ok.
@@ -48,3 +49,11 @@ Um item por seção, com ID sequencial; ao resolver, registrar a data e mover pa
   [`product/fonts/THIRD-PARTY-NOTICE.md`](product/fonts/THIRD-PARTY-NOTICE.md), que declara
   o risco aceito e que o MIT do repositório **não** cobre a fonte; a **SquareFont continua
   fora**. Permissão por escrito dos autores segue como o caminho definitivo.
+  **Encerramento (2026-08-27, decisão da designer — rodada 7):** a SquareFont **saiu do
+  projeto**; a Aldo the Apache assume também o logotipo "CITE BAURU". O item fecha **na
+  origem**: a única fonte com `All Rights Reserved` declarado não é mais usada, e não resta
+  nenhuma fonte fora do repositório. O "Plano B" (substituir por fonte OFL próxima) não
+  chegou a ser necessário — a designer resolveu com uma fonte que o projeto já tinha.
+  **Resíduo:** permissão escrita de AJ Paglia continua desejável, agora como o único item
+  em aberto e com peso maior — a Aldo passou a ser a única fonte não-corpo da identidade.
+  Não é gate de lançamento; o fallback (sans condensada) mantém o build de pé.

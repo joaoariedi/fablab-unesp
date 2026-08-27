@@ -13,8 +13,10 @@ Full Truth Map in [`research.md`](research.md). The load-bearing findings:
   otherwise require us to justify in writing.
 - **`theme.primaryColor` is an unvalidated `text` field.** CLR-004's first validation point
   does not exist yet; this feature adds it.
-- **CI never has SquareFont** and never will (CLR-002). The fallback path is permanent, so
-  SC-012 is a real gate rather than a temporary allowance.
+- **Every font the design uses is in the repository** (CLR-002, revised 2026-08-27 — the
+  designer dropped SquareFont and gave the logotype to Aldo). CI renders exactly what
+  production renders, and `--font-logotype` is deleted rather than aliased to
+  `--font-display`. SC-012 stopped being a fallback gate and became a redistribution one.
 - The guardrail pattern to copy is feature 000's lint fence: `no-restricted-syntax`, a
   message naming the sanctioned alternative, and a probe commit proving CI rejects it.
 
@@ -24,7 +26,7 @@ Full Truth Map in [`research.md`](research.md). The load-bearing findings:
 |------|------------|-------------|
 | `packages/ui/package.json` | modify | React as **peer** dependency; real `test` script; export map for `./tokens`, `./components`, `./styles.css` |
 | `packages/ui/src/tokens/palette.css` | create | **The only file allowed to contain hex literals.** Seven palette colours as custom properties on `:root` |
-| `packages/ui/src/tokens/typography.css` | create | `@font-face` for the three faces + type-scale tokens + fallback stacks |
+| `packages/ui/src/tokens/typography.css` | create | `@font-face` for the **two** faces + type-scale tokens + fallback stacks |
 | `packages/ui/src/tokens/layout.css` | create | Breakpoint, spacing and radius tokens — 390 / 834 / 1440 as named tokens, never magic numbers |
 | `packages/ui/src/tokens/index.ts` | create | The documented token names and contrast pairs as data, so tests can iterate them |
 | `packages/ui/src/components/{Card,Button,Chip,SkillPips,ProgressBar,SearchInput,Tabs}.tsx` | create | Base set (FR-006); server components except where noted |
@@ -40,7 +42,7 @@ Full Truth Map in [`research.md`](research.md). The load-bearing findings:
 | `apps/web/app/(frontend)/_workbench/page.tsx` | create | Component workbench, dev-only (FR-016) |
 | `eslint.config.mjs` | modify | Hex-literal rule + `--color-rosa-raw` ban for `packages/ui`; purity boundary for `packages/ui` |
 | `scripts/check-colour-tokens.sh` | create | The half ESLint cannot see: raw colours in **CSS** files outside `tokens/` (review round 1) |
-| `docs/product/fonts/*.woff2` | create | Comfortaa + Aldo, converted once locally; **no converter joins the stack** |
+| `docs/product/fonts/*.woff2` | create | Comfortaa + Aldo — the complete set, converted once locally; **no converter joins the stack** |
 | `.github/workflows/ci.yml` | modify | Nothing new — existing Lint/Tests jobs cover the new gates |
 
 ## Data Model
@@ -64,8 +66,8 @@ Order follows the dependency chain, and every guardrail lands before the thing i
 1. **Tokens first, and the lint rule with them.** Writing components before the hex rule
    exists means writing hex literals and cleaning them up later — the rule is cheapest when
    it has nothing to reject yet.
-2. **Fonts second**, because typography tokens reference them and the fallback path needs
-   proving while the tree is small.
+2. **Fonts second**, because typography tokens reference them. Simpler than planned: two
+   faces, both committed, no fallback path to prove.
 3. **Theme resolution third** — validated in both places (CLR-004) before any component
    consumes `--color-primary`.
 4. **Components**, then the shell, each with its invariant test.
@@ -325,8 +327,10 @@ a convenience.
   literals enforced by lint, identity from the organization record, mobile-first across the
   three targets, islands discipline, PT-BR content with English code.
 - [x] **Principle 5 — Enumerated verification gates:** the gate set grows — hex-literal lint,
-  contrast maths, the islands audit, the pixel clamp, and SC-012's fonts-absent build. No
-  existing gate is removed or made advisory.
+  contrast maths, the islands audit, the pixel clamp, and SC-012's SquareFont-exclusion
+  check. No existing gate is removed or made advisory. **SC-012 changed subject rather than
+  disappearing** when the font left: a criterion whose subject vanishes goes vacuous, not
+  green, and a vacuous assertion is a gate that reports success while checking nothing.
 
 ## Risks & Mitigations
 
@@ -334,9 +338,11 @@ a convenience.
 |------|--------|------------|
 | A component uses the raw pink where it means `--color-primary` | Silent co-branding failure — correct in every test, wrong for the second organization | **Now enforced, not just documented** (review round 1): the token is `--color-rosa-raw`, private, and rejected by lint outside `tokens/`. SC-002 renders two organizations and diffs as a second line |
 | The hex rule fires on legitimate non-colour strings (an id, a URL fragment) | Contributors learn to disable the rule | Selector matches only complete hex-colour literals; the escape valve is a disable **with a written reason**, visible in review |
-| CI never renders SquareFont, so its absence is never noticed | The logotype silently degrades in production too | SC-012 makes the fallback a tested path; production delivery is named as feature 007's concern rather than assumed |
+| ~~CI never renders SquareFont, so its absence is never noticed~~ | — | **Risk deleted 2026-08-27:** the designer removed the face. CI and production render identical typography, and feature 007 loses the asset-delivery requirement |
+| A stale working tree still holds `Square.ttf` from the old setup instructions | An `All Rights Reserved` binary lands in a public MIT repo | `.gitignore` entries deliberately **kept** — their purpose inverted from staging a setup to preventing a commit — and SC-012 asserts the cover held |
+| Aldo is now the only non-body face | An author objection degrades the whole display layer, not half | Accepted and recorded in `THIRD-PARTY-NOTICE.md`. The fallback keeps the build standing; written permission from AJ Paglia is the durable fix (ISS-001 residue) |
 | Workbench leaks into the production bundle | Ships dead code and an unintended public page | Dev-only route guard plus a test asserting it is absent from a production build |
-| Three custom faces hurt LCP, which feature 003 must measure | 003 inherits a budget it cannot meet | `font-display: swap`, fallback stacks declared, WOFF2 only, and no runtime JS in the token layer |
+| Custom faces hurt LCP, which feature 003 must measure | 003 inherits a budget it cannot meet | `font-display: swap`, fallback stacks declared, WOFF2 only, no runtime JS in the token layer — and **two faces instead of three** since 2026-08-27, which makes the budget strictly easier |
 | Pixel art at fractional device pixel ratios | Muddy art on some devices | Integer clamp in `PixelImage`, asserted by SC-008 |
 | **Rendering is unverified by CI** (accepted, CLR-003) | A component can be visually broken while every gate is green | The workbench (FR-016) is the human check; feature 003's Playwright is where rendering becomes machine-verified. Named here so nobody mistakes green CI for visual correctness |
 
@@ -345,8 +351,9 @@ a convenience.
 1. Add React as a peer dependency of `packages/ui` and give it a real `vitest.config.ts`.
 2. Write `tokens/*.css` and `tokens/index.ts`, then **immediately** add the hex-literal rule
    (Sketch 2) — before any component exists to violate it.
-3. Convert Comfortaa and Aldo to WOFF2 locally, commit them, and write the `@font-face`
-   block with fallbacks. Verify the build with SquareFont absent (SC-012).
+3. Convert Comfortaa and Aldo to WOFF2 locally, commit them, and write the two `@font-face`
+   blocks with fallbacks. `--font-display` covers logo, logotype and headings; there is no
+   `--font-logotype`. Add the SquareFont-exclusion assertion (SC-012).
 4. Build `lib/theme.ts` + the `Organizations` field validator (CLR-004 both checkpoints),
    with the SC-011 payload test.
 5. Components in dependency order: `LogoChip`, `Button`, `Card`, `Chip`, `SkillPips`,

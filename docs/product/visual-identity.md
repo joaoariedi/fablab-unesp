@@ -45,22 +45,32 @@ pequeno).
 
 | Fonte | Papel definido na prancha |
 |---|---|
-| **Aldo the Apache** | Logo e logotipo; pode ser usada em títulos e subtítulos |
-| **Square Font** | Logotipo ("CITE BAURU"); pode ser usada em títulos e subtítulos |
+| **Aldo the Apache** | Logo, **logotipo ("CITE BAURU")**, títulos e subtítulos |
+| ~~**Square Font**~~ | ~~Logotipo ("CITE BAURU"); pode ser usada em títulos e subtítulos~~ — **removida na rodada 7** |
 | **Comfortaa** | Corpo de texto |
+
+**Rodada 7 (decidido pela designer, 2026-08-27): a Square Font sai; a Aldo the Apache
+assume o logotipo.** A prancha original usava duas fontes display para o lockup — Aldo em
+`FAB ◆ LAB` e Square em `CITE BAURU`. Passa a ser **uma só**. A tipografia do produto fica
+com **duas fontes no total**, ambas versionadas no repositório.
+
+> **Ponto em aberto para a designer:** com as duas linhas do lockup na mesma fonte, a
+> diferenciação entre `FAB ◆ LAB` e `CITE BAURU` passa a depender só de tamanho, peso e
+> tracking. Definir esses valores ao revisar o `LogoChip` — a decisão da rodada 7 não os
+> especifica.
 
 Notas para web (arquivos **recebidos em 2026-08-23**, em `fonts/`):
 
-- **Aldo the Apache** (`AldotheApache.ttf`) — Regular, de AJ Paglia.
-- **SquareFont** (`Square.ttf`) — Regular, © Bou Fonts 2011 — é a "Square Font" da prancha.
+- **Aldo the Apache** (`AldotheApache.ttf`) — Regular, de AJ Paglia. Versionada, com
+  [`THIRD-PARTY-NOTICE.md`](fonts/THIRD-PARTY-NOTICE.md).
 - **Comfortaa** (`Comfortaa-VariableFont_wght.ttf`) — variável (Light–Bold), licença OFL
   (Google Fonts) — uso web liberado.
 - Na implementação: converter para WOFF2, `font-display: swap`, e definir fallbacks
   (display → sans condensada; corpo → `system-ui, sans-serif`).
-- **Licenças:** Aldo the Apache e SquareFont vieram **sem arquivo de licença**; a
-  confirmação está **em espera** (decisão do PO, 2026-08-24) — rastreada como **ISS-001**
-  em [backlog.md](../backlog.md), com gate antes do lançamento público. Comfortaa está ok
-  (OFL).
+- **Licenças:** ~~confirmação em espera (ISS-001)~~ **encerrada em 2026-08-27**. Comfortaa
+  é OFL; a Aldo vai versionada com aviso de terceiros; a Square Font — a única com
+  `All Rights Reserved` nos metadados — **deixou de ser usada**, o que resolve a pendência
+  na origem em vez de contorná-la. Ver [backlog.md](../backlog.md) § ISS-001.
 
 ## Logo
 

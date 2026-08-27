@@ -1,44 +1,40 @@
 # Fontes da identidade
 
-Status das três fontes da identidade visual (ver `../visual-identity.md`).
+Status das fontes da identidade visual (ver `../visual-identity.md`).
 Termos de terceiros: [`THIRD-PARTY-NOTICE.md`](THIRD-PARTY-NOTICE.md).
 
 | Fonte | No repositório | Licença | Uso |
 |---|---|---|---|
 | **Comfortaa** | ✅ `Comfortaa-VariableFont_wght.ttf` + `OFL.txt` | [SIL OFL 1.1](OFL.txt) — redistribuição permitida com a licença junto | Corpo de texto |
-| **Aldo the Apache** (AJ Paglia) | ✅ `AldotheApache.ttf` | "100% Free" no [dafont](https://www.dafont.com/aldo-the-apache.font); **sem texto de licença do autor** e **sem restrição declarada** em nenhum lugar — risco aceito e documentado no [aviso](THIRD-PARTY-NOTICE.md) | Logo, títulos |
-| **SquareFont** (Bou Fonts, 2011) | ❌ **não redistribuída** | dafont diz "100% Free", mas os metadados da própria fonte dizem `© Bou Fonts. 2011. All Rights Reserved` | Logotipo, títulos |
+| **Aldo the Apache** (AJ Paglia) | ✅ `AldotheApache.ttf` | "100% Free" no [dafont](https://www.dafont.com/aldo-the-apache.font); **sem texto de licença do autor** e **sem restrição declarada** em nenhum lugar — risco aceito e documentado no [aviso](THIRD-PARTY-NOTICE.md) | Logo, logotipo, títulos |
 
-## Por que SquareFont continua fora (revisado 2026-08-27)
+**São duas fontes, não três.** Toda a tipografia do produto está versionada aqui.
 
-A decisão de 2026-08-25 mantinha **as duas** fontes fora do repositório por não haver texto
-de licença. Ao revisar, procuramos nos três lugares que o próprio dafont indica — e os
-resultados foram **diferentes para cada fonte**:
+## SquareFont saiu do projeto (decisão da designer, 2026-08-27)
 
-- **Aldo the Apache:** o arquivo baixado traz **só o `.ttf`** (sem readme), o site do autor
-  estava **fora do ar**, e os metadados embutidos **não declaram restrição alguma** — nem
-  copyright, nem licença. Nada proíbe; a única indicação publicada é permissiva.
-- **SquareFont:** os metadados embutidos afirmam **`All Rights Reserved`**. É provavelmente
-  o texto padrão do FontCreator que o autor não editou, mas é a **única declaração autoral
-  existente** — e ela diz o contrário de "livre".
+A SquareFont (Bou Fonts, 2011) desenhava o logotipo "CITE BAURU" na prancha original. A
+designer decidiu **substituí-la pela Aldo the Apache**, que já cobria o logo e os títulos.
 
-Daí a assimetria: Aldo entra com aviso de terceiros; SquareFont fica fora até haver
-confirmação do autor.
+Isso encerra a pendência de licenciamento **na origem, e não por contorno**: a única fonte
+cujos metadados diziam `© Bou Fonts. 2011. All Rights Reserved` simplesmente **não é mais
+usada**. Não há mais fonte fora do repositório, nem passo de setup local, nem caminho de
+build que dependa de arquivo ausente — e o CI passa a renderizar exatamente a mesma
+tipografia que a produção.
 
-> **O rótulo do dafont não é uma licença.** O FAQ do próprio site avisa: *"The licence
-> mentioned above the download button is just an indication. Please look at the readme-files
-> in the archives or check the indicated author's website for details, and contact him/her if
-> in doubt."*
+> Registro da investigação que levou até aqui (2026-08-27): o rótulo do dafont **não é
+> licença** — o FAQ do próprio site avisa que *"the licence mentioned above the download
+> button is just an indication"*. Verificados os três lugares que o dafont indica, as duas
+> fontes se separaram: o arquivo da Aldo não traz readme, o site do autor estava fora do ar
+> e os metadados **não declaram restrição alguma**; os da SquareFont declaravam
+> `All Rights Reserved`. Era essa assimetria que mantinha a SquareFont fora. A decisão da
+> designer torna a assimetria irrelevante.
 
-## Como obter SquareFont (setup local)
+## `Square.ttf` continua no `.gitignore` — de propósito
 
-1. Baixe: <https://www.dafont.com/squarefont.font>
-2. Coloque `Square.ttf` (e, se quiser a variante vazada, `Squareo.ttf`) nesta pasta — ambos
-   estão no `.gitignore`.
-3. Sem esses arquivos o build **funciona**: a tipografia cai no fallback declarado
-   (display → sans condensada). Essa é a condição normal do CI, que não tem como obtê-los.
+As entradas de `.gitignore` para `Square.ttf` e `Squareo.ttf` **não foram removidas**, e o
+motivo mudou de sinal: antes elas organizavam um setup local; agora elas evitam um commit
+acidental de um binário `All Rights Reserved` em repositório público MIT — sem que ninguém
+tenha qualquer razão para querer esse arquivo.
 
-*(Caminho definitivo: permissão por escrito — AJ Paglia via [ajpaglia.com](https://ajpaglia.com),
-Bou Fonts via dafont — trocaria toda a inferência acima por um documento e permitiria
-versionar a SquareFont também. Alternativa: substituir por similar OFL, decisão com a
-designer.)*
+O risco é concreto: a versão anterior deste README **mandava** colocar `Square.ttf` nesta
+pasta. Quem seguiu aquela instrução ainda tem o arquivo na árvore de trabalho. Pode apagá-lo.

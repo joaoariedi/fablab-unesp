@@ -13,7 +13,7 @@ them.
 | **Source** | <https://www.dafont.com/aldo-the-apache.font> |
 | **Stated category** | **"100% Grátis" / "100% Free"** on dafont |
 | **Author licence text** | **None found** — see the evidence below |
-| **Used for** | Display type and the logotype |
+| **Used for** | Display type, the logo and the logotype — **all non-body type** since 2026-08-27 |
 
 ### The evidence, stated plainly (checked 2026-08-27)
 
@@ -40,18 +40,29 @@ If AJ Paglia (or anyone acting for them) objects, remove `AldotheApache.ttf` and
 issue — the design system is built to fall back to a condensed sans, so removing it degrades
 the typography without breaking the build.
 
-## Not redistributed here
+Since 2026-08-27 that fallback covers **more** of the identity than before: Aldo replaced
+SquareFont in the logotype, so it is now the only non-body face. An objection would degrade
+the whole display layer rather than half of it. The build still survives; the brand would
+look generic until a replacement is chosen.
 
-**SquareFont / SquareFont Outline** (`Square.ttf`, `Squareo.ttf`, © Bou Fonts 2011) are
-**deliberately excluded** and remain in `.gitignore`. dafont lists them "100% Free", but the
-fonts' own embedded metadata says:
+## SquareFont — no longer used at all
+
+**SquareFont / SquareFont Outline** (`Square.ttf`, `Squareo.ttf`, © Bou Fonts 2011) drew the
+"CITE BAURU" logotype in the original design board. **The designer replaced it with Aldo the
+Apache on 2026-08-27**, so it is not merely un-redistributed — it is **not part of the
+product**. There is no local setup step and no reason for anyone to hold a copy.
+
+This closed the licensing question at its source. The fonts' own embedded metadata said:
 
 > `Typeface © Bou Fonts. 2011. All Rights Reserved`
 
-That is the only author-authored statement that exists for them, and it says the opposite of
-permissive. It may well be untouched FontCreator boilerplate — it usually is — but this
-notice cannot rest a redistribution decision on a guess about which fields an author edited.
-Fetch them locally per [`README.md`](README.md).
+That was the only author-authored statement that existed for them, and it said the opposite
+of permissive. Dropping the face is a stronger resolution than any inference about whether
+that string was untouched FontCreator boilerplate.
+
+Both filenames **stay in `.gitignore`**, with the reason inverted: they no longer stage a
+local setup, they prevent an accidental commit of an All-Rights-Reserved binary into a public
+MIT repository — by someone who followed the old instructions and still has the file.
 
 ## Comfortaa
 
@@ -61,6 +72,6 @@ if their authors published terms.
 
 ## The durable fix
 
-Written permission from AJ Paglia and from Bou Fonts would replace every inference above with
-a document, and would let SquareFont be versioned normally too. Until then this file is the
-honest record of what is known.
+Written permission from AJ Paglia would replace the inference above with a document. Bou
+Fonts is no longer relevant — that font left the project. Until then this file is the honest
+record of what is known about the one face that needs it.

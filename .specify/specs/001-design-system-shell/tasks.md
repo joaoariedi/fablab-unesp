@@ -16,9 +16,12 @@ Five things are load-bearing, and four of them fail quietly.
    rejects it in components (review round 1 — the first draft had only a convention here,
    and the failure is invisible: a CTA using it renders identically for CITe and fails to
    co-brand only once org #2 exists).
-3. **CI never has SquareFont, permanently** (CLR-002) — which is why "build with it absent"
-   proves nothing on its own. T011 asserts the real risk instead: that **no code path
-   requires** a file the repository does not have.
+3. **Two fonts, both committed, and there is no `--font-logotype`** (CLR-002, revised
+   2026-08-27 — the designer replaced SquareFont with Aldo). Aldo covers logo, logotype and
+   headings under `--font-display`. A second token holding the same value would be the
+   `--color-rosa` trap again. T011 no longer guards a fallback path — it asserts SquareFont
+   never *enters* the repo, because old setup instructions put `Square.ttf` in working trees
+   that still exist.
 4. **Which tabs show at which breakpoint is CSS, not JavaScript.** The three sets are static
    and decided; a breakpoint hook would ship the whole header to the browser to express a
    media query. Only `MenuSheet` is a client island.
@@ -48,9 +51,9 @@ assumed), so dependencies live in the **Blocked by** column. Keep them accurate 
 | T007 | **The hex-literal fence**, TS half. `no-restricted-syntax` on complete hex-colour literals **and on `--color-rosa-raw`**, `ignores` scoped to `tokens/**` so the exemption is a path visible in review. **Land this before any component exists** | FR-002, CLR-001 | `eslint.config.mjs` | T006 |
 | T007b | **The hex fence, CSS half.** ESLint does not lint `.css`, and CSS Modules is where the hexes will actually be written — so a script scans `.css` outside `tokens/` for hex, `rgb()` and `hsl()`. Without this the rule guarding against hexes is blind to the likeliest hex (review round 1) | FR-002 | `scripts/check-colour-tokens.sh` | T006 |
 | T008 | [P] Contrast test over `DOCUMENTED_PAIRS` — AA thresholds by size class. A pair that fails cannot be documented, which finally answers the open pink-on-navy question in `visual-identity.md` | FR-017, SC-006 | `packages/ui/tests/contrast.test.ts` | T006 |
-| T009 | Convert Comfortaa + Aldo to WOFF2 **locally** and commit the output. No converter joins the stack (Principle 1) | FR-005 | `docs/product/fonts/*.woff2` | — |
-| T010 | `@font-face` for the three faces with `font-display: swap` and real fallback stacks; `--font-logotype` must look acceptable in fallback because CI always renders it that way | FR-005, CLR-002 | `packages/ui/src/tokens/typography.css` | T006, T009 |
-| T011 | Assert **no code path requires** a non-committed font: every `@font-face` for such a face declares a fallback stack, and nothing imports or resolves `Square.woff2`. Guards against a developer who *has* the file locally committing a dependency on it | SC-012 | `packages/ui/tests/fonts.test.ts` | T010 |
+| T009 | Convert Comfortaa + Aldo to WOFF2 **locally** and commit the output — that is the complete font set. No converter joins the stack (Principle 1) | FR-005 | `docs/product/fonts/*.woff2` | — |
+| T010 | `@font-face` for the **two** faces with `font-display: swap` and real fallback stacks. `--font-display` (Aldo) covers logo, logotype and headings; `--font-body` is Comfortaa. **Do not add `--font-logotype`** — it would alias `--font-display` and no test could catch a component picking the wrong one | FR-005, CLR-002 | `packages/ui/src/tokens/typography.css` | T006, T009 |
+| T011 | Assert **no SquareFont artefact is tracked**: no file matching `Square*.{ttf,otf,woff,woff2}`, and no source, stylesheet or config naming SquareFont. Guards the live case — a developer who followed the old README still has the file one `git add -A` away | SC-012 | `packages/ui/tests/fonts.test.ts` | T010 |
 
 ## Phase 3: User Stories (by priority)
 
@@ -142,7 +145,7 @@ assumed), so dependencies live in the **Blocked by** column. Keep them accurate 
 | SC-003 theme fallback | T017 | SC-009 built from exports | T040 |
 | SC-004 header layout | T032 | SC-010 gates grow | T045 |
 | SC-005 compact bars | T032 | SC-011 hostile colour | T014 |
-| SC-006 WCAG AA | T008 | SC-012 fonts absent | T011 |
+| SC-006 WCAG AA | T008 | SC-012 no SquareFont | T011 |
 
 ---
 

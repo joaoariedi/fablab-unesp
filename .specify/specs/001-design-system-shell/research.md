@@ -45,10 +45,12 @@ edit above them, and feature 000 lost four citations that way before the convent
   CSS convention to follow or contradict. Next 16 supports CSS Modules and plain global CSS
   natively; **no CSS tooling is installed**, and adding one (Tailwind, CSS-in-JS) would need
   written justification under constitution Principle 1.
-- **The fonts split three ways** (`docs/product/fonts/README.md` § table): Comfortaa in-repo
-  under OFL; Aldo the Apache in-repo under `THIRD-PARTY-NOTICE.md`; SquareFont **not in the
-  repo** and gitignored. CI therefore never has SquareFont — this is permanent, not
-  temporary (spec CLR-002).
+- **There are two fonts and both are in the repo** (`docs/product/fonts/README.md` § table):
+  Comfortaa under OFL, Aldo the Apache under `THIRD-PARTY-NOTICE.md`. SquareFont **left the
+  project** on 2026-08-27 (designer, round 7) with Aldo taking over the logotype, so CI
+  renders the same typography as production and no font needs local setup (spec CLR-002).
+  `Square.ttf`/`Squareo.ttf` stay in `.gitignore` to block an accidental commit, not to stage
+  a download.
 - **The palette is decided and definitive** (`docs/product/visual-identity.md` § Paleta de
   cores): seven hexes, with render drift in the mockups explicitly ruled an artefact.
 - **Navigation is decided per breakpoint** (`docs/product/visual-identity.md` § Direção de
@@ -84,10 +86,12 @@ CLR-002 fonts, CLR-003 Vitest-only testing, CLR-004 validate twice).
 
 Deferred by decision, tracked elsewhere:
 
-- **Production delivery of the SquareFont WOFF2** — a deployment concern, feature 007
-  (spec CLR-002). The fallback makes an unpopulated path degrade rather than break.
-- **Written permission from the font authors** — would let SquareFont be versioned and
-  retire the third-party notice (`docs/backlog.md` § ISS-001).
+- ~~**Production delivery of the SquareFont WOFF2** — a deployment concern, feature 007.~~
+  **No longer exists** (2026-08-27): the font left the project, so feature 007 inherits one
+  fewer requirement and there is no unpopulated asset path to degrade from.
+- **Written permission from AJ Paglia** — would retire the third-party notice
+  (`docs/backlog.md` § ISS-001). Now the only open licensing item, and it carries more weight
+  than before: Aldo is the sole non-body face.
 - **LCP budget measurement** — feature 003 owns it (spec scope boundaries); this feature must
   not make it unmeetable, which is why fonts use `font-display: swap` and the token layer
   ships no runtime JavaScript.

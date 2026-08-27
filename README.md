@@ -242,6 +242,6 @@ fablab/makerspace may run its own instance.
 **Exceptions** (not MIT): the Fab Lab CITe Bauru **visual identity, mockups, brand
 assets and pixel art** (`docs/product/design/`, `docs/product/brand/`) are © their
 authors, used here with permission — reuse them only for this project. Typefaces keep
-their own licenses: Comfortaa is OFL (bundled); Aldo the Apache and SquareFont are
-dafont "100% Free" but are **not redistributed** in this repository — see
-[`docs/product/fonts/README.md`](docs/product/fonts/README.md).
+their own licenses: **Comfortaa** is OFL (bundled with `OFL.txt`); **Aldo the Apache** is
+bundled under a documented risk acceptance that the MIT grant does **not** extend to — see
+[`docs/product/fonts/THIRD-PARTY-NOTICE.md`](docs/product/fonts/THIRD-PARTY-NOTICE.md).
