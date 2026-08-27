@@ -174,10 +174,19 @@ vocabulary still read as Fab Lab — which is worse than either extreme.
 
 ### CLR-002: Font files are used but never redistributed [integration]
 
-**Decision**: **The fonts are used in full — including WOFF2 conversion and serving — but
-their source files are never committed to this repository.** Comfortaa (OFL) ships in-repo
-with its licence; Aldo the Apache and SquareFont are fetched locally per
-[`fonts/README.md`](../../../docs/product/fonts/README.md) and are gitignored.
+**Decision** *(revised 2026-08-27, PO)*: **Comfortaa and Aldo the Apache ship in-repo;
+SquareFont does not.** Comfortaa carries its OFL; Aldo carries
+[`THIRD-PARTY-NOTICE.md`](../../../docs/product/fonts/THIRD-PARTY-NOTICE.md) recording a
+documented risk acceptance and stating that the repository's MIT licence does **not** cover
+it. SquareFont stays gitignored and is fetched locally per
+[`fonts/README.md`](../../../docs/product/fonts/README.md).
+
+The two fonts separated once all three sources dafont names were actually checked: neither
+archive contains a readme, Aldo's author site is unreachable — but the **embedded metadata
+differs**. Aldo asserts **no restriction at all**; SquareFont asserts
+`© Bou Fonts. 2011. All Rights Reserved`, the only author-authored statement that exists for
+it. Likely FontCreator boilerplate, but a redistribution decision cannot rest on a guess
+about which metadata fields an author bothered to edit.
 
 **Rationale**: *(corrected 2026-08-27 — the first draft of this clarification said the
 licence was unconfirmed and that ISS-001 gated this feature. Both were wrong. **ISS-001 was

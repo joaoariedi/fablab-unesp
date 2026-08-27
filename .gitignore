@@ -1,5 +1,8 @@
-docs/product/fonts/AldotheApache.ttf
+# SquareFont is NOT redistributed here: its embedded metadata says
+# "Typeface © Bou Fonts. 2011. All Rights Reserved" — see docs/product/fonts/README.md.
+# Aldo the Apache IS tracked; it carries no such claim (THIRD-PARTY-NOTICE.md).
 docs/product/fonts/Square.ttf
+docs/product/fonts/Squareo.ttf
 
 # --- workspace (feature 000) ---
 node_modules/
