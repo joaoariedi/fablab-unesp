@@ -7,7 +7,7 @@ Derived from [`spec.md`](spec.md), [`plan.md`](plan.md) and
 
 ## Read before starting
 
-Five things are load-bearing, and four of them fail quietly.
+Six things are load-bearing, and five of them fail quietly.
 
 1. **The hex-literal rule lands with the tokens, before any component exists** (T007, right
    after T004–T006). Write components first and you write hex literals first, and the rule
@@ -28,7 +28,14 @@ Five things are load-bearing, and four of them fail quietly.
 5. **No test renders a component.** There is no DOM environment in the workspace and none is
    added, so tests assert data, arithmetic and file text. Rendering is verified by the
    workbench and by feature 003's Playwright — see plan § *What these tests can and cannot
-   prove*. Green CI here does **not** mean visually correct.
+   prove*. Green CI here does **not** mean visually correct. **If a task says *rendered*,
+   *reaches the DOM* or *displays*, it is mis-worded** — round 1 caught two, round 2 caught
+   two more.
+6. **A gate nobody has watched fail is not a gate.** Round 2 measured three assertions that
+   would have reported success while checking nothing: the colour scan exited 1 on a *clean*
+   tree (so it could never distinguish), T038 asserted the absence of a page that was never
+   a route, and SC-012 v2 ran over an empty set. Before trusting any "asserts absence" gate,
+   plant a violation and watch it go red — that is what T041 is for.
 
 **No task tracker.** `TaskCreate`/`TaskUpdate` are unavailable in this session (checked, not
 assumed), so dependencies live in the **Blocked by** column. Keep them accurate by hand.
@@ -38,8 +45,9 @@ assumed), so dependencies live in the **Blocked by** column. Keep them accurate 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
 | T001 | React as a **peer** dependency (the app owns the React instance); export map for `./tokens`, `./components`, `./styles.css` | FR-018 | `packages/ui/package.json` | — |
+| T001b | `transpilePackages: ['@fablab/ui']` — the package exports raw TS and CSS, so Next must compile it (round 2: `next.config.mjs` was missing from the plan entirely) | FR-018 | `apps/web/next.config.mjs` | T001 |
 | T002 | Real Vitest config, replacing `--passWithNoTests` | FR-020 | `packages/ui/vitest.config.ts` | T001 |
-| T003 | Purity boundary for `packages/ui` — React allowed, `payload`/`@payloadcms/*`/Next **server** APIs forbidden. Mirrors the `packages/game` block, does not copy it | FR-018 | `eslint.config.mjs` | — |
+| T003 | Purity boundary **scoped to `packages/ui/src/**`** — React allowed, `payload`/`@payloadcms/*`/Next **server** APIs forbidden. Mirrors the `packages/game` block, does not copy it. **Scope matters:** `packages/ui/tests/**` must stay free to use `node:fs` and `git ls-files`, which T011 needs | FR-018 | `eslint.config.mjs` | — |
 
 ## Phase 2: Foundational — tokens, the fence, fonts
 
@@ -48,11 +56,12 @@ assumed), so dependencies live in the **Blocked by** column. Keep them accurate 
 | T004 | Palette as custom properties, with `--color-primary` defaulting to `var(--color-rosa-raw)` so an unthemed page is already correct; the raw pink is **private** | FR-001, CLR-001 | `packages/ui/src/tokens/palette.css` | T001 |
 | T005 | [P] Layout tokens: breakpoints **390 / 834 / 1440**, spacing, radius, the hard offset shadow | FR-012 | `packages/ui/src/tokens/layout.css` | T001 |
 | T006 | Token names and `DOCUMENTED_PAIRS` as data, so tests can iterate them rather than restate them | FR-001, FR-017 | `packages/ui/src/tokens/index.ts` | T004, T005 |
-| T007 | **The hex-literal fence**, TS half. `no-restricted-syntax` on complete hex-colour literals **and on `--color-rosa-raw`**, `ignores` scoped to `tokens/**` so the exemption is a path visible in review. **Land this before any component exists** | FR-002, CLR-001 | `eslint.config.mjs` | T006 |
-| T007b | **The hex fence, CSS half.** ESLint does not lint `.css`, and CSS Modules is where the hexes will actually be written — so a script scans `.css` outside `tokens/` for hex, `rgb()` and `hsl()`. Without this the rule guarding against hexes is blind to the likeliest hex (review round 1) | FR-002 | `scripts/check-colour-tokens.sh` | T006 |
+| T007 | **The hex fence, TS half.** `no-restricted-syntax` with **four** selectors: hex in a `Literal`, hex in a `TemplateElement`, `--color-rosa-raw` in either. `ignores` scoped to `tokens/**` so the exemption is a path visible in review. **The template-literal selectors are not optional** — styled-jsx ships with Next and a `Literal` selector misses `` <style jsx>{`…#EE703E`}</style> `` entirely (round 2, measured). **Land this before any component exists** | FR-002, CLR-001 | `eslint.config.mjs` | T006 |
+| T007b | **The hex fence, CSS half.** ESLint does not lint `.css`, and CSS Modules is where component colour is actually written. Scan `.css` outside `tokens/` for hex, `rgb()`, `hsl()` **and `--color-rosa-raw`** — the private token was banned only in TypeScript, leaving it free in the one file type it would be used in (round 2). **Capture into a variable and branch on emptiness; do not pipe grep into the exit status** — the first draft exited 1 on a clean tree, so it could never distinguish pass from fail (same class as feature 000's `grep \| head`) | FR-002, CLR-001 | `scripts/check-colour-tokens.sh` | T006 |
 | T008 | [P] Contrast test over `DOCUMENTED_PAIRS` — AA thresholds by size class. A pair that fails cannot be documented, which finally answers the open pink-on-navy question in `visual-identity.md` | FR-017, SC-006 | `packages/ui/tests/contrast.test.ts` | T006 |
-| T009 | Convert Comfortaa + Aldo to WOFF2 **locally** and commit the output — that is the complete font set. No converter joins the stack (Principle 1) | FR-005 | `docs/product/fonts/*.woff2` | — |
-| T010 | `@font-face` for the **two** faces with `font-display: swap` and real fallback stacks. `--font-display` (Aldo) covers logo, logotype and headings; `--font-body` is Comfortaa. **Do not add `--font-logotype`** — it would alias `--font-display` and no test could catch a component picking the wrong one | FR-005, CLR-002 | `packages/ui/src/tokens/typography.css` | T006, T009 |
+| T009 | Convert Comfortaa + Aldo to WOFF2 **locally** into **`apps/web/public/fonts/`** — that is the complete font set, and it is the only location the runtime can serve. The `.ttf` sources stay in `docs/product/fonts/` as the provenance record with their licence notice. No converter joins the stack (Principle 1) | FR-005 | `apps/web/public/fonts/*.woff2` | — |
+| T010 | `@font-face` for the **two** faces with `font-display: swap` and real fallback stacks, using **absolute `url('/fonts/…')`** so no bundler has to resolve the asset and `packages/ui` needs no build step (Sketch 8). `--font-display` (Aldo) covers logo, logotype and headings; `--font-body` is Comfortaa. **Do not add `--font-logotype`** — it would alias `--font-display` and no test could catch a component picking the wrong one | FR-005, CLR-002 | `packages/ui/src/tokens/typography.css` | T006, T009 |
+| T010b | [P] `<link rel="preload">` for the display face in the frontend layout — the one thing `next/font/local` would have given us automatically, added deliberately instead (Sketch 8) | FR-005 | `apps/web/app/(frontend)/layout.tsx` | T010 |
 | T011 | Assert **no SquareFont artefact is tracked**: no file matching `Square*.{ttf,otf,woff,woff2}`, and no source, stylesheet or config naming SquareFont. Guards the live case — a developer who followed the old README still has the file one `git add -A` away | SC-012 | `packages/ui/tests/fonts.test.ts` | T010 |
 
 ## Phase 3: User Stories (by priority)
@@ -67,7 +76,7 @@ assumed), so dependencies live in the **Blocked by** column. Keep them accurate 
 | T013 | `themeStyle()` returning a React **style object**, never a `<style>` string. **The regex is the primary defence; the object only limits blast radius** — in SSR React emits `style="--color-primary:VALUE"`, so `red; display:none` still injects a second declaration on `<body>` (review round 1 corrected the attribution) | FR-003, FR-004, FR-019 | `apps/web/lib/theme.ts` | T012 |
 | T014 | Hostile-payload test: write `red;}body{display:none` and friends through the **REST API**, assert the stored value is rejected and the rendered CSS carries the default | SC-011 | `apps/web/tests/theme.test.ts` | T013 |
 | T015 | `currentOrganization()` + layout injection: import `styles.css`, set the validated `--color-primary` on `<body>`. Server component — the theme costs no client JS. **Catch `TenantUnresolvedError` → `notFound()`**: the choke point throws, this layout wraps every page, and falling back to CITe's identity is forbidden by feature 000's US4 error case (review round 1) | FR-003, US2 | `apps/web/app/(frontend)/layout.tsx` | T013 |
-| T016 | Two organizations rendered from different records in one run; assert the accent differs **and** the tracked-source fingerprint is unchanged (the method that validated SC-008 in feature 000) | SC-002 | `apps/web/tests/theme.test.ts` | T015 |
+| T016 | `themeStyle()` **resolved** over two organization records in one run — assert the accent differs **and** the tracked-source fingerprint is unchanged (the method that validated SC-008 in feature 000). A data assertion, not a render: "rendered" was the round-2 mis-wording | SC-002 | `apps/web/tests/theme.test.ts` | T015 |
 | T017 | [P] Absent, empty and malformed `theme` are three distinct cases; all three render the CITe defaults | FR-004, SC-003 | `apps/web/tests/theme.test.ts` | T013 |
 
 **Components — each with its invariant test**
@@ -82,8 +91,8 @@ assumed), so dependencies live in the **Blocked by** column. Keep them accurate 
 | T023 | [P] `ProgressBar` — continuous with %, for missions and XP | FR-006 | `packages/ui/src/components/ProgressBar.tsx` | T007 |
 | T024 | [P] `SearchInput` — rounded with magnifier; dark-on-navy and light-on-white variants | FR-006 | `packages/ui/src/components/SearchInput.tsx` | T007 |
 | T025 | [P] `Tabs` — caps display text, active item underlined in `--color-primary` | FR-006 | `packages/ui/src/components/Tabs.tsx` | T007 |
-| T026 | `PixelImage` — clamp **down** to the nearest whole multiple; a non-integer scale is what makes pixel art muddy | FR-013, SC-008 | `packages/ui/src/components/PixelImage.tsx` | T007 |
-| T027 | [P] Clamp test: assert a fractional target width never reaches the DOM | SC-008 | `packages/ui/tests/pixel.test.ts` | T026 |
+| T026 | `PixelImage`, with the clamp **extracted as an exported `clampScale(target, base)`** — clamp *down* to the nearest whole multiple; a non-integer scale is what makes pixel art muddy. The extraction is what makes SC-008 testable at all (round 2) | FR-013, SC-008 | `packages/ui/src/components/PixelImage.tsx` | T007 |
+| T027 | [P] Clamp test over `clampScale()` — fractional inputs, `target < base`, exact multiples. **Pure arithmetic, no rendering**: the previous wording ("never reaches the DOM") could not execute under CLR-003 | SC-008 | `packages/ui/tests/pixel.test.ts` | T026 |
 
 **Responsive shell**
 
@@ -103,16 +112,16 @@ assumed), so dependencies live in the **Blocked by** column. Keep them accurate 
 | T034 | `Footer` — three pillars with outline icons (Aprenda fazendo / Compartilhe conhecimento / Desenvolva projetos reais) + isometric composition | FR-010 | `packages/ui/src/shell/Footer.tsx` | T007 |
 | T035 | [P] Isometric shape vocabulary as reusable assets: cube filled/wireframe, slab, tetrahedra, circles, 4-point sparkles, extruded F, double chevrons, grid lines | FR-015 | `packages/ui/src/shapes/` | T007 |
 | T036 | Background roles: navy base, **white content area for Biblioteca 3D and Aulas**, light for onboarding and Minha Conta; teal band persists and its items act as filter tags | FR-011 | `packages/ui/src/tokens/palette.css` | T004 |
-| T037 | Component workbench rendering every component and state at all three breakpoints | FR-016, US7 | `apps/web/app/(frontend)/_workbench/page.tsx` | T032, T034 |
-| T038 | Workbench excluded from the production bundle — dev-only guard **plus** a test asserting its absence from a production build | FR-016 | `apps/web/tests/workbench.test.ts` | T037 |
+| T037 | Component workbench rendering every component and state at all three breakpoints, at a **real route**. **Not `_workbench/`** — Next drops any path part starting with `_` from route discovery in *every* environment, so the original path would not have rendered in dev either (round 2, verified in Next 16.3.3's `route-discovery.js`) | FR-016, US7 | `apps/web/app/(frontend)/workbench/page.tsx` | T032, T034 |
+| T038 | Production guard: `NODE_ENV === 'production' → notFound()`, and a test asserting a production build **404s** at `/workbench`. Assert the guard's *behaviour*, not the file's absence — the previous form would have passed vacuously against a page that was never a route | FR-016 | `apps/web/tests/workbench.test.ts` | T037 |
 
 ## Phase 4: Polish
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
 | T039 | Public surface: replace the placeholder `export {}` with the real exports | FR-018 | `packages/ui/src/index.ts` | T034, T035 |
-| T040 | Workbench composes a representative page from **public exports only** — which is what proves feature 003 can build on this | SC-009 | `apps/web/app/(frontend)/_workbench/page.tsx` | T039 |
-| T041 | **Probe commit**, three violations so neither half of the fence is assumed: a hex in a `.tsx`, a hex in a `.module.css`, and a `--color-rosa-raw` reference in a component. Confirm CI rejects all three, close unmerged | SC-001 | throwaway branch | T007, T007b |
+| T040 | Workbench composes a representative page from **public exports only** — which is what proves feature 003 can build on this | SC-009 | `apps/web/app/(frontend)/workbench/page.tsx` | T039 |
+| T041 | **Probe commit**, **four** violations so no shape of the fence is assumed: a hex in a `.tsx`, a hex in a **template literal** in a `.tsx`, a hex in a `.module.css`, and `var(--color-rosa-raw)` in a `.module.css`. The last two were unenforced before round 2 and the second evaded the TS half. Confirm CI names file and value for each, close unmerged | SC-001 | throwaway branch | T007, T007b |
 | T042 | [P] Rewrite `packages/ui/README.md` — it currently says "Filled by feature 001" | — | `packages/ui/README.md` | T039 |
 | T043 | [P] CHANGELOG entry for the design system | — | `CHANGELOG.md` | T039 |
 | T044 | Tick CHK001–CHK028 against the implementation; leave open anything not genuinely satisfied | all | `checklists/requirements.md` | T041 |
@@ -122,9 +131,9 @@ assumed), so dependencies live in the **Blocked by** column. Keep them accurate 
 
 | Requirement | Tasks |
 |---|---|
-| FR-001, FR-002 | T004, T006, T007 |
+| FR-001, FR-002 | T004, T006, T007, T007b |
 | FR-003, FR-004, FR-019 | T012, T013, T015, T017 |
-| FR-005 | T009, T010 |
+| FR-005 | T009, T010, T010b |
 | FR-006 | T019–T025 |
 | FR-007 | T018 |
 | FR-008, FR-009 | T028–T032 |
@@ -135,7 +144,7 @@ assumed), so dependencies live in the **Blocked by** column. Keep them accurate 
 | FR-014 | T033 |
 | FR-016 | T037, T038 |
 | FR-017 | T008 |
-| FR-018 | T001, T003, T039 |
+| FR-018 | T001, T001b, T003, T039 |
 | FR-020 | T002 |
 
 | Success criterion | Task | Success criterion | Task |

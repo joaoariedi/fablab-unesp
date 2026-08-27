@@ -72,6 +72,13 @@ typography production does.
 Both faces declare `font-display: swap` and a real fallback stack — now for latency (feature
 003's LCP budget) rather than for a missing file, since no file is missing.
 
+**The `@font-face` rules live in `packages/ui` and point at `url('/fonts/…')`**, served from
+`apps/web/public/fonts/`. An absolute path means no bundler has to resolve the asset, so the
+package keeps its "no build step" property. `next/font/local` was considered and rejected: it
+would move two token *definitions* into `apps/web` and fail silently if the layout ever
+dropped its generated className. The rule this preserves is the plan's central one — **the
+app injects `--color-primary` and nothing else.**
+
 ## Layout
 
 ```css

@@ -121,7 +121,7 @@ preventing structurally.
 | FR-013 | Pixel art renders via DOM/CSS with `image-rendering: pixelated`, clamped to integer scale factors; **no canvas or WebGL renderer** | P1 | US5 |
 | FR-014 | Components are server components unless they carry real interactivity; `'use client'` requires a stated reason | P1 | US6 |
 | FR-015 | The isometric shape vocabulary (cube filled/wireframe, slab, tetrahedra, circles, 4-point sparkles, extruded F, double chevrons, grid lines) ships as reusable assets | P2 | US1 |
-| FR-016 | A component workbench renders every component and state at all three breakpoints, and is excluded from the production bundle | P2 | US7 |
+| FR-016 | A component workbench renders every component and state at all three breakpoints, at a **real route** (`/workbench`), **unreachable in production** via a guard returning 404. *(Revised round 2: was "excluded from the production bundle" — App Router has no build-time page exclusion, so a guarded route still ships its module. The previous plan put it at `_workbench/`, which Next drops from routing in every environment, so it would not have rendered in development either.)* | P2 | US7 |
 | FR-017 | Every documented token pair meets **WCAG AA** for its size class; on white, body text is navy and small pink text is forbidden | P1 | US8 |
 | FR-018 | `packages/ui` keeps the feature-000 import boundary: no Payload, no Next server APIs, no IO — it receives resolved values as props or CSS variables | P1 | US1 |
 | FR-019 | `theme.primaryColor` is validated as a strict hex colour **twice** — on the collection field and again before it reaches CSS — falling back to the default on failure (CLR-004) | P1 | US2 |
@@ -131,14 +131,14 @@ preventing structurally.
 
 | ID | Criterion | Validation Method |
 |----|-----------|-------------------|
-| SC-001 | No component contains a hexadecimal colour literal | Lint rule, plus a deliberate probe commit adding one — CI must fail naming file and value |
-| SC-002 | Changing one organization's `primaryColor` restyles its pages with **zero source diffs** | Two organizations rendered from different records in the same test run; tracked-source fingerprint unchanged |
+| SC-001 | No component contains a hexadecimal colour literal **or the private `--color-rosa-raw`**, in TypeScript or in CSS | Lint rule plus CSS scan, and a probe commit carrying **four** violation shapes — a hex in `.tsx`, a hex in a template literal, a hex in a `.module.css`, and `var(--color-rosa-raw)` in a `.module.css`. CI must fail naming file and value for each *(round 2: the last two shapes were unenforced)* |
+| SC-002 | Changing one organization's `primaryColor` restyles its pages with **zero source diffs** | `themeStyle()` **resolved** over two organization records in the same run — a data assertion, not a render (round 2 reworded "rendered", which CLR-003 cannot do); plus the tracked-source fingerprint unchanged |
 | SC-003 | A missing or malformed `theme` never produces a broken page | Test with `theme` absent, empty, and containing an invalid colour — all render the CITe defaults |
 | SC-004 | The header matches the decided layout at each design target | Assert the **tab-set data** (six desktop in canonical order, four tablet, five mobile ending `PERFIL`) **and** that the CSS contains the media queries that switch them. Whether the cascade actually shows/hides at those widths needs a browser — feature 003's Playwright (see plan § *What these tests can and cannot prove*) |
 | SC-005 | `BIBLIOTECA 3D` and `INSTAGRAM` never appear in a compact bar | Assert both are absent from the tablet and mobile tab-set data **and** present in the menu set — a data assertion, so it holds without a browser |
 | SC-006 | Every documented token pair passes WCAG AA | Automated contrast calculation over the documented pairs; a failing pair fails CI |
 | SC-007 | No component ships JavaScript without stated interactivity | Test listing `'use client'` components; each must carry a reason comment |
-| SC-008 | Pixel art is never rendered at a non-integer scale | Test asserting the clamp |
+| SC-008 | Pixel art is never rendered at a non-integer scale | Unit test over the exported `clampScale(target, base)`. *(Round 2: the clamp was inlined in the component and the criterion said "never reaches the DOM" — unexecutable, since CLR-003 adds no DOM. Extracting the function makes this arithmetic.)* |
 | SC-009 | Feature 003 can build a page using only `@fablab/ui` exports | The workbench composes a representative page from library exports alone |
 | SC-010 | The gate set still grows, never shrinks | CI retains every feature-000 gate and adds the hex-literal and contrast gates |
 | SC-011 | A hostile `primaryColor` cannot escape its custom property | Test writing `red;} body{display:none` and similar payloads through the REST API; the stored value is rejected and the rendered CSS carries the default |

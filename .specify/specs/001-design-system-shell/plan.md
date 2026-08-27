@@ -19,6 +19,12 @@ Full Truth Map in [`research.md`](research.md). The load-bearing findings:
   `--font-display`. SC-012 stopped being a fallback gate and became a redistribution one.
 - The guardrail pattern to copy is feature 000's lint fence: `no-restricted-syntax`, a
   message naming the sanctioned alternative, and a probe commit proving CI rejects it.
+- **A folder whose name starts with `_` is not a route in any environment** — checked in the
+  installed Next 16.3.3, `dist/build/route-discovery.js` uses
+  `ignorePartFilter: (part) => part.startsWith('_')`. Round 2 found the workbench planned at
+  `_workbench/`, where it would never have rendered, in dev either.
+- **`apps/web/public/` does not exist yet** and nothing in the repo references a font. The
+  runtime cannot serve anything from `docs/`, so the WOFF2 files need a real home (Sketch 8).
 
 ## Affected Files
 
@@ -39,10 +45,11 @@ Full Truth Map in [`research.md`](research.md). The load-bearing findings:
 | `apps/web/lib/theme.ts` | create | Resolve + **validate** organization theme into custom properties (FR-003/004/019) |
 | `apps/web/app/(frontend)/layout.tsx` | modify | Import `styles.css`, inject the validated per-organization `--color-primary` |
 | `apps/web/collections/Organizations.ts` | modify | Add the hex `validate` to `theme.primaryColor` — CLR-004's **first** checkpoint |
-| `apps/web/app/(frontend)/_workbench/page.tsx` | create | Component workbench, dev-only (FR-016) |
-| `eslint.config.mjs` | modify | Hex-literal rule + `--color-rosa-raw` ban for `packages/ui`; purity boundary for `packages/ui` |
-| `scripts/check-colour-tokens.sh` | create | The half ESLint cannot see: raw colours in **CSS** files outside `tokens/` (review round 1) |
-| `docs/product/fonts/*.woff2` | create | Comfortaa + Aldo — the complete set, converted once locally; **no converter joins the stack** |
+| `apps/web/app/(frontend)/workbench/page.tsx` | create | Component workbench. **A real route with a production guard** — `_workbench/` would not have routed anywhere (FR-016, round 2) |
+| `eslint.config.mjs` | modify | Hex + template-literal + `--color-rosa-raw` selectors for `packages/ui` and `apps/web`; purity boundary scoped to `packages/ui/src/**` |
+| `scripts/check-colour-tokens.sh` | create | The half ESLint cannot see: raw colours **and the private token** in CSS outside `tokens/` (round 1; exit contract fixed in round 2) |
+| `apps/web/public/fonts/*.woff2` | create | Comfortaa + Aldo, converted once locally, **served at `/fonts/`**; no converter joins the stack |
+| `apps/web/next.config.mjs` | modify | `transpilePackages: ['@fablab/ui']` — the package exports raw TS and CSS |
 | `.github/workflows/ci.yml` | modify | Nothing new — existing Lint/Tests jobs cover the new gates |
 
 ## Data Model
@@ -117,15 +124,20 @@ organization exists — which is the plan's own top risk with nothing behind it.
 **Intent:** the FR-002 guardrail, built like feature 000's tenancy fence.
 
 ```js
+const HEX = '(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6,8})'
 {
   files: ['packages/ui/src/**/*.{ts,tsx}', 'apps/web/**/*.{ts,tsx}'],
   ignores: ['packages/ui/src/tokens/**'],   // the one place a hex may be written
   rules: {
-    'no-restricted-syntax': ['error', {
-      selector: "Literal[value=/^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6,8})$/]",
-      message: 'Hexadecimal colour in a component. Use a token from @fablab/ui/tokens — ' +
-               'a hex here is one organization\'s identity hard-coded into shared code.',
-    }],
+    'no-restricted-syntax': ['error',
+      { selector: `Literal[value=/^#${HEX}$/]`,          message: HEX_MSG },
+      // Round 2: styled-jsx ships with Next (5.1.6 is installed), so a hex can be written
+      // in a template literal inside .tsx — invisible to a `Literal` selector AND to the
+      // .css script below. Both halves missed it; measured, not assumed.
+      { selector: `TemplateElement[value.raw=/#${HEX}/]`, message: HEX_MSG },
+      { selector: 'Literal[value=/--color-rosa-raw/]',          message: RAW_MSG },
+      { selector: 'TemplateElement[value.raw=/--color-rosa-raw/]', message: RAW_MSG },
+    ],
   },
 }
 ```
@@ -133,24 +145,44 @@ organization exists — which is the plan's own top risk with nothing behind it.
 Plus the half ESLint cannot see, as a script the way `scripts/isolation-mutation.sh` is:
 
 ```bash
-# scripts/check-colour-tokens.sh — CSS is where the hexes will actually be written.
-grep -rnEi '#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(' \
-     --include='*.css' packages/ui/src apps/web \
-  | grep -v '^packages/ui/src/tokens/' && { echo "raw colour outside tokens/"; exit 1; }
+# scripts/check-colour-tokens.sh — CSS is where the colours will actually be written.
+set -euo pipefail
+# grep exits 1 when it finds NOTHING, which is this gate's SUCCESS case. Piping that into
+# `pipefail` makes a clean tree fail the build — measured in round 2: the first draft
+# returned exit 1 on a clean tree AND on a dirty one, so it could never tell them apart.
+# Capture and branch on emptiness instead. Same defect class as feature 000's `grep | head`.
+hits=$(grep -rnEi '#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(|--color-rosa-raw' \
+         --include='*.css' packages/ui/src apps/web \
+       | grep -v '/tokens/' || true)
+[ -z "$hits" ] || { echo "Raw colour or private token outside tokens/:" >&2
+                    echo "$hits" >&2; exit 1; }
 ```
 
-**Why this shape:** *(revised after review round 1.)* The ESLint selector alone repeats
-feature 000's method-name mistake — it matches a form the problem does not take. Components
-are styled with **CSS Modules**, and ESLint does not lint `.css` at all, so the likeliest
-hex in the codebase would have been invisible to the rule guarding against hexes. The script
-also covers `rgb()`/`hsl()`, which are the same defect wearing a different notation. Two
-instruments because the code has two languages; a single one would have been the comfortable
-answer rather than the correct one.
+**Why this shape:** *(round 1 added the CSS half; round 2 fixed what both halves still
+missed.)* The ESLint selector alone repeats feature 000's method-name mistake — it matches a
+form the problem does not take. Components are styled with **CSS Modules**, and ESLint does
+not lint `.css` at all, so the likeliest hex would have been invisible to the rule guarding
+against hexes.
+
+Round 2 measured the result and found two more holes in the same class:
+
+1. **`--color-rosa-raw` was banned only in TypeScript.** The CSS script scanned for hex,
+   `rgb()` and `hsl()` — not for the private token. So `color: var(--color-rosa-raw)` in a
+   `Button.module.css` passed both halves, in the exact file type the component's colour
+   actually lives in. Round 1 renamed that token *specifically* so reaching for it would
+   fail; the rename was enforced everywhere except where it mattered.
+2. **Template literals evaded the TS half.** Verified by running the selector: it caught
+   `'#EE703E'` and missed `` `#EE703E` `` and `` <style jsx>{`.x{color:#EE703E}`}</style> ``.
+   styled-jsx needs no install and is a natural reach for component CSS.
+
+Three surfaces, not two: TS string literals, template literals inside TS, and `.css` files.
+The instruments now cover all three, and `var(--color-primary)` plus `href="#section-3"`
+were confirmed clean — the risk row's false-positive worry, checked rather than asserted.
 
 An import boundary cannot do this job — a hex is a *value*, not an import — so
 `no-restricted-syntax` remains right for the TS half, exactly as it was for `req.payload`.
 Scoping `ignores` to the token directory keeps the exemption a **path**, visible in review,
-rather than a per-line disable. `--color-rosa-raw` joins the same rule (R1).
+rather than a per-line disable.
 
 ### Sketch 3: validated theme resolution
 
@@ -249,18 +281,29 @@ query.
 **Intent:** FR-013's prohibition, with the clamp that makes it look right.
 
 ```tsx
-export function PixelImage({ src, baseWidth, targetWidth, alt }: PixelImageProps) {
+/** Exported so SC-008 can assert it as arithmetic — no test renders a component (CLR-003). */
+export function clampScale(targetWidth: number, baseWidth: number): number {
   // Non-integer scaling is what makes pixel art muddy — clamp DOWN to the nearest whole
   // multiple rather than accepting the requested width.
-  const scale = Math.max(1, Math.floor(targetWidth / baseWidth))
-  return <img src={src} alt={alt} width={baseWidth * scale}
+  return Math.max(1, Math.floor(targetWidth / baseWidth))
+}
+
+export function PixelImage({ src, baseWidth, targetWidth, alt }: PixelImageProps) {
+  return <img src={src} alt={alt} width={baseWidth * clampScale(targetWidth, baseWidth)}
               style={{ imageRendering: 'pixelated' }} />
 }
 ```
 
 **Why this shape:** the constitution excludes a canvas engine in v1, and DOM/CSS meets the
-need — but only at integer scale. Clamping in the component means no caller has to know
-that, and SC-008 asserts it.
+need — but only at integer scale. Clamping inside the component means no caller has to know
+that.
+
+*(Round 2: the clamp is now a **separate exported function**. The first draft inlined it in
+the component body while T027 promised to assert "a fractional width never reaches the DOM"
+— and there is no DOM, by CLR-003's own decision. The assertion could not have executed.
+Extracting it makes SC-008 pure arithmetic, which is what the test boundary table already
+claimed it was. This is round 1's finding #5 recurring: a criterion written as if rendering
+were available.)*
 
 ### Sketch 7: contrast as a test, not a promise
 
@@ -283,6 +326,73 @@ navy in small text. A computed ratio either clears AA or it does not, and if it 
 pair simply cannot be documented. This is the check that turns "validar contraste WCAG AA
 restante" into a gate.
 
+### Sketch 8: where the font files actually live
+
+**File:** `packages/ui/src/tokens/typography.css` (new) + `apps/web/public/fonts/` (new)
+**Intent:** a `url()` the runtime can actually resolve.
+
+```css
+/* Served by Next from apps/web/public/fonts/ — an absolute path, so no bundler has to
+   resolve it and packages/ui needs no asset pipeline or build step. */
+@font-face {
+  font-family: 'Aldo the Apache';
+  src: url('/fonts/aldo-the-apache.woff2') format('woff2');
+  font-display: swap;
+}
+@font-face { font-family: 'Comfortaa'; src: url('/fonts/comfortaa.woff2') format('woff2');
+             font-display: swap; font-weight: 300 700; }
+
+:root {
+  --font-display: 'Aldo the Apache', 'Arial Narrow', 'Helvetica Neue Condensed', sans-serif;
+  --font-body:    'Comfortaa', system-ui, sans-serif;
+}
+```
+
+**Why this shape:** *(round 2 — the plan previously named no servable location at all.)* The
+only font destination on record was `docs/product/fonts/*.woff2`. **`docs/` is documentation;
+nothing serves it**, and `apps/web/public/` did not exist. T010 had no valid `url()` to write.
+
+The alternative considered and rejected was **`next/font/local`**, which self-hosts, subsets
+and preloads automatically. It loses on ownership: it must be called from `apps/web` and
+emits a className that has to be applied to `<html>`, which would move two token *definitions*
+out of the token layer and add a silent failure mode — forget the className and every face
+falls back with nothing to notice it. Absolute-path `@font-face` keeps typography wholly
+inside `packages/ui`, which is the plan's central claim: **the app injects `--color-primary`
+and nothing else.** The preload `next/font` would have given us is one `<link rel="preload">`
+in the layout for the display face, added deliberately rather than inherited.
+
+The `.ttf` sources stay in `docs/product/fonts/` with their licence notice — that is the
+provenance record. `public/fonts/` holds the converted WOFF2 the browser fetches.
+
+### Sketch 9: the workbench is a real route with a closed door
+
+**File:** `apps/web/app/(frontend)/workbench/page.tsx` (new)
+**Intent:** FR-016 reachable in development, 404 in production.
+
+```tsx
+import { notFound } from 'next/navigation'
+
+export default function WorkbenchPage() {
+  // A route, not a private folder: `_workbench/` is dropped by route discovery in EVERY
+  // environment, so the first draft's workbench would not have rendered in dev either.
+  if (process.env.NODE_ENV === 'production') notFound()
+  return <Workbench />
+}
+```
+
+**Why this shape:** *(round 2.)* Verified in the installed Next 16.3.3 —
+`dist/build/route-discovery.js` filters path parts with
+`ignorePartFilter: (part) => part.startsWith('_')`. The planned `_workbench/` path was not a
+dev-only route; it was **no route at all**, and T038's "assert it is absent from a production
+build" would have passed vacuously because the page never existed.
+
+**This changes what FR-016 can honestly promise.** A guarded route still *ships its module* —
+App Router has no build-time page exclusion — so "excluded from the production bundle" is not
+achievable and FR-016 now says **unreachable in production** instead. The marginal cost is
+the workbench page itself; the components it renders are in the bundle regardless, because
+real pages use them. T038 asserts the guard's behaviour — a 404 from a production build —
+which is a claim that can actually fail.
+
 ## What these tests can and cannot prove
 
 *(Added after review round 1, which found two success criteria that could not execute.)*
@@ -295,12 +405,18 @@ plan must say where it falls rather than imply full coverage:
 | Token values and names; `DOCUMENTED_PAIRS` contrast maths | That the cascade resolves as intended on a real page |
 | The **tab-set data** — six desktop entries in canonical order, four tablet, five mobile ending `PERFIL`, and `BIBLIOTECA 3D`/`INSTAGRAM` absent from both compact sets | That CSS actually **shows and hides** them at 390 / 834 / 1440 |
 | That the CSS text contains the expected media queries and token references | Layout, overflow, and whether the result looks right |
-| The pixel clamp (pure arithmetic), the islands audit (file contents), the colour-token scan (file contents) | Rendered pixel output |
+| The pixel clamp — genuinely arithmetic since round 2 extracted `clampScale()` from the component | Rendered pixel output |
+| The islands audit and the colour-token scan (file contents) | That the workbench looks right at any width |
 
 **No DOM environment is added.** Verified during review: the workspace has no `jsdom` or
 `happy-dom` and `apps/web/vitest.config.ts` sets none. Every assertion above works on data,
 arithmetic or file text, so no component is rendered in a test — and the moment one needs to
 be, that is feature 003's Playwright, not a new devDependency here.
+
+**The rule this line implies, added in round 2:** any task whose wording contains *rendered*,
+*reaches the DOM* or *displays* is either mis-worded or out of scope. Round 1 caught two such
+criteria, round 2 caught two more (T027's clamp, T016's "rendered"). The phrasing is the
+tell — a test that cannot execute reads exactly like one that can.
 
 **Consequence, stated plainly:** feature 001 ships a component library whose *rendering* is
 verified by human eyes and the workbench, not by CI. That is an accepted limitation of
@@ -331,6 +447,10 @@ a convenience.
   check. No existing gate is removed or made advisory. **SC-012 changed subject rather than
   disappearing** when the font left: a criterion whose subject vanishes goes vacuous, not
   green, and a vacuous assertion is a gate that reports success while checking nothing.
+  *(Round 2: gate **count** was growing while gate **effectiveness** was not — the colour
+  scan returned exit 1 on a clean tree, so it could never have distinguished pass from fail,
+  and T038 asserted the absence of a page that was never a route. Both fixed and both
+  measured. A gate nobody has watched fail is not yet a gate.)*
 
 ## Risks & Mitigations
 
@@ -341,24 +461,29 @@ a convenience.
 | ~~CI never renders SquareFont, so its absence is never noticed~~ | — | **Risk deleted 2026-08-27:** the designer removed the face. CI and production render identical typography, and feature 007 loses the asset-delivery requirement |
 | A stale working tree still holds `Square.ttf` from the old setup instructions | An `All Rights Reserved` binary lands in a public MIT repo | `.gitignore` entries deliberately **kept** — their purpose inverted from staging a setup to preventing a commit — and SC-012 asserts the cover held |
 | Aldo is now the only non-body face | An author objection degrades the whole display layer, not half | Accepted and recorded in `THIRD-PARTY-NOTICE.md`. The fallback keeps the build standing; written permission from AJ Paglia is the durable fix (ISS-001 residue) |
-| Workbench leaks into the production bundle | Ships dead code and an unintended public page | Dev-only route guard plus a test asserting it is absent from a production build |
+| Workbench reachable in production | An unintended public page | `NODE_ENV === 'production' → notFound()` (Sketch 9), asserted by T038 against a production build. **Round 2 replaced the previous mitigation**, which put the page at `_workbench/` — a path Next drops from routing everywhere, so the workbench would not have worked in dev and the test would have passed vacuously |
+| A gate asserts the absence of something that never existed | Green CI reporting a check that ran over nothing | **The failure mode this plan keeps producing** — three instances now: SC-012 v2, T038's original form, T027's clamp. Every "asserts absence" gate must be seen failing once against a deliberately planted violation before it is trusted (T041) |
 | Custom faces hurt LCP, which feature 003 must measure | 003 inherits a budget it cannot meet | `font-display: swap`, fallback stacks declared, WOFF2 only, no runtime JS in the token layer — and **two faces instead of three** since 2026-08-27, which makes the budget strictly easier |
 | Pixel art at fractional device pixel ratios | Muddy art on some devices | Integer clamp in `PixelImage`, asserted by SC-008 |
 | **Rendering is unverified by CI** (accepted, CLR-003) | A component can be visually broken while every gate is green | The workbench (FR-016) is the human check; feature 003's Playwright is where rendering becomes machine-verified. Named here so nobody mistakes green CI for visual correctness |
 
 ## Quick Start
 
-1. Add React as a peer dependency of `packages/ui` and give it a real `vitest.config.ts`.
-2. Write `tokens/*.css` and `tokens/index.ts`, then **immediately** add the hex-literal rule
-   (Sketch 2) — before any component exists to violate it.
-3. Convert Comfortaa and Aldo to WOFF2 locally, commit them, and write the two `@font-face`
-   blocks with fallbacks. `--font-display` covers logo, logotype and headings; there is no
-   `--font-logotype`. Add the SquareFont-exclusion assertion (SC-012).
+1. Add React as a peer dependency of `packages/ui`, give it a real `vitest.config.ts`, and
+   add `transpilePackages: ['@fablab/ui']` to `apps/web/next.config.mjs`.
+2. Write `tokens/*.css` and `tokens/index.ts`, then **immediately** add both halves of the
+   fence (Sketch 2) — before any component exists to violate them. Run the script against a
+   clean tree *and* a planted violation; the first draft passed neither test.
+3. Convert Comfortaa and Aldo to WOFF2 locally into **`apps/web/public/fonts/`** (Sketch 8),
+   and write the two `@font-face` blocks with fallbacks. `--font-display` covers logo,
+   logotype and headings; there is no `--font-logotype`. Add the SquareFont-exclusion
+   assertion (SC-012).
 4. Build `lib/theme.ts` + the `Organizations` field validator (CLR-004 both checkpoints),
    with the SC-011 payload test.
 5. Components in dependency order: `LogoChip`, `Button`, `Card`, `Chip`, `SkillPips`,
    `ProgressBar`, `SearchInput`, `Tabs`, `PixelImage` — each with its invariant test.
 6. The shell: `HeaderNav`, `MobileTabBar`, `MenuSheet`, `Footer`; assert the tab sets at
    390 / 834 / 1440 (SC-004, SC-005).
-7. Workbench from public exports only (SC-009), then the probe commit proving the hex rule
-   rejects a violation in CI (SC-001).
+7. Workbench at `workbench/` — a **real route** with a production guard (Sketch 9) — composed
+   from public exports only (SC-009), then the probe commit proving the fence rejects all
+   four violation shapes in CI (SC-001).
