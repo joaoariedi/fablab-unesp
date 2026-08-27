@@ -25,6 +25,16 @@ Full Truth Map in [`research.md`](research.md). The load-bearing findings:
   `_workbench/`, where it would never have rendered, in dev either.
 - **`apps/web/public/` does not exist yet** and nothing in the repo references a font. The
   runtime cannot serve anything from `docs/`, so the WOFF2 files need a real home (Sketch 8).
+- **`pnpm test` is `pnpm -r --no-bail test`**, so `packages/ui` tests do run in CI the moment
+  T002 replaces `--passWithNoTests`. Checked, because the rest of this list is what happens
+  when wiring is assumed.
+- **`pnpm lint` is `eslint .` and runs no shell scripts.** Round 3: the CSS half of the fence
+  was reachable from nothing — not CI, not lint, not a test. It needs its own job, the way
+  `migration-drift.sh` has one.
+- **`packages/ui/tsconfig.json` compiles no `.tsx` at all** — `include` is `["src/**/*.ts"]`,
+  there is no `jsx` setting, `lib` omits DOM, and `@types/react` is absent. Measured:
+  `tsc --listFiles` matched **zero** component files, so `pnpm typecheck` would have reported
+  success having checked nothing.
 
 ## Affected Files
 
@@ -41,6 +51,8 @@ Full Truth Map in [`research.md`](research.md). The load-bearing findings:
 | `packages/ui/src/shell/{HeaderNav,MobileTabBar,MenuSheet,Footer}.tsx` | create | Responsive shell (FR-008/009/010); the three interactive ones are client islands |
 | `packages/ui/src/index.ts` | modify | Replace the placeholder `export {}` with the public surface |
 | `packages/ui/vitest.config.ts` | create | Real config replacing `--passWithNoTests` |
+| `packages/ui/tsconfig.json` | modify | **Cannot compile a component today** — `include` is `src/**/*.ts`, no `jsx`, no DOM lib (round 3) |
+| `packages/ui/src/styles.css` | create | The entry behind the `./styles.css` export: `@import`s palette, typography and layout |
 | `packages/ui/tests/*.test.ts` | create | Token, contrast, clamp and islands-audit invariants (FR-020) |
 | `apps/web/lib/theme.ts` | create | Resolve + **validate** organization theme into custom properties (FR-003/004/019) |
 | `apps/web/app/(frontend)/layout.tsx` | modify | Import `styles.css`, inject the validated per-organization `--color-primary` |
@@ -50,7 +62,7 @@ Full Truth Map in [`research.md`](research.md). The load-bearing findings:
 | `scripts/check-colour-tokens.sh` | create | The half ESLint cannot see: raw colours **and the private token** in CSS outside `tokens/` (round 1; exit contract fixed in round 2) |
 | `apps/web/public/fonts/*.woff2` | create | Comfortaa + Aldo, converted once locally, **served at `/fonts/`**; no converter joins the stack |
 | `apps/web/next.config.mjs` | modify | `transpilePackages: ['@fablab/ui']` — the package exports raw TS and CSS |
-| `.github/workflows/ci.yml` | modify | Nothing new — existing Lint/Tests jobs cover the new gates |
+| `.github/workflows/ci.yml` | modify | **A `check-colour-tokens` job.** Round 3 correction: this row previously said "nothing new — existing Lint/Tests jobs cover the new gates", which was false. `pnpm lint` is `eslint .` and runs no shell scripts; nothing else invoked the CSS half of the fence |
 
 ## Data Model
 
@@ -127,7 +139,14 @@ organization exists — which is the plan's own top risk with nothing behind it.
 const HEX = '(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6,8})'
 {
   files: ['packages/ui/src/**/*.{ts,tsx}', 'apps/web/**/*.{ts,tsx}'],
-  ignores: ['packages/ui/src/tokens/**'],   // the one place a hex may be written
+  ignores: [
+    'packages/ui/src/tokens/**',  // the one place a hex may be written
+    // Round 3: fixtures must be able to do the forbidden thing. T016 needs two orgs with
+    // DIFFERENT primaryColor hexes, and T041's probe is a hex on purpose. The tenancy
+    // fence in this same file already exempts apps/web/tests/** for exactly this reason —
+    // the precedent existed and the first draft of this rule did not follow it.
+    'apps/web/tests/**', 'packages/ui/tests/**',
+  ],
   rules: {
     'no-restricted-syntax': ['error',
       { selector: `Literal[value=/^#${HEX}$/]`,          message: HEX_MSG },
@@ -181,8 +200,14 @@ were confirmed clean — the risk row's false-positive worry, checked rather tha
 
 An import boundary cannot do this job — a hex is a *value*, not an import — so
 `no-restricted-syntax` remains right for the TS half, exactly as it was for `req.payload`.
-Scoping `ignores` to the token directory keeps the exemption a **path**, visible in review,
-rather than a per-line disable.
+Scoping `ignores` to directories keeps every exemption a **path**, visible in review, rather
+than a per-line disable.
+
+**Both instruments must be wired to something that runs them.** Round 3 found the script
+reachable from nothing: `pnpm lint` is `eslint .`, which runs no shell scripts, and no CI job
+called it. It gets its own merge-blocking job (T045b), modelled on `drift` — which is how
+`migration-drift.sh` and `isolation-mutation.sh` already earn their keep. A rule that exists
+in a file and in no pipeline is documentation.
 
 ### Sketch 3: validated theme resolution
 
@@ -326,6 +351,35 @@ navy in small text. A computed ratio either clears AA or it does not, and if it 
 pair simply cannot be documented. This is the check that turns "validar contraste WCAG AA
 restante" into a gate.
 
+### Sketch 7b: the toolchain that has to see a component before any gate can
+
+**File:** `packages/ui/tsconfig.json` (modify)
+**Intent:** make `pnpm typecheck` actually compile the components it claims to check.
+
+```jsonc
+{
+  "compilerOptions": {
+    // ...unchanged from the packages/game precedent...
+    "lib": ["ES2022", "DOM"],   // components touch DOM types
+    "jsx": "react-jsx"          // without this, no .tsx compiles at all
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"]   // was: .ts only
+}
+```
+
+Plus `@types/react` as a **devDependency** — React is a *peer* for consumers, and pnpm does
+not install a package's own peers, so the package cannot typecheck itself without it.
+
+**Why this shape:** *(round 3.)* The inherited `packages/game` tsconfig is right for pure
+TypeScript and wrong for a component library, and it fails in the quietest possible way.
+Measured with `tsc --listFiles`: under the current `include`, **zero** `.tsx` files enter the
+program. `pnpm typecheck` reports success having compiled nothing. Verified the fix both
+directions — a valid component exits 0, a type error inside a component exits 2.
+
+This is the same failure family as rounds 1–3, moved one layer down: not a test that asserts
+nothing, but a *compiler* that checks nothing. **It also corrects a plan claim** — see
+Principle 1 below, which said "no dependency is added" and now has to name `@types/react`.
+
 ### Sketch 8: where the font files actually live
 
 **File:** `packages/ui/src/tokens/typography.css` (new) + `apps/web/public/fonts/` (new)
@@ -425,10 +479,14 @@ a convenience.
 
 ## Constitution Compliance
 
-- [x] **Principle 1 — Locked stack, swappable services:** **no dependency is added** —
-  and the review checked the claim rather than taking it. React is a peer of a package
-  already in the workspace; CSS is native to Next 16; contrast maths is ~15 lines of
-  arithmetic; the colour-token scan is a shell script like `scripts/isolation-mutation.sh`.
+- [x] **Principle 1 — Locked stack, swappable services:** **no runtime dependency is added**
+  — and the review checked the claim rather than taking it. *(Round 3 narrowed the wording:
+  the first three drafts said "no dependency", which stopped being true once `@types/react`
+  turned out to be required — pnpm does not install a package's own peers, so `packages/ui`
+  cannot typecheck itself without it. Types are not runtime, so the principle holds; the
+  sentence did not.)* React is a peer of a package already in the workspace; CSS is native to
+  Next 16; contrast maths is ~15 lines of arithmetic; the colour-token scan is a shell script
+  like `scripts/isolation-mutation.sh`.
   The one-off TTF→WOFF2 conversion runs locally and is documented, **not** a project
   dependency. The claim holds *only because* no test renders a component — see the section
   above; had rendering been needed, a DOM environment would have been required and this
@@ -451,6 +509,10 @@ a convenience.
   scan returned exit 1 on a clean tree, so it could never have distinguished pass from fail,
   and T038 asserted the absence of a page that was never a route. Both fixed and both
   measured. A gate nobody has watched fail is not yet a gate.)*
+  *(Round 3 found the same theme one layer out: the colour scan belonged to no pipeline, and
+  `packages/ui`'s tsconfig compiled zero components. The gate set was growing on paper while
+  two of its members could not run at all. Both now have jobs, and both were measured red
+  against a planted violation before being trusted.)*
 
 ## Risks & Mitigations
 
@@ -462,15 +524,18 @@ a convenience.
 | A stale working tree still holds `Square.ttf` from the old setup instructions | An `All Rights Reserved` binary lands in a public MIT repo | `.gitignore` entries deliberately **kept** — their purpose inverted from staging a setup to preventing a commit — and SC-012 asserts the cover held |
 | Aldo is now the only non-body face | An author objection degrades the whole display layer, not half | Accepted and recorded in `THIRD-PARTY-NOTICE.md`. The fallback keeps the build standing; written permission from AJ Paglia is the durable fix (ISS-001 residue) |
 | Workbench reachable in production | An unintended public page | `NODE_ENV === 'production' → notFound()` (Sketch 9), asserted by T038 against a production build. **Round 2 replaced the previous mitigation**, which put the page at `_workbench/` — a path Next drops from routing everywhere, so the workbench would not have worked in dev and the test would have passed vacuously |
-| A gate asserts the absence of something that never existed | Green CI reporting a check that ran over nothing | **The failure mode this plan keeps producing** — three instances now: SC-012 v2, T038's original form, T027's clamp. Every "asserts absence" gate must be seen failing once against a deliberately planted violation before it is trusted (T041) |
+| A gate asserts the absence of something that never existed | Green CI reporting a check that ran over nothing | **The failure mode this plan keeps producing** — five instances across three review rounds: SC-012 v2, T038's original form, T027's clamp, the colour scan reachable from no pipeline, and a tsconfig compiling zero components. Every "asserts absence" gate must be seen failing once against a deliberately planted violation before it is trusted (T041, T011b) |
+| A gate exists in a file but in no pipeline | Indistinguishable from a gate that passes | Round 3: `pnpm lint` is `eslint .` and runs no scripts. Each script gate gets its **own merge-blocking job**, the way `drift` and `isolation-mutation` already do. T045 checks this explicitly rather than assuming it |
 | Custom faces hurt LCP, which feature 003 must measure | 003 inherits a budget it cannot meet | `font-display: swap`, fallback stacks declared, WOFF2 only, no runtime JS in the token layer — and **two faces instead of three** since 2026-08-27, which makes the budget strictly easier |
 | Pixel art at fractional device pixel ratios | Muddy art on some devices | Integer clamp in `PixelImage`, asserted by SC-008 |
 | **Rendering is unverified by CI** (accepted, CLR-003) | A component can be visually broken while every gate is green | The workbench (FR-016) is the human check; feature 003's Playwright is where rendering becomes machine-verified. Named here so nobody mistakes green CI for visual correctness |
 
 ## Quick Start
 
-1. Add React as a peer dependency of `packages/ui`, give it a real `vitest.config.ts`, and
-   add `transpilePackages: ['@fablab/ui']` to `apps/web/next.config.mjs`.
+1. Add React as a peer dependency of `packages/ui` **plus `@types/react` as a devDependency**,
+   fix its tsconfig so `.tsx` compiles at all (Sketch 7b), give it a real `vitest.config.ts`,
+   and add `transpilePackages: ['@fablab/ui']` to `apps/web/next.config.mjs`. Prove the
+   typecheck works by breaking a component on purpose — it must exit non-zero.
 2. Write `tokens/*.css` and `tokens/index.ts`, then **immediately** add both halves of the
    fence (Sketch 2) — before any component exists to violate them. Run the script against a
    clean tree *and* a planted violation; the first draft passed neither test.

@@ -31,11 +31,18 @@ Six things are load-bearing, and five of them fail quietly.
    prove*. Green CI here does **not** mean visually correct. **If a task says *rendered*,
    *reaches the DOM* or *displays*, it is mis-worded** — round 1 caught two, round 2 caught
    two more.
-6. **A gate nobody has watched fail is not a gate.** Round 2 measured three assertions that
-   would have reported success while checking nothing: the colour scan exited 1 on a *clean*
-   tree (so it could never distinguish), T038 asserted the absence of a page that was never
-   a route, and SC-012 v2 ran over an empty set. Before trusting any "asserts absence" gate,
-   plant a violation and watch it go red — that is what T041 is for.
+6. **A gate nobody has watched fail is not a gate.** Five measured instances across three
+   review rounds, all reporting success while checking nothing: the colour scan exited 1 on
+   a *clean* tree (so it could never distinguish); T038 asserted the absence of a page that
+   was never a route; SC-012 v2 ran over an empty set; **the colour scan belonged to no CI
+   job at all** — `pnpm lint` is `eslint .` and runs no shell scripts; and **`packages/ui`'s
+   tsconfig compiled zero `.tsx` files**, so `pnpm typecheck` passed having checked no
+   component. Before trusting any "asserts absence" gate, plant a violation and watch it go
+   red — T041, T011b, and T001c's deliberate break exist for exactly that.
+
+   The two round-3 instances are worth separating from the rest: those gates were not wrong,
+   they were **unreachable**. Reviewing the rule tells you nothing about whether anything
+   runs it.
 
 **No task tracker.** `TaskCreate`/`TaskUpdate` are unavailable in this session (checked, not
 assumed), so dependencies live in the **Blocked by** column. Keep them accurate by hand.
@@ -46,6 +53,8 @@ assumed), so dependencies live in the **Blocked by** column. Keep them accurate 
 |---|---|---|---|---|
 | T001 | React as a **peer** dependency (the app owns the React instance); export map for `./tokens`, `./components`, `./styles.css` | FR-018 | `packages/ui/package.json` | — |
 | T001b | `transpilePackages: ['@fablab/ui']` — the package exports raw TS and CSS, so Next must compile it (round 2: `next.config.mjs` was missing from the plan entirely) | FR-018 | `apps/web/next.config.mjs` | T001 |
+| T001c | **Make the tsconfig able to see a component.** `include` gains `src/**/*.tsx`, `lib` gains `DOM`, add `"jsx": "react-jsx"`, and add `@types/react` as a **devDependency** (pnpm does not install a package's own peers). Measured in round 3: the inherited config matched **zero** `.tsx` files, so `pnpm typecheck` passed having compiled nothing. **Verify by breaking a component on purpose** — `tsc` must exit non-zero | FR-018, FR-020 | `packages/ui/tsconfig.json`, `packages/ui/package.json` | T001 |
+| T001d | [P] `src/styles.css` — the entry the `./styles.css` export points at; `@import`s palette, typography and layout so the app has one import (round 3: the export map named a file no task created) | FR-001 | `packages/ui/src/styles.css` | T004, T005, T010 |
 | T002 | Real Vitest config, replacing `--passWithNoTests` | FR-020 | `packages/ui/vitest.config.ts` | T001 |
 | T003 | Purity boundary **scoped to `packages/ui/src/**`** — React allowed, `payload`/`@payloadcms/*`/Next **server** APIs forbidden. Mirrors the `packages/game` block, does not copy it. **Scope matters:** `packages/ui/tests/**` must stay free to use `node:fs` and `git ls-files`, which T011 needs | FR-018 | `eslint.config.mjs` | — |
 
@@ -56,13 +65,14 @@ assumed), so dependencies live in the **Blocked by** column. Keep them accurate 
 | T004 | Palette as custom properties, with `--color-primary` defaulting to `var(--color-rosa-raw)` so an unthemed page is already correct; the raw pink is **private** | FR-001, CLR-001 | `packages/ui/src/tokens/palette.css` | T001 |
 | T005 | [P] Layout tokens: breakpoints **390 / 834 / 1440**, spacing, radius, the hard offset shadow | FR-012 | `packages/ui/src/tokens/layout.css` | T001 |
 | T006 | Token names and `DOCUMENTED_PAIRS` as data, so tests can iterate them rather than restate them | FR-001, FR-017 | `packages/ui/src/tokens/index.ts` | T004, T005 |
-| T007 | **The hex fence, TS half.** `no-restricted-syntax` with **four** selectors: hex in a `Literal`, hex in a `TemplateElement`, `--color-rosa-raw` in either. `ignores` scoped to `tokens/**` so the exemption is a path visible in review. **The template-literal selectors are not optional** — styled-jsx ships with Next and a `Literal` selector misses `` <style jsx>{`…#EE703E`}</style> `` entirely (round 2, measured). **Land this before any component exists** | FR-002, CLR-001 | `eslint.config.mjs` | T006 |
+| T007 | **The hex fence, TS half.** `no-restricted-syntax` with **four** selectors: hex in a `Literal`, hex in a `TemplateElement`, `--color-rosa-raw` in either. `ignores` covering `tokens/**` **and `apps/web/tests/**` + `packages/ui/tests/**`** — fixtures must be able to do the forbidden thing (T016 needs two orgs with different hexes), and the tenancy fence in the same file already exempts tests for that reason (round 3). Every exemption stays a path visible in review. **The template-literal selectors are not optional** — styled-jsx ships with Next and a `Literal` selector misses `` <style jsx>{`…#EE703E`}</style> `` entirely (round 2, measured). **Land this before any component exists** | FR-002, CLR-001 | `eslint.config.mjs` | T006 |
 | T007b | **The hex fence, CSS half.** ESLint does not lint `.css`, and CSS Modules is where component colour is actually written. Scan `.css` outside `tokens/` for hex, `rgb()`, `hsl()` **and `--color-rosa-raw`** — the private token was banned only in TypeScript, leaving it free in the one file type it would be used in (round 2). **Capture into a variable and branch on emptiness; do not pipe grep into the exit status** — the first draft exited 1 on a clean tree, so it could never distinguish pass from fail (same class as feature 000's `grep \| head`) | FR-002, CLR-001 | `scripts/check-colour-tokens.sh` | T006 |
 | T008 | [P] Contrast test over `DOCUMENTED_PAIRS` — AA thresholds by size class. A pair that fails cannot be documented, which finally answers the open pink-on-navy question in `visual-identity.md` | FR-017, SC-006 | `packages/ui/tests/contrast.test.ts` | T006 |
 | T009 | Convert Comfortaa + Aldo to WOFF2 **locally** into **`apps/web/public/fonts/`** — that is the complete font set, and it is the only location the runtime can serve. The `.ttf` sources stay in `docs/product/fonts/` as the provenance record with their licence notice. No converter joins the stack (Principle 1) | FR-005 | `apps/web/public/fonts/*.woff2` | — |
 | T010 | `@font-face` for the **two** faces with `font-display: swap` and real fallback stacks, using **absolute `url('/fonts/…')`** so no bundler has to resolve the asset and `packages/ui` needs no build step (Sketch 8). `--font-display` (Aldo) covers logo, logotype and headings; `--font-body` is Comfortaa. **Do not add `--font-logotype`** — it would alias `--font-display` and no test could catch a component picking the wrong one | FR-005, CLR-002 | `packages/ui/src/tokens/typography.css` | T006, T009 |
 | T010b | [P] `<link rel="preload">` for the display face in the frontend layout — the one thing `next/font/local` would have given us automatically, added deliberately instead (Sketch 8) | FR-005 | `apps/web/app/(frontend)/layout.tsx` | T010 |
 | T011 | Assert **no SquareFont artefact is tracked**: no file matching `Square*.{ttf,otf,woff,woff2}`, and no source, stylesheet or config naming SquareFont. Guards the live case — a developer who followed the old README still has the file one `git add -A` away | SC-012 | `packages/ui/tests/fonts.test.ts` | T010 |
+| T011b | [P] **Plant a probe for T011**: add a dummy `Square.woff2`, force-add it, confirm T011 goes red, revert. Verified in round 3 that SC-012 passes on today's tree — which it would do whether or not the assertion is written correctly | SC-012 | throwaway branch | T011 |
 
 ## Phase 3: User Stories (by priority)
 
@@ -113,7 +123,7 @@ assumed), so dependencies live in the **Blocked by** column. Keep them accurate 
 | T035 | [P] Isometric shape vocabulary as reusable assets: cube filled/wireframe, slab, tetrahedra, circles, 4-point sparkles, extruded F, double chevrons, grid lines | FR-015 | `packages/ui/src/shapes/` | T007 |
 | T036 | Background roles: navy base, **white content area for Biblioteca 3D and Aulas**, light for onboarding and Minha Conta; teal band persists and its items act as filter tags | FR-011 | `packages/ui/src/tokens/palette.css` | T004 |
 | T037 | Component workbench rendering every component and state at all three breakpoints, at a **real route**. **Not `_workbench/`** — Next drops any path part starting with `_` from route discovery in *every* environment, so the original path would not have rendered in dev either (round 2, verified in Next 16.3.3's `route-discovery.js`) | FR-016, US7 | `apps/web/app/(frontend)/workbench/page.tsx` | T032, T034 |
-| T038 | Production guard: `NODE_ENV === 'production' → notFound()`, and a test asserting a production build **404s** at `/workbench`. Assert the guard's *behaviour*, not the file's absence — the previous form would have passed vacuously against a page that was never a route | FR-016 | `apps/web/tests/workbench.test.ts` | T037 |
+| T038 | Production guard: `NODE_ENV === 'production' → notFound()`, asserted by stubbing the env (`vi.stubEnv`) and expecting the page to throw Next's not-found signal. **That is the honest reach of a Vitest test** — round 3: the previous wording claimed "a production build 404s", which Vitest cannot drive since it starts no server. The build-level confirmation, if wanted later, is a step after the `build` job, not a unit test | FR-016 | `apps/web/tests/workbench.test.ts` | T037 |
 
 ## Phase 4: Polish
 
@@ -125,7 +135,8 @@ assumed), so dependencies live in the **Blocked by** column. Keep them accurate 
 | T042 | [P] Rewrite `packages/ui/README.md` — it currently says "Filled by feature 001" | — | `packages/ui/README.md` | T039 |
 | T043 | [P] CHANGELOG entry for the design system | — | `CHANGELOG.md` | T039 |
 | T044 | Tick CHK001–CHK028 against the implementation; leave open anything not genuinely satisfied | all | `checklists/requirements.md` | T041 |
-| T045 | Confirm every feature-000 gate still passes and the new ones are merge-blocking | SC-010 | `.github/workflows/ci.yml` | T041 |
+| T045 | Confirm every feature-000 gate still passes and the new ones are merge-blocking. **Check by reading the workflow, not by trusting the plan** — round 3 found the colour scan wired to nothing while the plan asserted "existing jobs cover the new gates" | SC-010 | `.github/workflows/ci.yml` | T041, T045b |
+| T045b | **A `check-colour-tokens` CI job**, merge-blocking, modelled on `drift` (checkout → pnpm → `bash scripts/check-colour-tokens.sh`; no database needed). Without it the CSS half of the fence runs nowhere: `pnpm lint` is `eslint .` and executes no shell scripts (round 3) | FR-002, SC-001, SC-010 | `.github/workflows/ci.yml` | T007b |
 
 ## Coverage
 
@@ -144,17 +155,17 @@ assumed), so dependencies live in the **Blocked by** column. Keep them accurate 
 | FR-014 | T033 |
 | FR-016 | T037, T038 |
 | FR-017 | T008 |
-| FR-018 | T001, T001b, T003, T039 |
-| FR-020 | T002 |
+| FR-018 | T001, T001b, T001c, T003, T039 |
+| FR-020 | T002, T001c |
 
 | Success criterion | Task | Success criterion | Task |
 |---|---|---|---|
-| SC-001 hex probe | T041 | SC-007 islands audit | T033 |
+| SC-001 hex probe | T041, T045b | SC-007 islands audit | T033 |
 | SC-002 co-branding | T016 | SC-008 pixel clamp | T027 |
 | SC-003 theme fallback | T017 | SC-009 built from exports | T040 |
-| SC-004 header layout | T032 | SC-010 gates grow | T045 |
+| SC-004 header layout | T032 | SC-010 gates grow | T045, T045b |
 | SC-005 compact bars | T032 | SC-011 hostile colour | T014 |
-| SC-006 WCAG AA | T008 | SC-012 no SquareFont | T011 |
+| SC-006 WCAG AA | T008 | SC-012 no SquareFont | T011, T011b |
 
 ---
 

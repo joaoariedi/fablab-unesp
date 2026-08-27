@@ -140,7 +140,7 @@ preventing structurally.
 | SC-007 | No component ships JavaScript without stated interactivity | Test listing `'use client'` components; each must carry a reason comment |
 | SC-008 | Pixel art is never rendered at a non-integer scale | Unit test over the exported `clampScale(target, base)`. *(Round 2: the clamp was inlined in the component and the criterion said "never reaches the DOM" — unexecutable, since CLR-003 adds no DOM. Extracting the function makes this arithmetic.)* |
 | SC-009 | Feature 003 can build a page using only `@fablab/ui` exports | The workbench composes a representative page from library exports alone |
-| SC-010 | The gate set still grows, never shrinks | CI retains every feature-000 gate and adds the hex-literal and contrast gates |
+| SC-010 | The gate set still grows, never shrinks | CI retains every feature-000 gate and adds the hex-literal (both halves), contrast and font gates. **Verified by reading `ci.yml`, not by trusting the plan** — round 3 found the CSS scan wired into no job while the plan asserted existing jobs covered it. A gate absent from the pipeline did not shrink the set; it never joined it |
 | SC-011 | A hostile `primaryColor` cannot escape its custom property | Test writing `red;} body{display:none` and similar payloads through the REST API; the stored value is rejected and the rendered CSS carries the default |
 | SC-012 | **No SquareFont artefact ever enters the repository** | Assert no tracked file matches `Square*.{ttf,otf,woff,woff2}` and no source, stylesheet or config names SquareFont. *(Repurposed 2026-08-27 — third version; see the note below.)* |
 
