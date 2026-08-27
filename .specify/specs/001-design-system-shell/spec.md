@@ -110,7 +110,7 @@ preventing structurally.
 | FR-002 | **Zero hexadecimal literals in any component.** A lint rule fails the build on a hex value outside the token definition file | P1 | US1 |
 | FR-003 | **Exactly one colour token is per-organization:** `--color-primary` resolves from `theme.primaryColor` (default rosa `#EE9DC4`) and drives CTAs, active tabs and card titles. `logoUrl` and `heroImageUrl` are also per-organization. **Every other colour is platform-fixed** — the logo chip stays laranja, the hero band teal, the base navy (CLR-001) | P1 | US2 |
 | FR-004 | An organization with an absent or partial `theme` falls back to the CITe defaults; a malformed value is rejected before it reaches the stylesheet | P1 | US2 |
-| FR-005 | Typography tokens and `@font-face` declarations for **Aldo the Apache** (display/logo), **Square Font** (logotype) and **Comfortaa** (body), with `font-display: swap` and declared fallbacks (display → condensed sans; body → `system-ui, sans-serif`). **The Aldo and Square WOFF2 binaries are NOT committed in this feature** — ISS-001 gates them (CLR-002); Comfortaa (OFL) ships now | P1 | US1 |
+| FR-005 | Typography tokens and `@font-face` declarations for **Aldo the Apache** (display/logo), **Square Font** (logotype) and **Comfortaa** (body), with `font-display: swap` and declared fallbacks (display → condensed sans; body → `system-ui, sans-serif`). Comfortaa ships in-repo (OFL). **Aldo and SquareFont are never committed** — used freely, redistribution undocumented (CLR-002); developers fetch them per `docs/product/fonts/README.md` | P1 | US1 |
 | FR-006 | Base components: `Card`, `Button` (primary = pink filled, navy text, hard offset shadow), `Chip`, `SkillPips` (**10** levels), `ProgressBar` (continuous, with %), `SearchInput`, `Tabs` | P1 | US1 |
 | FR-007 | `LogoChip` renders the canonical **orange** extruded chip with the cube between `FAB` and `LAB`, and accepts the other palette colours for non-header use | P1 | US4 |
 | FR-008 | Responsive shell: desktop 6 tabs in canonical order and **no menu button**; tablet 4 tabs; mobile 5-position bottom bar appearing on scroll; menu button top-right with logo left, containing **all** tabs | P1 | US3 |
@@ -142,7 +142,7 @@ preventing structurally.
 | SC-009 | Feature 003 can build a page using only `@fablab/ui` exports | The workbench composes a representative page from library exports alone |
 | SC-010 | The gate set still grows, never shrinks | CI retains every feature-000 gate and adds the hex-literal and contrast gates |
 | SC-011 | A hostile `primaryColor` cannot escape its custom property | Test writing `red;} body{display:none` and similar payloads through the REST API; the stored value is rejected and the rendered CSS carries the default |
-| SC-012 | The design system renders with the licensed fallbacks alone | Build and test with no Aldo/Square binaries present — nothing may depend on their presence |
+| SC-012 | The design system renders with the licensed fallbacks alone | Build and test with no Aldo/Square binaries present. This is the **permanent** CI condition, not a temporary one: CI has no licensed way to obtain those files and must never scrape dafont |
 
 ## Decisions taken while writing this spec
 
@@ -172,17 +172,35 @@ the logo chip too would leave a half-rebranded page — the shared pixel art and
 vocabulary still read as Fab Lab — which is worse than either extreme.
 **Impact**: FR-003, SC-002, US2; sets the token layer's split between per-org and fixed.
 
-### CLR-002: Unlicensed font binaries [integration]
+### CLR-002: Font files are used but never redistributed [integration]
 
-**Decision**: **Defer the binaries.** Ship the token layer, `@font-face` declarations and the
-documented fallbacks now; add the Aldo and Square WOFF2 files once ISS-001 clears. Comfortaa
-(OFL) ships immediately.
-**Rationale**: the repository is **public and MIT**. Committing binaries whose licence is
-unconfirmed puts them in a history where deletion does not remove them, and the cost of
-undoing that later is far higher than the cost of waiting. Everything else in the feature
-proceeds; only exact typeface rendering waits.
-**Impact**: FR-005, new SC-012; ISS-001 becomes a blocker for the *visual* completion of
-this feature rather than for public launch alone.
+**Decision**: **The fonts are used in full — including WOFF2 conversion and serving — but
+their source files are never committed to this repository.** Comfortaa (OFL) ships in-repo
+with its licence; Aldo the Apache and SquareFont are fetched locally per
+[`fonts/README.md`](../../../docs/product/fonts/README.md) and are gitignored.
+
+**Rationale**: *(corrected 2026-08-27 — the first draft of this clarification said the
+licence was unconfirmed and that ISS-001 gated this feature. Both were wrong. **ISS-001 was
+already RESOLVED on 2026-08-25**, the TTFs were already removed from the repo and its
+history, and the reason is more specific than "unknown licence".)*
+
+Verified on dafont: **Aldo the Apache** (AJ Paglia) is listed **"100% Grátis"**, and
+**SquareFont** (Bou Fonts) is listed **"100% Free"**. Neither author publishes a licence
+text. So the two rights come apart: **use** is covered by the listing, while **redistribution**
+in a public MIT repository is simply undocumented — and an undocumented right is not a
+granted one. Using them and not shipping them is therefore not a compromise, it is the
+accurate reading.
+
+**Impact**: FR-005 (nothing visual is deferred); SC-012 changes meaning — it is not a
+temporary state to be lifted later but the **permanent CI condition**, because CI has no
+licensed way to obtain the two files and must never scrape dafont. ISS-001 stays closed and
+gates nothing.
+
+**Consequence this raises, deliberately left to feature 007**: production must obtain the
+WOFF2 files from somewhere that is not this repository (the campus VM, a private asset store,
+or a mounted volume). Feature 001 ships the token layer and `@font-face` declarations
+pointing at a path; **populating that path is a deployment concern**, and the fallbacks make
+an unpopulated path degrade rather than break.
 
 ### CLR-003: What "tested" means for a design system [scope boundaries]
 
