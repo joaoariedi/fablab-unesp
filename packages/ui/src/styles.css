@@ -4,13 +4,23 @@
  * The app imports this one file and gets the whole token layer. It is an aggregator and
  * nothing else: no selectors, no declarations, no at-rules beyond the imports below.
  *
- * Why nothing else may live here: this file sits outside `tokens/`, and the colour fence
- * (scripts/check-colour-tokens.sh) scans exactly there for raw colours. A value written
- * here would be a token nobody guards. Add tokens to the imported files, not to this one.
+ * Why nothing else may live here — and the earlier version of this comment had it exactly
+ * backwards. This file sits INSIDE `packages/ui/src`, which is a scan root of the colour
+ * fence (scripts/check-colour-tokens.sh); the fence's one exemption is the single path
+ * `packages/ui/src/tokens/`, and this file is not under it. So a raw colour written here is
+ * CAUGHT, not invisible. The rule stands for a different reason: a token defined here would
+ * live outside the one directory where the palette is reviewed and where FR-001's values are
+ * asserted, so it would be a colour with no test and no reviewer. Add tokens to the imported
+ * files, not to this one.
  *
  * Order is cascade order, not alphabetical — palette first, because the other two resolve
  * colours from it. Per the CSS spec, at-rules must precede any other rule, which is a
  * second reason this file stays import-only.
+ *
+ * Each `@import` below must name a file that EXISTS. CSS has no link-time check: a missing
+ * target is a silent 404 at runtime, and this file shipped once with all three dangling
+ * (T001d ran before T004/T005/T010 created them) while the suite stayed green. The entry test
+ * now resolves every path against disk — see tests/styles-entry.test.ts.
  */
 
 @import './tokens/palette.css';

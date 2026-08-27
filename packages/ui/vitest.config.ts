@@ -19,6 +19,20 @@ export default defineConfig({
     // scratch file named `*.test.ts` beside a component would silently join the suite; the
     // package keeps its tests in one directory instead.
     include: ['tests/**/*.test.ts'],
+    // Serial, for the same reason apps/web is — a shared mutable resource — though the
+    // resource here is the package tree itself, not a database.
+    //
+    // Three suites prove executed behaviour by writing probe files INSIDE the package and
+    // running the real `tsc`/`eslint` over them: `src/__tsc_probe__`, `src/__eslint_probe__`
+    // and `__colour_probe__`. They must live inside the package, because a probe outside it
+    // would not pick up the tsconfig or the flat-config block under test — that is precisely
+    // what makes these gates real rather than restatements.
+    //
+    // In parallel they sabotage each other. Measured: purity-boundary writes probes importing
+    // `payload` and `node:fs`, and the tsconfig suite's "passes on the tree as committed"
+    // case then runs `tsc` over a package containing them and fails — 10/10 in isolation,
+    // 1 failed in the full run. Two working gates reporting a defect that belongs to neither.
+    fileParallelism: false,
     // Some cases shell out to `tsc` and to `vitest list` to assert executed behaviour rather
     // than file text, which costs seconds rather than milliseconds. The default 5s timeout
     // would make those flaky on a cold or loaded machine.

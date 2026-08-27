@@ -1,0 +1,61 @@
+/*
+ * @fablab/ui — typography tokens (T010 / FR-005, CLR-002).
+ *
+ * Two faces, both committed to the repository, so CI renders exactly what production
+ * renders. Imported by `src/styles.css`; the app never imports this file directly.
+ *
+ * ── Why the url() is absolute (Sketch 8) ────────────────────────────────────────────────
+ *
+ * The WOFF2 files live in `apps/web/public/fonts/` and Next serves them at `/fonts/`. An
+ * absolute path means no bundler has to resolve the asset, so `packages/ui` ships as source
+ * with no asset pipeline and no build step. The `.ttf` sources and their licence notice stay
+ * in `docs/product/fonts/` as the provenance record — `docs/` is documentation, nothing
+ * serves it, which is why the runtime path is not that one.
+ *
+ * `next/font/local` was considered and rejected: it must be called from `apps/web` and
+ * applies through a generated className, which would move two token *definitions* out of the
+ * token layer and add a silent failure mode — forget the className and every face falls back
+ * with nothing to notice. The one thing it would have given us for free, a preload link for
+ * the display face, is added deliberately in the layout instead (T010b).
+ *
+ * ── There is no --font-logotype (CLR-002, 2026-08-27) ───────────────────────────────────
+ *
+ * The designer dropped SquareFont and gave the logotype to Aldo. A `--font-logotype` token
+ * would therefore hold the same value as `--font-display`, and a component reaching for the
+ * wrong one of two identical tokens renders identically — the `--color-rosa` trap in
+ * typography form, which no downstream test could catch. The defence is that the name does
+ * not exist. `--font-display` covers logo, logotype and headings.
+ *
+ * `font-display: swap` on both faces is a requirement, not a preference: the `auto` default
+ * blocks text for up to three seconds on a cold cache, and feature 003 inherits an LCP
+ * budget measured on exactly that.
+ */
+
+@font-face {
+  font-family: 'Aldo the Apache';
+  src: url('/fonts/aldo-the-apache.woff2') format('woff2');
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: 'Comfortaa';
+  src: url('/fonts/comfortaa.woff2') format('woff2');
+  font-display: swap;
+  font-style: normal;
+  /* A variable face: one file covers the whole 300–700 axis, so no second request is made
+     for bold and no synthetic bolding is applied outside the range. */
+  font-weight: 300 700;
+}
+
+:root {
+  /*
+   * Fallbacks are declared, not left to the browser's default serif. Aldo is a condensed
+   * display face, so the substitutes are condensed too — a proportional fallback reflows the
+   * logotype and the headings noticeably during the swap.
+   */
+  --font-display: 'Aldo the Apache', 'Arial Narrow', 'Helvetica Neue Condensed', sans-serif;
+  --font-body: 'Comfortaa', system-ui, sans-serif;
+}
+

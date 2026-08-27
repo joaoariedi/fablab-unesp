@@ -39,10 +39,39 @@ const ESLINT_BIN = join(REPO_ROOT, 'node_modules', '.bin', 'eslint')
 const SRC_PROBE_DIR = join(PACKAGE_DIR, 'src', '__eslint_probe__')
 const TESTS_PROBE_DIR = join(PACKAGE_DIR, 'tests', '__eslint_probe__')
 
+/**
+ * `src/tokens/**` is inside the boundary and must stay inside it.
+ *
+ * It is called out separately because it is the one directory in `src/**` that other fences
+ * *exempt* — the colour fence has to let a hex be written somewhere, and that somewhere is
+ * here. An exemption written one clause too wide takes the purity clause with it, and the
+ * result reads correctly in review: the config still names `packages/ui/src/**`, and `tokens/`
+ * is quietly outside it. Tokens are the most tempting place to reach for a Node builtin too —
+ * "just read the palette off disk at build time" is a one-line change away.
+ */
+const TOKENS_PROBE_DIR = join(PACKAGE_DIR, 'src', 'tokens', '__eslint_probe__')
+
 /** ESLint over a handful of files is fast, but a cold start on a loaded machine is not. */
 const ESLINT_TIMEOUT_MS = 120_000
 
-const BOUNDARY_RULE = 'no-restricted-imports'
+/**
+ * The boundary's instruments — plural, because one rule cannot see every form of the reach.
+ *
+ * `no-restricted-imports` matches `ImportDeclaration` and `export … from`. A dynamic
+ * `import()` is an `ImportExpression` and is neither, so the rule is blind to it by
+ * construction (measured: `await import('payload')` in `src/**` produced zero findings while
+ * every static probe below was red). The deny-by-default clause therefore has to be re-stated
+ * in `no-restricted-syntax` for that form.
+ *
+ * Probes assert that the boundary REFUSED the module, not which rule did the refusing.
+ * Pinning to a single rule id would turn a correct change of instrument into a failure, and —
+ * worse — would let a form slip through the moment it needs a different rule, which is exactly
+ * how the dynamic-import hole survived the first two rounds of this file.
+ */
+const BOUNDARY_RULES: ReadonlySet<string> = new Set([
+  'no-restricted-imports',
+  'no-restricted-syntax',
+])
 
 /**
  * Modules a component in `src/**` must not be able to reach.
@@ -117,6 +146,90 @@ const ALLOWED_IN_SRC = ['react', 'react/jsx-runtime', 'next/link', 'next/image']
 /** What T011 needs from `tests/**`, verbatim: read the filesystem, shell out to git. */
 const ALLOWED_IN_TESTS = ['node:fs', 'node:child_process', 'node:path']
 
+/**
+ * One specifier per clause, probed inside `src/tokens/**` rather than beside it.
+ *
+ * The full sweep above already establishes *which* specifiers leak; the question here is
+ * whether the directory is inside the fence at all, so one representative of each deny list
+ * is the whole assertion.
+ */
+const TOKENS_FORBIDDEN_STATIC = ['payload', 'next/headers', 'node:fs', 'net']
+
+/** A probe whose body is not a plain static import — the module reach in another form. */
+interface ShapeProbe {
+  /** File stem, also the test-case label. */
+  readonly name: string
+  readonly body: string
+}
+
+/**
+ * The same forbidden modules, reached through `await import(…)` instead of `import … from`.
+ *
+ * This is feature 000's method-name lesson in its third costume. The first attempt at this
+ * boundary matched the wrong *specifiers*; this matches the wrong *syntax*. A component that
+ * wants the current organization does not care which form it uses — and the dynamic form is
+ * the one a contributor reaches for precisely when the static one is refused, because the
+ * lint error names the module and says nothing about the shape. One `await` and the fence
+ * reports green.
+ *
+ * The specifiers are drawn from all four clauses (Payload, Next server APIs, prefixed and
+ * bare Node builtins) so a fix that closes the hole for one deny list and not the others
+ * cannot pass.
+ */
+const DYNAMIC_FORBIDDEN: readonly ShapeProbe[] = [
+  { name: 'dynamic-payload', body: "export const load = async () => await import('payload')\n" },
+  {
+    name: 'dynamic-payloadcms',
+    body: "export const load = async () => await import('@payloadcms/db-postgres')\n",
+  },
+  {
+    name: 'dynamic-next-headers',
+    body: "export const load = async () => await import('next/headers')\n",
+  },
+  { name: 'dynamic-next-og', body: "export const load = async () => await import('next/og')\n" },
+  {
+    name: 'dynamic-node-fs',
+    body: "export const load = async () => await import('node:fs/promises')\n",
+  },
+  // Bare, not prefixed: the same asymmetry that let the rejected first attempt report a green
+  // "no IO" boundary while `net` was importable.
+  { name: 'dynamic-bare-net', body: "export const load = async () => await import('net')\n" },
+  {
+    name: 'dynamic-server-only',
+    body: "export const load = async () => await import('server-only')\n",
+  },
+  // A source that is not a plain string. Without these the rule above is a speed bump rather
+  // than a boundary: `import('pay' + 'load')` is one line, and an allowlist any variable
+  // defeats does not constrain anyone who wanted to get past it. They also cost nothing to
+  // refuse — `packages/ui` has no use for a module specifier it computes at runtime.
+  {
+    name: 'dynamic-computed',
+    body: 'export const load = async (name: string) => await import(name)\n',
+  },
+  {
+    name: 'dynamic-concatenated',
+    body: "export const load = async () => await import('pay' + 'load')\n",
+  },
+  { name: 'dynamic-template', body: 'export const load = async () => await import(`payload`)\n' },
+]
+
+/**
+ * Dynamic imports the boundary must NOT touch, or it stops being a boundary and becomes a ban.
+ *
+ * `React.lazy(() => import('./Heavy'))` is the reason code splitting exists and is ordinary in
+ * a component package. A relative specifier cannot escape the fence in any case — everything
+ * it can reach is itself under `src/**` and fenced by the same block — so the rule has no
+ * reason to refuse it, and a rule that refuses it would be routed around with a disable
+ * comment on the first real component that needs it.
+ */
+const DYNAMIC_ALLOWED: readonly ShapeProbe[] = [
+  { name: 'dynamic-relative', body: "export const load = async () => await import('./sibling')\n" },
+  {
+    name: 'dynamic-relative-parent',
+    body: "export const load = async () => await import('../sibling')\n",
+  },
+]
+
 interface EslintMessage {
   readonly ruleId: string | null
   readonly message: string
@@ -151,13 +264,20 @@ function writeProbes(dir: string, moduleNames: readonly string[]): void {
   }
 }
 
+function writeShapeProbes(dir: string, probes: readonly ShapeProbe[]): void {
+  mkdirSync(dir, { recursive: true })
+  for (const probe of probes) {
+    writeFileSync(join(dir, `${probe.name}.ts`), `// @ts-nocheck\n${probe.body}`, 'utf8')
+  }
+}
+
 /**
  * Runs the repo's own ESLint against the repo's own `eslint.config.mjs`, from the repo root —
  * what `pnpm lint` does, minus the rest of the tree. No `--rule`, no `--config`: a flag here
  * would make this test assert a configuration it invented rather than the one that ships.
  */
 function lintProbeDirs(): readonly EslintResult[] {
-  const args = ['--format', 'json', SRC_PROBE_DIR, TESTS_PROBE_DIR]
+  const args = ['--format', 'json', SRC_PROBE_DIR, TOKENS_PROBE_DIR, TESTS_PROBE_DIR]
   let stdout: string
   try {
     stdout = execFileSync(ESLINT_BIN, args, {
@@ -197,17 +317,41 @@ function messagesFor(dir: string, moduleName: string): readonly EslintMessage[] 
 }
 
 function boundaryMessagesFor(dir: string, moduleName: string): readonly EslintMessage[] {
-  return messagesFor(dir, moduleName).filter((message) => message.ruleId === BOUNDARY_RULE)
+  return messagesFor(dir, moduleName).filter(
+    (message) => message.ruleId !== null && BOUNDARY_RULES.has(message.ruleId),
+  )
+}
+
+/** Same filter, addressed by shape-probe stem rather than by module specifier. */
+function boundaryMessagesForShape(dir: string, probe: ShapeProbe): readonly EslintMessage[] {
+  const path = join(dir, `${probe.name}.ts`)
+  const result = results.find((entry) => entry.filePath === path)
+  if (!result) {
+    throw new Error(
+      `eslint reported nothing for ${path}. Linted files:\n` +
+        results.map((entry) => entry.filePath).join('\n'),
+    )
+  }
+  return result.messages.filter(
+    (message) => message.ruleId !== null && BOUNDARY_RULES.has(message.ruleId),
+  )
 }
 
 beforeAll(() => {
   writeProbes(SRC_PROBE_DIR, [...FORBIDDEN_IN_SRC, ...NODE_BUILTINS, ...ALLOWED_IN_SRC])
+  writeShapeProbes(SRC_PROBE_DIR, [...DYNAMIC_FORBIDDEN, ...DYNAMIC_ALLOWED])
+  // `src/tokens/**` gets one probe of each clause rather than the full sweep: the question
+  // there is whether the directory is inside the boundary at all, not which specifier leaks.
+  writeProbes(TOKENS_PROBE_DIR, TOKENS_FORBIDDEN_STATIC)
+  writeShapeProbes(TOKENS_PROBE_DIR, DYNAMIC_FORBIDDEN)
   writeProbes(TESTS_PROBE_DIR, ALLOWED_IN_TESTS)
+  writeShapeProbes(TESTS_PROBE_DIR, DYNAMIC_FORBIDDEN)
   results = lintProbeDirs()
 }, ESLINT_TIMEOUT_MS)
 
 afterAll(() => {
   rmSync(SRC_PROBE_DIR, { recursive: true, force: true })
+  rmSync(TOKENS_PROBE_DIR, { recursive: true, force: true })
   rmSync(TESTS_PROBE_DIR, { recursive: true, force: true })
 })
 
@@ -262,6 +406,45 @@ describe('packages/ui/src purity boundary (FR-018)', () => {
   })
 })
 
+describe('the boundary holds for a dynamic import, not only a static one (FR-018)', () => {
+  it.each(DYNAMIC_FORBIDDEN)('rejects `await import("…")` of $name under src/', (probe) => {
+    const messages = boundaryMessagesForShape(SRC_PROBE_DIR, probe)
+    expect(
+      messages.length,
+      `${probe.body.trim()} must be an ESLint error in packages/ui/src. ` +
+        '`no-restricted-imports` matches ImportDeclaration only, so a deny list expressed ' +
+        'solely through it is blind to this form — and this is the form a contributor ' +
+        'reaches for once the static one is refused.',
+    ).toBeGreaterThan(0)
+  })
+
+  it.each(DYNAMIC_FORBIDDEN)('rejects `await import("…")` of $name under src/tokens/', (probe) => {
+    const messages = boundaryMessagesForShape(TOKENS_PROBE_DIR, probe)
+    expect(
+      messages.length,
+      `${probe.body.trim()} must be an ESLint error in packages/ui/src/tokens too. Other ` +
+        'fences exempt that directory (a hex has to be writable somewhere); the purity ' +
+        'clause must not travel with the exemption.',
+    ).toBeGreaterThan(0)
+  })
+
+  it.each(DYNAMIC_FORBIDDEN)('explains why $name is refused, rather than just failing', (probe) => {
+    const [first] = boundaryMessagesForShape(SRC_PROBE_DIR, probe)
+    expect(first?.message ?? '').toMatch(/packages\/ui/)
+  })
+
+  it.each(DYNAMIC_ALLOWED)('leaves the relative `await import("…")` of $name alone', (probe) => {
+    const messages = boundaryMessagesForShape(SRC_PROBE_DIR, probe)
+    expect(
+      messages,
+      `${probe.body.trim()} is ordinary code splitting — React.lazy(() => import('./Heavy')) ` +
+        'is the reason the syntax exists, and a relative specifier cannot leave a fence that ' +
+        'already covers everything it can reach. A rule that refuses it is a ban, not a ' +
+        'boundary, and gets routed around with a disable comment.',
+    ).toEqual([])
+  })
+})
+
 describe('the boundary is scoped to src/, not to the package (T011)', () => {
   it.each(ALLOWED_IN_TESTS)('leaves `import from "%s"` alone under tests/', (moduleName) => {
     const messages = boundaryMessagesFor(TESTS_PROBE_DIR, moduleName)
@@ -270,5 +453,29 @@ describe('the boundary is scoped to src/, not to the package (T011)', () => {
       `tests/ must keep '${moduleName}': T011 reads the git index to assert no SquareFont ` +
         'artefact is tracked, and cannot do that through a boundary written for components',
     ).toEqual([])
+  })
+
+  it.each(DYNAMIC_FORBIDDEN)('leaves the dynamic import of $name alone under tests/', (probe) => {
+    // The dynamic-import clause is new, so it is the clause most likely to be written one
+    // directory too wide — `packages/ui/**` instead of `packages/ui/src/**` reads identically
+    // in review and takes T011's `git ls-files` with it.
+    const messages = boundaryMessagesForShape(TESTS_PROBE_DIR, probe)
+    expect(
+      messages,
+      'the purity boundary stops at src/. A copy of it reaching tests/ would make T011 ' +
+        'unwritable, and would do so silently.',
+    ).toEqual([])
+  })
+})
+
+describe('the static clauses reach src/tokens/ as well (FR-018)', () => {
+  it.each(TOKENS_FORBIDDEN_STATIC)('rejects `import from "%s"` under src/tokens/', (moduleName) => {
+    const messages = boundaryMessagesFor(TOKENS_PROBE_DIR, moduleName)
+    expect(
+      messages.length,
+      `importing '${moduleName}' from packages/ui/src/tokens must be an ESLint error: ` +
+        'tokens are the most tempting place to read a palette off disk at build time, and ' +
+        'the directory other fences exempt.',
+    ).toBeGreaterThan(0)
   })
 })

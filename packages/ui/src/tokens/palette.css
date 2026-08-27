@@ -1,0 +1,59 @@
+/*
+ * @fablab/ui — palette tokens (T004 / FR-001, CLR-001).
+ *
+ * The seven identity colours of the 2026-08-23 decision, as custom properties. Imported by
+ * `src/styles.css`; the app never imports this file directly.
+ *
+ * ── The one file that may write a colour ────────────────────────────────────────────────
+ *
+ * `tokens/` is the single exemption from the colour fence (eslint.config.mjs +
+ * scripts/check-colour-tokens.sh): everywhere else a hex, an `rgb()` or an `hsl()` is a
+ * lint error naming the token to use instead. So every value below has exactly one
+ * definition, and a component that wants a colour resolves it through `var()`.
+ *
+ * ── The split that matters (CLR-001) ────────────────────────────────────────────────────
+ *
+ * Six of these are *platform identity*: identical for every organization, forever. Exactly
+ * one token varies per organization, and it is `--color-primary`.
+ *
+ * The pink is the trap. It is the default accent, not the accent, so it is named
+ * `--color-rosa-raw`, it is private, and lint rejects it outside this directory. There is
+ * deliberately no `--color-rosa` to reach for: a CTA painted with the raw pink renders
+ * *identically* to one painted with `--color-primary` for CITe — the default makes them the
+ * same colour — passes every test, and fails to co-brand only once a second organization
+ * exists. A convention could not catch that; a name that is visibly wrong plus a lint rule
+ * can. (Review round 1; the first draft exported `--color-rosa` and relied on documentation.)
+ */
+
+:root {
+  /*
+   * Platform identity — fixed for every organization (CLR-001). The role comments are the
+   * ones from the token contract; they are what makes picking the right token possible
+   * without opening the mockups.
+   */
+  --color-navy: #191C37; /* base background; text on light surfaces */
+  --color-azul: #3760AA; /* links, icons, graphic elements */
+  --color-teal: #74B7A5; /* hero band, progress detail, status chips */
+  --color-amarelo: #F8C810; /* XP, rewards, mission icons, numbering */
+  --color-laranja: #EE703E; /* the canonical logo chip — never themed */
+  --color-claro: #DCE7E3; /* light surfaces; text on dark */
+
+  /*
+   * PRIVATE. The default value of --color-primary, and never the accent itself.
+   *
+   * The `-raw` suffix exists so that reaching for it reads as wrong at the call site. Its
+   * only legitimate use is the declaration immediately below — anything else is a colour
+   * that will not follow an organization's theme.
+   */
+  --color-rosa-raw: #EE9DC4;
+
+  /*
+   * Per-organization (CLR-001, FR-003). CTAs, active tabs and card titles.
+   *
+   * `apps/web` overrides this one declaration from the validated `theme.primaryColor` and
+   * overrides nothing else. Defaulting it here rather than in the app is what makes FR-004
+   * free: a page rendered with no organization theme — the workbench, an error boundary, a
+   * static shell — is already correctly branded, with no second code path to keep in sync.
+   */
+  --color-primary: var(--color-rosa-raw);
+}

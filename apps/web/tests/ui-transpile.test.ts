@@ -10,18 +10,31 @@ import { describe, expect, it } from 'vitest'
  * **What was measured, because the plan's claim rested on reading rather than running.** The
  * task's acceptance was a real `pnpm --filter @fablab/web build` of a page importing a token
  * (raw `.ts`) and a component (raw `.tsx` that itself imports raw `.css`) from `@fablab/ui`.
- * That build was run twice, with the flag as the only variable, on Next 16.3.3:
+ * That build was run under both install layouts, with the flag as the only variable, on
+ * Next 16.3.3:
  *
- *   without `transpilePackages` → compiled, type-checked and prerendered the probe route
- *   with    `transpilePackages` → identical result
+ *   symlinked (what `pnpm install` produces here)
+ *     Turbopack, with `transpilePackages`  → compiled, type-checked, prerendered the route
+ *     Turbopack, without                   → identical result
+ *     webpack (`--webpack`), without       → identical result
+ *   copied (a real directory under node_modules, made by hand and reverted)
+ *     Turbopack, without `transpilePackages` → BUILD FAILED, "Unknown module type" on the
+ *                                              package's raw `src/tokens/index.ts`
+ *     Turbopack, with it                     → compiled and prerendered
  *
- * The reason is pnpm: `apps/web/node_modules/@fablab/ui` is a **symlink** to `packages/ui`, and
- * Turbopack resolves it to a real path outside `node_modules`, so the source is compiled as app
- * code. The flag stays anyway, and this test guards it, because that immunity is an artifact of
- * *how the workspace happens to be installed*, not of the package contract: a hoisted install
- * (`node-linker=hoisted`), a `pnpm deploy` that copies the package into `node_modules`, or a
- * `--webpack` build all put a real directory back under `node_modules`, and there the raw `.ts`
- * is a parse error rather than a module.
+ * So the flag is load-bearing, and which layout is installed — not which bundler runs — is what
+ * decides whether it matters. Under pnpm's layout `apps/web/node_modules/@fablab/ui` is a
+ * **symlink** to `packages/ui`, which both bundlers resolve to a real path *outside*
+ * `node_modules`, where source is compiled as app code; the flag is redundant there and only
+ * there. Nothing in this repo pins that layout: `node-linker=hoisted` or a `pnpm deploy` copy
+ * puts a real directory back under `node_modules`, which is the failing row above.
+ *
+ * Two claims earlier revisions of this docstring made are corrected here: `--webpack` does not
+ * change the outcome (row 3), and the copied layout is no longer "the untested reason the flag
+ * stays" — it was measured, and it fails without the flag.
+ *
+ * This test was watched go red (`expected undefined to be defined`) with the flag deleted from
+ * `next.config.mjs`, so it is a gate someone has seen fail — not one assumed to work.
  *
  * It asserts the config **after `withPayload()` has wrapped it** rather than grepping the file:
  * the wrapper returns a new object and merges its own keys (`serverExternalPackages`, `turbopack`,
