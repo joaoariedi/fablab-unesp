@@ -1,20 +1,37 @@
 import { notFound } from 'next/navigation'
 import type { CSSProperties, ReactElement, ReactNode } from 'react'
 
-import { Button } from '../../../../../packages/ui/src/components/Button'
-import { Card } from '../../../../../packages/ui/src/components/Card'
-import { Chip } from '../../../../../packages/ui/src/components/Chip'
-import { LogoChip, LOGO_CHIP_COLOURS } from '../../../../../packages/ui/src/components/LogoChip'
-import { PixelImage } from '../../../../../packages/ui/src/components/PixelImage'
-import { ProgressBar } from '../../../../../packages/ui/src/components/ProgressBar'
-import { SearchInput } from '../../../../../packages/ui/src/components/SearchInput'
-import { SkillPips } from '../../../../../packages/ui/src/components/SkillPips'
-import { Tabs } from '../../../../../packages/ui/src/components/Tabs'
-import { IsoShape, ISO_SHAPE_NAMES } from '../../../../../packages/ui/src/shapes'
-import { Footer } from '../../../../../packages/ui/src/shell/Footer'
-import { HeaderNav } from '../../../../../packages/ui/src/shell/HeaderNav'
-import { MenuSheet } from '../../../../../packages/ui/src/shell/MenuSheet'
-import { MobileTabBar } from '../../../../../packages/ui/src/shell/MobileTabBar'
+/**
+ * SC-009 lives in this one import line.
+ *
+ * The workbench is the design system's first real consumer, and the criterion is that a page
+ * can be built "using only @fablab/ui exports". The first draft reached in through
+ * `../../../../../packages/ui/src/components/Button` — sixteen deep relative paths that
+ * bypass the export map entirely, so it would have rendered perfectly while proving nothing:
+ * five components were unreachable through the public surface at the time and the workbench
+ * could not have noticed. Importing the way feature 003 will have to is what makes this page
+ * evidence rather than a gallery.
+ */
+import {
+  Button,
+  Card,
+  Chip,
+  Footer,
+  HeaderNav,
+  ISO_SHAPE_NAMES,
+  IsoShape,
+  LOGO_CHIP_COLOURS,
+  LogoChip,
+  MenuSheet,
+  MobileTabBar,
+  PixelImage,
+  profileHref,
+  ProgressBar,
+  SearchInput,
+  SkillPips,
+  Tabs,
+} from '@fablab/ui'
+
 
 /**
  * T037 / FR-016, US7 — the component workbench.
@@ -253,6 +270,33 @@ function meterSpecimens(): ReactElement[] {
   ]
 }
 
+/**
+ * `MobileTabBar` pins itself with `position: fixed; bottom: 0` and an opaque navy fill. Two of
+ * them in one gallery therefore resolve against the same viewport and land on IDENTICAL
+ * pixels — same edges, same z-index, same five labels — so the later one in the DOM wins and
+ * the other is invisible and unclickable beneath it. The workbench would show one bar while
+ * claiming to show two states, which is worse than showing one: it reads as coverage.
+ *
+ * `contain: layout paint` makes each wrapper a containing block for fixed descendants, so
+ * every bar pins inside its own labelled box. `position: relative` alone does NOT do this —
+ * a fixed element ignores it.
+ *
+ * The destination is printed beside each bar because the two states differ ONLY by an href.
+ * Nothing rendered distinguishes them — PERFIL is the label in both — so a reviewer looking
+ * at two identical bars cannot tell which is which without opening devtools, and FR-009's
+ * branch stays unreviewable however correctly it is wired.
+ */
+function tabBarSpecimen(isSignedIn: boolean): ReactElement {
+  const state = isSignedIn ? 'logado' : 'deslogado'
+  return (
+    <Specimen key={`tabbar-${state}`} title={`MobileTabBar — PERFIL ${state} → ${profileHref(isSignedIn)}`}>
+      <div style={{ width: '100%', height: '4.5rem', contain: 'layout paint' }}>
+        <MobileTabBar isSignedIn={isSignedIn} />
+      </div>
+    </Specimen>
+  )
+}
+
 /** The shell. These are the specimens the three frame widths exist for. */
 function shellSpecimens(): ReactElement[] {
   return [
@@ -266,16 +310,8 @@ function shellSpecimens(): ReactElement[] {
     // for a signed-in maker. This bar is the only surface in the product where that branch
     // renders (MobileTabBar § PERFIL), so the state the workbench omits is a destination
     // nobody ever reviews.
-    <Specimen key="tabbar" title="MobileTabBar — five positions; PERFIL deslogado (login)">
-      <div style={{ width: '100%' }}>
-        <MobileTabBar isSignedIn={false} />
-      </div>
-    </Specimen>,
-    <Specimen key="tabbar-signed-in" title="MobileTabBar — PERFIL logado (Minha Conta)">
-      <div style={{ width: '100%' }}>
-        <MobileTabBar isSignedIn />
-      </div>
-    </Specimen>,
+    tabBarSpecimen(false),
+    tabBarSpecimen(true),
     <Specimen key="footer" title="Footer — three pillars and the isometric composition">
       <div style={{ width: '100%' }}>
         <Footer />

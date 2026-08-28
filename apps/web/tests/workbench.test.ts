@@ -300,15 +300,23 @@ describe('T037 / FR-016, US7 — the component workbench', () => {
       })
     }
 
-    it('imports its components from packages/ui, never a local look-alike', async () => {
+    it('imports every component from @fablab/ui, never a local look-alike', async () => {
+      // Was `packages/ui/src` — the PATH form. That was right about the intent (a component
+      // defined in the page reviews nothing but itself) and wrong about the source: reaching
+      // into the package bypasses the export map, which is exactly what let five components
+      // ship with no legal import while every suite stayed green. The public surface is the
+      // stricter requirement, and it is the one SC-009 actually states.
       const source = readFileSync(PAGE_PATH, 'utf8')
-      for (const name of LIBRARY_COMPONENTS) {
-        expect(
-          source,
-          `${name} appears in the workbench tree but is not imported from packages/ui — a ` +
-            'component defined in the page reviews nothing but itself.',
-        ).toMatch(new RegExp(`import[^\\n]*\\b${name}\\b[^\\n]*packages/ui/src`))
-      }
+      const imported = new Set(
+        [...source.matchAll(/import\s*\{([^}]*)\}\s*from\s*'@fablab\/ui'/g)]
+          .flatMap((m) => m[1]!.split(','))
+          .map((name) => name.trim().replace(/^type\s+/, '')),
+      )
+      const missing = LIBRARY_COMPONENTS.filter((name) => !imported.has(name))
+      expect(
+        missing,
+        `these render in the workbench but are not imported from '@fablab/ui': ${missing.join(', ')}`,
+      ).toEqual([])
     })
   })
 
@@ -507,5 +515,77 @@ describe('T038 / FR-016 — unreachable in production', () => {
       'the guard 404s the workbench in development as well, which is the one environment ' +
         'FR-016 exists to keep it reachable in.',
     ).not.toHaveBeenCalled()
+  })
+})
+
+describe('SC-009: built from the public surface only', () => {
+  it('reaches into packages/ui through no relative or deep path', () => {
+    // The criterion is that a page can be built "using only @fablab/ui exports". The first
+    // draft imported sixteen deep relative paths into packages/ui/src, which bypass the
+    // export map — so it would have rendered while proving nothing, at a moment when five
+    // components genuinely had no legal import. Asserted as a pattern over the source rather
+    // than a list of allowed specifiers, so a new deep import is caught without an edit here.
+    const source = readFileSync(PAGE_PATH, 'utf8')
+    const offenders = [...source.matchAll(/from\s+'([^']*packages\/ui[^']*)'/g)].map((m) => m[1])
+    expect(
+      offenders,
+      `the workbench must import through '@fablab/ui', not reach into the package:\n  ${offenders.join('\n  ')}`,
+    ).toEqual([])
+  })
+
+  it('does import from @fablab/ui — an empty page would satisfy the rule above', () => {
+    const source = readFileSync(PAGE_PATH, 'utf8')
+    expect(source).toMatch(/from\s+'@fablab\/ui'/)
+  })
+})
+
+describe('the two tab bars do not paint on top of each other', () => {
+  it('gives every MobileTabBar wrapper a containing block for fixed descendants', async () => {
+    // MobileTabBar pins itself with `position: fixed; bottom: 0` and an opaque navy fill.
+    // Two of them in one gallery resolve against the SAME viewport, land on identical pixels,
+    // and the later one in the DOM hides the other completely — the workbench would show one
+    // bar while claiming two states, which reads as coverage and is worse than showing one.
+    //
+    // Only a few properties make an ancestor a containing block for `position: fixed`:
+    // transform, perspective, filter, will-change of those, or `contain` with layout+paint.
+    // `position: relative` does NOT — which is why this asserts the property rather than
+    // trusting that a wrapper exists. Measured: swapping `contain` for `position: relative`
+    // left the whole suite green before this case was written.
+    const elements = await renderFrame(390)
+    const bars = elements.filter((el) => componentName(el) === 'MobileTabBar')
+    expect(bars.length, 'both session states must be on the page').toBeGreaterThan(1)
+
+    const wrappers = elements.filter((el) => {
+      const children = (el.props as { children?: unknown }).children
+      const list = Array.isArray(children) ? children : [children]
+      return list.some((child) => isElement(child) && componentName(child) === 'MobileTabBar')
+    })
+    expect(wrappers.length, 'every bar must sit in its own wrapper').toBe(bars.length)
+
+    for (const wrapper of wrappers) {
+      const style = styleOf(wrapper)
+      const contain = String(style.contain ?? '')
+      const establishes =
+        (contain.includes('layout') && contain.includes('paint')) ||
+        contain.includes('strict') ||
+        contain.includes('content') ||
+        style.transform !== undefined ||
+        style.perspective !== undefined ||
+        style.filter !== undefined ||
+        String(style.willChange ?? '').length > 0
+      expect(
+        establishes,
+        `a MobileTabBar wrapper has style ${JSON.stringify(style)}, which does not contain a ` +
+          'fixed descendant — the bars will stack on the same pixels and one becomes invisible.',
+      ).toBe(true)
+    }
+  })
+
+  it('labels each bar with the destination PERFIL resolves to', () => {
+    // The two states differ ONLY by an href, and PERFIL is the label in both, so nothing
+    // rendered distinguishes them. Without the destination in the title a reviewer sees two
+    // identical bars and FR-009's branch stays unreviewable however correctly it is wired.
+    const source = readFileSync(PAGE_PATH, 'utf8')
+    expect(source).toMatch(/profileHref\(/)
   })
 })
