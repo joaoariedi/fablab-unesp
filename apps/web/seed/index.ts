@@ -29,6 +29,23 @@ import { readEnv } from '../lib/env'
 export const CITE_ORGANIZATION = {
   slug: 'bauru',
   name: 'Fab Lab CITe Bauru',
+  /**
+   * Development hostnames, so a freshly seeded machine SERVES something.
+   *
+   * Host resolution has three steps and the third is a sovereign fallback: when exactly one
+   * organization exists, any host resolves to it. That covers a clean install and hides this
+   * gap — but the test suite creates fixture organizations in the same database, and the
+   * moment there are two the fallback switches off and `localhost` matches nothing. The
+   * layout then correctly turns `TenantUnresolvedError` into a 404, and the whole site is
+   * unreachable in development. Measured: `GET / -> HTTP 404` with three organizations
+   * present.
+   *
+   * Naming the hostnames explicitly makes dev resolution independent of how many
+   * organizations happen to exist. It changes DATA, never `resolve.ts` — the resolver behaved
+   * exactly as feature 000 specified, and "fixing" it to be lenient about unknown hosts is
+   * how the cross-tenant leak that feature exists to prevent would come back.
+   */
+  domains: ['localhost', '127.0.0.1'],
 } as const
 
 export type SeedReport = {
@@ -66,6 +83,7 @@ export async function seed(): Promise<SeedReport> {
         name: CITE_ORGANIZATION.name,
         slug: CITE_ORGANIZATION.slug,
         status: 'active',
+        domains: CITE_ORGANIZATION.domains.map((domain) => ({ domain })),
       },
       overrideAccess: true,
     })

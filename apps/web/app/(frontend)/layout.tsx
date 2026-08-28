@@ -5,6 +5,7 @@ import type React from 'react'
 // including `--color-primary` — so the override set on <body> below has something to
 // override. Imported once, here, because this layout wraps every public page.
 import '@fablab/ui/styles.css'
+import { Footer, HeaderNav, MenuSheet, MobileTabBar } from '@fablab/ui'
 
 import { getTenantScopedPayloadForRSC, TenantUnresolvedError } from '../../lib/tenancy'
 import { themeStyle } from '../../lib/theme'
@@ -116,7 +117,22 @@ export default async function FrontendLayout({ children }: { children: React.Rea
         value and returns `undefined` when it cannot be trusted, which *is* the fallback —
         palette.css already declares the CITe pink, so publishing no override renders it.
       */}
-      <body style={themeStyle(org)}>{children}</body>
+      <body style={themeStyle(org)}>
+        {/*
+          FR-008's shell, mounted. The four components were built, tested and rendered
+          NOWHERE — grepping this file for them returned 0 — which is the same "delivered but
+          never wired" failure FR-009's `profileHref` had: a component nothing renders is not
+          delivered, however green its own suite is.
+
+          `isSignedIn` is hard-false until authentication lands (feature 004). That is the
+          safe default and the one FR-009 names: an unauthenticated visitor tapping PERFIL
+          must reach login, never the guarded account page.
+        */}
+        <HeaderNav menu={<MenuSheet />} />
+        {children}
+        <Footer />
+        <MobileTabBar isSignedIn={false} />
+      </body>
     </html>
   )
 }

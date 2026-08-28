@@ -261,9 +261,19 @@ function shellSpecimens(): ReactElement[] {
         <HeaderNav menu={<MenuSheet />} />
       </div>
     </Specimen>,
-    <Specimen key="tabbar" title="MobileTabBar — five positions, fixed to the bottom on mobile">
+    // Both session states, because `isSignedIn` is not cosmetic: PERFIL resolves through
+    // `profileHref`, so the fifth position points at /login for a visitor and at Minha Conta
+    // for a signed-in maker. This bar is the only surface in the product where that branch
+    // renders (MobileTabBar § PERFIL), so the state the workbench omits is a destination
+    // nobody ever reviews.
+    <Specimen key="tabbar" title="MobileTabBar — five positions; PERFIL deslogado (login)">
       <div style={{ width: '100%' }}>
-        <MobileTabBar />
+        <MobileTabBar isSignedIn={false} />
+      </div>
+    </Specimen>,
+    <Specimen key="tabbar-signed-in" title="MobileTabBar — PERFIL logado (Minha Conta)">
+      <div style={{ width: '100%' }}>
+        <MobileTabBar isSignedIn />
       </div>
     </Specimen>,
     <Specimen key="footer" title="Footer — three pillars and the isometric composition">

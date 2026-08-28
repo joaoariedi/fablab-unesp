@@ -369,6 +369,22 @@ describe('T037 / FR-016, US7 — the component workbench', () => {
       expect(active.length, 'no Tabs specimen carries activeHref').toBeGreaterThan(0)
     })
 
+    it('shows the bottom bar signed out and signed in, the two destinations PERFIL has', async () => {
+      const bars = propsFor(await frame(), 'MobileTabBar')
+      expect(bars.length, 'no MobileTabBar specimen').toBeGreaterThan(0)
+
+      const states = new Set(bars.map((props) => props.isSignedIn === true))
+      expect(
+        states,
+        'the workbench shows the mobile bar in one session state only. `isSignedIn` is the ' +
+          "bar's entire prop surface, and it is not cosmetic: PERFIL resolves through " +
+          '`profileHref`, so signed out it goes to /login and signed in to Minha Conta. This ' +
+          'bar is the only place in the product where that branch renders at all (MobileTabBar ' +
+          "§ PERFIL), so a state the workbench omits is a destination nobody reviews — and " +
+          'US7 is "every component is visible in its **states**", not one specimen apiece.',
+      ).toEqual(new Set([true, false]))
+    })
+
     it('shows every shape in the FR-015 vocabulary', async () => {
       const drawn = new Set(propsFor(await frame(), 'IsoShape').map((props) => props.name))
       const missing = ISO_SHAPE_NAMES.filter((name) => !drawn.has(name))
