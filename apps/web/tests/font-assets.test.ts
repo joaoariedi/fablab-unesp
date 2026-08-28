@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
@@ -14,8 +14,10 @@ import { describe, expect, it } from 'vitest'
  * strip a redistribution obligation (Comfortaa is OFL) and leave the WOFF2 unattributable.
  *
  * The conversion is a **one-off run on a maintainer's machine**, not a build step. Principle 1
- * counts a converter in any manifest as a dependency added to the stack, so the last test
- * reads the three `package.json` files rather than trusting the claim.
+ * counts a converter in any manifest as a dependency added to the stack, so the last tests
+ * read every workspace manifest rather than trusting the claim — derived from
+ * `pnpm-workspace.yaml`, because the hand-written list they replaced named three of the
+ * four and `packages/game` could have carried a converter unseen.
  *
  * Why the header is parsed instead of just calling `existsSync`: the failure this guards is
  * not an absent file, it is a **wrong** one — a `.ttf` renamed to `.woff2` (which browsers
@@ -40,8 +42,28 @@ const FACES = [
   { woff2: 'comfortaa.woff2', ttf: 'Comfortaa-VariableFont_wght.ttf', role: '--font-body' },
 ] as const
 
-/** Every manifest that could acquire a converter, relative to the repo root. */
-const MANIFESTS = ['package.json', 'apps/web/package.json', 'packages/ui/package.json']
+/**
+ * Every manifest a `pnpm install` reads, derived from `pnpm-workspace.yaml` rather than
+ * listed by hand. The hand-written list this replaced named three files and the workspace
+ * has four — `packages/game/package.json` was outside the scan, so a converter declared
+ * there was installed on every machine and reported by nothing. The globs are the authority
+ * on what gets installed, so they are the authority on what gets scanned; a package added
+ * tomorrow joins the scan without anyone remembering to add it.
+ */
+const MANIFESTS = workspaceManifests()
+
+/**
+ * A hand-written floor, kept deliberately independent of the derivation above. If the YAML
+ * parser stops matching, or a glob stops expanding, `MANIFESTS` shrinks and every assertion
+ * over it passes over nothing — the vacuity this feature has now produced repeatedly. These
+ * four exist today; the scan must reach all of them.
+ */
+const REQUIRED_MANIFESTS = [
+  'package.json',
+  'apps/web/package.json',
+  'packages/game/package.json',
+  'packages/ui/package.json',
+] as const
 
 /**
  * Package-name fragments that would mean a font converter joined the stack. Matched as
@@ -58,6 +80,61 @@ const CONVERTER_FRAGMENTS = [
   'opentype',
   'fonteditor',
 ]
+
+/**
+ * The workspace globs, read out of `pnpm-workspace.yaml`'s `packages:` block. Parsed with a
+ * line scanner rather than a YAML dependency: Principle 1 is the rule this whole describe
+ * block enforces, and adding a parser to check that no parser was added would be absurd.
+ */
+function workspaceGlobs(): string[] {
+  const lines = readFileSync(join(REPO_ROOT, 'pnpm-workspace.yaml'), 'utf8').split('\n')
+  const start = lines.findIndex((line) => /^packages:\s*$/.test(line))
+  if (start === -1) {
+    throw new Error(
+      'pnpm-workspace.yaml declares no `packages:` block. Without it this scan cannot know ' +
+        'which manifests pnpm installs from, and silently scanning fewer would be worse ' +
+        'than failing here.',
+    )
+  }
+  const globs: string[] = []
+  for (const line of lines.slice(start + 1)) {
+    if (/^\S/.test(line)) break // the block ended: a new top-level key or a comment column 0
+    const entry = /^\s+-\s*['"]?([^'"\s#]+)/.exec(line)?.[1]
+    if (entry !== undefined) globs.push(entry)
+  }
+  return globs
+}
+
+/**
+ * `apps/*` → every directory under `apps/`. Only the trailing-`/*` and literal forms are
+ * understood, and anything else throws rather than expanding to nothing — an unsupported
+ * glob that quietly contributes no directories is how a scan shrinks without a failure.
+ */
+function expandGlob(glob: string): string[] {
+  if (!glob.includes('*')) return [glob]
+  if (!glob.endsWith('/*') || glob.slice(0, -2).includes('*')) {
+    throw new Error(
+      `pnpm-workspace.yaml declares the glob ${JSON.stringify(glob)}, which this scan does ` +
+        'not understand. Teach expandGlob() the new form — do not leave it unexpanded, or ' +
+        'the manifests under it stop being checked for a converter.',
+    )
+  }
+  const parent = glob.slice(0, -2)
+  return readdirSync(join(REPO_ROOT, parent), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => `${parent}/${entry.name}`)
+}
+
+/** The root manifest plus one per workspace package that actually has a `package.json`. */
+function workspaceManifests(): string[] {
+  const candidates = [
+    'package.json',
+    ...workspaceGlobs()
+      .flatMap(expandGlob)
+      .map((directory) => `${directory}/package.json`),
+  ]
+  return candidates.filter((manifest) => existsSync(join(REPO_ROOT, manifest))).sort()
+}
 
 interface Woff2Header {
   /** The four-byte signature, decoded as ASCII. */
@@ -177,6 +254,22 @@ describe('the .ttf sources stay in docs/ as the provenance record', () => {
 })
 
 describe('no converter joined the stack (Principle 1)', () => {
+  it('scans every manifest a pnpm install reads, not a hand-written list', () => {
+    for (const manifest of REQUIRED_MANIFESTS) {
+      expect(
+        MANIFESTS,
+        `${manifest} is outside this scan, so a font converter declared there would be ` +
+          'installed on every machine and reported by nothing. Principle 1 is a property of ' +
+          'the whole workspace, not of the three manifests someone happened to list.',
+      ).toContain(manifest)
+    }
+    expect(
+      MANIFESTS.length,
+      'the derivation found fewer manifests than the hand-written floor, which means it is ' +
+        'contributing nothing and the scan is only as wide as the list it replaced',
+    ).toBeGreaterThanOrEqual(REQUIRED_MANIFESTS.length)
+  })
+
   it.each(MANIFESTS)('%s declares no font-conversion dependency', (manifest) => {
     const offenders = declaredDependencies(manifest).filter((name) =>
       CONVERTER_FRAGMENTS.some((fragment) => name.toLowerCase().includes(fragment)),

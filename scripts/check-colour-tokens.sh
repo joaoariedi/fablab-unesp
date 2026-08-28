@@ -41,9 +41,22 @@ cd "$ROOT"
 # exemption stays a single reviewed path, so `apps/web/app/tokens/` cannot adopt it by name.
 TOKENS_DIR='packages/ui/src/tokens/'
 
-# Where component colour lives. `apps/web` owns the layout, the theme resolution and every
-# page; leaving it out would fence the library and free the application.
-SCAN_ROOTS=(packages/ui/src apps/web)
+# Where component colour lives: the two workspace globs from `pnpm-workspace.yaml`
+# (`apps/*`, `packages/*`), not the two directories that happened to hold CSS the day this
+# was written. That earlier list — `packages/ui/src apps/web` — left `packages/game` scanned
+# by nothing: measured, a `.css` there carrying both a hex and `var(--color-rosa-raw)` exited
+# 0 with PASS. It is this script's own "a gate that scans nothing reports PASS forever"
+# failure with a narrower blast radius, and the existence check below cannot catch it —
+# nothing is missing, the list is merely short, and the next package added is free the same
+# way. Scanning the globs makes coverage follow the workspace instead of trailing it.
+SCAN_ROOTS=(packages apps)
+
+# Paths whose ABSENCE means a rename rather than an addition. Checked separately from
+# SCAN_ROOTS because the two lists answer different questions: the roots decide what is
+# scanned, and these decide whether the scan still points at anything real. Widening the
+# roots to `packages apps` would otherwise have thrown that check away, since those two
+# survive any rename underneath them.
+REQUIRED_DIRS=(packages/ui/src apps/web)
 
 # `.next` holds minified vendor CSS after any local `next build` — thousands of hexes nobody
 # wrote. Scanning it fails the gate for every developer who has ever built, which is how a
@@ -53,10 +66,10 @@ SKIP_DIRS=(--exclude-dir=node_modules --exclude-dir=.next --exclude-dir=dist)
 RAW_COLOUR='#[0-9a-f]{3,8}\b|rgba?\(|hsla?\('
 PRIVATE_TOKEN='--color-rosa-raw'
 
-for dir in "${SCAN_ROOTS[@]}"; do
+for dir in "${REQUIRED_DIRS[@]}"; do
   if [ ! -d "$dir" ]; then
     echo "FAIL: $dir does not exist, so this gate would scan nothing and report PASS." >&2
-    echo "      A scan root was renamed or moved; update SCAN_ROOTS in $0." >&2
+    echo "      A scan root was renamed or moved; update REQUIRED_DIRS in $0." >&2
     exit 2
   fi
 done

@@ -116,7 +116,40 @@ export const Organizations: CollectionConfig = {
       type: 'group',
       label: 'Identidade visual',
       fields: [
-        { name: 'primaryColor', type: 'text', label: 'Cor primária' },
+        {
+          name: 'primaryColor',
+          type: 'text',
+          label: 'Cor primária',
+          admin: {
+            description:
+              'Cor hexadecimal estrita: #RGB ou #RRGGBB. Vira --color-primary nas páginas da organização.',
+          },
+          // FR-019 / CLR-004, checkpoint ONE of two. The other lives in lib/theme.ts and
+          // runs when the value becomes CSS.
+          //
+          // The duplication is the mechanism, not an oversight: an organization admin owns
+          // this value and the REST API writes the same field, so two INDEPENDENT checks are
+          // the point. Feature 000 measured what one layer is worth — mutating any single
+          // tenancy layer there left the whole harness green. Do not extract these two
+          // regexes into a shared constant: a shared constant is one layer wearing two hats.
+          //
+          // Rejecting padded input (' #abcdef ') rather than trimming it is also deliberate.
+          // Trim-then-validate would store a value that is not itself a hex, and lib/theme.ts
+          // is not the only thing that will ever read this field.
+          validate: (value: unknown) => {
+            // Optional field: organizations created before this feature carry no theme, and
+            // Payload runs validate on absent values too. Rejecting them here would turn a
+            // config change into a migration and make every existing record unsaveable.
+            if (value === undefined || value === null || value === '') return true
+            if (typeof value !== 'string') {
+              return `Cor primária inválida (${JSON.stringify(value)}). Use uma cor hexadecimal: #RGB ou #RRGGBB.`
+            }
+            if (!/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value)) {
+              return `Cor primária inválida: "${value}". Use uma cor hexadecimal estrita: #RGB ou #RRGGBB. Nomes de cor, rgb(), var() e ponto e vírgula não são aceitos.`
+            }
+            return true
+          },
+        },
         {
           name: 'logoUrl',
           type: 'text',

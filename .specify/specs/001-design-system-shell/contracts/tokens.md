@@ -51,8 +51,20 @@ Backgrounds are named by role rather than colour, so the white-background pages
 ```css
 --font-display  /* Aldo the Apache → condensed sans fallback. Logo, logotype, headings */
 --font-body     /* Comfortaa      → system-ui, sans-serif                              */
---text-xs … --text-3xl
+--text-xs … --text-3xl   /* 12 14 16 20 24 32 40 px */
 ```
+
+**The type scale is derived, not sourced** *(2026-08-28)*. `visual-identity.md`, `concept.md`
+and every page spec were searched: they fix layout dimensions, touch targets and the three
+breakpoints, and name **no font size anywhere**. The scale is 16px base at roughly a 1.25
+ratio, rounded to **whole pixels** — and the rounding is the part that is not taste: this
+design renders pixel art with `image-rendering: pixelated` at integer scale factors (FR-013,
+SC-008), and type on fractional sizes anti-aliases against art that deliberately does not, so
+the two read as different materials on one page.
+
+> **Open for the designer.** The base and ratio are a defensible default, not a decision from
+> the mockups. Overruling them is an edit to seven lines in `typography.css`; the tests assert
+> the *shape* (all seven steps present, whole pixels, strictly increasing), not the values.
 
 **There are two faces and two tokens.** Both ship in the repository, so CI renders the same
 typography production does.

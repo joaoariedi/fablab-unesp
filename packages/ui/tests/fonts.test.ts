@@ -50,20 +50,52 @@ const GIT_TIMEOUT_MS = 30_000
  */
 const ARTEFACT_PATTERN = /(?:^|\/)square[^/]*\.(?:ttf|otf|woff2?)$/i
 
-/** Source, stylesheet and config extensions — the three surfaces SC-012 names. */
-const SCANNED_EXTENSIONS = [
-  '.ts',
-  '.tsx',
-  '.js',
-  '.jsx',
-  '.mjs',
-  '.cjs',
-  '.css',
-  '.json',
-  '.yml',
-  '.yaml',
-  '.toml',
-] as const
+/**
+ * What the usage scan skips. Everything else tracked is scanned — the set is DERIVED, not
+ * enumerated, because an allowlist of extensions is the shape that already failed here.
+ *
+ * The first draft listed eleven extensions and omitted `.svg`. Measured: this repo tracks
+ * brand SVGs carrying live `font-family` declarations, and planting
+ * `font-family:'SquareFont'` in `docs/product/brand/fablab-github-banner-1280x320.svg` left
+ * the suite 19/19 green. A tracked, committed, public file declaring SquareFont as the
+ * rendered face — the exact thing SC-012 forbids — and every assertion passed. It is also
+ * the *likeliest* place for it: CLR-002 records SquareFont as the **logotype**, and the
+ * logotype lives in `docs/product/brand/`. `.jsonc` was missing too, while SC-012 names
+ * "config" and `.markdownlint-cli2.jsonc` is tracked.
+ *
+ * Two skip categories, and each earns its place:
+ *
+ * 1. **Binaries** — nothing to read, and `git grep -I` would skip them anyway.
+ * 2. **Provenance documents** — the files whose *job* is to record that SquareFont left and
+ *    must never come back. `.gitignore` names `Square.ttf` precisely to block it; the fonts
+ *    README and THIRD-PARTY-NOTICE explain the licensing; the spec artifacts carry the
+ *    decision. Scanning them makes the gate red on a clean tree forever, which is the
+ *    can-never-pass defect this feature has already produced twice.
+ *
+ * Note what is NOT skipped: `.md` under `docs/product/brand/`, every `.css`, `.svg`, `.html`
+ * and config file, and `packages/ui/src/tokens/typography.css` — which names SquareFont in a
+ * comment explaining the token's absence and stays green because the rules below match
+ * *usage*, never mention.
+ */
+const BINARY_EXTENSIONS = ['.woff2', '.woff', '.ttf', '.otf', '.png', '.jpg', '.jpeg', '.pdf', '.ico']
+
+/**
+ * Provenance: naming the retired face here is the point, not a violation. Every entry carries
+ * a literal `Square.ttf` / `Squareo.ttf` path, which is what makes it unscannable — and the
+ * "skips only the files a usage rule would actually fire on" case below holds the list to
+ * exactly that, so it cannot drift into an allowlist. `docs/sdd-strategy.md` sat here until
+ * that case was written and measured it: no rule fires on it, so the skip removed a whole
+ * file from the scan and protected nothing.
+ */
+const PROVENANCE_PATHS = [
+  '.gitignore',
+  'docs/product/fonts/README.md',
+  'docs/product/fonts/THIRD-PARTY-NOTICE.md',
+  'docs/backlog.md',
+]
+
+/** Spec artefacts record the decision in full; scanning them re-reports the decision. */
+const PROVENANCE_PREFIXES = ['.specify/']
 
 /**
  * The one exclusion, and it is structural rather than a judgement call: this file defines the
@@ -128,8 +160,21 @@ function trackedPaths(): readonly string[] {
   return git('ls-files', '-z').split('\0').filter((path) => path.length > 0)
 }
 
+function isBinaryPath(path: string): boolean {
+  const lower = path.toLowerCase()
+  return BINARY_EXTENSIONS.some((extension) => lower.endsWith(extension))
+}
+
 function isScanned(path: string): boolean {
-  return SCANNED_EXTENSIONS.some((extension) => path.toLowerCase().endsWith(extension))
+  if (isBinaryPath(path)) return false
+  if (PROVENANCE_PATHS.includes(path)) return false
+  if (PROVENANCE_PREFIXES.some((prefix) => path.startsWith(prefix))) return false
+  return true
+}
+
+/** Reads a tracked file relative to the repo root. */
+function readTracked(path: string): string {
+  return readFileSync(join(REPO_ROOT, path), 'utf8')
 }
 
 /** Applies every usage rule to one file's text, line by line, so failures cite a location. */
@@ -139,7 +184,10 @@ function scanText(path: string, text: string): readonly Violation[] {
       path,
       line: index + 1,
       rule: rule.name,
-      text: line.trim(),
+      // Truncated because the scan now reaches SVGs, and the real violation this gate was
+      // widened to catch lives on a line carrying an inlined base64 font — an 80KB failure
+      // message that buries the path it is trying to report.
+      text: line.trim().slice(0, 160),
     })),
   )
 }
@@ -201,6 +249,43 @@ describe('no source, stylesheet or config uses SquareFont (SC-012)', () => {
     const extensions = new Set(SCANNED.map((path) => path.slice(path.lastIndexOf('.'))))
     expect(SCANNED.length).toBeGreaterThan(20)
     expect([...extensions]).toEqual(expect.arrayContaining(['.ts', '.mjs', '.json']))
+  })
+
+  it('skips only the files a usage rule would actually fire on', () => {
+    // A skip that is not load-bearing is an allowlist entry wearing a provenance label: it
+    // takes a whole file out of the scan while nothing in that file needed taking out, and
+    // it reads as justified because its neighbours are. The first real usage written there
+    // is then invisible, and the diff that adds it shows nothing unusual.
+    //
+    // Measured on this list: `docs/sdd-strategy.md` was skipped and no rule fires on any of
+    // its lines — the skip bought nothing and cost the whole file. The four that remain each
+    // carry a literal `Square.ttf` path, which is exactly why they cannot be scanned.
+    const untracked = PROVENANCE_PATHS.filter((path) => !TRACKED.includes(path))
+    expect(
+      untracked,
+      'a skip naming a path that is not in the index protects nothing and hides the next ' +
+        'file that takes that name',
+    ).toEqual([])
+
+    const inert = PROVENANCE_PATHS.filter((path) => scanText(path, readTracked(path)).length === 0)
+    expect(
+      inert,
+      'these paths are skipped, but no usage rule fires on them — so the skip is not ' +
+        'provenance, it is an exclusion. Delete them from PROVENANCE_PATHS and let the scan ' +
+        'read them; if a later edit does trip a rule there, that is the gate working.',
+    ).toEqual([])
+
+    for (const prefix of PROVENANCE_PREFIXES) {
+      const firing = TRACKED.filter(
+        (path) =>
+          path.startsWith(prefix) && !isBinaryPath(path) && scanText(path, readTracked(path)).length > 0,
+      )
+      expect(
+        firing.length,
+        `${prefix} is skipped wholesale, but nothing tracked under it trips a rule — the ` +
+          'prefix excludes a subtree for no reason',
+      ).toBeGreaterThan(0)
+    }
   })
 
   it('excludes exactly one file, and it is this one', () => {

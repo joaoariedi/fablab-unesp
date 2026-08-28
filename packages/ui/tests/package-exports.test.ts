@@ -1,5 +1,6 @@
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
-import { dirname } from 'node:path'
+import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs'
+import { createRequire } from 'node:module'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
@@ -158,5 +159,75 @@ describe('@fablab/ui package manifest', () => {
         expect(existsSync(absoluteTarget(target ?? '')), `"${subpath}" → ${target} does not exist`).toBe(true)
       }
     })
+  })
+})
+
+/**
+ * T001 / FR-018 — "the app owns the React instance", asserted against the **installed tree**
+ * rather than the declared text.
+ *
+ * Every assertion above reads `package.json` as a string: react is under `peerDependencies`,
+ * it is absent from `dependencies`, and the two declared *ranges* name the same major. That
+ * is the manifest restating itself, and it is blind to the failure the file's own opening
+ * comment describes — two physical copies of React, and "Invalid hook call" for every hook in
+ * the product.
+ *
+ * The gap is not hypothetical, because the declaration is not what decides the outcome.
+ * pnpm's resolution also answers to `.npmrc` (`node-linker=hoisted`, `dedupe-peer-dependents`,
+ * `resolution-mode`), to a root `pnpm.overrides` or workspace catalog entry, and to whether
+ * `pnpm install` was ever run after the manifest was edited. Every one of those lives outside
+ * `packages/ui/package.json`, leaves all six assertions above green, and can still hand the
+ * package a second React.
+ *
+ * CLR-003 guarantees nothing else in this workspace can catch it: no test renders, so no test
+ * ever calls a hook, so the duplicate is invisible until the product runs in a browser. The
+ * check has to be a resolution check or it does not exist.
+ *
+ * Resolution is compared through `realpathSync` deliberately. Under pnpm both packages reach
+ * React by a *symlink into the same store entry*, so the symlink paths differ
+ * (`packages/ui/node_modules/react` vs `apps/web/node_modules/react`) while the instance is
+ * one. Comparing the link paths would fail on a correct tree; comparing the real paths is what
+ * "same instance" actually means to Node's module cache.
+ */
+describe('React instance identity (the installed tree, not the declared text)', () => {
+  /** A directory whose module resolution we want to imitate — the `.js` is never read. */
+  function requireFrom(directory: string): NodeJS.Require {
+    return createRequire(join(directory, 'noop.js'))
+  }
+
+  /**
+   * The real directory of the React that `directory` would load at runtime.
+   *
+   * `react/package.json` is used as the probe rather than `react` itself because React 19
+   * exports it, and it pins the *package root* rather than whichever conditional entry point
+   * the resolver happened to pick for this context.
+   */
+  function resolvedReactRoot(directory: string): string {
+    return dirname(realpathSync(requireFrom(directory).resolve('react/package.json')))
+  }
+
+  const UI_SRC_DIR = fileURLToPath(new URL('../src/', import.meta.url))
+  const APP_DIR = fileURLToPath(new URL('../../../apps/web/', import.meta.url))
+
+  it('resolves react from packages/ui at all — a peer the tree never linked is not usable', () => {
+    // Not redundant with the identity assertion below: if this throws, that one throws too and
+    // reports a resolution error instead of the duplicate-instance failure it exists to name.
+    expect(() => resolvedReactRoot(UI_SRC_DIR)).not.toThrow()
+    expect(() => resolvedReactRoot(APP_DIR)).not.toThrow()
+  })
+
+  it('loads the SAME physical react as apps/web — one instance, never two', () => {
+    const fromUi = resolvedReactRoot(UI_SRC_DIR)
+    const fromApp = resolvedReactRoot(APP_DIR)
+
+    expect(
+      fromUi,
+      `packages/ui and apps/web resolve DIFFERENT React installations, so every hook in a\n` +
+        `@fablab/ui component will throw "Invalid hook call" in the product:\n` +
+        `  packages/ui -> ${fromUi}\n` +
+        `  apps/web    -> ${fromApp}\n` +
+        `The manifest can look perfectly correct while this is true — check .npmrc,\n` +
+        `pnpm.overrides, the workspace catalog, and whether pnpm install has been re-run.`,
+    ).toBe(fromApp)
   })
 })

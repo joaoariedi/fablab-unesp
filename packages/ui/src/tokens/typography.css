@@ -59,3 +59,34 @@
   --font-body: 'Comfortaa', system-ui, sans-serif;
 }
 
+
+:root {
+  /*
+   * The type scale (FR-005 "typography tokens"; contracts/tokens.md § Typography names the
+   * range `--text-xs … --text-3xl`).
+   *
+   * DERIVATION, because no design source gives numbers. `visual-identity.md`, `concept.md`
+   * and every page spec were searched: they fix layout dimensions, touch targets and the
+   * three breakpoints, and specify no font size anywhere. Rather than leave the contract
+   * advertising an API that ships nothing, the scale is derived from a rule that is stated
+   * here so the designer can overrule it in one file:
+   *
+   *   - 16px base, the browser default, so a user's font-size preference is not fought.
+   *   - Roughly a 1.25 (major-third) ratio, rounded to WHOLE PIXELS at every step.
+   *
+   * The rounding is the part that is not arbitrary. This design renders pixel art with
+   * `image-rendering: pixelated` clamped to integer scale factors (FR-013, SC-008); type on
+   * fractional pixel sizes anti-aliases against art that deliberately does not, and the two
+   * read as different materials on the same page. Integer sizes keep them consistent.
+   *
+   * OPEN FOR THE DESIGNER: the ratio and the base are a defensible default, not a decision
+   * from the mockups. Changing them is an edit to these seven lines and nothing else.
+   */
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 20px;
+  --text-xl: 24px;
+  --text-2xl: 32px;
+  --text-3xl: 40px;
+}

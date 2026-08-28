@@ -25,6 +25,17 @@ import { describe, expect, it } from 'vitest'
 
 const SRC_DIR = fileURLToPath(new URL('../src', import.meta.url))
 const TYPOGRAPHY_PATH = fileURLToPath(new URL('../src/tokens/typography.css', import.meta.url))
+
+/** The range contracts/tokens.md § Typography advertises, expanded to its named steps. */
+const SCALE_STEPS = [
+  '--text-xs',
+  '--text-sm',
+  '--text-base',
+  '--text-lg',
+  '--text-xl',
+  '--text-2xl',
+  '--text-3xl',
+] as const
 /** Where Next serves `/fonts/` from (Sketch 8). T009 puts the converted WOFF2 here. */
 const PUBLIC_FONTS_DIR = fileURLToPath(new URL('../../../apps/web/public/fonts', import.meta.url))
 
@@ -173,6 +184,35 @@ describe('packages/ui/src/tokens/typography.css', () => {
     expect(selectors.length).toBeGreaterThan(0)
     for (const selector of selectors) {
       expect(selector, `${selector} is not a token-defining selector`).toMatch(/^:root$/)
+    }
+  })
+
+  it('ships the full --text-xs … --text-3xl scale the contract advertises', () => {
+    // contracts/tokens.md § Typography names the range in the same elided form the Layout
+    // section uses for `--space-1 … --space-12` — and layout.css ships all twelve. The first
+    // draft of typography.css shipped none, so the contract advertised an API with nothing
+    // behind it, and the committed test could not tell because it only ever asserted the two
+    // family tokens. Named steps rather than a count, so a renamed step is red too.
+    const tokens = declarations(readTypography())
+    const missing = SCALE_STEPS.filter((name) => !tokens.has(name))
+    expect(missing, `contracts/tokens.md advertises these and typography.css lacks them`).toEqual([])
+  })
+
+  it('sizes the scale in whole pixels, strictly increasing', () => {
+    // Whole pixels is the one part of the derivation that is not taste: this design renders
+    // pixel art with image-rendering: pixelated at integer scale factors (FR-013, SC-008),
+    // and type on fractional sizes anti-aliases against art that deliberately does not.
+    // Strictly increasing is the --color-rosa lesson in type form — two steps at one size
+    // give two names to one value, and picking the wrong one looks identical.
+    const tokens = declarations(readTypography())
+    const sizes = SCALE_STEPS.map((name) => {
+      const value = tokens.get(name) ?? ''
+      const px = /^(\d+)px$/.exec(value)
+      expect(px, `${name} must be a whole-pixel length, got "${value}"`).not.toBeNull()
+      return Number(px![1])
+    })
+    for (let i = 1; i < sizes.length; i++) {
+      expect(sizes[i]!, `${SCALE_STEPS[i]} must exceed ${SCALE_STEPS[i - 1]}`).toBeGreaterThan(sizes[i - 1]!)
     }
   })
 })

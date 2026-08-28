@@ -112,6 +112,26 @@ const FORBIDDEN: readonly Probe[] = [
     body: '.card__title { color: var(--color-rosa-raw); }\n',
   },
   {
+    file: 'packages/game/src/board.module.css',
+    value: '#123456',
+    // `pnpm-workspace.yaml` globs `apps/*` and `packages/*`, but the gate enumerated the two
+    // directories that happened to hold CSS the day it was written. `packages/game` is a
+    // workspace package that exists *today* and was scanned by nothing — measured: this file,
+    // carrying a hex AND the private token, exited 0 with `PASS`. That is the script's own
+    // "a gate that scans nothing reports PASS forever" failure, narrowed from a renamed root
+    // to an unenumerated one, and an existence check cannot catch it: nothing is missing, the
+    // list is merely short. The next package added is unfenced the same way.
+    body: '.board { color: #123456; background: var(--color-rosa-raw); }\n',
+  },
+  {
+    file: 'packages/game/src/pieces.module.css',
+    value: '--color-rosa-raw',
+    // The CLR-001 half of the same hole, probed separately because a probe asserts one
+    // substring: a package outside the enumerated roots frees the private token as well as
+    // the hex, which is the exact round 2 escape this task exists to close.
+    body: '.piece { color: var(--color-rosa-raw); }\n',
+  },
+  {
     file: 'apps/web/app/tokens/theme.module.css',
     value: '#191C37',
     // A directory *named* tokens is not the token layer. The exemption is one reviewed

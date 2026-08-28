@@ -130,18 +130,43 @@ describe('packages/ui/src/tokens/layout.css', () => {
     }
   })
 
-  it('is the only source of breakpoint widths: no media query under src/ invents one', () => {
+  it('media queries under src/ are mobile-first, in px, and only at the design targets', () => {
+    // FR-012 has TWO clauses and the first draft guarded only the second. It inspected pixel
+    // VALUES and never the DIRECTION, so `@media (max-width: 1440px)` — a fully desktop-first
+    // stylesheet built on design targets — passed 9/9. Measured, not argued. Mobile-first is
+    // mapped by tasks.md to this task alone, and SC-004 defers cascade behaviour to feature
+    // 003's Playwright, so nothing downstream re-checks it: without this, FR-012's first word
+    // has no owner in the feature.
+    //
+    // The unit clause matters for the same reason: `@media (min-width: 48rem)` is a magic
+    // number wearing a different unit, and a px-only scan cannot see it.
     const allowed = new Set(DESIGN_TARGETS.map(String))
     const offenders: string[] = []
     for (const file of cssFilesUnder(SRC_DIR)) {
       const body = stripComments(readFileSync(file, 'utf8'))
       for (const query of body.matchAll(/@media[^{]+/g)) {
-        for (const width of query[0].matchAll(/(\d+(?:\.\d+)?)px/g)) {
-          if (!allowed.has(width[1]!)) offenders.push(`${file}: ${query[0].trim()}`)
+        const text = query[0].trim()
+        const features = [...text.matchAll(/\(\s*([a-z-]*width)\s*:\s*([^)]+?)\s*\)/g)]
+        // Deny by default: any mention of `width` this loop could not parse into a feature —
+        // range syntax such as `(width >= 390px)`, for one — is itself a finding rather than
+        // something to skip. A guard that silently ignores what it cannot parse is the
+        // vacuous-pass shape this feature has produced seven times.
+        if ((text.match(/width/g) ?? []).length !== features.length) {
+          offenders.push(`${file}: ${text} — width condition this guard cannot parse`)
+          continue
+        }
+        for (const [, feature, value] of features) {
+          if (feature !== 'min-width') {
+            offenders.push(`${file}: ${text} — ${feature} is desktop-first; FR-012 says min-width`)
+            continue
+          }
+          const px = /^(\d+(?:\.\d+)?)px$/.exec(value!)
+          if (!px) offenders.push(`${file}: ${text} — "${value}" is not a px length`)
+          else if (!allowed.has(px[1]!)) offenders.push(`${file}: ${text} — ${px[1]} is not a design target`)
         }
       }
     }
-    expect(offenders, 'media queries must use the 390 / 834 / 1440 targets').toEqual([])
+    expect(offenders, 'FR-012: mobile-first min-width at 390 / 834 / 1440, in px').toEqual([])
   })
 })
 

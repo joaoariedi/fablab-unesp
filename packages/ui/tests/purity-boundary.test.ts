@@ -230,6 +230,110 @@ const DYNAMIC_ALLOWED: readonly ShapeProbe[] = [
   },
 ]
 
+/**
+ * The same forbidden modules reached through `require(…)` — the boundary's CommonJS blind spot.
+ *
+ * Both instruments in this fence are stated against ESM syntax. `no-restricted-imports` visits
+ * `ImportDeclaration`, `export … from` and `import x = require(…)`; `PURITY_SELECTORS` visits
+ * `ImportExpression`. A bare `require(…)` call is none of those — it is an ordinary
+ * `CallExpression` — so every deny list in the config is blind to it by construction, exactly
+ * as it was blind to `await import(…)` before that clause existed.
+ *
+ * Measured against the config before this suite covered it, in `packages/ui/src/`:
+ *
+ *   req-payload.cjs      const p = require('payload')       -> ZERO boundary findings
+ *   req-node-fs.cjs      const fs = require('node:fs')      -> ZERO boundary findings
+ *   req-next-headers.js  const h = require('next/headers')  -> ZERO boundary findings
+ *   req-in-ts.ts         const p = require('payload')       -> ZERO boundary findings
+ *
+ * `@typescript-eslint/no-require-imports` did fire on all four, and that is the trap rather
+ * than the mitigation: it is a *style* rule about syntax, it says nothing about the boundary,
+ * and the one-line fix a contributor writing legitimate CommonJS reaches for is
+ * `// eslint-disable-next-line @typescript-eslint/no-require-imports` — which leaves the
+ * module reach fenced by nothing at all. A boundary that survives only because an unrelated
+ * rule happens to overlap it is not a boundary; it is a coincidence, and it is asserted here
+ * on `BOUNDARY_RULES` specifically so the coincidence cannot be mistaken for coverage.
+ *
+ * This form became reachable when the `files` glob widened past `*.{ts,tsx}`: `.cjs` and `.js`
+ * are where `require` is the *natural* spelling, not an exotic one, and they are now in scope.
+ *
+ * Specifiers are drawn from all four clauses so a fix that closes one deny list cannot pass.
+ */
+const REQUIRE_FORBIDDEN: readonly ShapeProbe[] = [
+  { name: 'require-payload', body: "export const load = () => require('payload')\n" },
+  {
+    name: 'require-payloadcms',
+    body: "export const load = () => require('@payloadcms/db-postgres')\n",
+  },
+  { name: 'require-next-headers', body: "export const load = () => require('next/headers')\n" },
+  { name: 'require-next-og', body: "export const load = () => require('next/og')\n" },
+  { name: 'require-node-fs', body: "export const load = () => require('node:fs')\n" },
+  // Bare, not prefixed: the asymmetry that let the rejected first attempt report a green
+  // "no IO" boundary while `net` was importable.
+  { name: 'require-bare-net', body: "export const load = () => require('net')\n" },
+  { name: 'require-server-only', body: "export const load = () => require('server-only')\n" },
+  // A specifier that is not a plain string, for the same reason the dynamic clause refuses
+  // one: an allowlist that `const n = 'net'` defeats does not constrain anybody who wanted
+  // past it, and `packages/ui` has no use for a module name it computes at runtime.
+  { name: 'require-computed', body: 'export const load = (name: string) => require(name)\n' },
+  { name: 'require-concatenated', body: "export const load = () => require('pay' + 'load')\n" },
+  { name: 'require-template', body: 'export const load = () => require(`payload`)\n' },
+]
+
+/**
+ * `require('./sibling')` must stay legal, for the reason the relative dynamic import does.
+ *
+ * Everything a relative specifier can reach is itself under `src/**` and fenced by the same
+ * block, so refusing it buys nothing and costs the rule its credibility — a fence that fires
+ * on ordinary local code is one contributors learn to blanket-disable, taking the clauses
+ * above with it.
+ */
+const REQUIRE_ALLOWED: readonly ShapeProbe[] = [
+  { name: 'require-relative', body: "export const load = () => require('./sibling')\n" },
+  { name: 'require-relative-parent', body: "export const load = () => require('../sibling')\n" },
+]
+
+/**
+ * Every file extension a module under `src/**` can carry — the boundary's OTHER enumeration.
+ *
+ * The deny lists were made general (`builtinModules`, a deny-by-default Next regex) precisely
+ * because an enumeration matches a form the problem does not take. The `files` glob is an
+ * enumeration too, and it was still `*.{ts,tsx}`. Measured against that config, in
+ * `packages/ui/src/`:
+ *
+ *   js-component.js   import * as p from 'payload'          -> ZERO findings
+ *   jsx-component.jsx import { cookies } from 'next/headers' -> not linted at all
+ *   mts-component.mts import * as fs from 'node:fs'          -> ZERO boundary findings
+ *
+ * `.jsx` is not an exotic spelling in a React package, it is the default one outside
+ * TypeScript, and `.mjs`/`.cjs` are what a build helper or a codegen output lands as. Any of
+ * them puts a component one rename away from the whole fence: the deny lists stay perfect and
+ * stop being consulted. This is the same lesson as the `node:*` glob and the four Next
+ * specifiers, moved one level out — from *what* the rule matches to *where* it looks.
+ *
+ * Both shapes are probed per extension, because the two clauses live in different rules
+ * (`no-restricted-imports` and `no-restricted-syntax`) on different config blocks, and a scope
+ * widened on one block only would leave the other half blind.
+ */
+const SRC_MODULE_EXTENSIONS = ['ts', 'tsx', 'mts', 'cts', 'js', 'jsx', 'mjs', 'cjs'] as const
+
+interface ExtensionProbe {
+  /** File name including the extension, also the test-case label. */
+  readonly file: string
+  readonly body: string
+}
+
+const EXTENSION_PROBES: readonly ExtensionProbe[] = SRC_MODULE_EXTENSIONS.flatMap((ext) => [
+  {
+    file: `ext-static-payload.${ext}`,
+    body: "import * as probe from 'payload'\n\nexport const used = probe\n",
+  },
+  {
+    file: `ext-dynamic-node-fs.${ext}`,
+    body: "export const load = async () => await import('node:fs')\n",
+  },
+])
+
 interface EslintMessage {
   readonly ruleId: string | null
   readonly message: string
@@ -337,15 +441,64 @@ function boundaryMessagesForShape(dir: string, probe: ShapeProbe): readonly Esli
   )
 }
 
+function writeExtensionProbes(dir: string, probes: readonly ExtensionProbe[]): void {
+  mkdirSync(dir, { recursive: true })
+  for (const probe of probes) {
+    // `@ts-nocheck` on every probe for the same reason the others carry it: the T001c suite
+    // runs a real `tsc --noEmit` over this package and `payload` is not a dependency of it.
+    writeFileSync(join(dir, probe.file), `// @ts-nocheck\n${probe.body}`, 'utf8')
+  }
+}
+
+/**
+ * Boundary findings for a probe addressed by file name — MISSING IS A FAILURE, deliberately.
+ *
+ * A file ESLint never visits reports nothing, which is indistinguishable from a file it
+ * cleared. Under `src/**` those two are the same defect (the module is unfenced either way),
+ * so the strict lookup throws rather than returning an empty list: `.jsx` was invisible to
+ * ESLint entirely, and a lenient helper would have called that a pass.
+ */
+function boundaryMessagesForFile(dir: string, file: string): readonly EslintMessage[] {
+  const path = join(dir, file)
+  const result = results.find((entry) => entry.filePath === path)
+  if (!result) {
+    throw new Error(
+      `eslint reported nothing for ${path} — it was not linted at all, so nothing fences it. ` +
+        `Linted files:\n${results.map((entry) => entry.filePath).join('\n')}`,
+    )
+  }
+  return result.messages.filter(
+    (message) => message.ruleId !== null && BOUNDARY_RULES.has(message.ruleId),
+  )
+}
+
+/**
+ * The same lookup for `tests/**`, where "not linted" IS the expected outcome for some
+ * extensions and must not be read as a missing harness.
+ */
+function unfencedMessagesForFile(dir: string, file: string): readonly EslintMessage[] {
+  const result = results.find((entry) => entry.filePath === join(dir, file))
+  return (result?.messages ?? []).filter(
+    (message) => message.ruleId !== null && BOUNDARY_RULES.has(message.ruleId),
+  )
+}
+
 beforeAll(() => {
   writeProbes(SRC_PROBE_DIR, [...FORBIDDEN_IN_SRC, ...NODE_BUILTINS, ...ALLOWED_IN_SRC])
-  writeShapeProbes(SRC_PROBE_DIR, [...DYNAMIC_FORBIDDEN, ...DYNAMIC_ALLOWED])
+  writeShapeProbes(SRC_PROBE_DIR, [
+    ...DYNAMIC_FORBIDDEN,
+    ...DYNAMIC_ALLOWED,
+    ...REQUIRE_FORBIDDEN,
+    ...REQUIRE_ALLOWED,
+  ])
   // `src/tokens/**` gets one probe of each clause rather than the full sweep: the question
   // there is whether the directory is inside the boundary at all, not which specifier leaks.
   writeProbes(TOKENS_PROBE_DIR, TOKENS_FORBIDDEN_STATIC)
-  writeShapeProbes(TOKENS_PROBE_DIR, DYNAMIC_FORBIDDEN)
+  writeShapeProbes(TOKENS_PROBE_DIR, [...DYNAMIC_FORBIDDEN, ...REQUIRE_FORBIDDEN])
   writeProbes(TESTS_PROBE_DIR, ALLOWED_IN_TESTS)
-  writeShapeProbes(TESTS_PROBE_DIR, DYNAMIC_FORBIDDEN)
+  writeShapeProbes(TESTS_PROBE_DIR, [...DYNAMIC_FORBIDDEN, ...REQUIRE_FORBIDDEN])
+  writeExtensionProbes(SRC_PROBE_DIR, EXTENSION_PROBES)
+  writeExtensionProbes(TESTS_PROBE_DIR, EXTENSION_PROBES)
   results = lintProbeDirs()
 }, ESLINT_TIMEOUT_MS)
 
@@ -445,6 +598,52 @@ describe('the boundary holds for a dynamic import, not only a static one (FR-018
   })
 })
 
+describe('the boundary holds for require(), not only for the ESM forms (FR-018)', () => {
+  it.each(REQUIRE_FORBIDDEN)('rejects `require("…")` of $name under src/', (probe) => {
+    const messages = boundaryMessagesForShape(SRC_PROBE_DIR, probe)
+    expect(
+      messages.length,
+      `${probe.body.trim()} must be an ESLint error in packages/ui/src. Both instruments in ` +
+        'this fence are stated against ESM syntax — no-restricted-imports visits ' +
+        'ImportDeclaration and import-equals, PURITY_SELECTORS visits ImportExpression — and a ' +
+        'bare require() is an ordinary CallExpression, so every deny list is blind to it by ' +
+        'construction. .cjs and .js are in the files glob now, and require is the natural ' +
+        'spelling there.',
+    ).toBeGreaterThan(0)
+  })
+
+  it.each(REQUIRE_FORBIDDEN)('rejects `require("…")` of $name under src/tokens/', (probe) => {
+    const messages = boundaryMessagesForShape(TOKENS_PROBE_DIR, probe)
+    expect(
+      messages.length,
+      `${probe.body.trim()} must be an ESLint error in packages/ui/src/tokens too: tokens are ` +
+        'the most tempting place to read a palette off disk at build time, and the directory ' +
+        'the other fences exempt.',
+    ).toBeGreaterThan(0)
+  })
+
+  it.each(REQUIRE_FORBIDDEN)('refuses $name for the BOUNDARY reason, not a style one', (probe) => {
+    // The load-bearing assertion of this whole describe. Before the clause existed,
+    // `@typescript-eslint/no-require-imports` already fired on every probe here — a style
+    // rule about syntax that says nothing about the boundary and names no alternative. A
+    // contributor writing legitimate CommonJS silences it with one disable comment and the
+    // module reach is then fenced by nothing. Requiring the message to name packages/ui is
+    // what stops that coincidence from being read as coverage.
+    const [first] = boundaryMessagesForShape(SRC_PROBE_DIR, probe)
+    expect(first?.message ?? '').toMatch(/packages\/ui/)
+  })
+
+  it.each(REQUIRE_ALLOWED)('leaves the relative `require("…")` of $name alone', (probe) => {
+    const messages = boundaryMessagesForShape(SRC_PROBE_DIR, probe)
+    expect(
+      messages,
+      `${probe.body.trim()} cannot leave a fence that already covers everything a relative ` +
+        'specifier can reach. A rule that refuses it is a ban rather than a boundary, and ' +
+        'gets routed around with a disable comment that takes the real clauses with it.',
+    ).toEqual([])
+  })
+})
+
 describe('the boundary is scoped to src/, not to the package (T011)', () => {
   it.each(ALLOWED_IN_TESTS)('leaves `import from "%s"` alone under tests/', (moduleName) => {
     const messages = boundaryMessagesFor(TESTS_PROBE_DIR, moduleName)
@@ -452,6 +651,18 @@ describe('the boundary is scoped to src/, not to the package (T011)', () => {
       messages,
       `tests/ must keep '${moduleName}': T011 reads the git index to assert no SquareFont ` +
         'artefact is tracked, and cannot do that through a boundary written for components',
+    ).toEqual([])
+  })
+
+  it.each(REQUIRE_FORBIDDEN)('leaves the require() of $name alone under tests/', (probe) => {
+    // Every clause added to this boundary is a fresh chance to write it one directory too
+    // wide. `packages/ui/**` instead of `packages/ui/src/**` reads identically in review and
+    // takes T011's `git ls-files` with it.
+    const messages = boundaryMessagesForShape(TESTS_PROBE_DIR, probe)
+    expect(
+      messages,
+      'the purity boundary stops at src/. A require() clause reaching tests/ would make T011 ' +
+        'unwritable, and would do so silently.',
     ).toEqual([])
   })
 
@@ -477,5 +688,36 @@ describe('the static clauses reach src/tokens/ as well (FR-018)', () => {
         'tokens are the most tempting place to read a palette off disk at build time, and ' +
         'the directory other fences exempt.',
     ).toBeGreaterThan(0)
+  })
+})
+
+describe('the boundary covers every extension a module in src/ can have (FR-018)', () => {
+  it.each(EXTENSION_PROBES)('refuses the forbidden module in $file under src/', (probe) => {
+    const messages = boundaryMessagesForFile(SRC_PROBE_DIR, probe.file)
+    expect(
+      messages.length,
+      `${probe.body.trim()} must be an ESLint error in packages/ui/src/${probe.file}. The deny ` +
+        'lists were made general so no specifier could slip past them; the files glob is an ' +
+        'enumeration in the same way, and a component is one rename away from leaving the ' +
+        'fence entirely while every deny list still reads as correct.',
+    ).toBeGreaterThan(0)
+  })
+
+  it('probes enough extensions to be evidence', () => {
+    // Guards the sweep above against passing vacuously if the extension list is trimmed to
+    // the two that already worked.
+    expect(new Set(SRC_MODULE_EXTENSIONS).size).toBeGreaterThanOrEqual(8)
+  })
+
+  it.each(EXTENSION_PROBES)('still leaves $file alone under tests/', (probe) => {
+    // The widening must move the boundary OUT by extension, never OUT by directory. A fix
+    // applied to `packages/ui/**` instead of `packages/ui/src/**` passes every assertion
+    // above and takes T011's `git ls-files` with it.
+    const messages = unfencedMessagesForFile(TESTS_PROBE_DIR, probe.file)
+    expect(
+      messages,
+      'the purity boundary stops at src/, whatever the file extension: tests/ reads the git ' +
+        'index for T011 and cannot do that through a boundary written for components.',
+    ).toEqual([])
   })
 })
