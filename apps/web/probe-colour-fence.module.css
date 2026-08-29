@@ -1,0 +1,3 @@
+/* T041 / SC-001 — deliberate violations for the CSS half of the fence. */
+.probeC { color: #F8C810; }
+.probeD { color: var(--color-rosa-raw); }
