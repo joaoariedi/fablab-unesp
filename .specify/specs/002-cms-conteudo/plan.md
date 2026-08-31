@@ -30,14 +30,15 @@ nothing from feature 004 — 004 adds the public sign-up UI, not authentication 
 
 | File | Change | Description |
 |------|--------|-------------|
-| `apps/web/lib/tenancy/access.ts` | modify | **`publicRead()` and `teamOnly()`** — the anonymous host-scoped reader and the publish gate |
+| `apps/web/lib/tenancy/public-payload.ts` | create | **`getPublicScopedPayload(host)`** — the anonymous read path, going around collection access rather than through it (round 1) |
+| `apps/web/lib/tenancy/access.ts` | modify | `teamOnly(): Access` and `canPublishField: FieldAccess` — two functions, because Payload types field access as boolean-only |
 | `apps/web/lib/tenancy/scope-registry.ts` | modify | Thirteen new entries; `payload-locked-documents` moves out of "not ours to declare" |
 | `apps/web/collections/content/*.ts` | create | `projeto` `modelo3d` `aula` `artigo` `evento` and their categories, `local`, `maquina`, `perfilMaker`, `curtida`, `progressoAula` |
 | `apps/web/lib/uploads/verify.ts` | create | Post-upload signature check and quarantine release |
 | `apps/web/lib/uploads/limits.ts` | create | The three caps and three allowlists as named constants |
 | `apps/web/lib/content/counters.ts` | create | The one counter strategy every derived field uses |
 | `apps/web/lib/content/review.ts` | create | The status transition and its idempotent approval stamp |
-| `apps/web/payload.config.ts` | modify | Register the collections and the S3 storage adapter |
+| `apps/web/payload.config.ts` | modify | Register the collections and the S3 storage adapter. **No `onInit` access composition** — round 1 found that API does not exist; `lockDocuments: false` on each scoped collection replaces it |
 | `apps/web/package.json` | modify | `@payloadcms/storage-s3` — a runtime dependency (Principle 1) |
 | `infra/docker-compose.yml` | modify | Bucket lifecycle rule for the orphan reaper |
 | `apps/web/tests/tenancy/isolation.test.ts` | modify | Extend the harness to the new collections |
@@ -61,17 +62,33 @@ boolean instead of a constraint opens every generated endpoint at once.
 Order follows risk, not the collection list. The access layer lands first because every
 collection depends on it, and getting it wrong is a cross-tenant leak rather than a bug.
 
-1. **`publicRead()` and `teamOnly()`, with the harness extended before any content exists.**
-2. **One collection end to end** (`projeto`) — registry entry, `sameTenant` relations, review
-   queue, counters — as the template the other twelve follow.
-3. **Uploads**, which are the only genuinely new subsystem: adapter, limits, quarantine, reaper.
-4. **The remaining collections**, mechanical once the template is proven.
-5. **`payload-locked-documents`**, after there is real scoped content for it to leak.
+**002a — the primitives, and one collection that proves them**
 
-**The thing most likely to go wrong quietly**: `publicRead()` widens read access to
-unauthenticated requests. Every previous cross-tenant defect in this project has been a rule
-that matched a form the problem did not take. This one is worse if wrong, because the failure
-is silent and public.
+1. `getPublicScopedPayload`, `teamOnly`, `canPublishField`, with the harness extended
+   **before any content exists** — including the two vantage points round 1 found untested.
+2. One collection end to end (`projeto`): registry entry, `sameTenant` relations, review queue,
+   counters, `lockDocuments: false`.
+3. Uploads — the only genuinely new subsystem: adapter, limits, quarantine, verification, reaper.
+
+**002b — the remaining twelve, against a proven template**
+
+4. `modelo3d`, `aula`, `artigo`, `evento`, the three category collections, `local`, `maquina`,
+   `perfilMaker`, `curtida`, `progressoAula`.
+5. The locked-documents assertion, once there is real scoped content for it to leak.
+
+*(Round 1 recommended splitting these into two features. The boundary is drawn here and the
+sequence is binding either way; whether 002b becomes its own spec directory is the PO's call,
+not the plan's. The argument for splitting: feature 001 was smaller than this and took nine
+workflow launches, and steps 1–3 are where every unknown lives — steps 4–5 are twelve
+repetitions of a shape that is either right or wrong by then.)*
+
+**The thing most likely to go wrong quietly**: `getPublicScopedPayload` runs with
+`overrideAccess: true`. It is the second module in the codebase permitted to do that, and the
+first that serves anonymous traffic — so a missing `status` filter or a mis-resolved host is a
+public, silent cross-tenant leak rather than an error anyone sees. That is why `PUBLISHABLE` is
+derived rather than listed, why the module is unexported from `index.ts`, and why it carries an
+`@isolation-mutation-point` marker so `scripts/isolation-mutation.sh` breaks it on purpose and
+requires the harness to notice.
 
 ## Code Sketches (Mental Alignment)
 
@@ -84,7 +101,10 @@ export const Projeto: CollectionConfig = {
   slug: 'projeto',
   labels: { singular: 'Projeto', plural: 'Projetos' },
   access: {
-    read: publicRead('projeto'),      // published rows to anyone; drafts to members
+    // The ADMIN and REST surface only. Public reads never reach here — they go through
+    // getPublicScopedPayload (Sketch 2), because the plugin AND-s its own tenant constraint
+    // onto whatever this returns and would nullify a public branch.
+    read: scopedAccess(),
     create: scopedAccess(),
     update: scopedAccess(),
     delete: teamOnly(),
@@ -94,7 +114,7 @@ export const Projeto: CollectionConfig = {
     { name: 'categoria', type: 'relationship', relationTo: 'categoriaProjeto',
       required: true, validate: sameTenant },
     { name: 'status', type: 'select', required: true, defaultValue: 'rascunho',
-      options: REVIEW_STATES, access: { update: teamOnlyField } },
+      options: REVIEW_STATES, access: { update: canPublishField } },
   ],
 }
 ```
@@ -105,39 +125,70 @@ organization's category. `status` carries **field-level** access so a maker may 
 draft but not publish it — the alternative, guarding the transition in a hook, is checked after
 the write is already shaped.
 
-### Sketch 2: `publicRead` — the anonymous, host-scoped reader
+**`canPublishField` is a second function, not `teamOnly` reused** *(round 1)*. Payload types
+`FieldAccess` as `(args) => boolean | Promise<boolean>` — it cannot return a `Where`, so the
+collection-level `teamOnly(): Access` and the field-level `canPublishField: FieldAccess` share
+a predicate and nothing else. The first draft wrote `teamOnlyField` as if one function served
+both, which would not have typechecked.
 
-**File:** `apps/web/lib/tenancy/access.ts` (modify)
-**Intent:** the one addition that makes a public site possible without weakening isolation.
+**Why `status` is hand-rolled rather than Payload's native drafts** *(round 1 asked)*:
+`versions: { drafts: true }` models **two** states, published and not. The page specs require
+**three** — `rascunho · em_revisao · publicado` — and the middle one is the review queue, which
+is the whole point of FR-008. Native drafts would give preview and version history for free and
+still not express "submitted, awaiting the team". The cost is stated so a later reader does not
+"simplify" it into drafts and silently delete the queue.
+
+### Sketch 2: `getPublicScopedPayload` — the anonymous read path
+
+**File:** `apps/web/lib/tenancy/public-payload.ts` (new)
+**Intent:** serve published content to a visitor without asking the plugin for permission it
+will not give.
 
 ```ts
-export const publicRead = (collection: string): Access => async ({ req }) => {
-  const user = req?.user as MaybeUser
-  if (isMaster(user)) return true
+/** Sibling of `getSystemScopedPayload`: an operation with no request USER, rather than no
+ *  request TENANT. Not exported from index.ts — the import boundary keeps it in here. */
+export async function getPublicScopedPayload(host: string): Promise<TenantScopedPayload> {
+  const organization = await resolveTenant(host)
+  if (!organization) throw new TenantUnresolvedError(host)
 
-  // Anonymous, or a member of some OTHER organization browsing this host: both are visitors
-  // here, and both see exactly the published rows of the organization the HOST resolves to.
-  const org = await resolveTenant(hostOf(req))
-  if (!org) return false                              // unresolved host reads nothing
-  const published: Where = { tenant: { equals: org.id }, status: { equals: 'publicado' } }
+  const base = buildTenantClient({ payload, tenantId: organization.id, overrideAccess: true })
+  const published = (c: string): Where | undefined =>
+    PUBLISHABLE.has(c) ? ({ status: { equals: 'publicado' } } as Where) : undefined
 
-  const ids = tenantIdsOf(user)
-  if (ids.length === 0) return published
-  /* @isolation-mutation-point */
-  return { or: [published, { tenant: { in: ids } }] } as Where
+  return {
+    ...base,
+    find: (args) => base.find({ ...args, where: and(args.where, published(args.collection)) }),
+    findByID: async (args) =>
+      (await base.find({ collection: args.collection, limit: 1,
+        where: and({ id: { equals: args.id } }, published(args.collection)) })).docs[0] ?? null,
+    // No create/update/delete: a public reader writes nothing except the download counter,
+    // which goes through its own narrow endpoint (Sketch 7b).
+  }
 }
 ```
 
-**Why this shape:** it keeps feature 000's contract — **a query constraint, never a boolean** —
-and adds the axis the original lacked: *the host*, not just the session. A visitor sees
-published rows of the organization whose hostname they typed; a member additionally sees their
-own organization's drafts. The `or` is the whole design: without it a signed-in maker of lab A
-visiting lab B would see nothing, and with a naive `if (!user)` it would be two divergent code
-paths that drift.
+**Why this shape:** *(revised after review round 1, which measured that the previous sketch
+could not work.)* The first draft added a `publicRead()` access function returning
+`or: [published-on-this-host, own-org-rows]`. The plugin defeats it. `withTenantAccess.js`
+pushes our result into a constraint list and then — whenever `req.user` exists and is not a
+master — pushes `{ tenant: { in: userTenantIDs } }`, joining them with **AND**. For a
+signed-in maker of lab A browsing lab B that reduces to `tenant IN [A]`, so B's published
+content is invisible: precisely the case the `or` was drawn for.
 
-The `@isolation-mutation-point` marker is deliberate — `scripts/isolation-mutation.sh` breaks
-marked lines and requires the harness to notice, so this line joins the set that must be proven
-breakable.
+Worse, when a user has **no** memberships the wrapper returns `false` outright before our
+access is consulted, so a freshly registered account — feature 004's entire output — would see
+**less than a logged-out visitor**.
+
+Going around collection access rather than through it is what `getSystemScopedPayload` already
+does for the mirror-image problem, and `buildTenantClient` is built for it: it AND-s the
+caller's `where` with the tenant constraint and documents that *"a caller cannot widen the
+scope by supplying its own"*. The public client adds one more AND and removes the writers.
+
+**`PUBLISHABLE` is derived, not listed.** Categories, `local` and `maquina` carry no `status`,
+so filtering them on one would match nothing. A hand-kept list would rot the first time a
+collection gains or loses `status` — so a test asserts that `PUBLISHABLE` is exactly the set of
+scoped collections whose config declares a `status` field, the same discipline `SCOPE_REGISTRY`
+already gets from `registry.test.ts`.
 
 ### Sketch 3: `teamOnly` — who may publish
 
@@ -203,23 +254,38 @@ the same write as the transition — so 005 can credit correctly for content app
 existed, with no backfill. SC-004's sequence (publish → unpublish → republish → one record) is
 what proves the `aprovacaoRegistrada` guard rather than the `entering` guard alone.
 
-### Sketch 6: `payload-locked-documents`, scoped
+### Sketch 6: `payload-locked-documents` — nothing to leak
 
-**File:** `apps/web/payload.config.ts` (modify)
+**File:** `apps/web/collections/content/*.ts` (new)
 
 ```ts
-// Feature 000 escalated this in writing: the collection references our scoped documents,
-// the plugin does not compose access over it, and org B can enumerate org A's document IDs.
-collections: [...ours],
-// Payload exposes its internal collections for override; compose the same constraint.
-onInit: composeAccessFor('payload-locked-documents', scopedAccess()),
+export const Projeto: CollectionConfig = {
+  slug: 'projeto',
+  // No rows are written to `payload-locked-documents` for this collection at all, so there is
+  // nothing for another organization to enumerate. A supported switch, not a workaround.
+  lockDocuments: false,
+  …
+}
 ```
 
-**Why this shape:** CLR-004 chose scoping over denial so the admin keeps its "someone else is
-editing this" warning, which matters for a team sharing one admin (US7). **The fallback is
-denial**, and which one ships depends on whether Payload permits composing access on an
-internal collection — a fact to establish with a spike, not an assumption. SC-003 requires
-seeing the leak **fail first**, so the test is written against today's behaviour before the fix.
+**Why this shape:** *(replaces the round-1 sketch, which invented an API.)* That draft wrote
+`onInit: composeAccessFor('payload-locked-documents', scopedAccess())`. `onInit` is
+`(payload: Payload) => Promise<void> | void` — a seeding hook that cannot compose access, and
+`composeAccessFor` does not exist.
+
+`lockDocuments?: { duration } | false` **does** exist, per collection
+(`payload/dist/collections/config/types.d.ts`). Setting it `false` on scoped content means the
+leak has no rows to occur through — strictly better than filtering rows that should not be
+created.
+
+The cost is the one CLR-004 already priced as its fallback: no "someone else is editing this"
+warning on those collections. Two team members can now overwrite each other silently, which
+matters for the shared admin of US7 — so it is **stated here rather than discovered**, and it is
+worth revisiting if Payload later exposes access composition on internal collections.
+
+SC-003 is unchanged and still requires seeing the leak **fail first** against today's
+behaviour, because `lockDocuments: false` on our collections does not protect any collection
+that forgets the flag — which is what the test is for.
 
 ### Sketch 7: one counter strategy, and the drift it can produce
 
@@ -253,8 +319,11 @@ but it obeys the same rule: derived at write, verified by the same reconciliatio
   dependency. Storage swaps by environment, so the swap rule holds.
 - [x] **Principle 2 — Tenancy is a property of the data:** thirteen collections declared in the
   registry; access returns constraints; `sameTenant` on every scoped relationship; nothing
-  outside `lib/tenancy` touches the Local API. `publicRead` **widens** access and is therefore
-  the highest-risk change in the feature — it joins the mutation-point set.
+  outside `lib/tenancy` touches the Local API. `getPublicScopedPayload` **widens** reach and is
+  therefore the highest-risk change in the feature — it joins the mutation-point set. Round 1
+  is the reason it is a client rather than an access function: the plugin AND-s its own tenant
+  constraint onto every access result, so the widening the public site needs cannot be
+  expressed there at all.
 - [ ] **Principle 3 — Pure game rules:** not applicable, deliberately. This feature writes no
   XP (CLR-001); it records approvals for feature 005 to consume.
 - [x] **Principle 4 — Design and content fidelity:** fields labelled PT-BR, code English; the
@@ -267,7 +336,9 @@ but it obeys the same rule: derived at write, verified by the same reconciliatio
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| `publicRead` leaks unpublished or cross-tenant rows | A public, silent cross-tenant leak — the failure feature 000 exists to prevent | It joins the `@isolation-mutation-point` set; the harness is extended **before** content exists; the `or` branch is tested from all four vantage points (anonymous, member, other-org member, master) |
+| `getPublicScopedPayload` leaks unpublished or cross-tenant rows | A public, silent leak — and it runs with `overrideAccess: true`, so nothing downstream catches it | `@isolation-mutation-point`; unexported from `index.ts`; `PUBLISHABLE` derived from the collection configs rather than listed; harness extended **before** content exists |
+| The harness tests only the vantage points we thought of | The two that actually broke go untested | Round 1 measured both: a **member of another organization** (the plugin ANDs its tenant filter and nullifies the public branch) and a **signed-in user with no membership** (the plugin returns `false` outright, so they see less than an anonymous visitor). Both are now required cases |
+| `resolveTenant` is called per access evaluation | Many host resolutions per request, including nested relationship population | Request-scoped memo. `resolveTenant` is cached, but feature 000 documented that it **degrades when `next/cache` throws** — which is the Local API path tests and seeds use, so the cache cannot be relied on as the only mitigation |
 | Presigned upload bypasses verification | An unverified object is served | Objects land in `quarantine/`, which is not publicly served; only a passing check moves them |
 | Abandoned presigned uploads accumulate | Disk exhaustion — `tech-stack.md` names disk as failure number one | Bucket lifecycle rule; owned by this feature rather than left unowned |
 | Counter drift | Card grids show wrong numbers, quietly | Reconciliation test in CI; the drift paths are named in Sketch 7 |
@@ -285,9 +356,11 @@ an answer.
 ## Quick Start
 
 1. Run the `imageSizes` spike, or decide to drop it.
-2. `publicRead` + `teamOnly` in `access.ts`, harness extended, mutation points marked — before
-   any collection exists to use them.
+2. `getPublicScopedPayload` in `lib/tenancy/public-payload.ts`, plus `teamOnly` and
+   `canPublishField` in `access.ts`. Harness extended and mutation points marked **before** any
+   collection exists to use them — including the member-of-another-org and
+   no-membership vantage points.
 3. `projeto` end to end as the template: registry, relations, review queue, counters.
 4. Uploads: adapter, limits, quarantine, verification, reaper.
 5. The remaining twelve collections against the proven template.
-6. `payload-locked-documents`: the failing test first, then the fix.
+6. `payload-locked-documents`: the failing test first, then `lockDocuments: false`.
