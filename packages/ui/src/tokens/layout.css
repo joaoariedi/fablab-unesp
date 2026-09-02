@@ -1,0 +1,67 @@
+/*
+ * @fablab/ui — layout tokens (T005 / FR-012).
+ *
+ * Breakpoints, spacing, radii and the one shadow the design uses. Imported by
+ * `src/styles.css`; the app never imports this file directly.
+ *
+ * ── The breakpoints, and the thing you cannot do with them ──────────────────────────────
+ *
+ * 390 / 834 / 1440 are *design targets* — the three widths the mockups in
+ * `docs/product/design/` are actually drawn at — not arbitrary thresholds. Naming them
+ * keeps that traceable, which is what FR-012 asks for.
+ *
+ * **`@media (min-width: var(--bp-tablet))` does not work.** Media queries are evaluated
+ * before the cascade, so a custom property has no value at the point the query is tested;
+ * the query is dropped, not defaulted, and the failure is silent. CLR-003 adds no PostCSS,
+ * so there is no `@custom-media` to lower it either. These tokens are therefore the
+ * *declared source of truth* rather than a substitution mechanism: a media query still
+ * writes the literal width, and `tests/layout-tokens.test.ts` is what holds the two in
+ * sync — it rejects any `@media` under `src/` whose pixel width is not one of the three.
+ *
+ * Write media queries mobile-first (`min-width`), so the 390 column is the base and the
+ * two larger targets are additive.
+ */
+
+:root {
+  /* The three design targets. Change one here and the test forces every query to follow. */
+  --bp-mobile: 390px;
+  --bp-tablet: 834px;
+  --bp-desktop: 1440px;
+
+  /*
+   * Spacing: a 4px base, doubling early and coarsening past --space-6. Strictly
+   * increasing on purpose — two names for one gap would be the `--color-rosa` mistake in
+   * spacing form, where picking the wrong token renders identically and no test can tell.
+   */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+  --space-9: 48px;
+  --space-10: 64px;
+  --space-11: 80px;
+  --space-12: 96px;
+
+  /* "Cantos levemente arredondados" (visual-identity.md § Cards): sm for chips and
+     inputs, md for cards and buttons. Two steps, because a third would be a choice
+     nobody could make consistently. */
+  --radius-sm: 4px;
+  --radius-md: 12px;
+
+  /*
+   * The hard offset shadow — "sombra dura deslocada" (visual-identity.md § Botões), the
+   * hero-v2 style that the canonical primary button inherits. The blur is explicitly
+   * `0px`: a blur radius here would make it a soft shadow under a token whose name
+   * promises it is not, and every consumer would inherit that silently.
+   *
+   * The colour is `--color-navy` and not `--color-primary`: the shadow is platform
+   * identity, fixed for every organization (CLR-001), and the button it sits under is
+   * already the per-organization accent. A themed shadow behind a themed fill loses the
+   * offset entirely for a dark primary.
+   */
+  --shadow-hard: 4px 4px 0px var(--color-navy);
+}

@@ -1,5 +1,11 @@
-docs/product/fonts/AldotheApache.ttf
+# SquareFont left the project on 2026-08-27 (designer replaced it with Aldo the Apache).
+# These entries STAY, with the reason inverted: they no longer stage a local setup, they
+# stop an accidental commit of a binary whose own metadata says "Typeface © Bou Fonts.
+# 2011. All Rights Reserved" into a public MIT repo. An earlier README told developers to
+# put Square.ttf in that folder, so working trees out there still have it.
+# Aldo the Apache IS tracked; it carries no such claim (docs/product/fonts/).
 docs/product/fonts/Square.ttf
+docs/product/fonts/Squareo.ttf
 
 # --- workspace (feature 000) ---
 node_modules/

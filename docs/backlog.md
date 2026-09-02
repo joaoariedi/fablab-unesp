@@ -6,7 +6,8 @@ Um item por seção, com ID sequencial; ao resolver, registrar a data e mover pa
 
 ## ISS-001 — Licenças das fontes Aldo the Apache e SquareFont
 
-- **Status:** RESOLVIDA (2026-08-25) — ver seção Resolvidos.
+- **Status:** RESOLVIDA (2026-08-25) — **encerrada em definitivo em 2026-08-27**, ver
+  seção Resolvidos.
 - **O quê:** os arquivos `product/fonts/AldotheApache.ttf` (AJ Paglia) e
   `product/fonts/Square.ttf` (© Bou Fonts 2011) vieram **sem arquivo de licença**;
   fontes desses acervos costumam ser "free for personal use". Comfortaa é OFL — ok.
@@ -34,8 +35,25 @@ Um item por seção, com ID sequencial; ao resolver, registrar a data e mover pa
 
 ## Resolvidos
 
-- **ISS-001 (2026-08-25):** pesquisa confirmou as duas fontes como **"100% Free"** no
-  dafont (uso comercial reportado), porém **sem texto de licença dos autores** — logo,
-  uso no site liberado, **redistribuição no repositório público evitada**: TTFs
-  removidos do repo e do histórico ao abrir o código (MIT); Comfortaa (OFL) permanece
-  com a licença. Setup e caminhos futuros: `product/fonts/README.md`.
+- **ISS-001 (2026-08-25, revisada em 2026-08-27):** pesquisa confirmou as duas fontes como
+  **"100% Free"** no dafont, porém **sem texto de licença dos autores** — uso no site
+  liberado, redistribuição evitada; TTFs removidos do repo e do histórico ao abrir o
+  código (MIT); Comfortaa (OFL) permanece com a licença.
+  **Revisão (2026-08-27, decisão do PO):** ao verificar os três lugares que o próprio
+  dafont indica, as duas fontes se separaram. O **arquivo baixado não traz readme** em
+  nenhuma delas e o **site do autor da Aldo estava fora do ar**, mas os **metadados
+  embutidos** divergem: a Aldo **não declara restrição alguma**, enquanto a SquareFont diz
+  `© Bou Fonts. 2011. All Rights Reserved`. Também ficou registrado que o rótulo do dafont
+  é, pelo FAQ do próprio site, **"just an indication"** — não é licença.
+  **Resultado:** `AldotheApache.ttf` passa a ser versionado com
+  [`product/fonts/THIRD-PARTY-NOTICE.md`](product/fonts/THIRD-PARTY-NOTICE.md), que declara
+  o risco aceito e que o MIT do repositório **não** cobre a fonte; a **SquareFont continua
+  fora**. Permissão por escrito dos autores segue como o caminho definitivo.
+  **Encerramento (2026-08-27, decisão da designer — rodada 7):** a SquareFont **saiu do
+  projeto**; a Aldo the Apache assume também o logotipo "CITE BAURU". O item fecha **na
+  origem**: a única fonte com `All Rights Reserved` declarado não é mais usada, e não resta
+  nenhuma fonte fora do repositório. O "Plano B" (substituir por fonte OFL próxima) não
+  chegou a ser necessário — a designer resolveu com uma fonte que o projeto já tinha.
+  **Resíduo:** permissão escrita de AJ Paglia continua desejável, agora como o único item
+  em aberto e com peso maior — a Aldo passou a ser a única fonte não-corpo da identidade.
+  Não é gate de lançamento; o fallback (sans condensada) mantém o build de pé.

@@ -78,6 +78,25 @@ jobs:
       # Payload clients out of application code (FR-014).
       - run: pnpm lint
 
+  colour-tokens:
+    name: Colour tokens
+    # The CSS half of the FR-002 colour fence, and it needs a job of its own because NOTHING
+    # else runs it: `pnpm lint` is `eslint .`, which executes no shell scripts, and ESLint
+    # cannot read `.css` at all. Review round 1 added the script because CSS Modules is where
+    # component colour is actually written; round 2 found its exit contract inverted so it
+    # failed on a clean tree; round 3 found it belonged to no pipeline. Three rounds, one
+    # mechanism, never once in a position to fire.
+    #
+    # No pnpm, no Node, no database: the script is grep over `.css` files, so checkout is the
+    # only setup it needs.
+    #
+    # Being here is still not being merge-blocking — branch protection lists required checks
+    # by NAME, and a new job joins none of them automatically (T046).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/check-colour-tokens.sh
+
   typecheck:
     name: Type check
     runs-on: ubuntu-latest

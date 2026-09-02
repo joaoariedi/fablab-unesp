@@ -19,10 +19,14 @@ site, o README do repositório e peças gráficas. Canon complementar:
 
 ## Tipografia
 
-- **Aldo the Apache** — logo e logotipo; pode ser usada em títulos e subtítulos.
-- **Square Font** — logotipo; pode ser usada em títulos e subtítulos.
+- **Aldo the Apache** — logo, **logotipo**, títulos e subtítulos.
+- ~~**Square Font** — logotipo; pode ser usada em títulos e subtítulos.~~ **Removida em
+  2026-08-27** (decisão da designer): a Aldo the Apache assume o logotipo. Ver
+  [`../visual-identity.md`](../visual-identity.md) § Tipografia.
 - **Comfortaa** — corpo de texto (disponível no Google Fonts e no pacote Debian
   `fonts-comfortaa`).
+
+São **duas** fontes. Ambas versionadas em [`../fonts/`](../fonts/).
 
 ## Elementos gráficos
 

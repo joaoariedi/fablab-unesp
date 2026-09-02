@@ -1,0 +1,112 @@
+/*
+ * @fablab/ui — palette tokens (T004 / FR-001, CLR-001).
+ *
+ * The seven identity colours of the 2026-08-23 decision, as custom properties. Imported by
+ * `src/styles.css`; the app never imports this file directly.
+ *
+ * ── The one file that may write a colour ────────────────────────────────────────────────
+ *
+ * `tokens/` is the single exemption from the colour fence (eslint.config.mjs +
+ * scripts/check-colour-tokens.sh): everywhere else a hex, an `rgb()` or an `hsl()` is a
+ * lint error naming the token to use instead. So every value below has exactly one
+ * definition, and a component that wants a colour resolves it through `var()`.
+ *
+ * ── The split that matters (CLR-001) ────────────────────────────────────────────────────
+ *
+ * Six of these are *platform identity*: identical for every organization, forever. Exactly
+ * one token varies per organization, and it is `--color-primary`.
+ *
+ * The pink is the trap. It is the default accent, not the accent, so it is named
+ * `--color-rosa-raw`, it is private, and lint rejects it outside this directory. There is
+ * deliberately no `--color-rosa` to reach for: a CTA painted with the raw pink renders
+ * *identically* to one painted with `--color-primary` for CITe — the default makes them the
+ * same colour — passes every test, and fails to co-brand only once a second organization
+ * exists. A convention could not catch that; a name that is visibly wrong plus a lint rule
+ * can. (Review round 1; the first draft exported `--color-rosa` and relied on documentation.)
+ */
+
+:root {
+  /*
+   * Platform identity — fixed for every organization (CLR-001). The role comments are the
+   * ones from the token contract; they are what makes picking the right token possible
+   * without opening the mockups.
+   */
+  --color-navy: #191C37; /* base background; text on light surfaces */
+  --color-azul: #3760AA; /* links, icons, graphic elements */
+  --color-teal: #74B7A5; /* hero band, progress detail, status chips */
+  --color-amarelo: #F8C810; /* XP, rewards, mission icons, numbering */
+  --color-laranja: #EE703E; /* the canonical logo chip — never themed */
+  --color-claro: #DCE7E3; /* light surfaces; text on dark */
+
+  /*
+   * PRIVATE. The default value of --color-primary, and never the accent itself.
+   *
+   * The `-raw` suffix exists so that reaching for it reads as wrong at the call site. Its
+   * only legitimate use is the declaration immediately below — anything else is a colour
+   * that will not follow an organization's theme.
+   */
+  --color-rosa-raw: #EE9DC4;
+
+  /*
+   * Per-organization (CLR-001, FR-003). CTAs, active tabs and card titles.
+   *
+   * `apps/web` overrides this one declaration from the validated `theme.primaryColor` and
+   * overrides nothing else. Defaulting it here rather than in the app is what makes FR-004
+   * free: a page rendered with no organization theme — the workbench, an error boundary, a
+   * static shell — is already correctly branded, with no second code path to keep in sync.
+   */
+  --color-primary: var(--color-rosa-raw);
+
+  /*
+   * ── Background ROLES (T036 / FR-011) ──────────────────────────────────────────────────
+   *
+   * Named by role rather than by colour (contracts/tokens.md § Colour), so the pages that
+   * do not sit on navy need no per-page colour overrides: a region re-declares
+   * `--surface-page` and everything derived from it follows.
+   *
+   * FR-011 names **two** non-navy surfaces and they are different colours. Biblioteca 3D
+   * and Aulas use a white content area; onboarding and Minha Conta use the light one
+   * (visual-identity.md § Paleta: "fundo branco" for the first pair, "fundo claro" for the
+   * second). One token carrying both would render *almost* right everywhere — the failure
+   * nobody reports, and one no test could see once a single name covers the two roles.
+   */
+  --surface-page: var(--color-navy); /* the base, "no site em geral" */
+  --surface-light: var(--color-claro); /* onboarding and Minha Conta */
+
+  /*
+   * The white content area of Biblioteca 3D and Aulas — a literal, and deliberately not a
+   * palette token. FR-001 fixes the identity at seven colours and white is not among them,
+   * so a `--color-white` would smuggle in an eighth (and `token-data.test.ts` would then
+   * require a `PALETTE.white` entry documenting the contrast of a non-identity colour).
+   * `tokens/` is the one place a literal may be written, which is why it may be written here.
+   */
+  --surface-inverted: #FFFFFF;
+
+  /*
+   * Derived, not declared: the card takes the surface it sits on. On navy the cards are
+   * dark, on the white pages "os cards são brancos com contorno azul navy escuro e sombra"
+   * (visual-identity.md § Cards) — in both cases the separation comes from the thin outline
+   * and `--shadow-hard`, never from a contrasting fill. Deriving it is what makes the white
+   * pages free: they re-declare `--surface-page` for their region and the cards follow.
+   */
+  --surface-card: var(--surface-page);
+
+  /*
+   * The teal band, and the one surface that must NOT derive from the page.
+   *
+   * FR-011: "the teal band persists on those pages and its items act as filter tags". A band
+   * resolved through `--surface-page` would turn white along with the content area beneath
+   * it, and the filter tags would disappear on exactly the two pages that need them.
+   */
+  --surface-band: var(--color-teal);
+
+  /*
+   * Text roles, so a component picks a direction rather than a colour (FR-017). Round 2 of
+   * visual-identity.md § Paleta settles the light case: "sobre fundo branco, os textos usam
+   * azul navy escuro (não usar rosa em texto pequeno sobre branco)" — which is why there is
+   * no pink text role here to reach for. Both directions are documented AA pairs in
+   * `tokens/index.ts` (`claro` on `navy`, `navy` on `claro`).
+   */
+  --text-on-dark: var(--color-claro);
+  --text-on-light: var(--color-navy);
+}

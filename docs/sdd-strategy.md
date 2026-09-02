@@ -91,10 +91,11 @@ Fatias pequenas mantêm cada espec/plan/tasks dentro de uma janela de contexto s
   F/M, checkbox de termos etc.) **não bloqueiam a implementação** — as specs escritas já
   registram as decisões finais; as artes atualizadas chegam depois como conferência
   visual. **Features 000/001 podem começar imediatamente.**
-- **Fontes:** ~~confirmação de licenças em espera (ISS-001)~~ **resolvida (2026-08-25)**:
-  Comfortaa (OFL) versionada; Aldo the Apache e SquareFont são "100% Free" para uso, mas
-  **não são redistribuídas** no repositório público — setup local e caminhos futuros em
-  `product/fonts/README.md`.
+- **Fontes:** ~~confirmação de licenças em espera (ISS-001)~~ ~~resolvida (2026-08-25)~~
+  **encerrada (2026-08-27)**: a designer removeu a SquareFont e a Aldo the Apache assumiu o
+  logotipo. Restam **duas** fontes, ambas versionadas — Comfortaa (OFL) e Aldo (com
+  [`THIRD-PARTY-NOTICE.md`](product/fonts/THIRD-PARTY-NOTICE.md)). Não há mais fonte fora do
+  repositório nem setup local — ver `product/fonts/README.md`.
 - **Gamificação:** números fechados em 2026-08-23 (1 XP por ação; 5 XP por nível; máximo
   10; curtidas sem XP; cosméticos de recompensa adiados). O brainstorm da 005 foca no que
   restou: moderação/anti-farm, check-in presencial e a recompensa coletiva do Nível do Lab.

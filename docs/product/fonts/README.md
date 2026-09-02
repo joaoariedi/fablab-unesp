@@ -1,31 +1,40 @@
 # Fontes da identidade
 
-Status das três fontes da identidade visual (ver `../visual-identity.md`):
+Status das fontes da identidade visual (ver `../visual-identity.md`).
+Termos de terceiros: [`THIRD-PARTY-NOTICE.md`](THIRD-PARTY-NOTICE.md).
 
-| Fonte | Arquivo no repositório | Licença | Uso |
+| Fonte | No repositório | Licença | Uso |
 |---|---|---|---|
-| **Comfortaa** | `Comfortaa-VariableFont_wght.ttf` + `OFL.txt` | [SIL OFL 1.1](OFL.txt) — redistribuição permitida com a licença junto | Corpo de texto |
-| **Aldo the Apache** (AJ Paglia) | **não redistribuída aqui** | Listada como "100% Free" no [dafont](https://www.dafont.com/aldo-the-apache.font); sem arquivo de licença do autor | Logo, títulos |
-| **SquareFont** (Bou Fonts, 2011) | **não redistribuída aqui** | Listada como "100% Free" no [dafont](https://www.dafont.com/squarefont.font); sem arquivo de licença do autor | Logotipo, títulos |
+| **Comfortaa** | ✅ `Comfortaa-VariableFont_wght.ttf` + `OFL.txt` | [SIL OFL 1.1](OFL.txt) — redistribuição permitida com a licença junto | Corpo de texto |
+| **Aldo the Apache** (AJ Paglia) | ✅ `AldotheApache.ttf` | "100% Free" no [dafont](https://www.dafont.com/aldo-the-apache.font); **sem texto de licença do autor** e **sem restrição declarada** em nenhum lugar — risco aceito e documentado no [aviso](THIRD-PARTY-NOTICE.md) | Logo, logotipo, títulos |
 
-## Por que Aldo the Apache e SquareFont não estão no repositório
+**São duas fontes, não três.** Toda a tipografia do produto está versionada aqui.
 
-As duas fontes são gratuitas para uso (categoria **"100% Free"** no dafont, com uso
-comercial reportado pelos agregadores), mas os autores **não publicam um texto de
-licença** — logo, o direito de **redistribuição** num repositório público não está
-documentado. A postura adotada (2026-08-25, resolução da ISS-001):
+## SquareFont saiu do projeto (decisão da designer, 2026-08-27)
 
-- **Usar no site: sim** — o build converte para WOFF2 e o site serve as fontes
-  (uso amparado pela listagem "100% Free").
-- **Redistribuir os TTFs neste repositório público: não** — os arquivos foram removidos
-  (inclusive do histórico do git).
+A SquareFont (Bou Fonts, 2011) desenhava o logotipo "CITE BAURU" na prancha original. A
+designer decidiu **substituí-la pela Aldo the Apache**, que já cobria o logo e os títulos.
 
-## Como obter os arquivos (setup local)
+Isso encerra a pendência de licenciamento **na origem, e não por contorno**: a única fonte
+cujos metadados diziam `© Bou Fonts. 2011. All Rights Reserved` simplesmente **não é mais
+usada**. Não há mais fonte fora do repositório, nem passo de setup local, nem caminho de
+build que dependa de arquivo ausente — e o CI passa a renderizar exatamente a mesma
+tipografia que a produção.
 
-1. Baixe **Aldo the Apache**: <https://www.dafont.com/aldo-the-apache.font>
-2. Baixe **SquareFont**: <https://www.dafont.com/squarefont.font>
-3. Coloque `AldotheApache.ttf` e `Square.ttf` nesta pasta (estão no `.gitignore`).
+> Registro da investigação que levou até aqui (2026-08-27): o rótulo do dafont **não é
+> licença** — o FAQ do próprio site avisa que *"the licence mentioned above the download
+> button is just an indication"*. Verificados os três lugares que o dafont indica, as duas
+> fontes se separaram: o arquivo da Aldo não traz readme, o site do autor estava fora do ar
+> e os metadados **não declaram restrição alguma**; os da SquareFont declaravam
+> `All Rights Reserved`. Era essa assimetria que mantinha a SquareFont fora. A decisão da
+> designer torna a assimetria irrelevante.
 
-*(Melhoria futura: permissão por escrito dos autores — AJ Paglia via
-[ajpaglia.com](https://ajpaglia.com), Bou Fonts via dafont — permitiria versionar os
-arquivos; alternativa: substituir por similares OFL, decisão com a designer.)*
+## `Square.ttf` continua no `.gitignore` — de propósito
+
+As entradas de `.gitignore` para `Square.ttf` e `Squareo.ttf` **não foram removidas**, e o
+motivo mudou de sinal: antes elas organizavam um setup local; agora elas evitam um commit
+acidental de um binário `All Rights Reserved` em repositório público MIT — sem que ninguém
+tenha qualquer razão para querer esse arquivo.
+
+O risco é concreto: a versão anterior deste README **mandava** colocar `Square.ttf` nesta
+pasta. Quem seguiu aquela instrução ainda tem o arquivo na árvore de trabalho. Pode apagá-lo.

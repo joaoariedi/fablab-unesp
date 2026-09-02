@@ -10,6 +10,31 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) �
 
 ### Added
 
+- **Design system** (`@fablab/ui`, feature 001) — the identity layer the product renders
+  from. Tokens (palette, two font faces with a whole-pixel type scale, breakpoints/spacing/
+  radii/hard shadow), nine components, the isometric shape vocabulary, and the responsive
+  shell: `HeaderNav`, `MobileTabBar`, `MenuSheet`, `Footer`, with the tab sets held as data.
+  Exactly one token varies per organization — `--color-primary`, resolved from
+  `organizations.theme` and validated twice (collection field, then again before it reaches
+  CSS).
+- **The site serves.** The frontend layout mounts the shell, injects the validated accent,
+  preloads the display face, and turns an unresolved host into a 404 rather than falling
+  back to another organization's identity. Placeholder routes stand behind every navigation
+  destination so the shell can be walked; the real pages are feature 003's.
+- **A component workbench** at `/workbench`, built from the public surface only and 404ing
+  in production, rendering every component and state at 390 / 834 / 1440.
+- **Two colour fences.** ESLint rejects hex literals and the private `--color-rosa-raw` in
+  TypeScript — including inside template literals, which styled-jsx makes reachable — and
+  `scripts/check-colour-tokens.sh` covers `.css`, where component colour is actually
+  written. The script now has its own merge-blocking CI job (`Colour tokens`); it previously
+  ran nowhere, because `pnpm lint` is `eslint .` and executes no shell scripts.
+- **A contrast gate.** `DOCUMENTED_PAIRS` is iterated against WCAG AA thresholds, so a pair
+  that fails cannot be documented — which answers `visual-identity.md`'s open question about
+  pink on navy (8.12:1, clears AA at body size; on white it is 2.05:1 and forbidden).
+
+
+### Added — feature 000
+
 - **Spec-kit scaffolding** (`.specify/`): templates for spec, plan, tasks and checklist.
 - **Project constitution** v1.0.0 (`.specify/memory/constitution.md`) — five principles
   (locked stack with swappable services; tenancy as a property of the data; pure game
@@ -43,6 +68,14 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) �
 
 ### Changed
 
+- **Fonts: two, not three.** The designer replaced SquareFont with Aldo the Apache for the
+  "CITE BAURU" logotype (2026-08-27), which closed the licensing question at its source —
+  SquareFont was the only face whose metadata asserted `All Rights Reserved`. Both remaining
+  faces ship in the repository, so CI renders what production renders, and `--font-logotype`
+  was deleted rather than aliased to `--font-display`.
+- **Seed**: the CITe organization carries `localhost` and `127.0.0.1` as domains, so a dev
+  machine serves the site even once fixture organizations have switched off the
+  single-organization host fallback.
 - **Next is pinned to `>=16.2.6 <17`,** not the `>=15.5` the plan chose. Payload 3.88's
   peer range excludes the whole 15.5.x line, so the original pin was unsatisfiable. Next 16
   also renames `middleware` to `proxy` (and moves it from the `edge` runtime to `nodejs`),
