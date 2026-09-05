@@ -123,7 +123,7 @@ wrong, they are twelve wrong collections.
 | T046 | Isolation harness extended to every new collection — admin, REST, GraphQL and **relationship pickers**, which a scoped list view does not cover by itself | FR-021, SC-002 | `apps/web/tests/tenancy/isolation.test.ts` | T044 |
 | T047 | Migration for the twelve | FR-001 | `apps/web/migrations/` | T044 |
 | T048 | [P] Content-model docs and CHANGELOG | — | `docs/`, `CHANGELOG.md` | T044 |
-| T049 | Tick CHK001–CHK031 against the implementation; **leave open anything not genuinely satisfied** | all | `checklists/requirements.md` | T045, T046 |
+| T049 | Tick CHK001–CHK095 across all four checklists against the implementation; **leave open anything not genuinely satisfied** | all | `checklists/requirements.md` | T045, T046 |
 | T050 | Confirm every feature-000 and feature-001 gate still passes and the new ones are merge-blocking — **verified against the live protection API**, not the workflow file | SC-012 | protection API, `.github/workflows/ci.yml` | T049 |
 
 ## Coverage
