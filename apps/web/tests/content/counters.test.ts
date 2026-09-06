@@ -36,21 +36,36 @@ import type { CounterField } from '../../lib/content/counters'
  */
 
 /**
- * How the truth is recomputed for each counter of FR-020.
- *
- * `satisfies Record<CounterField, ...>` is the anti-rot device, and it is the reason this map
- * is keyed by the counter field rather than written as a list: a fifth member added to
- * `CounterField` in `lib/content/counters.ts` fails **typecheck** here until someone states
- * how it reconciles. A hand-kept list would simply not mention it, and the gate would go on
- * reporting "all counters in sync" while ignoring one.
+ * FR-020's four derived values: the three counters of `CounterField` plus `formatos`, which is
+ * derived on the document being saved rather than counted across rows — so it is not a counter
+ * and never arrives through that type. Both halves are reconciled by this gate, because FR-020
+ * makes no such distinction: it names four values and demands one maintenance strategy.
  */
-type CounterSource =
+type DerivedField = CounterField | 'formatos'
+
+/**
+ * How the truth is recomputed for each derived value of FR-020.
+ *
+ * `satisfies Record<DerivedField, ...>` is the anti-rot device, and it is the reason this map
+ * is keyed by the field rather than written as a list: a fifth member added to `CounterField`
+ * in `lib/content/counters.ts` fails **typecheck** here until someone states how it reconciles.
+ * A hand-kept list would simply not mention it, and the gate would go on reporting "all
+ * counters in sync" while ignoring one.
+ */
+type DerivedSource =
   /** Recount: the rows exist, so the stored value can be re-derived from them. */
   | { from: { collection: string; foreignKey: string } }
   /** No rows exist to count. Stated with its reason — see the inventory test below. */
   | { noSourceRows: string }
+  /**
+   * The collection this value lives on is not in the config yet, so there is nothing to
+   * recount and any recount written now would be written against a field shape nobody has
+   * committed to. **Armed, not skipped**: the guard reports it the moment its collection
+   * appears, so the commit that gives it a subject is the commit that must reconcile it.
+   */
+  | { awaitingSubject: { collection: string; task: string; derivedFrom: string } }
 
-const COUNTER_SOURCES = {
+const DERIVED_SOURCES = {
   curtidas: { from: { collection: 'curtida', foreignKey: 'alvo' } },
   // A download persists nothing — no row per download is the whole reason `downloads` is a
   // `delta` derivation rather than a `count` (plan § Sketch 7). There is therefore no truth
@@ -62,23 +77,63 @@ const COUNTER_SOURCES = {
       'the delta is covered by the download test (T036, FR-016) instead',
   },
   totalModelos: { from: { collection: 'modelo3d', foreignKey: 'categoria' } },
-} as const satisfies Record<CounterField, CounterSource>
+  // FR-020's fourth derived value, and the only one that is not a counter: `formatos` is the
+  // set of extensions of the document's own `arquivosModelo` (data-model.md § Derived values),
+  // computed on save. It lives on `modelo3d`, which T039 adds in phase **002b** — so 002a has
+  // no row to reconcile and no committed field shape to recount from. Declaring it anyway is
+  // the point: round 4 found this gate covering three of the four, with the rot guard unable
+  // to catch the fourth later because it filtered on `type === 'number'` and `formatos` is a
+  // list of extensions. Both halves are closed here — the value is declared, and the guard
+  // below refuses this placeholder the moment `modelo3d` enters the config.
+  formatos: {
+    awaitingSubject: {
+      collection: 'modelo3d',
+      task: 'T039 (phase 002b)',
+      derivedFrom: 'the extensions of arquivosModelo, computed on save (plan § Sketch 7)',
+    },
+  },
+} as const satisfies Record<DerivedField, DerivedSource>
 
 /** Derived from the map, never written twice — the two cannot disagree. */
-const COUNTER_FIELDS = Object.keys(COUNTER_SOURCES) as CounterField[]
+const DERIVED_FIELDS = Object.keys(DERIVED_SOURCES) as DerivedField[]
 
 /**
- * Read-only numbers that are **not** FR-020 counters. Explicit, so the rot guard below can
- * demand that every other derived-looking field is either reconciled here or listed here with
- * a reason — a new one can be added, but not silently.
+ * System-maintained fields of **any type** that are not FR-020 derived values. Explicit, so the
+ * rot guard below can demand that every other derived-looking field is either reconciled here
+ * or listed here with a reason — a new one can be added, but not silently.
  */
-const NOT_AN_FR020_COUNTER: Record<string, string> = {
+const NOT_AN_FR020_DERIVED: Record<string, string> = {
   'organizations.storageUsedMb':
     'not one of FR-020\'s four derived values; its stated strategy is a periodic job ' +
     '(Organizations.ts:178), not the same-transaction one this gate reconciles',
+  'projeto.aprovacaoRegistrada':
+    'a record of a transition, not a derivation: stampApproval writes it once at the first ' +
+    'publication and nothing recomputes it (T008, FR-009). Its gate is stamp-approval.test.ts',
+  'projeto.aprovadoEm':
+    'the date half of the same approval record — written once by stampApproval, never ' +
+    'derived from other rows, and a republication does not rewrite it (FR-009)',
 }
 
-type CounterColumn = { collection: string; field: CounterField }
+/**
+ * Written by Payload itself on an upload collection, from the bytes it stored. A rule rather
+ * than twenty-one inventory lines: these arrive with the `upload` option, so listing them one
+ * by one would mean editing this file every time a media collection is added — the kind of
+ * chore that ends with the guard being deleted. Scoped to upload collections and to the names
+ * Payload generates, so a genuinely derived field on a media collection is still caught.
+ */
+const PAYLOAD_UPLOAD_METADATA = new Set([
+  'url',
+  'thumbnailURL',
+  'filename',
+  'mimeType',
+  'filesize',
+  'width',
+  'height',
+  'focalX',
+  'focalY',
+])
+
+type DerivedColumn = { collection: string; field: DerivedField }
 
 type Drift = {
   where: string
@@ -92,14 +147,14 @@ let seeded: { org: number; categoria: number; projeto: number }
 
 const collectionsInConfig = async () => (await configPromise).collections
 
-/** Every (collection, field) pair in the live config that stores an FR-020 counter. */
-const counterColumns = async (): Promise<CounterColumn[]> => {
-  const columns: CounterColumn[] = []
+/** Every (collection, field) pair in the live config that stores an FR-020 derived value. */
+const derivedColumns = async (): Promise<DerivedColumn[]> => {
+  const columns: DerivedColumn[] = []
   for (const collection of await collectionsInConfig()) {
     for (const field of collection.flattenedFields) {
       const name = (field as { name?: string }).name
-      if (name && (COUNTER_FIELDS as string[]).includes(name)) {
-        columns.push({ collection: collection.slug, field: name as CounterField })
+      if (name && (DERIVED_FIELDS as string[]).includes(name)) {
+        columns.push({ collection: collection.slug, field: name as DerivedField })
       }
     }
   }
@@ -107,9 +162,13 @@ const counterColumns = async (): Promise<CounterColumn[]> => {
 }
 
 /** Rows whose stored counter disagrees with a recount of its source rows. */
-const driftIn = async (column: CounterColumn, known: Set<string>): Promise<Drift[]> => {
-  const declared = COUNTER_SOURCES[column.field]
-  if ('noSourceRows' in declared) return []
+const driftIn = async (column: DerivedColumn, known: Set<string>): Promise<Drift[]> => {
+  const declared: DerivedSource = DERIVED_SOURCES[column.field]
+  // Nothing to recompute from: no rows are persisted (`downloads`), or the collection that
+  // would hold them is not in this config yet (`formatos`). Neither is silent — the matrix
+  // tests below demand a stated reason, and the rot guard refuses a placeholder whose
+  // collection has since arrived.
+  if ('noSourceRows' in declared || 'awaitingSubject' in declared) return []
   const { from } = declared
 
   const { docs } = await payload.find({
@@ -148,10 +207,80 @@ const driftIn = async (column: CounterColumn, known: Set<string>): Promise<Drift
   return drifts
 }
 
+/**
+ * The shape the rot guard reads. Deliberately structural rather than Payload's own types: the
+ * guard has to be callable with a collection the app does not have yet, which is the only way
+ * to prove it is armed for `formatos` before `modelo3d` exists (T039, 002b).
+ */
+type ScannedField = { name?: string; type?: string; admin?: { readOnly?: boolean } }
+type ScannedCollection = {
+  slug: string
+  /** Payload sanitizes this to `false` on a collection that declares no `upload` option. */
+  upload?: unknown
+  flattenedFields: readonly ScannedField[]
+}
+
+/**
+ * A declaration accounts for a field only when it states how the value is recomputed, or
+ * states why nothing can recompute it. A placeholder states neither — it says "not yet" — so
+ * it deliberately does **not** account for a field that exists.
+ */
+const isReconciledHere = (name: string): boolean => {
+  const declared: DerivedSource | undefined = (DERIVED_SOURCES as Record<string, DerivedSource>)[
+    name
+  ]
+  return declared !== undefined && !('awaitingSubject' in declared)
+}
+
+/**
+ * Placeholders whose collection is now in the config — the tripwire for a value declared in a
+ * phase that had no subject for it. Reported independently of the field scan on purpose: a
+ * collection could arrive with the field not marked `admin.readOnly`, and the scan would then
+ * never look at it while the map went on claiming coverage.
+ */
+const placeholdersWithASubject = (slugs: ReadonlySet<string>): string[] =>
+  DERIVED_FIELDS.flatMap((field) => {
+    const declared: DerivedSource = DERIVED_SOURCES[field]
+    if (!('awaitingSubject' in declared)) return []
+    const { collection } = declared.awaitingSubject
+    return slugs.has(collection) ? [`${collection}.${field}`] : []
+  })
+
+/**
+ * Every system-maintained field in a config that nothing in this file accounts for.
+ *
+ * **No filter on field type.** It used to skip anything that was not a `number`, which round 4
+ * found meant the guard could never fire for `formatos` — a list of extensions. `admin.readOnly`
+ * is the marker of a value the system writes and a request does not, whatever its type, and
+ * that is the population FR-020 draws from.
+ *
+ * Extracted from the assertion that it is empty so the guard can be *probed* — an assertion
+ * over the live config alone can only ever show that the guard found nothing, never that it
+ * would have found something.
+ */
+const unaccountedDerivedFields = (collections: readonly ScannedCollection[]): string[] => {
+  const slugs = new Set(collections.map((collection) => collection.slug))
+  // A Set, because a placeholder whose collection has arrived is normally also picked up by
+  // the field scan below, and reporting it twice would make the failure read like two problems.
+  const unaccounted = new Set(placeholdersWithASubject(slugs))
+
+  for (const collection of collections) {
+    const isUploadCollection = Boolean(collection.upload)
+    for (const field of collection.flattenedFields) {
+      if (!field.admin?.readOnly || !field.name) continue
+      if (isUploadCollection && PAYLOAD_UPLOAD_METADATA.has(field.name)) continue
+      const key = `${collection.slug}.${field.name}`
+      if (isReconciledHere(field.name) || key in NOT_AN_FR020_DERIVED) continue
+      unaccounted.add(key)
+    }
+  }
+  return [...unaccounted]
+}
+
 /** The gate itself: every counter column, every row, recomputed. */
 const reconcileEveryCounter = async (): Promise<Drift[]> => {
   const known = new Set((await collectionsInConfig()).map((c) => c.slug))
-  const columns = await counterColumns()
+  const columns = await derivedColumns()
   const drifts: Drift[] = []
   for (const column of columns) drifts.push(...(await driftIn(column, known)))
   return drifts
@@ -213,7 +342,7 @@ describe('every stored counter equals a recount of its source rows (T031, FR-020
     // Without this, the gate below would report "no drift" on an empty matrix and the whole
     // file would be a green light for nothing — the exact failure mode a reconciliation test
     // is most likely to ship with.
-    const columns = await counterColumns()
+    const columns = await derivedColumns()
     expect(
       columns,
       'no collection in the config stores an FR-020 counter, so the reconciliation gate ' +
@@ -269,13 +398,21 @@ describe('the gate catches drift rather than merely running (T031, FR-020)', () 
 
 describe('the reconciliation matrix cannot rot (T031, SC-012)', () => {
   it('states how every counter of FR-020 is recomputed', async () => {
-    // `satisfies Record<CounterField, CounterSource>` already fails the typecheck for a
+    // `satisfies Record<CounterField, DerivedSource>` already fails the typecheck for a
     // missing member. This asserts the runtime half: every declaration carries a usable
     // recount or a stated reason, so none can be left as an empty placeholder.
-    for (const field of COUNTER_FIELDS) {
-      const declared = COUNTER_SOURCES[field] as CounterSource
+    for (const field of DERIVED_FIELDS) {
+      const declared = DERIVED_SOURCES[field] as DerivedSource
       if ('noSourceRows' in declared) {
         expect(declared.noSourceRows.length, `${field} skips reconciliation with no reason`)
+          .toBeGreaterThan(20)
+      } else if ('awaitingSubject' in declared) {
+        // A placeholder has to say what it is waiting for, who brings it, and what the recount
+        // will be — otherwise the tripwire fires in 002b onto a note nobody can act on.
+        const { collection, task, derivedFrom } = declared.awaitingSubject
+        expect(collection, `${field} awaits a collection it does not name`).toBeTruthy()
+        expect(task, `${field} names no task that will give it a subject`).toBeTruthy()
+        expect(derivedFrom.length, `${field} does not say what it will be derived from`)
           .toBeGreaterThan(20)
       } else {
         expect(declared.from.collection, `${field} names no source collection`).toBeTruthy()
@@ -284,41 +421,106 @@ describe('the reconciliation matrix cannot rot (T031, SC-012)', () => {
     }
   })
 
-  it('reconciles every counter except the one inventory of unrecountable ones', async () => {
-    // The escape hatch is an inventory, not a per-case judgement: adding to it is a visible
-    // diff someone has to defend, which is the same discipline SCOPE_REGISTRY gets.
-    const unrecountable = COUNTER_FIELDS.filter((f) => 'noSourceRows' in COUNTER_SOURCES[f])
-    expect(unrecountable).toEqual(['downloads'])
+  it('reconciles every derived value except the two inventories of exceptions', async () => {
+    // The escape hatches are inventories, not per-case judgements: adding to either is a
+    // visible diff someone has to defend, which is the same discipline SCOPE_REGISTRY gets.
+    const unrecountable = DERIVED_FIELDS.filter((f) => 'noSourceRows' in DERIVED_SOURCES[f])
+    expect(unrecountable, 'a second value claims to have no source rows').toEqual(['downloads'])
+
+    // The second hatch is *temporary by construction* — every entry is a value whose subject
+    // is still unwritten, and the guard turns each into a failure the moment it arrives.
+    const awaiting = DERIVED_FIELDS.filter((f) => 'awaitingSubject' in DERIVED_SOURCES[f])
+    expect(awaiting, 'a value is deferred to a phase that has not been argued for').toEqual([
+      'formatos',
+    ])
   })
 
   it('refuses a new derived field that nothing reconciles', async () => {
     // The rot this gate is most exposed to: a later collection adds a derived, admin-readOnly
-    // number — `totalModelos` on a category, or something nobody has thought of — and this
+    // field — `totalModelos` on a category, or something nobody has thought of — and this
     // file goes on reporting "all counters in sync" while never looking at it. Every such
-    // field must be either an FR-020 counter reconciled above or listed in
-    // NOT_AN_FR020_COUNTER with a reason.
-    const unaccounted: string[] = []
-    for (const collection of await collectionsInConfig()) {
-      for (const field of collection.flattenedFields) {
-        const f = field as { name?: string; type?: string; admin?: { readOnly?: boolean } }
-        if (f.type !== 'number' || !f.admin?.readOnly || !f.name) continue
-        const key = `${collection.slug}.${f.name}`
-        const accounted =
-          (COUNTER_FIELDS as string[]).includes(f.name) || key in NOT_AN_FR020_COUNTER
-        if (!accounted) unaccounted.push(key)
-      }
-    }
+    // field must be either an FR-020 derived value reconciled above or listed in
+    // NOT_AN_FR020_DERIVED with a reason.
+    const unaccounted = unaccountedDerivedFields(await collectionsInConfig())
 
     expect(
       unaccounted,
-      'a system-maintained number was added with no way to recompute it. Either declare its ' +
-        'source in COUNTER_SOURCES (and its field name in CounterField) or list it in ' +
-        'NOT_AN_FR020_COUNTER with the reason it is out of FR-020\'s scope',
+      'a system-maintained field was added with no way to recompute it — a number, a list, ' +
+        'or anything else the system writes and a request does not. Either declare its source ' +
+        'in DERIVED_SOURCES (and its name in DerivedField) or list it in NOT_AN_FR020_DERIVED ' +
+        'with the reason it is out of FR-020\'s scope',
     ).toEqual([])
   })
 
   it('watches a real column, so the rot guard is not scanning an empty config', async () => {
-    const columns = await counterColumns()
+    const columns = await derivedColumns()
     expect(columns).toContainEqual({ collection: 'projeto', field: 'curtidas' })
+  })
+})
+
+/**
+ * A stand-in for the collection T039 adds in phase 002b. `modelo3d` does not exist in 002a, so
+ * `formatos` has no subject here — and a guard that is only ever run against a config without
+ * the field is a guard nobody has seen fire. This is the shape it will have: a derived **list
+ * of extensions**, not a number, which is exactly the shape the round-4 review found the guard
+ * could not see.
+ */
+const FAKE_MODELO3D: ScannedCollection = {
+  slug: 'modelo3d',
+  flattenedFields: [
+    { name: 'titulo', type: 'text' },
+    { name: 'formatos', type: 'select', admin: { readOnly: true } },
+  ],
+}
+
+/**
+ * A derived list nobody declared — the rot this guard exists to refuse, in the non-number form
+ * the guard used to wave through.
+ */
+const FAKE_ACERVO: ScannedCollection = {
+  slug: 'acervo',
+  flattenedFields: [{ name: 'etiquetasDerivadas', type: 'text', admin: { readOnly: true } }],
+}
+
+describe('the guard sees derived values that are not numbers (T031, FR-020)', () => {
+  it('covers all four derived values of FR-020, not only the three counters', () => {
+    // FR-020 names four: `curtidas`, `downloads`, `total_modelos` and `formatos`. Three of
+    // them are counters and live in `CounterField`; `formatos` is a derived list on the
+    // document being saved, so it is not a counter and would never arrive through that type.
+    // It still has to be reconciled, and the map is where that is stated.
+    expect(Object.keys(DERIVED_SOURCES).sort()).toEqual([
+      'curtidas',
+      'downloads',
+      'formatos',
+      'totalModelos',
+    ])
+  })
+
+  it('flags a derived field that is not a number', () => {
+    expect(
+      unaccountedDerivedFields([FAKE_ACERVO]),
+      'a system-maintained list was added and the guard walked past it — every green run of ' +
+        'the live-config guard above proves only that no derived *number* is unaccounted for',
+    ).toEqual(['acervo.etiquetasDerivadas'])
+  })
+
+  it('demands a real recount for formatos the moment modelo3d exists', () => {
+    // The tripwire for 002b. `formatos` cannot be reconciled in 002a — there is no collection
+    // to reconcile — so its declaration is a placeholder, and a placeholder that stayed quiet
+    // once its subject arrived would be worse than no declaration at all: the map would claim
+    // coverage the gate never delivers. It must go red on the commit that adds `modelo3d`.
+    expect(
+      unaccountedDerivedFields([FAKE_MODELO3D]),
+      'modelo3d now exists, so formatos has source rows and a placeholder no longer accounts ' +
+        'for it — replace it in DERIVED_SOURCES with the recount from arquivosModelo',
+    ).toContain('modelo3d.formatos')
+  })
+
+  it('stays silent about formatos while 002a has no modelo3d to reconcile', async () => {
+    // The other half of the tripwire: armed, not merely noisy. A guard that reports a field
+    // the config does not have would be turned off by the first person it inconvenienced.
+    expect(unaccountedDerivedFields(await collectionsInConfig())).not.toContain(
+      'modelo3d.formatos',
+    )
   })
 })

@@ -84,29 +84,41 @@ describe('verify.ts records that the collection-level upload restrictions never 
     ).toMatch(/filesize/i)
   })
 
-  it('states that they do not execute, rather than merely mentioning them', () => {
+  it('records that D1 superseded the design this module was written for', () => {
+    // Inverted, and the inversion is the point. The four assertions that used to sit here
+    // demanded the docstring say collection-level mimeTypes/filesize "never execute" and that
+    // this pass was "the only defence" with "no field-level net underneath". D1 turned
+    // `clientUploads` off, so all three became false — and this file was holding them in place.
+    // A green gate defending a claim that has gone wrong is worse than no gate: it is a
+    // reviewer's reason not to look.
     expect(
       note,
-      'The docstring mentions mimeTypes/filesize without saying they never execute on this ' +
-        'path. A mention that reads as "these also apply" is worse than silence.',
-    ).toMatch(/\b(never|not|no)\b[^.]{0,80}\b(execute|executed|run|runs|reached|reach)\b|\b(execute|executed|run|runs|reached|reach)\w*\b[^.]{0,40}\bnever\b/i)
+      'The docstring does not record that D1 superseded the presigned path it describes. A ' +
+        'reader will take its enforcement claims as current.',
+    ).toMatch(/supersede|superseded|D1/i)
   })
 
-  it('names the mechanism, so the claim can be checked rather than believed', () => {
+  it('still names the mechanism, so the measurement survives the architecture change', () => {
+    // Spike S1's finding is not wrong — it is scoped. `generateFileData` really does return at
+    // `if (!file)` before `checkFileRestrictions`, on `clientUploads: true`. That measurement is
+    // *why* D1 turned it off, so it must stay readable rather than being deleted with the claim.
     expect(
       note,
-      'The docstring asserts the restrictions do not run but names nothing a reader can go ' +
-        'and read. Cite the measured mechanism — generateFileData returning at `if (!file)` ' +
-        'before checkFileRestrictions (spike S1).',
+      'The docstring drops the measured mechanism. Cite generateFileData / ' +
+        'checkFileRestrictions so a later reader can tell a scoped finding from a wrong one.',
     ).toMatch(/checkFileRestrictions|generateFileData/)
   })
 
-  it('spells out the consequence: this pass is the only defence, not one of two layers', () => {
+  it('says plainly that nothing here is on a live path', () => {
+    // The consequence a reader must not get wrong in the new direction: this module looks like
+    // enforcement and is not wired to anything. `verifyUploaded` has no production caller —
+    // only DERIVATIVE_WIDTHS is imported — and someone weakening the media collection because
+    // "verify.ts covers it" would be making the same mistake the old note guarded against,
+    // pointing the other way.
     expect(
       note,
-      'The docstring records that the collection options are inert but not what follows from ' +
-        'it. The whole point of T022 is that a later reader must not weaken this pass, or add ' +
-        'field-level restrictions, believing a second layer covers the surface.',
-    ).toMatch(/only defence|only defense|not defence in depth|not defense in depth|not one layer of two|whole enforcement surface|no field-level net/i)
+      'The docstring does not say this module is uncalled. Its presence reads as a layer that ' +
+        'is protecting something, and it is not.',
+    ).toMatch(/no production caller|not (?:currently )?called|nothing (?:in this file )?is enforcing|uncalled/i)
   })
 })

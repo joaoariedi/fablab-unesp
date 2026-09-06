@@ -17,6 +17,7 @@ Every entry below joins `SCOPE_REGISTRY` with a one-line `why`, or `registry.tes
 | `curtida` | scoped | Joins a user to scoped content; the content side decides the tenant |
 | `progressoAula` | scoped | Per-user progress against one lab's class |
 | `usuario` | **global** | Unchanged from feature 000 — identity is platform-wide, role is per membership |
+| `midiaImagem` `midiaModelo3d` `midiaDocumento` | scoped | An uploaded file belongs to the lab that uploaded it; a global media library would list every lab's files (T023b) |
 
 ## Relationships that need `sameTenant`
 
@@ -58,3 +59,32 @@ All four follow **one** strategy — see plan § Sketch 7.
 
 Caps are `tech-stack.md` § Storage's, not the plan's invention, and Caddy needs a matching
 `client_max_body_size`.
+
+### The three upload collections (T023b, added by decision D1)
+
+D1 turned `clientUploads` off, so the bytes pass through Node and Payload's own upload
+machinery is live again — but that machinery is a **collection** option (`upload`), and the
+model above had no collection carrying it. `apps/web/collections/Media.ts` declares one per
+group, generated from `MEDIA_GROUPS`:
+
+| Collection | Group | `upload.mimeTypes` | Cap | `imageSizes` |
+|---|---|---|---|---|
+| `midiaImagem` | images | `image/jpeg` `image/png` `image/webp` `image/svg+xml` | 10 MB | `miniatura` 320px, `card` 768px |
+| `midiaModelo3d` | 3D meshes | `model/*` container types, plus `application/zip` (a `.3mf` **is** a ZIP) and `text/plain` (ASCII meshes are detected as nothing) | 100 MB | none — there is no raster to resize |
+| `midiaDocumento` | documents | `application/pdf` `application/zip` `image/svg+xml` `image/vnd.dxf` `text/plain` | 200 MB | none |
+
+**One per group, not one `midia`.** Every knob Payload offers for FR-011 and FR-012 is per
+collection, so a single media collection could only carry the union of the three allowlists
+and the largest of the three caps — a cover-image field that accepts a 200 MB archive.
+
+**Two enforcement layers, and neither is redundant.** `mimeTypes` makes Payload sniff the
+leading bytes (`checkFileRestrictions` only reaches `fileTypeFromBuffer` when it is set); the
+extension allowlist and the per-group cap are enforced by a `beforeOperation` hook, because
+`UploadConfig` in payload 3.88 has **no** per-collection size option — the only size the
+framework reads (`config.upload.limits.fileSize`) is global, and it is the ceiling
+(`MAX_UPLOAD_CAP_BYTES`), not the policy. The extension gate also closes what `text/plain`
+opens: Payload's fallback answers `text/plain` for every extension its ten-entry table does
+not know, which is every mesh format.
+
+`projeto` still stores **keys as text** (D3), not upload relationships — these collections are
+where the bytes are validated and stored, not what the content schema points at.

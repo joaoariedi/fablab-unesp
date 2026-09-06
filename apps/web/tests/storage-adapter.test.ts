@@ -1,6 +1,7 @@
 import type { CollectionConfig } from 'payload'
 import { describe, expect, it } from 'vitest'
 
+import { MEDIA_SLUGS } from '../collections/Media'
 import * as webConfig from '../payload.config'
 
 /**
@@ -150,13 +151,23 @@ describe('the adapter is registered in buildConfig, not merely buildable', () =>
     ).not.toContain(SIGNED_URL_PATH)
   })
 
-  it('adapts exactly the collections that declare an upload — none yet', async () => {
-    // The honest state: the adapter attaches to upload-enabled collections, and this app has
-    // none. `projeto` carries storage KEYS as text (the Organizations.ts precedent), not
-    // Payload uploads. The assertion that the adapter actually handles a stored file belongs
-    // with the media collection D1 requires, and is deliberately not faked here.
+  it('adapts exactly the collections that declare an upload — the three media ones', async () => {
+    // Was "none yet", and the comment there named what would change it: the media collection
+    // D1 requires (T023b). It exists now, as one collection per media group, so this asserts
+    // the identity of the adapted set rather than its emptiness. An upload collection missing
+    // from this map does not fail — it writes files to the app's own disk instead of the
+    // bucket, which is the quietest way to lose them.
+    //
+    // `projeto` is still absent on purpose: it carries storage KEYS as text (D3, the
+    // Organizations.ts precedent), so it declares no upload of its own.
     const config = await webConfig.default
-    expect(config.collections.filter((collection) => collection.upload)).toHaveLength(0)
-    expect(optionsFor(MINIO_ENV, config.collections as never).collections).toEqual({})
+    const adapted = [...Object.values(MEDIA_SLUGS)].sort()
+
+    expect(
+      config.collections.filter((collection) => collection.upload).map((c) => c.slug).sort(),
+    ).toEqual(adapted)
+    expect(optionsFor(MINIO_ENV, config.collections as never).collections).toEqual(
+      Object.fromEntries(adapted.map((slug) => [slug, true])),
+    )
   })
 })

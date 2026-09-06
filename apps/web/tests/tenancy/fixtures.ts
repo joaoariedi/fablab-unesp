@@ -101,6 +101,14 @@ function seedDataFor(
         curtidas: 0,
         status: 'rascunho',
       }
+    // The upload collections (T023b). No fields of their own and no file: `upload.filesRequiredOnCreate`
+    // is false precisely so a row can exist without an object store, which CI does not run.
+    // What the harness asserts about them is tenancy, and a fileless row carries a tenant
+    // exactly like any other.
+    case 'midiaImagem':
+    case 'midiaModelo3d':
+    case 'midiaDocumento':
+      return {}
     default:
       throw new Error(
         `fixtures.ts has no seed data for scoped collection "${collection}". ` +

@@ -43,6 +43,20 @@ export const SCOPE_REGISTRY = {
     scope: 'scoped',
     why: 'Content belongs to the lab that made it; every content collection is scoped (FR-005)',
   },
+  // The three upload collections (T023b). One per media group, because every knob Payload
+  // offers for FR-011 and FR-012 is per collection — see `collections/Media.ts`.
+  midiaImagem: {
+    scope: 'scoped',
+    why: 'An uploaded file belongs to the lab that uploaded it; a global media library would list every lab\'s files (FR-005)',
+  },
+  midiaModelo3d: {
+    scope: 'scoped',
+    why: 'Same as midiaImagem — the group changes the cap and the allowlist, never the tenancy',
+  },
+  midiaDocumento: {
+    scope: 'scoped',
+    why: 'Same as midiaImagem — the group changes the cap and the allowlist, never the tenancy',
+  },
 } as const satisfies Record<string, ScopeEntry>
 
 /**

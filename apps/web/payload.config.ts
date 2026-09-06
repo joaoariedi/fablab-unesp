@@ -11,6 +11,7 @@ import sharp from 'sharp'
 
 import { CategoriaProjeto } from './collections/content/CategoriaProjeto'
 import { Projeto } from './collections/content/Projeto'
+import { MEDIA_COLLECTIONS, MEDIA_SLUGS } from './collections/Media'
 import { Organizations } from './collections/Organizations'
 import { PendingInvites } from './collections/PendingInvites'
 import { TenantCanaries } from './collections/TenantCanaries'
@@ -26,7 +27,18 @@ const dirname = path.dirname(fileURLToPath(import.meta.url))
 const env = readEnv()
 
 /** Every collection the app registers, in one place so the storage map is derived from it. */
-const collections = [Organizations, Users, TenantCanaries, PendingInvites, CategoriaProjeto, Projeto]
+const collections = [
+  Organizations,
+  Users,
+  TenantCanaries,
+  PendingInvites,
+  CategoriaProjeto,
+  Projeto,
+  // The upload collections D1 made necessary (T023b). Spread rather than listed one by one:
+  // they are derived from MEDIA_GROUPS, so a fourth media group arrives here on its own
+  // instead of existing in `limits.ts` with nowhere to be uploaded to.
+  ...MEDIA_COLLECTIONS,
+]
 
 /**
  * The S3 adapter's options, as a **pure function of the environment** (FR-019, SC-011).
@@ -119,18 +131,19 @@ export default buildConfig({
   // access control and migrating data. Feature 000 exists to get this ordering right once.
   collections,
 
-  // **The only size bound the live presign path has** (FR-012, SC-007).
+  // **The outer ceiling on every upload, whatever the collection** (FR-012, SC-007).
   //
-  // `@payloadcms/storage-s3`'s signed-URL handler reads exactly this number and nothing else:
-  // measured in generateSignedURL.js, it refuses an over-cap request and adds `content-length`
-  // to the signed headers ONLY when it is set, and otherwise signs `ContentLength: undefined`.
-  // Left unset — as it was — any signed-in user could obtain a signed URL for a PUT of any size,
-  // and `tech-stack.md` names disk exhaustion as failure number one.
+  // Payload applies this to the multipart body before a collection is even chosen, so it is the
+  // bound that holds when a per-collection guard is missing or wrong. It is deliberately the
+  // LARGEST group cap, not the smallest: a global limit below `document`'s 200 MB would refuse
+  // legitimate archives, and the per-group caps are enforced where the group is known —
+  // `collections/Media.ts`, one collection per group.
   //
-  // It is global, so it is a CEILING, not the policy. Per-group caps (UPLOAD_CAP_BYTES) cannot
-  // be expressed through the plugin, and `lib/uploads/presign.ts` — which does express them —
-  // has no caller until an endpoint of ours replaces the plugin's. Until then an image field is
-  // bounded at 200 MB rather than at 10 MB. Recorded in tasks.md against T016b, not left implied.
+  // Its history is worth keeping. Before D1 this was the *only* size bound in the product:
+  // `@payloadcms/storage-s3`'s signed-URL handler reads exactly this number and nothing else
+  // (measured in generateSignedURL.js — unset, it skips the refusal and signs
+  // `ContentLength: undefined`), and it takes no field, so per-field caps were unreachable
+  // while `clientUploads` was on. That is the measurement D1 acted on.
   upload: {
     limits: { fileSize: MAX_UPLOAD_CAP_BYTES },
   },
@@ -187,6 +200,11 @@ export default buildConfig({
         pendingInvites: {},
         categoriaProjeto: {},
         projeto: {},
+        // Uploaded media is one lab's. Derived from MEDIA_SLUGS for the same reason the
+        // collections themselves are: a media group that reached the config but not this map
+        // would carry no tenant column at all, and every lab would list every other lab's
+        // files in the admin media view.
+        ...Object.fromEntries(Object.values(MEDIA_SLUGS).map((slug) => [slug, {}])),
       },
     }),
 

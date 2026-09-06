@@ -10,16 +10,28 @@
  * size, then a bounded read of the leading bytes, and only then a move into the served
  * prefix.
  *
- * **The collection-level `mimeTypes` and `filesize` options never execute on this path**
- * (FR-011, FR-012), so what this module does is not defence in depth — it is the only
- * defence. The cause is the same early return spike S1 measured: `generateFileData` bails at
- * `if (!file)` *before* it reaches `checkFileRestrictions`, which is where Payload would have
- * applied a field's declared allowlist and cap. Declaring either on a collection is therefore
- * decorative here, and the trap is not the enforcement that is missing — it is that adding
- * them later *looks* like a second layer and invites relaxing this one. **There is no
- * field-level net underneath**: the format allowlist is the signature table below, and the
- * size cap is enforced on the signed URL at presign (`presign.ts`, T016), because a cap
- * checked only after the bytes land has already paid the disk cost it existed to prevent.
+ * ## ⚠ SUPERSEDED BY DECISION D1 (2026-09-06) — read this before trusting anything below
+ *
+ * This module was written for the **presigned direct-to-storage** path of plan § Sketch 4, and
+ * that path no longer exists. `clientUploads` is off, so the bytes pass through Node and
+ * Payload's own `checkFileRestrictions` **does** run: the collection-level `mimeTypes` on the
+ * media collections are live, and `collections/Media.ts` carries the size guard and the
+ * content sniff. `verifyUploaded` has **no production caller** — only `DERIVATIVE_WIDTHS` is
+ * imported from here — so nothing in this file is enforcing anything today.
+ *
+ * The paragraph that used to sit here said the opposite: that collection-level `mimeTypes` and
+ * `filesize` *never execute*, that this pass was therefore "the only defence", and that there
+ * was "no field-level net underneath". Every one of those was true of the old path and false of
+ * the current one, and a test was holding them in place — which is how a green gate ends up
+ * defending a claim that has become wrong. The claim is corrected rather than deleted so the
+ * reasoning survives: what changed is the architecture, not the measurement. Spike S1's finding
+ * (`generateFileData` returning at `if (!file)` before `checkFileRestrictions`) remains exactly
+ * right **about `clientUploads: true`**, and it is the reason D1 turned it off.
+ *
+ * What is still worth keeping here is the magic-byte table: Payload sniffs with `file-type`,
+ * which does not recognise every 3D container this product accepts, so a signature check for
+ * those formats is a genuine second layer rather than a duplicate. Rehoming it onto the media
+ * collection's `beforeValidate` is follow-up work, not a claim this file may make today.
  *
  * **Verified as a container, never parsed as a model** (CLR-003). Every check here reads a
  * fixed-width header, an ASCII magic string, or a length field, and compares it with the size

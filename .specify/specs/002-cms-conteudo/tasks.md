@@ -207,7 +207,7 @@ whoever knows the VM.
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
 | T023 ✅ | `categoriaProjeto` — scoped, with its registry entry. First, because `projeto` relates to it and a relation to a missing collection is not a template | FR-002, FR-004 | `apps/web/collections/content/CategoriaProjeto.ts`, `apps/web/lib/tenancy/scope-registry.ts` | T007 |
-| T023b | **Media collection** — D1 requires one to realise the native upload path (`upload: true`, per-collection `mimeTypes`/`filesize`, `imageSizes`). It is in neither `data-model.md` nor the original task list, so it is new work, not a gap in an existing task | FR-011, FR-012 | `apps/web/collections/` , `data-model.md` | D1 |
+| T023b ✅ | **Media collection** — D1 requires one to realise the native upload path (`upload: true`, per-collection `mimeTypes`/`filesize`, `imageSizes`). It is in neither `data-model.md` nor the original task list, so it is new work, not a gap in an existing task | FR-011, FR-012 | `apps/web/collections/` , `data-model.md` | D1 |
 | T024 ✅ | `projeto` collection: PT-BR labels, fields traced to `projetos.md` § Modelo de conteúdo, `read: scopedAccess()` for the admin surface — public reads never reach here | FR-001, FR-021 | `apps/web/collections/content/Projeto.ts` | T023 |
 | T025 ✅ | Registry entry with its one-line `why`. `registry.test.ts` already fails on an omission, so this is red before it is written | FR-004, SC-001 | `apps/web/lib/tenancy/scope-registry.ts` | T024 |
 | T026 ✅ | `sameTenant` on every relationship whose target is scoped — `categoria`, `autor`, `maquinasUtilizadas` | FR-007 | `apps/web/collections/content/Projeto.ts` | T024 |
@@ -215,9 +215,37 @@ whoever knows the VM.
 | T028 ✅ | `stampApproval` — sets `aprovacaoRegistrada` and `aprovadoEm` **once**, never cleared. This feature writes **no XP**; feature 005 reads these (CLR-001) | FR-009, SC-004 | `apps/web/lib/content/review.ts` | T027 |
 | T029 ✅ | `lockDocuments: false`. A supported per-collection switch — no rows are written for this collection, so `payload-locked-documents` has nothing to leak (CLR-004) | FR-018 | `apps/web/collections/content/Projeto.ts` | T024 |
 | T030 ✅ | The **one** counter strategy: stored, maintained inside the same transaction as the causing write. Counting on read is an N+1 across exactly the card grids this design serves | FR-020 | `apps/web/lib/content/counters.ts` | T024 |
-| T031 ✗ | **Reconciliation test**: recompute every counter from its source rows and assert equality. This is the mitigation for the drift a stored counter always has — an admin bulk delete, a migration, a manual SQL fix. Watch it red by desyncing one counter | FR-020, SC-012 | `apps/web/tests/content/counters.test.ts` | T030 |
+| T031 ✅ | **Reconciliation test**: recompute every counter from its source rows and assert equality. This is the mitigation for the drift a stored counter always has — an admin bulk delete, a migration, a manual SQL fix. Watch it red by desyncing one counter | FR-020, SC-012 | `apps/web/tests/content/counters.test.ts` | T030 |
 | T032 ✅ | Migration for `projeto` + `categoriaProjeto`. The drift gate from feature 000 is live throughout this feature | FR-001 | `apps/web/migrations/` | T025 |
 | T033 ✅ | Review-queue tests: publish → unpublish → republish yields **one** approval record; a maker cannot publish | SC-004, SC-005 | `apps/web/tests/content/review.test.ts` | T028 |
+
+## Run 5 (`wf_1f5b2700-6f2`, 2026-09-06) — what it left behind
+
+T031 accepted, T023b rejected. The rejection's headline — a red suite — had already been
+resolved by T031 landing in the same run, so the tree arrived green. Its two **secondary**
+findings were the valuable ones, and both are the project's recurring defect class:
+
+**A green test was defending a claim D1 had made false.**
+`tests/uploads/verify-restrictions-note.test.ts` required `verify.ts`'s docstring to assert that
+collection-level `mimeTypes`/`filesize` "never execute", that this pass is "the only defence",
+and that there is "no field-level net underneath". All three were true of the presigned path and
+false the moment `clientUploads` went off: the media collections declare `mimeTypes`, Payload's
+`checkFileRestrictions` runs, and `verifyUploaded` has no production caller at all — only
+`DERIVATIVE_WIDTHS` is imported from it. A gate holding a wrong claim in place is worse than no
+gate, because it is a reviewer's reason not to look. The docstring now records that D1 superseded
+the design it describes, that spike S1's measurement remains right *about `clientUploads: true`*
+and is why D1 acted, and that nothing in the file is on a live path. The test asserts those three
+instead. The same stale claim in `payload.config.ts` was corrected with it.
+
+**The per-group extension allowlist had no assertion.** `carga.exe` was the only refusal case, so
+substituting the union of all three groups' extensions for the per-group list survived all 35
+tests — and a union is exactly what FR-011's three collections exist to prevent, since an image
+field must not accept a 100 MB mesh. A cross-group matrix now asserts each collection refuses the
+other groups' extensions, skipping `.svg`, which `limits.ts` genuinely shares between `image` and
+`document`. Watched failing against the union: **26 of 61 red**, where previously all 35 passed.
+
+**Verified**: `pnpm lint` 0, `pnpm typecheck` 0, `pnpm test` 0 — 745 in `packages/ui`, 675 in
+`apps/web`. All three `isolation-mutation.sh` layers red for the right reason.
 
 ## Decisions D1, D2 and D3 applied (2026-09-06)
 
