@@ -48,7 +48,8 @@ services:
       retries: 10
 
   storage-init:
-    # One-shot: creates the bucket the app expects. Exits 0 and stays exited.
+    # One-shot: creates the bucket and the quarantine prefix the app expects, and refuses to
+    # exit 0 if that prefix is anonymously readable (FR-013, SC-008). Exits and stays exited.
     image: minio/mc:latest
     container_name: fablab-storage-init
     depends_on:
@@ -60,6 +61,10 @@ services:
       MINIO_ROOT_USER: fablab
       MINIO_ROOT_PASSWORD: fablab-dev-secret
       S3_BUCKET: fablab
+      # Where a presigned upload lands before its bytes have been checked. Declared here
+      # beside the bucket rather than only inside the script: it is stack configuration the
+      # upload code shares, and a name buried in a shell script is one both sides guess at.
+      QUARANTINE_PREFIX: quarantine
     volumes:
       - ./minio-init.sh:/scripts/minio-init.sh:ro
 

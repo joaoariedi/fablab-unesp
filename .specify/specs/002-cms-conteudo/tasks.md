@@ -46,29 +46,74 @@ it. ✅ does **not** mean committed; check `git log` for that.
 The twelve remaining collections are mechanical repetition of a template — if the template is
 wrong, they are twelve wrong collections.
 
+## Run 1 (`wf_471acc9b-c1b`, 2026-09-06) — what it left behind
+
+The run **halted** in phase 002a-2 on three rejections, and the tree it left needed four
+repairs beyond them. All were verified by execution, not by report. Recorded here because the
+next run reads this file, and because three of the four are failure modes rather than typos.
+
+**Two accepted tasks were not on disk.** T002 and T003 each passed three adversarial verifiers
+and `apps/web/payload.config.ts` was nevertheless byte-identical to `HEAD` — no `sharp`, no S3
+adapter, no `s3StorageOptions`. Their *tests* survived, so the tree was left with ten failing
+assertions and a red typecheck. The likely mechanism is the verifiers themselves: they mutate
+real files and restore from their own backups, they run concurrently, and they pipeline across
+tasks — so a verifier that backed a file up before a later task wrote it restores over that
+write. Feature 001 hit the same class inside vitest and fixed it with `fileParallelism: false`;
+between agents there is no such switch. **Do not trust "accepted" as "on disk" — check.**
+
+**A merged feature was regressed.** T014 re-pointed the layout's theme read at
+`getPublicScopedPayloadForRSC` and updated `frontend-layout.test.ts`, but not
+`font-preload.test.ts`, which mocks the *module path*: the stale mock stayed syntactically
+valid, intercepted a function nobody calls any more, and all five of its render cases died on
+the real `headers()`. Mocking by path fails silently when the entry point moves.
+
+**The public path failed open, and a test pinned it that way.** `publishedOnly` returned
+`undefined` for any collection it did not recognise, and `undefined` means *no filter* — so a
+collection the client could not constrain was served in full, with `overrideAccess: true`, to a
+visitor with no session. Measured: `pendingInvites` (scoped, no `status`) served its invite
+e-mails; `users` (global, so no tenant constraint either — [CF-8]) would have served every
+account on the platform. `public-payload.test.ts` asserted this as a requirement, under the
+title *"leaves a collection without a status field unfiltered"*. The client now **denies by
+default** and the one global exemption is the organization's own record by the id the host
+resolved to. Reference data with no `status` — the category lists 003's filter tabs read —
+must therefore arrive in 002b with an explicit public-read declaration; it is deliberately not
+inferred from the absence of a field.
+
+**The four vantage points could only ever pass through the leak.** `public-read.test.ts` read
+`tenantCanaries`, which has no `status`, so its rows came back *because* nothing filtered them.
+Lending it a publishable declaration does not rescue the shape either — Payload rejects the
+query ("The following path cannot be queried: status"). The row-level half of SC-002 is now
+asserted against the organization record, the only real public read that exists today; the same
+assertions over content arrive with `projeto` at T024/T035.
+
+**Verified after the repairs**: `pnpm lint` 0, `pnpm typecheck` 0, `pnpm test` 0 — 745 in
+`packages/ui`, 377 in `apps/web`. All three `isolation-mutation.sh` layers watched failing and
+red for the right reason. The app driven anonymously on two organizations' hosts: 200 on every
+route, with the shell, the font preload and the per-organization theme.
+
 ## Phase 002a-1: Setup — the dependencies the feature genuinely needs
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T001 | `@payloadcms/storage-s3` as a runtime dependency. **Pre-sanctioned, not newly argued**: `tech-stack.md` § Stack fixes object storage as S3-compatible with MinIO ↔ S3/R2 by env (Principle 1) | FR-019 | `apps/web/package.json` | — |
-| T002 | **Declare `sharp` in `apps/web` and pass it to `buildConfig`.** Spike S1 measured it absent from both, which makes `imageSizes` a no-op on every path. A second dependency addition, same Principle 1 note | FR-011, SC-006 | `apps/web/package.json`, `apps/web/payload.config.ts` | — |
-| T003 | S3 adapter wired with `clientUploads: true`, `forcePathStyle` from env so MinIO ↔ S3 is a config change | FR-019 | `apps/web/payload.config.ts` | T001 |
-| T004 | **User action, not a commit**: add `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_REGION` to `.env`. The hook blocks agent writes to `.env*`; supply the values and the developer pastes them | FR-019 | `.env` (manual) | T003 |
-| T005 | Bucket and `quarantine/` prefix exist in the compose stack; `quarantine/` is **not** publicly served | FR-013, SC-008 | `infra/docker-compose.yml`, `infra/minio-init.sh` | — |
+| T001 ✅ | `@payloadcms/storage-s3` as a runtime dependency. **Pre-sanctioned, not newly argued**: `tech-stack.md` § Stack fixes object storage as S3-compatible with MinIO ↔ S3/R2 by env (Principle 1) | FR-019 | `apps/web/package.json` | — |
+| T002 ✅ | **Declare `sharp` in `apps/web` and pass it to `buildConfig`.** Spike S1 measured it absent from both, which makes `imageSizes` a no-op on every path. A second dependency addition, same Principle 1 note | FR-011, SC-006 | `apps/web/package.json`, `apps/web/payload.config.ts` | — |
+| T003 ✅ | S3 adapter wired with `clientUploads: true`, `forcePathStyle` from env so MinIO ↔ S3 is a config change | FR-019 | `apps/web/payload.config.ts` | T001 |
+| T004 ✅ | ~~User action: add the S3 variables to `.env`.~~ **Already satisfied** — feature 000 provisioned all five, `.env.example` documents them, the compose stack is up and the `fablab` bucket exists. Verified 2026-09-06, not assumed | FR-019 | `.env` | T003 |
+| T005 ✅ | Bucket and `quarantine/` prefix exist in the compose stack; `quarantine/` is **not** publicly served | FR-013, SC-008 | `infra/docker-compose.yml`, `infra/minio-init.sh` | — |
 
 ## Phase 002a-2: The access layer — before any content exists to use it
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T006 | Widen `MaybeUser` so `orgs[]` rows carry `role`. The role already exists — `PendingInvites` offers `admin \| staff \| maker` and `invite.ts` reads it — but `access.ts`'s own type omits it, which is why it looked absent | FR-008 | `apps/web/lib/tenancy/access.ts` | — |
-| T007 | `teamOnly(): Access` — returns a **constraint**, so a staff member of lab A cannot publish lab B's content even if a route forgets to check | FR-008, SC-005 | `apps/web/lib/tenancy/access.ts` | T006 |
-| T008 | `canPublishField: FieldAccess` — a **second function**, not `teamOnly` reused. Payload types field access as `boolean` only and cannot return a `Where` | FR-008, SC-005 | `apps/web/lib/tenancy/access.ts` | T006 |
-| T009 | `getPublicScopedPayload(host)` — host-fixed tenant, `overrideAccess: true`, published-only, **no writers**, unexported from `index.ts`. Carries `@isolation-mutation-point` | FR-010, FR-015, SC-002 | `apps/web/lib/tenancy/public-payload.ts` | T006 |
-| T010 | `PUBLISHABLE` **derived** from which collection configs declare a `status` field, with a test asserting the set matches. A hand-kept list rots the first time a collection gains or loses `status` | FR-010 | `apps/web/lib/tenancy/public-payload.ts` | T009 |
-| T011 | Request-scoped memo for `resolveTenant` in the public path. Access runs per operation including nested relationship population, and feature 000 documented that its cache **degrades when `next/cache` throws** — the Local API path tests and seeds use | FR-016 | `apps/web/lib/tenancy/public-payload.ts` | T009 |
-| T012 | **Harness: four vantage points**, written before content exists — anonymous, member of this org, **member of another org**, **signed-in with no membership**. The last two are what review round 1 measured as broken | SC-002 | `apps/web/tests/tenancy/public-read.test.ts` | T009 |
-| T013 | Add the public path to `scripts/isolation-mutation.sh` as its own layer, so breaking it must be noticed | SC-002, SC-012 | `scripts/isolation-mutation.sh`, `.github/workflows/ci.yml` | T009, T012 |
-| T014 | **Feature-001 carry-over**: the anonymous theme read. `organizations.read` is `masterOnly()`, so a logged-out visitor cannot read their own organization's theme and co-branding never appears. Same root cause and same module as public content — fixed here, once | FR-003 (001) | `apps/web/app/(frontend)/layout.tsx`, `apps/web/lib/tenancy/public-payload.ts` | T009 |
+| T006 ✅ | Widen `MaybeUser` so `orgs[]` rows carry `role`. The role already exists — `PendingInvites` offers `admin \| staff \| maker` and `invite.ts` reads it — but `access.ts`'s own type omits it, which is why it looked absent | FR-008 | `apps/web/lib/tenancy/access.ts` | — |
+| T007 ✅ | `teamOnly(): Access` — returns a **constraint**, so a staff member of lab A cannot publish lab B's content even if a route forgets to check | FR-008, SC-005 | `apps/web/lib/tenancy/access.ts` | T006 |
+| T008 ✅ | `canPublishField: FieldAccess` — a **second function**, not `teamOnly` reused. Payload types field access as `boolean` only and cannot return a `Where` | FR-008, SC-005 | `apps/web/lib/tenancy/access.ts` | T006 |
+| T009 ✅ | `getPublicScopedPayload(host)` — host-fixed tenant, `overrideAccess: true`, published-only, **no writers**, unexported from `index.ts`. Carries `@isolation-mutation-point` | FR-010, FR-015, SC-002 | `apps/web/lib/tenancy/public-payload.ts` | T006 |
+| T010 ✅ | `PUBLISHABLE` **derived** from which collection configs declare a `status` field, with a test asserting the set matches. A hand-kept list rots the first time a collection gains or loses `status` | FR-010 | `apps/web/lib/tenancy/public-payload.ts` | T009 |
+| T011 ✅ | Request-scoped memo for `resolveTenant` in the public path. Access runs per operation including nested relationship population, and feature 000 documented that its cache **degrades when `next/cache` throws** — the Local API path tests and seeds use | FR-016 | `apps/web/lib/tenancy/public-payload.ts` | T009 |
+| T012 ✅ | **Harness: four vantage points**, written before content exists — anonymous, member of this org, **member of another org**, **signed-in with no membership**. The last two are what review round 1 measured as broken | SC-002 | `apps/web/tests/tenancy/public-read.test.ts` | T009 |
+| T013 ✅ | Add the public path to `scripts/isolation-mutation.sh` as its own layer, so breaking it must be noticed | SC-002, SC-012 | `scripts/isolation-mutation.sh`, `.github/workflows/ci.yml` | T009, T012 |
+| T014 ⚠ | **Feature-001 carry-over**: the anonymous theme read. `organizations.read` is `masterOnly()`, so a logged-out visitor cannot read their own organization's theme and co-branding never appears. Same root cause and same module as public content — fixed here, once | FR-003 (001) | `apps/web/app/(frontend)/layout.tsx`, `apps/web/lib/tenancy/public-payload.ts` | T009 |
 
 ## Phase 002a-3: Uploads — the only genuinely new subsystem
 
@@ -159,5 +204,5 @@ wrong, they are twelve wrong collections.
 
 ---
 
-**Legend**: `[P]` = parallelizable | `✅` = accepted and on disk | `FR-NNN` / `SC-NNN` / `US#`
+**Legend**: `[P]` = parallelizable | `✅` = accepted and on disk | `⚠` = on disk but never adjudicated (the run halted first) | `FR-NNN` / `SC-NNN` / `US#`
 = spec references | `CLR-n` = clarification

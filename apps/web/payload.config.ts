@@ -3,7 +3,10 @@ import { fileURLToPath } from 'node:url'
 
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { multiTenantPlugin } from '@payloadcms/plugin-multi-tenant'
+import { s3Storage } from '@payloadcms/storage-s3'
+import type { CollectionConfig } from 'payload'
 import { buildConfig } from 'payload'
+import sharp from 'sharp'
 
 import { Organizations } from './collections/Organizations'
 import { PendingInvites } from './collections/PendingInvites'
@@ -17,6 +20,62 @@ const dirname = path.dirname(fileURLToPath(import.meta.url))
 // This runs at config load, which includes `next build` — CI must provide the environment
 // for the build and drift jobs, which it needs for migrations anyway.
 const env = readEnv()
+
+/** Every collection the app registers, in one place so the storage map is derived from it. */
+const collections = [Organizations, Users, TenantCanaries, PendingInvites]
+
+/**
+ * The S3 adapter's options, as a **pure function of the environment** (FR-019, SC-011).
+ *
+ * Exported so the swap can be *driven* rather than eyeballed: pointing the five `S3_*`
+ * variables at a managed bucket must be a config change with a clean `git diff`, and the only
+ * way to assert that is to call this with two environments and compare the results. An
+ * object literal inlined into `buildConfig` below would be untestable — asserting its shape
+ * would assert nothing about the swap.
+ *
+ * Two values are computed rather than configured, because getting either wrong is silent:
+ *   - `forcePathStyle` follows the *presence of an endpoint*. MinIO serves buckets
+ *     path-style, managed S3 serves them virtual-hosted; hardcoding either makes the swap a
+ *     code change, which is what FR-019 forbids.
+ *   - `credentials` is **omitted entirely** when no keys are set, never sent as empty
+ *     strings. Empty credentials make the SDK skip its default provider chain, so a host
+ *     carrying an IAM role authenticates as nobody and every upload 403s.
+ *
+ * @example s3StorageOptions(readEnv(), collections).config.forcePathStyle // true on MinIO
+ */
+export function s3StorageOptions(
+  source: Pick<
+    ReturnType<typeof readEnv>,
+    'S3_ENDPOINT' | 'S3_BUCKET' | 'S3_ACCESS_KEY_ID' | 'S3_SECRET_ACCESS_KEY' | 'S3_REGION'
+  >,
+  adapted: readonly Pick<CollectionConfig, 'slug' | 'upload'>[] = [],
+) {
+  const { S3_ACCESS_KEY_ID: accessKeyId, S3_SECRET_ACCESS_KEY: secretAccessKey } = source
+
+  return {
+    // `?? ''` rather than a throw: the CI test job runs with no `S3_*` at all, and a config
+    // that refuses to load without a bucket would take every unrelated test down with it.
+    // A missing bucket surfaces at the first upload, which is where it is actionable.
+    bucket: source.S3_BUCKET ?? '',
+
+    // Spike S1: the bytes go browser → storage by presigned PUT and never through Node,
+    // which is what the whole presign/quarantine/verify design rests on (plan § Sketch 4).
+    clientUploads: true,
+
+    // Derived, never hand-listed: a list written by hand rots the first time a collection
+    // gains or loses an upload — silently, into local disk storage.
+    collections: Object.fromEntries(
+      adapted.filter((collection) => Boolean(collection.upload)).map(({ slug }) => [slug, true]),
+    ),
+
+    config: {
+      endpoint: source.S3_ENDPOINT,
+      region: source.S3_REGION,
+      forcePathStyle: Boolean(source.S3_ENDPOINT),
+      credentials: accessKeyId && secretAccessKey ? { accessKeyId, secretAccessKey } : undefined,
+    },
+  }
+}
 
 export default buildConfig({
   secret: env.PAYLOAD_SECRET,
@@ -40,7 +99,13 @@ export default buildConfig({
   // Order is load-bearing: the multi-tenant plugin must be registered before the first
   // content collection exists (FR-007). Adopting it later means renaming fields, rewriting
   // access control and migrating data. Feature 000 exists to get this ordering right once.
-  collections: [Organizations, Users, TenantCanaries, PendingInvites],
+  collections,
+
+  // Payload has no image pipeline of its own — it delegates every image operation to sharp,
+  // and only when sharp is handed to buildConfig. Spike S1 measured it absent from both the
+  // manifest and this config, which makes `imageSizes` a no-op on *every* path (not just the
+  // direct-upload one): the size fields exist on the document and stay empty forever.
+  sharp,
 
   plugins: [
     multiTenantPlugin({
@@ -82,6 +147,11 @@ export default buildConfig({
         pendingInvites: {},
       },
     }),
+
+    // Registered after the tenant plugin so the storage adapter sees the collections the
+    // tenant plugin has already shaped. The options are built by the exported pure function
+    // above, driven by the environment — never by a literal written here.
+    s3Storage(s3StorageOptions(env, collections)),
   ],
 
   typescript: {

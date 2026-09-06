@@ -12,15 +12,23 @@ import { describe, expect, it, vi } from 'vitest'
  * throws "A component suspended while responding to synchronous input". The fix is to await
  * the component as the plain function it is and render the element it returns.
  *
- * The two mocks exist for the same reason `frontend-layout.test.ts` has them: the layout now
- * calls `getTenantScopedPayloadForRSC()`, which resolves a host. With no request there is no
- * host, so the real call throws `TenantUnresolvedError`, the layout turns that into
- * `notFound()`, and this suite would be asserting a 404 instead of a preload. The mock stands
- * in for a resolved tenant whose record simply carries no theme — which is FR-004's default
- * case, and the one where the preload still has to be emitted.
+ * The two mocks exist for the same reason `frontend-layout.test.ts` has them: the layout
+ * resolves a host in order to read its organization. With no request there is no host, so the
+ * real call throws, the layout turns that into `notFound()`, and this suite would be asserting
+ * a 404 instead of a preload. The mock stands in for a resolved tenant whose record simply
+ * carries no theme — which is FR-004's default case, and the one where the preload still has
+ * to be emitted.
+ *
+ * **T014 moved the entry point** from `getTenantScopedPayloadForRSC` (lib/tenancy) to
+ * `getPublicScopedPayloadForRSC` (lib/tenancy/public-payload), because `organizations.read` is
+ * `masterOnly()` and no visitor is signed in. `frontend-layout.test.ts` was re-pointed with it;
+ * this file was not, so its mock stopped intercepting anything and all five render cases died
+ * on the real `headers()` — "called outside a request scope". Mocking by *module path* is what
+ * makes that failure mode possible: the stale mock stays syntactically valid and silently
+ * covers a function nobody calls any more. Both suites must move together.
  */
 const mocks = vi.hoisted(() => ({
-  getTenantScopedPayloadForRSC: vi.fn(async () => ({
+  getPublicScopedPayloadForRSC: vi.fn(async () => ({
     tenantId: 'org-test',
     findByID: async () => ({}),
   })),
@@ -32,9 +40,15 @@ vi.mock('next/navigation', () => ({
   },
 }))
 
+// Still mocked: the layout imports `TenantUnresolvedError` from here, and the real class is
+// what its `instanceof` branch must be tested against.
 vi.mock('../lib/tenancy', async () => ({
   ...(await import('../lib/tenancy/errors')),
-  getTenantScopedPayloadForRSC: mocks.getTenantScopedPayloadForRSC,
+}))
+
+vi.mock('../lib/tenancy/public-payload', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/tenancy/public-payload')>()),
+  getPublicScopedPayloadForRSC: mocks.getPublicScopedPayloadForRSC,
 }))
 
 const { default: FrontendLayout } = await import('../app/(frontend)/layout')

@@ -22,11 +22,13 @@
     "@payloadcms/db-postgres": "3.88.0",
     "@payloadcms/next": "3.88.0",
     "@payloadcms/plugin-multi-tenant": "3.88.0",
+    "@payloadcms/storage-s3": "3.88.0",
     "graphql": "16.11.0",
     "next": "16.3.3",
     "payload": "3.88.0",
     "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "react-dom": "19.2.0",
+    "sharp": "0.35.3"
   },
   "devDependencies": {
     "@types/node": "22.18.12",
