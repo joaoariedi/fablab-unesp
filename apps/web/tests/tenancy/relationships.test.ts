@@ -177,3 +177,49 @@ describe('normalizeRefs: all four relationship shapes', () => {
     expect(normalizeRefs([null, undefined], 'tenantCanaries')).toEqual([])
   })
 })
+
+describe('sameTenant composes with Payload\'s default validator, it does not replace it', () => {
+  /** Same shape as the sibling block's helper; redeclared because that one is block-scoped. */
+  const opts = (tenant: unknown, relationTo = 'tenantCanaries') => ({
+    siblingData: { tenant },
+    data: { tenant },
+    name: 'related',
+    relationTo,
+  })
+
+  /**
+   * **A declared `validate` REPLACES the default; it does not compose with it** — measured in
+   * Payload 3's `sanitize.js`. `required: true` on a relationship is enforced by
+   * `validations.relationship` and by nothing else, so attaching a bare `sameTenant` to a
+   * required field silently made `required` inert: a null value returned `true`, and the only
+   * remaining backstop was a Postgres NOT NULL error, which surfaces as a database failure
+   * rather than a field-level message — if the column is even NOT NULL yet.
+   *
+   * The first collision was `projeto.categoria`, declared `required: true` and marked
+   * obrigatório in `projetos.md`. It will not be the last: this validator goes on every scoped
+   * relationship in the feature, and twelve more collections copy that template.
+   */
+  it('refuses an empty value on a REQUIRED relationship', async () => {
+    const result = await sameTenant(null, { ...opts(world.orgA.id), required: true } as never)
+    expect(
+      result,
+      'a required relationship accepted null. `required` is enforced by the default validator ' +
+        'that a declared `validate` replaces, so attaching sameTenant switched it off.',
+    ).not.toBe(true)
+  })
+
+  it('still passes an empty value on an OPTIONAL relationship', async () => {
+    // The pair: without it, refusing every empty value would break every optional relation in
+    // the feature, which is a louder failure but just as wrong.
+    await expect(sameTenant(null, opts(world.orgA.id))).resolves.toBe(true)
+  })
+
+  it('still refuses a cross-tenant ref when the field is required', async () => {
+    // The tenant check must survive the composition rather than being short-circuited by it.
+    const result = await sameTenant(world.rows.tenantCanaries!.B, {
+      ...opts(world.orgA.id),
+      required: true,
+    } as never)
+    expect(result).toMatch(/outra organização/)
+  })
+})

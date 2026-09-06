@@ -35,6 +35,14 @@ export const SCOPE_REGISTRY = {
     scope: 'scoped',
     why: 'An invite belongs to the organization that issued it (FR-029)',
   },
+  categoriaProjeto: {
+    scope: 'scoped',
+    why: 'A second lab names its own vocabulary; a global set would impose CITe\'s (FR-002)',
+  },
+  projeto: {
+    scope: 'scoped',
+    why: 'Content belongs to the lab that made it; every content collection is scoped (FR-005)',
+  },
 } as const satisfies Record<string, ScopeEntry>
 
 /**

@@ -206,17 +206,73 @@ whoever knows the VM.
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T023 | `categoriaProjeto` — scoped, with its registry entry. First, because `projeto` relates to it and a relation to a missing collection is not a template | FR-002, FR-004 | `apps/web/collections/content/CategoriaProjeto.ts`, `apps/web/lib/tenancy/scope-registry.ts` | T007 |
-| T024 | `projeto` collection: PT-BR labels, fields traced to `projetos.md` § Modelo de conteúdo, `read: scopedAccess()` for the admin surface — public reads never reach here | FR-001, FR-021 | `apps/web/collections/content/Projeto.ts` | T023 |
-| T025 | Registry entry with its one-line `why`. `registry.test.ts` already fails on an omission, so this is red before it is written | FR-004, SC-001 | `apps/web/lib/tenancy/scope-registry.ts` | T024 |
-| T026 | `sameTenant` on every relationship whose target is scoped — `categoria`, `autor`, `maquinasUtilizadas` | FR-007 | `apps/web/collections/content/Projeto.ts` | T024 |
-| T027 | Review states `rascunho \| em_revisao \| publicado`, with `status` carrying `canPublishField` so a maker edits a draft but cannot publish it | FR-008, FR-010 | `apps/web/collections/content/Projeto.ts` | T008, T024 |
-| T028 | `stampApproval` — sets `aprovacaoRegistrada` and `aprovadoEm` **once**, never cleared. This feature writes **no XP**; feature 005 reads these (CLR-001) | FR-009, SC-004 | `apps/web/lib/content/review.ts` | T027 |
-| T029 | `lockDocuments: false`. A supported per-collection switch — no rows are written for this collection, so `payload-locked-documents` has nothing to leak (CLR-004) | FR-018 | `apps/web/collections/content/Projeto.ts` | T024 |
-| T030 | The **one** counter strategy: stored, maintained inside the same transaction as the causing write. Counting on read is an N+1 across exactly the card grids this design serves | FR-020 | `apps/web/lib/content/counters.ts` | T024 |
-| T031 | **Reconciliation test**: recompute every counter from its source rows and assert equality. This is the mitigation for the drift a stored counter always has — an admin bulk delete, a migration, a manual SQL fix. Watch it red by desyncing one counter | FR-020, SC-012 | `apps/web/tests/content/counters.test.ts` | T030 |
-| T032 | Migration for `projeto` + `categoriaProjeto`. The drift gate from feature 000 is live throughout this feature | FR-001 | `apps/web/migrations/` | T025 |
-| T033 | Review-queue tests: publish → unpublish → republish yields **one** approval record; a maker cannot publish | SC-004, SC-005 | `apps/web/tests/content/review.test.ts` | T028 |
+| T023 ✅ | `categoriaProjeto` — scoped, with its registry entry. First, because `projeto` relates to it and a relation to a missing collection is not a template | FR-002, FR-004 | `apps/web/collections/content/CategoriaProjeto.ts`, `apps/web/lib/tenancy/scope-registry.ts` | T007 |
+| T024 ✗ | `projeto` collection: PT-BR labels, fields traced to `projetos.md` § Modelo de conteúdo, `read: scopedAccess()` for the admin surface — public reads never reach here | FR-001, FR-021 | `apps/web/collections/content/Projeto.ts` | T023 |
+| T025 ✅ | Registry entry with its one-line `why`. `registry.test.ts` already fails on an omission, so this is red before it is written | FR-004, SC-001 | `apps/web/lib/tenancy/scope-registry.ts` | T024 |
+| T026 ✅ | `sameTenant` on every relationship whose target is scoped — `categoria`, `autor`, `maquinasUtilizadas` | FR-007 | `apps/web/collections/content/Projeto.ts` | T024 |
+| T027 ✅ | Review states `rascunho \| em_revisao \| publicado`, with `status` carrying `canPublishField` so a maker edits a draft but cannot publish it | FR-008, FR-010 | `apps/web/collections/content/Projeto.ts` | T008, T024 |
+| T028 ✅ | `stampApproval` — sets `aprovacaoRegistrada` and `aprovadoEm` **once**, never cleared. This feature writes **no XP**; feature 005 reads these (CLR-001) | FR-009, SC-004 | `apps/web/lib/content/review.ts` | T027 |
+| T029 ✅ | `lockDocuments: false`. A supported per-collection switch — no rows are written for this collection, so `payload-locked-documents` has nothing to leak (CLR-004) | FR-018 | `apps/web/collections/content/Projeto.ts` | T024 |
+| T030 ✅ | The **one** counter strategy: stored, maintained inside the same transaction as the causing write. Counting on read is an N+1 across exactly the card grids this design serves | FR-020 | `apps/web/lib/content/counters.ts` | T024 |
+| T031 ✗ | **Reconciliation test**: recompute every counter from its source rows and assert equality. This is the mitigation for the drift a stored counter always has — an admin bulk delete, a migration, a manual SQL fix. Watch it red by desyncing one counter | FR-020, SC-012 | `apps/web/tests/content/counters.test.ts` | T030 |
+| T032 ✅ | Migration for `projeto` + `categoriaProjeto`. The drift gate from feature 000 is live throughout this feature | FR-001 | `apps/web/migrations/` | T025 |
+| T033 ✅ | Review-queue tests: publish → unpublish → republish yields **one** approval record; a maker cannot publish | SC-004, SC-005 | `apps/web/tests/content/review.test.ts` | T028 |
+
+## Run 4 (`wf_9a0f5814-2d4`, 2026-09-06) — what it left behind
+
+Halted in phase 002a-4 with **five accepted and six rejected**, the worst ratio of the four
+runs. Every rejection was confirmed by execution. Four were repaired; two remain open and are
+recorded as ✗ because one of them needs a decision.
+
+**T025 switched off nine test files, including the SC-002 isolation gate.** Declaring `projeto`
+`scoped` without adding its case to `seedDataFor()` made `buildWorld()` throw — and a `beforeAll`
+throw does not fail an assertion, it aborts the file before any assertion runs. Measured: 10 red
+files, 160 skipped tests, `isolation.test.ts` among them. The fixture author's guard fired
+exactly as designed; what it could not do was fail *loudly*. Repaired, and the repair uncovered a
+second one: `resetWorld` deleted in registry order, so it removed `categoriaProjeto` rows while
+`projeto` still referenced them and Postgres refused on the foreign key. It now deletes in
+**reverse** registry order — a rule, not a list, since `seedDataFor` can only relate a collection
+to one declared before it. The isolation matrix has grown from 24 tests to 44 as a result.
+
+**T026 silently disabled `required` on every relationship it touched.** In Payload 3 a declared
+`validate` **replaces** the default validator rather than composing with it (`sanitize.js`), and
+`validations.relationship` is the only thing that enforces `required` on a relationship field. So
+attaching a bare `sameTenant` to `projeto.categoria` — `required: true`, obrigatório in
+`projetos.md` — made a null value return `true`, leaving a Postgres NOT NULL error as the only
+backstop, on a column the migration had not created yet. This was going to repeat on every
+required scoped relationship in the feature and across twelve more collections. The composition
+now lives inside `sameTenant`, once.
+
+**T028 and T033 left the approval stamp forgeable.** `aprovacaoRegistrada` and `aprovadoEm`
+carried only `admin: { readOnly: true }` — admin-UI cosmetics that stop nothing coming through
+the API — while the sibling `status` field beside them carried `canPublishField`. So a maker,
+correctly refused `status: 'publicado'`, could POST `aprovacaoRegistrada: true` on a `rascunho`
+and write themselves the record feature 005 credits XP from (CLR-001), and the hook's
+"never cleared" rule then preserved the forgery so the genuine publication was never dated.
+SC-005 fenced around through the field that actually carries the credit. Both fields are now
+`create: () => false, update: () => false` — hook-only, master included, because the value is a
+record of a transition and only the code performing the transition may write it. Watched failing
+without the guard, with the team's genuine publish as the non-vacuity pair.
+
+**Still open:**
+
+- **T024 ✗** — `projeto` declares 9 of the 17 fields `projetos.md` defines. Two of the four
+  stated deferral reasons do not survive contact with the spec: `descricao_completa` was deferred
+  as "a stack change", which spec.md § Decisions explicitly pre-rejects ("choosing the framework's
+  own default adds nothing"), and the upload fields were deferred for want of an upload-enabled
+  collection when the cited precedent, `Organizations.ts`, declares exactly such a field as text.
+  No downstream task owns any of the eight. **And T036 has no subject without them**: it asserts
+  an anonymous download is served and counted, and `projeto` has neither `arquivos` nor
+  `downloads`.
+- **T031 ✗** — the reconciliation covers three of FR-020's four derived values. `formatos` is
+  absent, and the guard claimed to force it later cannot fire for it: the guard's first filter is
+  `type !== 'number'`, and `formatos` is a list of extensions. Note `formatos` lives on
+  `modelo3d`, which is T039 in 002b, so it has no subject in 002a — but the guard must be widened
+  now or nothing will catch it then.
+
+**Verified after the repairs**: `pnpm lint` 0, `pnpm typecheck` 0, `pnpm test` 0 — 745 in
+`packages/ui`, 579 in `apps/web`. All three `isolation-mutation.sh` layers red for the right
+reason against the enlarged matrix.
 
 ## Phase 002a-5: The acceptance gate 002b depends on
 
@@ -278,5 +334,5 @@ whoever knows the VM.
 
 ---
 
-**Legend**: `[P]` = parallelizable | `✅` = accepted and on disk | `⚠` = on disk but never adjudicated (the run halted first) | `⛔` = deferred, blocked on a decision | `FR-NNN` / `SC-NNN` / `US#`
+**Legend**: `[P]` = parallelizable | `✅` = accepted and on disk | `⚠` = on disk but never adjudicated (the run halted first) | `⛔` = deferred, blocked on a decision | `✗` = rejected and still open | `FR-NNN` / `SC-NNN` / `US#`
 = spec references | `CLR-n` = clarification

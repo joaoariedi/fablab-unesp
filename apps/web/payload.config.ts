@@ -8,6 +8,8 @@ import type { CollectionConfig } from 'payload'
 import { buildConfig } from 'payload'
 import sharp from 'sharp'
 
+import { CategoriaProjeto } from './collections/content/CategoriaProjeto'
+import { Projeto } from './collections/content/Projeto'
 import { Organizations } from './collections/Organizations'
 import { PendingInvites } from './collections/PendingInvites'
 import { TenantCanaries } from './collections/TenantCanaries'
@@ -23,7 +25,7 @@ const dirname = path.dirname(fileURLToPath(import.meta.url))
 const env = readEnv()
 
 /** Every collection the app registers, in one place so the storage map is derived from it. */
-const collections = [Organizations, Users, TenantCanaries, PendingInvites]
+const collections = [Organizations, Users, TenantCanaries, PendingInvites, CategoriaProjeto, Projeto]
 
 /**
  * The S3 adapter's options, as a **pure function of the environment** (FR-019, SC-011).
@@ -162,6 +164,8 @@ export default buildConfig({
       collections: {
         tenantCanaries: {},
         pendingInvites: {},
+        categoriaProjeto: {},
+        projeto: {},
       },
     }),
 

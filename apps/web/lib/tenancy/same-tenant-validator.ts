@@ -1,3 +1,5 @@
+import { validations } from 'payload'
+
 import { isScoped } from './scope-registry'
 import { unscopedLookupTenant } from './unscoped'
 
@@ -93,7 +95,46 @@ const asId = (value: unknown): string | null => {
  *   { name: 'related', type: 'relationship', relationTo: 'tenantCanaries',
  *     validate: sameTenant }
  */
+/**
+ * Payload's own relationship validator, run first.
+ *
+ * **A declared `validate` REPLACES the default; it does not compose with it** — measured in
+ * `sanitize.js`, and it is the single most expensive thing to get wrong here. `required: true`
+ * on a relationship is enforced *by* `validations.relationship` and by nothing else, so a bare
+ * `sameTenant` attached to a required field silently makes `required` inert: a null value
+ * returns `true` and the only remaining backstop is a Postgres NOT NULL error, which surfaces
+ * as a database failure instead of a field-level message — if the column is even NOT NULL yet.
+ *
+ * The first collision was `projeto.categoria`. It will not be the last: this validator goes on
+ * every scoped relationship in the feature, and twelve more collections copy that template. So
+ * the composition lives HERE, once, rather than being remembered at each call site.
+ */
+async function defaultRelationshipRefusal(
+  value: unknown,
+  options: ValidateOptions,
+): Promise<string | null> {
+  const required = (options as { required?: boolean } | undefined)?.required === true
+  const empty = normalizeRefs(value, options?.relationTo ?? options?.field?.relationTo).length === 0
+
+  // The `required` floor is enforced here directly and unconditionally, because it is the
+  // guarantee that was measured missing and it must not depend on how rich the caller's
+  // options happen to be.
+  if (required && empty) return 'validation:required'
+
+  // The rest of Payload's checks — invalid ids, filterOptions — need a live `req.payload` to
+  // query with. Unit callers construct options by hand and have none; delegating regardless
+  // would turn "this validator was called without a request" into a TypeError that reads like
+  // a tenancy failure. Where a request exists (every production path) the full validator runs.
+  if (!(options as { req?: { payload?: unknown } } | undefined)?.req?.payload) return null
+
+  const result = await validations.relationship(value as never, options as never)
+  return result === true ? null : (result as string)
+}
+
 export async function sameTenant(value: unknown, options: ValidateOptions): Promise<true | string> {
+  const refusal = await defaultRelationshipRefusal(value, options)
+  if (refusal !== null) return refusal
+
   const fieldName = options?.name ?? options?.field?.name ?? 'relacionamento'
 
   // **[Spike S4]** The tenant is read from siblingData first, then data. `siblingData`

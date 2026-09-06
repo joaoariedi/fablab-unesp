@@ -30,9 +30,22 @@ export type Fixture = {
 
 const PASSWORD = 'fixture-password-123'
 
-/** Deletes everything this harness creates, so a re-run starts from a known world. */
+/**
+ * Deletes everything this harness creates, so a re-run starts from a known world.
+ *
+ * **Reverse registry order**, and that is not cosmetic. `seedDataFor` can only relate a
+ * collection to one declared *before* it, so dependants always sit later in the list — which
+ * means deleting forwards removes a row while its referrer still points at it, and Postgres
+ * refuses on the foreign key. Measured when `projeto` joined the registry after
+ * `categoriaProjeto`: `resetWorld` began failing inside `payload.delete`, which threw in
+ * `beforeAll` and took **every** tenancy suite down with it — twelve files reporting
+ * "skipped" rather than one reporting a broken fixture.
+ *
+ * The rule holds for any future pair, so it is expressed as the reverse of the order the seed
+ * loop uses rather than as a hand-kept list of which collection depends on which.
+ */
 export async function resetWorld(payload: Payload): Promise<void> {
-  for (const collection of scopedCollections()) {
+  for (const collection of [...scopedCollections()].reverse()) {
     await payload.delete({
       collection: collection as never,
       where: { id: { exists: true } },
@@ -52,12 +65,39 @@ export async function resetWorld(payload: Payload): Promise<void> {
 }
 
 /** Minimal valid data for a scoped collection, so the matrix grows without editing this. */
-function seedDataFor(collection: string, marker: string, userId: string | number) {
+function seedDataFor(
+  collection: string,
+  marker: string,
+  userId: string | number,
+  /**
+   * The ids already seeded for THIS organization, keyed by collection. A relation under
+   * `sameTenant` cannot be seeded from a literal — it must point at the row belonging to the
+   * same tenant, or the validator refuses the create and the whole harness aborts in
+   * `beforeAll`. `scopedCollections()` iterates in registry order, so a collection may only
+   * relate to one declared before it.
+   */
+  seeded: Record<string, string | number>,
+) {
   switch (collection) {
     case 'tenantCanaries':
       return { label: `canary-${marker}` }
     case 'pendingInvites':
       return { email: `invitee-${marker}@example.com`, role: 'maker', invitedBy: userId }
+    case 'categoriaProjeto':
+      return { nome: `Categoria ${marker}`, slug: `categoria-${marker}` }
+    // `projeto` relates to `categoriaProjeto` under `sameTenant`, so its row cannot be seeded
+    // from a literal — it needs the id of the category seeded into the SAME organization.
+    // `seedScoped` below resolves that from `rows`, which is why this case names the relation
+    // rather than inventing an id.
+    case 'projeto':
+      return {
+        titulo: `Projeto ${marker}`,
+        slug: `projeto-${marker}`,
+        descricaoCurta: `Projeto de fixture ${marker}.`,
+        categoria: seeded.categoriaProjeto,
+        curtidas: 0,
+        status: 'rascunho',
+      }
     default:
       throw new Error(
         `fixtures.ts has no seed data for scoped collection "${collection}". ` +
@@ -113,15 +153,23 @@ export async function buildWorld(): Promise<Fixture> {
     // `collection as never` is how a dynamically-chosen slug is passed to Payload's
     // generically-typed API; the return widens to `never` with it, so the ids are read back
     // through an explicit shape rather than silenced with `any`.
-    const create = async (marker: 'A' | 'B', tenant: string | number, userId: string | number) =>
+    const create = async (
+      marker: 'A' | 'B',
+      tenant: string | number,
+      userId: string | number,
+      seeded: Record<string, string | number>,
+    ) =>
       (await payload.create({
         collection: collection as never,
-        data: { ...seedDataFor(collection, marker, userId), tenant } as never,
+        data: { ...seedDataFor(collection, marker, userId, seeded), tenant } as never,
         overrideAccess: true,
       })) as unknown as { id: string | number }
 
-    const rowA = await create('A', a.id, userA.id)
-    const rowB = await create('B', b.id, userB.id)
+    const seededFor = (marker: 'A' | 'B'): Record<string, string | number> =>
+      Object.fromEntries(Object.entries(rows).map(([slug, ids]) => [slug, ids[marker]]))
+
+    const rowA = await create('A', a.id, userA.id, seededFor('A'))
+    const rowB = await create('B', b.id, userB.id, seededFor('B'))
     rows[collection] = { A: rowA.id, B: rowB.id }
   }
 
