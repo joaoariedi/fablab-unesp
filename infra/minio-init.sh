@@ -9,6 +9,9 @@ ALIAS=local
 # Declared by docker-compose.yml beside S3_BUCKET: the prefix is stack configuration, not a
 # magic string the upload code has to guess at.
 : "${QUARANTINE_PREFIX:=quarantine}"
+# Also declared by docker-compose.yml: how long an object may sit unclaimed in quarantine
+# before the bucket reaps it (FR-019).
+: "${QUARANTINE_EXPIRY_DAYS:=7}"
 
 mc alias set "$ALIAS" http://storage:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"
 
@@ -59,4 +62,49 @@ case "$permission" in
     ;;
 esac
 
-echo "minio-init: bucket '$S3_BUCKET' ready, '$QUARANTINE_PREFIX/' not publicly served"
+# FR-019: the orphan reaper. With clientUploads a presigned PUT can succeed while the request
+# that would have recorded it never arrives, leaving an object under "$QUARANTINE_PREFIX/" that
+# no database row points at — nothing in the application will ever look at it again.
+# `tech-stack.md` § Storage names disk exhaustion as failure number one, so the lifetime of an
+# unclaimed object belongs to the bucket itself, not to a cleanup job somebody must remember.
+#
+# `mc ilm rule import` and deliberately NOT `mc ilm rule add`: measured against minio/mc:latest
+# on 2026-09-06, `rule add` mints a fresh rule ID on every invocation — two runs left two
+# identical rules (IDs daep5oas7nf006brcsm0 and daep5oas7nf008hfcnjg, both listed by
+# `ilm rule ls`). That is one duplicate per `docker compose up`, which would undo the
+# re-runnability `mc mb --ignore-existing` buys above. `import` replaces the whole lifecycle
+# document, so the second run is a no-op on the stored state.
+#
+# Replacing the whole document is also the caveat worth stating: a rule this script does not
+# write is dropped. The bucket's lifecycle is owned here, in one place, on purpose.
+mc ilm rule import "$ALIAS/$S3_BUCKET" <<EOF
+{"Rules":[{"ID":"expire-abandoned-quarantine","Status":"Enabled","Filter":{"Prefix":"$QUARANTINE_PREFIX/"},"Expiration":{"Days":$QUARANTINE_EXPIRY_DAYS}}]}
+EOF
+
+# Verify, do not merely set — the same discipline the anonymous-policy check above exists for.
+# An expiry rule that silently failed to land is indistinguishable from a working one right up
+# until the volume fills, which is the failure this requirement was written to prevent.
+#
+# `mc ilm rule export` exits 1 on a bucket with no lifecycle at all ("Unable to get lifecycle
+# configuration", measured). Piping through `tr` is what keeps `set -e` from turning that into
+# an abrupt shell exit instead of the message below. Parsed by shell expansion because the
+# minio/mc image ships no sed, awk or grep.
+lifecycle=$(mc ilm rule export "$ALIAS/$S3_BUCKET" | tr -d ' \t\n')
+
+# Reads $lifecycle; $1 is the marker that must be present, $2 how to describe it to a human.
+require_lifecycle() {
+  case "$lifecycle" in
+    *"$1"*) return 0 ;;
+  esac
+  echo "minio-init: REFUSING to report ready — the orphan reaper is not in place on" \
+    "'$S3_BUCKET/$QUARANTINE_PREFIX/': expected $2, got '${lifecycle:-no lifecycle at all}'." \
+    "Abandoned presigned uploads would accumulate until the volume fills (FR-019)." >&2
+  exit 1
+}
+
+require_lifecycle "\"Prefix\":\"$QUARANTINE_PREFIX/\"" "a rule scoped to '$QUARANTINE_PREFIX/'"
+require_lifecycle "\"Days\":$QUARANTINE_EXPIRY_DAYS" "expiry after $QUARANTINE_EXPIRY_DAYS days"
+require_lifecycle '"Status":"Enabled"' 'the rule to be Enabled'
+
+echo "minio-init: bucket '$S3_BUCKET' ready, '$QUARANTINE_PREFIX/' not publicly served," \
+  "abandoned uploads expire after ${QUARANTINE_EXPIRY_DAYS}d"

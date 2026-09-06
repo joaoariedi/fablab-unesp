@@ -61,6 +61,22 @@ if [ "$1" = "anonymous" ] && [ "$2" = "get" ]; then
   printf '{"operation":"get","status":"success","bucket":"%s","permission":"%s"}\\n' \\
     "$target" "$permission"
 fi
+
+# T020 taught the script a second mc verb: it imports a bucket lifecycle document for the
+# orphan reaper and reads it back to confirm it landed. A double that answers nothing there
+# makes the script refuse to report ready, which would fail these tests for a reason that has
+# nothing to do with the quarantine policy they are about. The import verb replaces the stored
+# document and export returns it, matching what minio/mc:latest was measured to do; the
+# reaper's own behaviour is asserted in storage-reaper.test.ts, not here.
+if [ "$1" = "ilm" ]; then
+  verb="$2"
+  if [ "$verb" = "rule" ]; then verb="$3"; fi
+  case "$verb" in
+    import) cat > "$MC_ILM" ;;
+    export | ls | list) cat "$MC_ILM" ;;
+  esac
+  exit 0
+fi
 exit 0
 `
 
@@ -84,7 +100,9 @@ function runInitScript(env: Record<string, string> = {}, runs = 1): InitRun {
     if (resolved.status === 0) symlinkSync(resolved.stdout.trim(), join(dir, tool))
   }
   const log = join(dir, 'mc.log')
+  const ilm = join(dir, 'lifecycle.json')
   writeFileSync(log, '')
+  writeFileSync(ilm, '')
 
   let result = { status: null as number | null, stdout: '', stderr: '' }
   for (let run = 0; run < runs; run += 1) {
@@ -96,6 +114,7 @@ function runInitScript(env: Record<string, string> = {}, runs = 1): InitRun {
         ...process.env,
         PATH: dir,
         MC_LOG: log,
+        MC_ILM: ilm,
         MINIO_ROOT_USER: BUCKET,
         MINIO_ROOT_PASSWORD: 'fablab-dev-secret',
         S3_BUCKET: BUCKET,

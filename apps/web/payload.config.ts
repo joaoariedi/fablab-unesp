@@ -13,6 +13,7 @@ import { PendingInvites } from './collections/PendingInvites'
 import { TenantCanaries } from './collections/TenantCanaries'
 import { isMaster, Users } from './collections/Users'
 import { readEnv } from './lib/env'
+import { MAX_UPLOAD_CAP_BYTES } from './lib/uploads/limits'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -100,6 +101,22 @@ export default buildConfig({
   // content collection exists (FR-007). Adopting it later means renaming fields, rewriting
   // access control and migrating data. Feature 000 exists to get this ordering right once.
   collections,
+
+  // **The only size bound the live presign path has** (FR-012, SC-007).
+  //
+  // `@payloadcms/storage-s3`'s signed-URL handler reads exactly this number and nothing else:
+  // measured in generateSignedURL.js, it refuses an over-cap request and adds `content-length`
+  // to the signed headers ONLY when it is set, and otherwise signs `ContentLength: undefined`.
+  // Left unset — as it was — any signed-in user could obtain a signed URL for a PUT of any size,
+  // and `tech-stack.md` names disk exhaustion as failure number one.
+  //
+  // It is global, so it is a CEILING, not the policy. Per-group caps (UPLOAD_CAP_BYTES) cannot
+  // be expressed through the plugin, and `lib/uploads/presign.ts` — which does express them —
+  // has no caller until an endpoint of ours replaces the plugin's. Until then an image field is
+  // bounded at 200 MB rather than at 10 MB. Recorded in tasks.md against T016b, not left implied.
+  upload: {
+    limits: { fileSize: MAX_UPLOAD_CAP_BYTES },
+  },
 
   // Payload has no image pipeline of its own — it delegates every image operation to sharp,
   // and only when sharp is handed to buildConfig. Spike S1 measured it absent from both the

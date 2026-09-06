@@ -113,20 +113,50 @@ route, with the shell, the font preload and the per-organization theme.
 | T011 ✅ | Request-scoped memo for `resolveTenant` in the public path. Access runs per operation including nested relationship population, and feature 000 documented that its cache **degrades when `next/cache` throws** — the Local API path tests and seeds use | FR-016 | `apps/web/lib/tenancy/public-payload.ts` | T009 |
 | T012 ✅ | **Harness: four vantage points**, written before content exists — anonymous, member of this org, **member of another org**, **signed-in with no membership**. The last two are what review round 1 measured as broken | SC-002 | `apps/web/tests/tenancy/public-read.test.ts` | T009 |
 | T013 ✅ | Add the public path to `scripts/isolation-mutation.sh` as its own layer, so breaking it must be noticed | SC-002, SC-012 | `scripts/isolation-mutation.sh`, `.github/workflows/ci.yml` | T009, T012 |
-| T014 ⚠ | **Feature-001 carry-over**: the anonymous theme read. `organizations.read` is `masterOnly()`, so a logged-out visitor cannot read their own organization's theme and co-branding never appears. Same root cause and same module as public content — fixed here, once | FR-003 (001) | `apps/web/app/(frontend)/layout.tsx`, `apps/web/lib/tenancy/public-payload.ts` | T009 |
+| T014 ✅ | **Feature-001 carry-over**: the anonymous theme read. `organizations.read` is `masterOnly()`, so a logged-out visitor cannot read their own organization's theme and co-branding never appears. Same root cause and same module as public content — fixed here, once | FR-003 (001) | `apps/web/app/(frontend)/layout.tsx`, `apps/web/lib/tenancy/public-payload.ts` | T009 |
 
 ## Phase 002a-3: Uploads — the only genuinely new subsystem
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T015 | Caps and allowlists as **named constants**: images 10 MB, 3D 100 MB, archives 200 MB; the three extension groups. Values are `tech-stack.md` § Storage's, not this plan's | FR-011, FR-012 | `apps/web/lib/uploads/limits.ts` | — |
-| T016 | **Size enforced at presign** — the policy travels on the signed URL. A cap checked after the bytes land has already paid the cost (spike S1, and `tech-stack.md` names disk as failure number one) | FR-012, SC-007 | `apps/web/lib/uploads/presign.ts` | T003, T015 |
-| T017 | Object keys are **generated**; the original filename is metadata only, so a traversing or double-extension name cannot shape the key | FR-013, SC-008 | `apps/web/lib/uploads/keys.ts` | T015 |
-| T018 | Post-upload verification: `HeadObject` for size, first-KB **signature** check against the declared group, release from `quarantine/`. **No attacker-supplied binary is parsed** — a `.glb` is verified as a container, never as a model | FR-014, SC-006 | `apps/web/lib/uploads/verify.ts` | T005, T016, T017 |
-| T019 | **Derivatives generated here, explicitly with `sharp`** — `imageSizes` runs on no path with clientUploads (spike S1), so the size fields would otherwise exist and stay empty forever | FR-011 | `apps/web/lib/uploads/verify.ts` | T002, T018 |
-| T020 | Orphan reaper: a bucket lifecycle rule expiring abandoned `quarantine/` objects. An abandoned presigned upload leaves an object with no record | FR-019 | `infra/docker-compose.yml`, `infra/minio-init.sh` | T005 |
-| T021 | **Planted violations, watched red**: a `.exe` renamed `.png`; a `.png` whose bytes are not an image; a file past the cap; `../../etc/passwd` and `a.png.svg` as filenames. Each must be refused **naming the reason** | SC-006, SC-007, SC-008 | `apps/web/tests/uploads/verify.test.ts` | T018 |
-| T022 | Record in the module docstring that collection-level `mimeTypes`/`filesize` **do not run** on this path, so a later reader does not add them and believe the surface is covered | FR-011 | `apps/web/lib/uploads/verify.ts` | T018 |
+| T015 ✅ | Caps and allowlists as **named constants**: images 10 MB, 3D 100 MB, archives 200 MB; the three extension groups. Values are `tech-stack.md` § Storage's, not this plan's | FR-011, FR-012 | `apps/web/lib/uploads/limits.ts` | — |
+| T016a ✅ | **Size ceiling on the live presign path.** `upload.limits.fileSize` in `buildConfig`, derived from the largest group cap — the ONE number `@payloadcms/storage-s3`'s signed-URL handler reads. Measured in `generateSignedURL.js`: unset, it signs `ContentLength: undefined` and any signed-in user can presign a PUT of any size | FR-012, SC-007 | `apps/web/payload.config.ts`, `apps/web/lib/uploads/limits.ts` | T003 |
+| T016b | **Per-group caps at presign — NOT DONE.** `lib/uploads/presign.ts` expresses the policy, has 20 passing tests, and has no production caller: the endpoint the app serves is the plugin's, whose cap is global and has no per-group hook. Needs an endpoint of ours that calls `presignUpload`, plus a field→group mapping (FR-012 says "every upload **field** carries a size cap", and nothing maps a field to a group today, so a client declaring `document` gets a 200 MB URL for an image field) | FR-012, SC-007 | `apps/web/app/(payload)/`, `apps/web/lib/uploads/presign.ts` | T016a |
+| ~~T016~~ | ~~**Size enforced at presign** — the policy travels on the signed URL. A cap checked after the bytes land has already paid the cost (spike S1, and `tech-stack.md` names disk as failure number one) | FR-012, SC-007 | `apps/web/lib/uploads/presign.ts` | T003, T015 |
+| T017 ✅ | Object keys are **generated**; the original filename is metadata only, so a traversing or double-extension name cannot shape the key | FR-013, SC-008 | `apps/web/lib/uploads/keys.ts` | T015 |
+| T018 ✅ | Post-upload verification: `HeadObject` for size, first-KB **signature** check against the declared group, release from `quarantine/`. **No attacker-supplied binary is parsed** — a `.glb` is verified as a container, never as a model | FR-014, SC-006 | `apps/web/lib/uploads/verify.ts` | T005, T016, T017 |
+| T019 ✅ | **Derivatives generated here, explicitly with `sharp`** — `imageSizes` runs on no path with clientUploads (spike S1), so the size fields would otherwise exist and stay empty forever | FR-011 | `apps/web/lib/uploads/verify.ts` | T002, T018 |
+| T020 ✅ | Orphan reaper: a bucket lifecycle rule expiring abandoned `quarantine/` objects. An abandoned presigned upload leaves an object with no record | FR-019 | `infra/docker-compose.yml`, `infra/minio-init.sh` | T005 |
+| T021 ✅ | **Planted violations, watched red**: a `.exe` renamed `.png`; a `.png` whose bytes are not an image; a file past the cap; `../../etc/passwd` and `a.png.svg` as filenames. Each must be refused **naming the reason** | SC-006, SC-007, SC-008 | `apps/web/tests/uploads/verify.test.ts` | T018 |
+| T022 ✅ | Record in the module docstring that collection-level `mimeTypes`/`filesize` **do not run** on this path, so a later reader does not add them and believe the surface is covered | FR-011 | `apps/web/lib/uploads/verify.ts` | T018 |
+
+## Run 2 (`wf_46a2cb84-697`, 2026-09-06) — what it left behind
+
+Halted in phase 002a-3 on two rejections. Unlike run 1 it left the tree **green** (lint 0,
+typecheck 0, 463 apps/web tests) and lost no accepted work — the "re-read the file you changed"
+instruction appears to have held. Both rejections were confirmed by execution and repaired.
+
+**T016 — the presign cap was a module nobody called.** `presignUpload` is correct and has 20
+passing tests; `grep` finds no importer outside its own test. The endpoint the app actually
+serves is `@payloadcms/storage-s3`'s, and that handler reads exactly one number,
+`payload.config.upload.limits.fileSize`, which was unset — so it signed
+`ContentLength: undefined` and any signed-in user could presign a PUT of **any size**. Measured
+in `generateSignedURL.js`, not inferred. Split into **T016a** (done: the global ceiling, which
+closes the unbounded case) and **T016b** (open: per-group caps need an endpoint of ours, because
+the plugin has no per-group hook). FR-012's "every upload *field* carries a size cap" also needs
+a field→group mapping that does not exist yet.
+
+**T019 — the derivatives were rotated wrong, and the decode gate was optional.** `sharp` does not
+auto-orient unless asked and strips metadata by default, so a portrait phone photo (EXIF
+orientation 6, which is what almost every portrait JPEG carries) produced a landscape thumbnail
+turned a quarter turn, tag gone, width/height transposed. Every fixture in the suite was
+sharp-synthesised and therefore EXIF-free, so no test could see it. Fixed with `.rotate()` before
+`.resize()`, and a fixture that carries a real orientation tag — watched failing without the fix,
+with the upright case as its pair so a blanket rotate cannot pass. Separately, `deriveImages`
+returned early on `!writer`, which made the `imagem-ilegivel` refusal conditional on a *write*
+capability while the docstring stated it unconditionally; every test on the sibling path passes
+no writer, so the gate was absent exactly where it was most claimed. The decode now depends on
+the extension alone.
 
 ## Phase 002a-4: `projeto` end to end — the template the other twelve copy
 

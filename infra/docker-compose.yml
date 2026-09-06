@@ -65,6 +65,10 @@ services:
       # beside the bucket rather than only inside the script: it is stack configuration the
       # upload code shares, and a name buried in a shell script is one both sides guess at.
       QUARANTINE_PREFIX: quarantine
+      # How long an unclaimed object may sit in quarantine/ before the bucket's own lifecycle
+      # rule expires it (FR-019). Here rather than only in the script because it is the one
+      # knob an operator turns: raise it if a legitimate upload can outlive the window.
+      QUARANTINE_EXPIRY_DAYS: ${QUARANTINE_EXPIRY_DAYS:-7}
     volumes:
       - ./minio-init.sh:/scripts/minio-init.sh:ro
 
