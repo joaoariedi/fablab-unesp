@@ -121,7 +121,7 @@ route, with the shell, the font preload and the per-organization theme.
 |---|---|---|---|---|
 | T015 ✅ | Caps and allowlists as **named constants**: images 10 MB, 3D 100 MB, archives 200 MB; the three extension groups. Values are `tech-stack.md` § Storage's, not this plan's | FR-011, FR-012 | `apps/web/lib/uploads/limits.ts` | — |
 | T016a ✅ | **Size ceiling on the live presign path.** `upload.limits.fileSize` in `buildConfig`, derived from the largest group cap — the ONE number `@payloadcms/storage-s3`'s signed-URL handler reads. Measured in `generateSignedURL.js`: unset, it signs `ContentLength: undefined` and any signed-in user can presign a PUT of any size | FR-012, SC-007 | `apps/web/payload.config.ts`, `apps/web/lib/uploads/limits.ts` | T003 |
-| T016b | **Per-group caps at presign — NOT DONE.** `lib/uploads/presign.ts` expresses the policy, has 20 passing tests, and has no production caller: the endpoint the app serves is the plugin's, whose cap is global and has no per-group hook. Needs an endpoint of ours that calls `presignUpload`, plus a field→group mapping (FR-012 says "every upload **field** carries a size cap", and nothing maps a field to a group today, so a client declaring `document` gets a 200 MB URL for an image field) | FR-012, SC-007 | `apps/web/app/(payload)/`, `apps/web/lib/uploads/presign.ts` | T016a |
+| T016b ⛔ | **DEFERRED — blocked on a PO/architect decision, not on effort.** Per-field size caps at presign. Moved out of the critical path after run 3 so the remaining 28 tasks are not held behind an architecture trade-off. See § "T016b is a decision" below | FR-012, SC-007 | — | **decision** |
 | ~~T016~~ | ~~**Size enforced at presign** — the policy travels on the signed URL. A cap checked after the bytes land has already paid the cost (spike S1, and `tech-stack.md` names disk as failure number one) | FR-012, SC-007 | `apps/web/lib/uploads/presign.ts` | T003, T015 |
 | T017 ✅ | Object keys are **generated**; the original filename is metadata only, so a traversing or double-extension name cannot shape the key | FR-013, SC-008 | `apps/web/lib/uploads/keys.ts` | T015 |
 | T018 ✅ | Post-upload verification: `HeadObject` for size, first-KB **signature** check against the declared group, release from `quarantine/`. **No attacker-supplied binary is parsed** — a `.glb` is verified as a container, never as a model | FR-014, SC-006 | `apps/web/lib/uploads/verify.ts` | T005, T016, T017 |
@@ -157,6 +157,50 @@ returned early on `!writer`, which made the `imagem-ilegivel` refusal conditiona
 capability while the docstring stated it unconditionally; every test on the sibling path passes
 no writer, so the gate was absent exactly where it was most claimed. The decode now depends on
 the extension alone.
+
+## T016b is a decision, and three runs have now hit it
+
+Run 3 (`wf_43dc3efc-623`) halted on T016b with **nothing accepted**. The implementation was
+sound in itself — a table-driven field→group registry, the group derived rather than trusted,
+honest tests — and it was refused for the right reason: it added a *second* presign endpoint
+that nothing calls, while the endpoint every real upload uses stayed exactly as it was. The same
+defect T016b was written to correct, moved up one level. That verdict is correct.
+
+**What is measured, and therefore not in dispute:**
+
+- `@payloadcms/storage-s3`'s signed-URL handler reads one global number,
+  `payload.config.upload.limits.fileSize`, and its request body carries
+  `{collectionSlug, docPrefix, filename, filesize, mimeType}` — **no field**. It cannot be given
+  a per-field cap.
+- The plugin offers no hook for it: `ClientUploadsConfig` is `{ access?: ClientUploadsAccess } |
+  boolean` (`@payloadcms/plugin-cloud-storage/dist/types.d.ts`). `access` gates *who* may
+  presign, never *how large*.
+- The admin UI — the only uploader in the product — is wired to that handler by
+  `S3ClientUploadHandler`, which the plugin names internally. Nothing points it elsewhere.
+- The per-group cap **is** enforced today, post-upload, in `sizeRefusal` against `HeadObject`'s
+  reported size; an over-cap object is refused and left in `quarantine/` for the reaper.
+- But the group is **declared by the client** and encoded in the generated key, so a caller
+  naming `document` for an image field gets 200 MB at presign *and* 200 MB at verification.
+  That is the residual, and it is why post-upload enforcement alone does not close FR-012.
+
+**So the state is:** unbounded uploads are closed (T016a's ceiling). What remains is that an
+authenticated user can push up to 200 MB into quarantine against any field, regardless of that
+field's real cap, before it is refused and reaped.
+
+**The three ways out, none of which an agent should pick unilaterally:**
+
+| | Option | Cost |
+|---|---|---|
+| **A** | `clientUploads: false` — bytes flow through Node | Payload's own per-field `filesize`/`mimeTypes` then execute (spike S1's early return no longer applies), so FR-011 and FR-012 are solved natively and a custom subsystem shrinks. But it reverses plan § Sketch 4 and the `tech-stack.md` risk table, both of which chose presigned direct-to-storage precisely to keep the single Node process off the upload path |
+| **B** | Replace the plugin's client upload handler so the admin UI calls our endpoint carrying the field | Keeps direct-to-storage. The handler path is hardcoded inside the plugin, so this is a fork in all but name — and the constitution pins these versions and schedules upgrades in a dedicated sprint |
+| **C** | Accept the ceiling | No work. Documents that per-field caps are not enforced at presign, and that the bound is 200 MB plus post-upload refusal against a client-declared group |
+
+**Recommendation: A**, and it is not close on the merits of the *validation* — it is the only
+option that makes the framework enforce per-field limits itself instead of us reimplementing
+them beside it, and it deletes risk rather than adding it. The reason to hesitate is the one
+`tech-stack.md` already named: a single Node process carrying 100 MB meshes on a campus VM. That
+is a capacity question about the deployment, which is why it belongs with feature 008 and with
+whoever knows the VM.
 
 ## Phase 002a-4: `projeto` end to end — the template the other twelve copy
 
@@ -234,5 +278,5 @@ the extension alone.
 
 ---
 
-**Legend**: `[P]` = parallelizable | `✅` = accepted and on disk | `⚠` = on disk but never adjudicated (the run halted first) | `FR-NNN` / `SC-NNN` / `US#`
+**Legend**: `[P]` = parallelizable | `✅` = accepted and on disk | `⚠` = on disk but never adjudicated (the run halted first) | `⛔` = deferred, blocked on a decision | `FR-NNN` / `SC-NNN` / `US#`
 = spec references | `CLR-n` = clarification
