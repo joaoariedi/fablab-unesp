@@ -184,6 +184,9 @@ beforeAll(async () => {
       titulo: 'Banco de marcenaria',
       slug: 'banco-de-marcenaria',
       descricaoCurta: 'Um banco feito no lab.',
+      // Required (obrigatório in projetos.md): a storage key, generated, never a filename.
+      imagemCapa: 'media/image/00000000-0000-4000-8000-000000000001.png',
+      downloads: 0,
       categoria: categoria.id,
       tenant: org.id,
       // Stated rather than left to the field default: this is the seed the gate is about to

@@ -67,6 +67,9 @@ const draft = async (slug: string): Promise<number> => {
       titulo: 'Prensa de bancada',
       slug,
       descricaoCurta: 'Uma prensa feita no lab.',
+      // Required (obrigatório in projetos.md): a storage key, generated, never a filename.
+      imagemCapa: 'media/image/00000000-0000-4000-8000-000000000001.png',
+      downloads: 0,
       categoria: seeded.categoria,
       tenant: seeded.org,
       // Required on the collection, and its absence is not a lint-level detail: Payload types
@@ -287,6 +290,9 @@ describe('SC-005: a maker cannot publish', () => {
         titulo: 'Prensa recém-criada',
         slug: `prensa-criada-${ORG_SLUG}`,
         descricaoCurta: 'Criada já publicada.',
+        // Required (obrigatório in projetos.md): a storage key, generated, never a filename.
+        imagemCapa: 'media/image/00000000-0000-4000-8000-000000000001.png',
+        downloads: 0,
         categoria: seeded.categoria,
         tenant: seeded.org,
         status: 'publicado',
@@ -327,6 +333,9 @@ describe('the approval stamp cannot be written by a request (SC-004, SC-005)', (
         titulo: 'Prensa forjada',
         slug: 'prensa-forjada',
         descricaoCurta: 'Um rascunho que se autodeclara aprovado.',
+        // Required (obrigatório in projetos.md): a storage key, generated, never a filename.
+        imagemCapa: 'media/image/00000000-0000-4000-8000-000000000001.png',
+        downloads: 0,
         categoria: seeded.categoria,
         tenant: seeded.org,
         curtidas: 0,

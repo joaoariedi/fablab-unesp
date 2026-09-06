@@ -65,12 +65,17 @@ function clientConfigFor(source: StorageEnv) {
 }
 
 describe('S3 adapter options are a function of the environment (FR-019)', () => {
-  it('turns clientUploads on — the bytes never pass through Node', () => {
+  it('keeps clientUploads OFF, so Payload sees the bytes and can validate them', () => {
+    // Inverted by decision D1 (2026-09-06), and the inversion is the point of the decision.
+    // With `clientUploads: true`, spike S1 measured that `generateFileData` returns at
+    // `if (!file)` before `checkFileRestrictions` and before `imageSizes` — so per-field
+    // `mimeTypes`, per-field `filesize` and the whole image pipeline are inert, and FR-012's
+    // per-field caps are unreachable because the plugin's presign handler takes no field.
     expect(
       optionsFor(MINIO_ENV).clientUploads,
-      'clientUploads is off, so uploads would stream through the Node process. The whole ' +
-        'presign/quarantine/verify design (plan § Sketch 4) assumes it is on.',
-    ).toBe(true)
+      'clientUploads is on, so the bytes bypass Node and every per-field upload rule Payload ' +
+        'would have enforced is silently skipped (spike S1).',
+    ).toBe(false)
   })
 
   it('forces path-style addressing when a custom endpoint is configured (MinIO)', () => {
@@ -132,13 +137,26 @@ describe('S3 adapter options are a function of the environment (FR-019)', () => 
 })
 
 describe('the adapter is registered in buildConfig, not merely buildable', () => {
-  it('registers the client-upload signed URL endpoint', async () => {
+  it('registers NO client-upload signed URL route, because clientUploads is off', async () => {
+    // The inverse of what this asserted before D1, and it is what proves the flip reached the
+    // built config rather than only the options object. `initClientUploads` adds this route
+    // when — and only when — `clientUploads` is truthy.
     const config = await webConfig.default
     const paths = (config.endpoints ?? []).map((endpoint) => endpoint.path)
     expect(
       paths,
-      `buildConfig produced no ${SIGNED_URL_PATH} route, so s3Storage({ clientUploads }) ` +
-        'never ran. The browser has nowhere to ask for a presigned PUT.',
-    ).toContain(SIGNED_URL_PATH)
+      `${SIGNED_URL_PATH} is still registered, so clientUploads is still on somewhere and the ` +
+        'browser can still presign a PUT that bypasses every per-field rule.',
+    ).not.toContain(SIGNED_URL_PATH)
+  })
+
+  it('adapts exactly the collections that declare an upload — none yet', async () => {
+    // The honest state: the adapter attaches to upload-enabled collections, and this app has
+    // none. `projeto` carries storage KEYS as text (the Organizations.ts precedent), not
+    // Payload uploads. The assertion that the adapter actually handles a stored file belongs
+    // with the media collection D1 requires, and is deliberately not faked here.
+    const config = await webConfig.default
+    expect(config.collections.filter((collection) => collection.upload)).toHaveLength(0)
+    expect(optionsFor(MINIO_ENV, config.collections as never).collections).toEqual({})
   })
 })

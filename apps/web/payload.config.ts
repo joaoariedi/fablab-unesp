@@ -2,6 +2,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { postgresAdapter } from '@payloadcms/db-postgres'
+import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { multiTenantPlugin } from '@payloadcms/plugin-multi-tenant'
 import { s3Storage } from '@payloadcms/storage-s3'
 import type { CollectionConfig } from 'payload'
@@ -61,9 +62,23 @@ export function s3StorageOptions(
     // A missing bucket surfaces at the first upload, which is where it is actionable.
     bucket: source.S3_BUCKET ?? '',
 
-    // Spike S1: the bytes go browser → storage by presigned PUT and never through Node,
-    // which is what the whole presign/quarantine/verify design rests on (plan § Sketch 4).
-    clientUploads: true,
+    // **Off, deliberately — the bytes pass through Node** (decision D1, 2026-09-06).
+    //
+    // Plan § Sketch 4 chose presigned direct-to-storage, and spike S1 measured its price:
+    // `generateFileData` returns at `if (!file)` before `checkFileRestrictions` and before
+    // `imageSizes`, so Payload's per-field `mimeTypes`, its per-field `filesize` and its entire
+    // image pipeline are inert on that path — each then has to be rebuilt by hand.
+    //
+    // Three workflow runs established the rebuild cannot be finished: the plugin's signed-URL
+    // handler takes a global cap and no field at all, `ClientUploadsConfig` is
+    // `{ access? } | boolean` with no per-field hook, and the admin UI — the only uploader in
+    // the product — is bound to that handler by a path the plugin names internally. The
+    // per-field caps FR-012 requires were unreachable while this stayed on.
+    //
+    // Off, the framework enforces them itself. The cost is the one `tech-stack.md` already
+    // named: a single Node process carrying upload traffic. That is a capacity question about a
+    // host nobody has specified, and it belongs with feature 008.
+    clientUploads: false,
 
     // Derived, never hand-listed: a list written by hand rots the first time a collection
     // gains or loses an upload — silently, into local disk storage.
@@ -119,6 +134,12 @@ export default buildConfig({
   upload: {
     limits: { fileSize: MAX_UPLOAD_CAP_BYTES },
   },
+
+  // Payload 3 ships no editor by default — a `richText` field without one throws at config
+  // load. Lexical is the framework's own default, which spec.md § Decisions settles in writing:
+  // Principle 1 asks for justification to *add* to the stack, and choosing the default adds
+  // nothing, whereas a markdown pipeline would add an editor, a renderer and a sanitiser.
+  editor: lexicalEditor(),
 
   // Payload has no image pipeline of its own — it delegates every image operation to sharp,
   // and only when sharp is handed to buildConfig. Spike S1 measured it absent from both the

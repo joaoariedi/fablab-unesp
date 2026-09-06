@@ -94,6 +94,9 @@ function seedDataFor(
         titulo: `Projeto ${marker}`,
         slug: `projeto-${marker}`,
         descricaoCurta: `Projeto de fixture ${marker}.`,
+        // Required (obrigatório in projetos.md): a storage key, generated, never a filename.
+        imagemCapa: 'media/image/00000000-0000-4000-8000-000000000001.png',
+        downloads: 0,
         categoria: seeded.categoriaProjeto,
         curtidas: 0,
         status: 'rascunho',

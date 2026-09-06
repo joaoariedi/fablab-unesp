@@ -142,6 +142,67 @@ export const Projeto: CollectionConfig = {
       validate: sameTenant,
     },
     {
+      name: 'descricaoCompleta',
+      type: 'richText',
+      label: 'Descrição completa',
+      admin: {
+        description: 'Corpo da página de detalhe do projeto.',
+      },
+      // Lexical, wired in `payload.config.ts`. Not a stack addition to argue: spec.md
+      // § Decisions settles it in writing — Principle 1 asks for justification to *add* to the
+      // stack, and choosing the framework's own default adds nothing, whereas a markdown
+      // pipeline would add an editor, a renderer and a sanitiser.
+    },
+    {
+      name: 'imagemCapa',
+      type: 'text',
+      required: true,
+      label: 'Imagem de capa',
+      admin: {
+        description: 'Chave do objeto no storage. Gerada no upload, nunca o nome do arquivo.',
+      },
+      // **A storage KEY, not a Payload upload relationship**, and the precedent is
+      // `Organizations.ts`, which declares its media the same way. Two reasons it is text here:
+      // the key is generated (FR-013), so the client's filename never shapes it and a
+      // traversing name cannot escape the prefix; and it is mechanism-agnostic — the same
+      // column holds the key whether the bytes arrive through Payload's own upload path or
+      // through a presigned PUT, so the D1 decision does not rewrite the schema.
+    },
+    {
+      name: 'galeria',
+      type: 'array',
+      label: 'Galeria',
+      admin: {
+        description: 'Imagens adicionais da página de detalhe.',
+      },
+      fields: [{ name: 'chave', type: 'text', required: true, label: 'Chave do objeto' }],
+    },
+    {
+      name: 'arquivos',
+      type: 'array',
+      label: 'Arquivos',
+      admin: {
+        description: 'Arquivos fabricáveis anexos. O download é aberto e é contado (FR-016).',
+      },
+      fields: [{ name: 'chave', type: 'text', required: true, label: 'Chave do objeto' }],
+      // `projetos.md`: downloads are open — no account required — and anonymous downloads are
+      // counted. That is what `downloads` below exists for, and what T036 asserts against.
+    },
+    {
+      name: 'downloads',
+      type: 'number',
+      required: true,
+      defaultValue: 0,
+      min: 0,
+      label: 'Downloads',
+      admin: {
+        readOnly: true,
+        description: 'Somados inclusive os anônimos. Mantido na mesma transação do download.',
+      },
+      // Same strategy as `curtidas` and the same reason: counting on read is an N+1 across the
+      // card grids this design serves. `data-model.md` § Derived values lists both.
+    },
+    {
       name: 'curtidas',
       type: 'number',
       required: true,

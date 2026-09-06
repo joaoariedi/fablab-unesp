@@ -51,12 +51,34 @@ const namedFields = (collection: CollectionConfig): NamedField[] =>
 const expectedColumns = (collection: CollectionConfig): string[] =>
   namedFields(collection)
     .filter((f) => !('hasMany' in f && f.hasMany === true))
+    // An `array` is not a column either: Payload gives it its own `<table>_<name>` table with
+    // `_order` and `_parent_id`, exactly as it does for `hasMany`. `galeria` and `arquivos`
+    // are the first two, and expecting them here would demand a column that must not exist.
+    .filter((f) => f.type !== 'array')
     .map((f) => (f.type === 'relationship' ? `${snake(f.name)}_id` : snake(f.name)))
 
 /** The body of a `CREATE TABLE "<table>" ( … );` statement, or null when it is not created. */
 const createTableBody = (sql: string, table: string): string | null => {
   const match = new RegExp(`CREATE TABLE "${table}" \\(([\\s\\S]*?)\\n\\s*\\);`).exec(sql)
   return match?.[1] ?? null
+}
+
+/**
+ * Every column the committed migrations give `table`, however they give it.
+ *
+ * A column arrives one of two ways and the first draft only looked for one: in the original
+ * `CREATE TABLE`, or in a later `ALTER TABLE … ADD COLUMN`. Reading only the create body means
+ * the check passes for as long as the schema never changes and then reports a *missing column*
+ * the moment a second migration adds one — which is exactly backwards, since a field added
+ * without a migration is the failure this file exists to catch. Measured when `imagemCapa`,
+ * `descricaoCompleta` and `downloads` landed in a second migration.
+ */
+const migratedColumns = (sql: string, table: string): string => {
+  const created = createTableBody(sql, table) ?? ''
+  const altered = [...sql.matchAll(new RegExp(`ALTER TABLE "${table}" ADD COLUMN [^;]+;`, 'g'))]
+    .map((m) => m[0])
+    .join('\n')
+  return `${created}\n${altered}`
 }
 
 describe('committed migrations', () => {
@@ -76,7 +98,7 @@ describe('committed migrations', () => {
       })
 
       it('carries a column for every single-value field the collection declares', () => {
-        const body = createTableBody(committedSql(), table) ?? ''
+        const body = migratedColumns(committedSql(), table)
         for (const column of expectedColumns(collection)) {
           expect(body, `missing column "${column}"`).toContain(`"${column}"`)
         }

@@ -127,7 +127,7 @@ skill the moment skills exist without a migration that rewrites content.
 | FR-019 | S3-compatible storage configured through environment only; MinIO ↔ S3/R2 is a config change, never a code change | P2 | US6 |
 | FR-020 | Derived counters (`curtidas`, `downloads`, `total_modelos`, `formatos`) have a stated maintenance strategy, and it is the same one everywhere | P2 | US8 |
 | FR-021 | The admin surface shows a team member only their own organization's rows, including in relationship pickers | P1 | US3, US7 |
-| FR-022 | Relationship fields to `skill`, `missao` and `estacao` are declared where the page specs require them, with the target collections left to feature 005 | P2 | US1 |
+| FR-022 | ~~Relationship fields to `skill`, `missao` and `estacao` are declared where the page specs require them, with the target collections left to feature 005~~ **Amended 2026-09-06 (decision D2): the fields land in feature 005 together with their target collections.** Payload throws `InvalidFieldRelationship` when `relationTo` names a collection absent from the config, so the original wording was not implementable — a declaration cannot precede its target. The same applies to `projeto.autor`, whose target `perfilMaker` is a 002b collection | P2 | US1 |
 | FR-023 | Calendar grants **no XP in v1**; `xp_presenca` exists in the model and is unused (PO, 2026-08-24) | P2 | US1 |
 | FR-024 | No collection, hook or endpoint added here calls `payload.find/findByID/create/update/delete` or raw SQL outside `lib/tenancy` | P1 | US3 |
 
@@ -174,6 +174,46 @@ justification to *add* to the stack; choosing the framework's own default adds n
 a markdown pipeline would add an editor, a renderer and a sanitiser. The cost is that stored
 content is Lexical JSON rather than portable text — accepted, and noted here so feature 003
 plans its renderer around it rather than discovering it.
+
+## Decisions taken after the spec was written
+
+### D1 (2026-09-06) — uploads go through Node, not straight to storage
+
+**Decision**: `clientUploads` is off. The browser POSTs to Payload, which validates and then
+writes to S3-compatible storage through the adapter.
+
+**Why**: FR-012 requires a size cap per upload *field*, and with `clientUploads` on that is
+unreachable — measured across three workflow runs. The storage plugin's signed-URL handler reads
+one global number and its request body carries no field at all; `ClientUploadsConfig` is
+`{ access? } | boolean`, offering no per-field hook; and the admin UI, the only uploader in the
+product, is bound to that handler by a path the plugin names internally. Spike S1 had already
+measured the same early return switching off `checkFileRestrictions` and `imageSizes`, so every
+per-field rule Payload provides was inert and had to be rebuilt by hand — and the rebuild could
+not be completed.
+
+**Cost, stated rather than discovered later**: a single Node process now carries upload traffic,
+which is the risk `tech-stack.md` names in its own table. It is a capacity question about a host
+nobody has specified, and it belongs with feature 008.
+
+**Consequence**: plan § Sketch 4's presign/quarantine design is superseded. `lib/uploads/` had no
+production caller at the time of the decision, so nothing working was discarded — but a **media
+collection** is now required to realise the native path, and it is in neither `data-model.md`
+nor the task list. Recorded as T023b.
+
+### D2 (2026-09-06) — FR-022's relationship fields move to feature 005
+
+See the amended FR-022 above. A `relationTo` cannot name a collection that does not exist.
+
+### D3 (2026-09-06) — `projeto` carries storage keys, not Payload upload relationships
+
+**Decision**: `imagemCapa`, `galeria` and `arquivos` are text columns holding generated object
+keys, following the `Organizations.ts` precedent. `descricaoCompleta` is Lexical rich text.
+
+**Why**: the key is generated (FR-013), so a client filename never shapes it; and text keys are
+mechanism-agnostic — the same column holds the key whether the bytes arrive through Payload's
+upload path or a presigned PUT, so D1 does not rewrite the schema. It also gives T036 a subject:
+that task asserts an anonymous download is served and counted, and `projeto` previously had
+neither `arquivos` nor `downloads`.
 
 ## Clarifications
 

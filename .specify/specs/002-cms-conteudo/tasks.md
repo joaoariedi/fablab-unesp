@@ -207,7 +207,8 @@ whoever knows the VM.
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
 | T023 ✅ | `categoriaProjeto` — scoped, with its registry entry. First, because `projeto` relates to it and a relation to a missing collection is not a template | FR-002, FR-004 | `apps/web/collections/content/CategoriaProjeto.ts`, `apps/web/lib/tenancy/scope-registry.ts` | T007 |
-| T024 ✗ | `projeto` collection: PT-BR labels, fields traced to `projetos.md` § Modelo de conteúdo, `read: scopedAccess()` for the admin surface — public reads never reach here | FR-001, FR-021 | `apps/web/collections/content/Projeto.ts` | T023 |
+| T023b | **Media collection** — D1 requires one to realise the native upload path (`upload: true`, per-collection `mimeTypes`/`filesize`, `imageSizes`). It is in neither `data-model.md` nor the original task list, so it is new work, not a gap in an existing task | FR-011, FR-012 | `apps/web/collections/` , `data-model.md` | D1 |
+| T024 ✅ | `projeto` collection: PT-BR labels, fields traced to `projetos.md` § Modelo de conteúdo, `read: scopedAccess()` for the admin surface — public reads never reach here | FR-001, FR-021 | `apps/web/collections/content/Projeto.ts` | T023 |
 | T025 ✅ | Registry entry with its one-line `why`. `registry.test.ts` already fails on an omission, so this is red before it is written | FR-004, SC-001 | `apps/web/lib/tenancy/scope-registry.ts` | T024 |
 | T026 ✅ | `sameTenant` on every relationship whose target is scoped — `categoria`, `autor`, `maquinasUtilizadas` | FR-007 | `apps/web/collections/content/Projeto.ts` | T024 |
 | T027 ✅ | Review states `rascunho \| em_revisao \| publicado`, with `status` carrying `canPublishField` so a maker edits a draft but cannot publish it | FR-008, FR-010 | `apps/web/collections/content/Projeto.ts` | T008, T024 |
@@ -217,6 +218,39 @@ whoever knows the VM.
 | T031 ✗ | **Reconciliation test**: recompute every counter from its source rows and assert equality. This is the mitigation for the drift a stored counter always has — an admin bulk delete, a migration, a manual SQL fix. Watch it red by desyncing one counter | FR-020, SC-012 | `apps/web/tests/content/counters.test.ts` | T030 |
 | T032 ✅ | Migration for `projeto` + `categoriaProjeto`. The drift gate from feature 000 is live throughout this feature | FR-001 | `apps/web/migrations/` | T025 |
 | T033 ✅ | Review-queue tests: publish → unpublish → republish yields **one** approval record; a maker cannot publish | SC-004, SC-005 | `apps/web/tests/content/review.test.ts` | T028 |
+
+## Decisions D1, D2 and D3 applied (2026-09-06)
+
+The three conflicts runs 1-4 kept hitting were settled by the PO and applied by hand. Full
+reasoning is in `spec.md` § "Decisions taken after the spec was written"; the consequences for
+this list are:
+
+- **D1 — `clientUploads` is off.** The presign/quarantine design of plan § Sketch 4 is
+  superseded. `lib/uploads/` had **no production caller** when the decision was taken (`grep`
+  for `verifyUploaded`, `generateObjectKey`, `presignUpload` outside their own tests returns
+  nothing), so nothing working was discarded — but the modules are now a library waiting for a
+  home rather than the upload path. **T016b (⛔) is closed by this decision**: per-field caps
+  become Payload's job. **T023b is new**: the native path needs a media collection, which is in
+  neither `data-model.md` nor this list.
+- **D2 — FR-022's relationship fields move to feature 005**, with their targets. Payload throws
+  `InvalidFieldRelationship` when `relationTo` names an absent collection, so the original
+  wording could not be implemented. Same for `projeto.autor`, whose target `perfilMaker` is a
+  002b collection.
+- **D3 — `projeto` carries storage keys as text**, following the `Organizations.ts` precedent,
+  and `descricaoCompleta` is Lexical. **T024 is now ✅**: `descricaoCompleta`, `imagemCapa`,
+  `galeria`, `arquivos` and `downloads` are declared and migrated. The three 005 relations and
+  `autor` are deferred by D2, not omitted.
+
+Two defects surfaced while applying them, both in work run 4 had accepted:
+
+- `migrations.test.ts` read only the `CREATE TABLE` body, so it reported a *missing column* the
+  moment a second migration added one with `ALTER TABLE … ADD COLUMN` — backwards, since a field
+  added without a migration is what the file exists to catch. It also counted `array` fields as
+  columns, which Payload gives their own tables. Both fixed.
+- `@payloadcms/richtext-lexical` was not installed. Payload 3 ships no editor by default and a
+  `richText` field throws at config load without one. T024's original deferral called this "a
+  stack change"; `spec.md` § Decisions had already settled that choosing the framework's own
+  default adds nothing to the stack.
 
 ## Run 4 (`wf_9a0f5814-2d4`, 2026-09-06) — what it left behind
 
