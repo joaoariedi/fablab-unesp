@@ -427,7 +427,14 @@ beforeAll(async () => {
     overrideAccess: true,
   })
 
-  seeded = { org: org.id, categoria: categoria.id, midia: midia.id as number, projeto: projeto.id }
+  // Ids are `string | number` without the generated `payload-types.ts`, which is gitignored —
+  // so this narrows here rather than typechecking locally and failing in CI.
+  seeded = {
+    org: org.id as number,
+    categoria: categoria.id as number,
+    midia: midia.id as number,
+    projeto: projeto.id as number,
+  }
 }, 120_000)
 
 afterAll(async () => {

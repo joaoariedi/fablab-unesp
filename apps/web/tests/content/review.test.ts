@@ -46,7 +46,7 @@ const member = async (email: string, role: 'maker' | 'staff', org: number): Prom
     collection: 'users',
     data: {
       email,
-      password: 'fila-de-revisao-123',
+      password: 'fixture-password-123',
       role: 'user',
       orgs: [{ organization: org, role }],
     },

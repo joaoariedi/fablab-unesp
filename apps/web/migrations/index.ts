@@ -4,6 +4,7 @@ import * as migration_20260906_194532_projeto_campos_de_conteudo from './2026090
 import * as migration_20260906_200327_midia_uploads from './20260906_200327_midia_uploads';
 import * as migration_20260907_035137_projeto_midia_relacionamentos from './20260907_035137_projeto_midia_relacionamentos';
 import * as migration_20260907_063817_colecoes_002b from './20260907_063817_colecoes_002b';
+import * as migration_20260907_122242_evento_inscricao_obrigatoria from './20260907_122242_evento_inscricao_obrigatoria';
 
 export const migrations = [
   {
@@ -35,5 +36,10 @@ export const migrations = [
     up: migration_20260907_063817_colecoes_002b.up,
     down: migration_20260907_063817_colecoes_002b.down,
     name: '20260907_063817_colecoes_002b'
+  },
+  {
+    up: migration_20260907_122242_evento_inscricao_obrigatoria.up,
+    down: migration_20260907_122242_evento_inscricao_obrigatoria.down,
+    name: '20260907_122242_evento_inscricao_obrigatoria'
   },
 ];

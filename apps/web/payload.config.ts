@@ -119,8 +119,14 @@ export function s3StorageOptions(
 
     // Derived, never hand-listed: a list written by hand rots the first time a collection
     // gains or loses an upload — silently, into local disk storage.
+    // `true as const`, not `true`: `Object.fromEntries` widens to `Record<string, boolean>`,
+    // and the adapter's option is `true | CollectionOptions` — `false` is not a member. It
+    // typechecks either way while `payload-types.ts` exists locally and fails in CI, which has
+    // no generated types, so the widening is invisible until the pipeline runs.
     collections: Object.fromEntries(
-      adapted.filter((collection) => Boolean(collection.upload)).map(({ slug }) => [slug, true]),
+      adapted
+        .filter((collection) => Boolean(collection.upload))
+        .map(({ slug }) => [slug, true as const]),
     ),
 
     config: {
