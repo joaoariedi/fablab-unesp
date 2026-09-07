@@ -68,6 +68,19 @@ export type DownloadRequest = {
    * being supplied by the caller and string-matched. A caller can no longer name a key at all.
    */
   midiaId: string | number
+  /**
+   * The relationship field the attachments live on.
+   *
+   * **A parameter, not a constant.** It was hardcoded to `arquivos`, which is `projeto`'s name
+   * for it — and every other content collection names it something else: `artigo.anexos`,
+   * `modelo3d.arquivosModelo`, `aula.materiais`. So the endpoint registered on those three
+   * resolved `undefined ?? []`, found nothing, and answered 404 for every attachment they
+   * carry, while their `downloads` counters stayed permanently 0 because counting happens only
+   * after the media is found. Three registered, dead routes — and worse than three missing
+   * ones, because a registered route reads as covered to the isolation harness and to anyone
+   * checking the page spec's field table.
+   */
+  field: string
 }
 
 export type DownloadDeps = {
@@ -86,7 +99,7 @@ type MediaDoc = { id?: unknown; filename?: unknown }
  * over the media collections, so each entry arrives as `{ relationTo, value }` and `value` is
  * the populated document at depth ≥ 1.
  */
-type DocumentWithFiles = { arquivos?: ({ value?: MediaDoc | unknown } | unknown)[] | null }
+type DocumentWithFiles = Record<string, ({ value?: MediaDoc | unknown } | unknown)[] | null | undefined>
 
 /**
  * One answer for every refusal, and deliberately the same one.
@@ -114,8 +127,12 @@ const hostFromRequest = (req: PayloadRequest): string =>
  * key and there is nothing to traverse with — where a text key had to be matched *and* trusted
  * enough to hand to the object store.
  */
-const listedMedia = (doc: DocumentWithFiles, midiaId: string | number): MediaDoc | null => {
-  for (const entry of doc.arquivos ?? []) {
+const listedMedia = (
+  doc: DocumentWithFiles,
+  field: string,
+  midiaId: string | number,
+): MediaDoc | null => {
+  for (const entry of doc[field] ?? []) {
     const value = (entry as { value?: unknown })?.value
     const media = (typeof value === 'object' && value !== null ? value : entry) as MediaDoc
     if (String(media?.id ?? '') === String(midiaId)) return media
@@ -147,7 +164,7 @@ const dispositionFor = (chave: string): string => {
  *
  * @example
  *   // In a route handler holding a PayloadRequest:
- *   return serveDownload(req, { collection: 'projeto', id, midiaId }, { objects: readFromBucket })
+ *   return serveDownload(req, { collection: 'projeto', id, midiaId, field: 'arquivos' }, …)
  */
 export async function serveDownload(
   req: PayloadRequest,
@@ -187,7 +204,7 @@ export async function serveDownload(
       if (err instanceof PublicReadDeniedError) return null
       throw err
     })
-  const media = doc ? listedMedia(doc, request.midiaId) : null
+  const media = doc ? listedMedia(doc, request.field, request.midiaId) : null
   const filename = typeof media?.filename === 'string' ? media.filename : null
   if (!filename) return notFound()
 

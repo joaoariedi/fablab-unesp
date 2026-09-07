@@ -1,9 +1,73 @@
-import type { CollectionConfig } from 'payload'
+import type { CollectionConfig, Endpoint, PayloadRequest } from 'payload'
 
+import { serveDownload } from '../../lib/content/downloads'
 import { stampApproval } from '../../lib/content/review'
 import { canPublishField, scopedAccess, teamOnly } from '../../lib/tenancy/access'
+import { mediaObjectReader } from '../../lib/tenancy/media-objects'
 import { sameTenant } from '../../lib/tenancy/same-tenant-validator'
 import { scopedListEndpoint } from '../../lib/tenancy/scoped-endpoint'
+
+/**
+ * The same refusal `serveDownload` gives, for a request that never reaches it.
+ *
+ * Byte-identical on purpose: a malformed path must be indistinguishable from a draft, a foreign
+ * organization and an unlisted media document, or the difference is an oracle — the property
+ * `downloads.ts` calls its single 404 and run 6 caught being violated across collections.
+ */
+const notFound = (): Response => Response.json({ error: 'Not found' }, { status: 404 })
+
+/** `path-to-regexp` hands every captured segment through as a string; anything else is a 404. */
+const routeSegment = (value: unknown): string | null =>
+  typeof value === 'string' && value.length > 0 ? value : null
+
+/**
+ * **The anonymous download route** (FR-015, FR-016, SC-009, T036b).
+ *
+ * `GET /api/<collection>/:id/download/:midiaId`. Custom collection endpoints are served without
+ * authentication, which is exactly what FR-015 asks for: downloads are open, no account
+ * required (PO, 2026-08-24). The policy — published-only, host-resolved tenant, the media
+ * document read *through* the project, and the counted write — is entirely `serveDownload`'s;
+ * this is the registration it lacked. Run 6 recorded the module having **no production caller
+ * at all**, which made FR-015 true only inside the test harness.
+ *
+ * Both ids come from the **path** rather than a body or a query: the route is a link a visitor
+ * follows, and a GET with a body is not one.
+ *
+ * The bytes come from `mediaObjectReader`, which lives in `lib/tenancy` because it touches the
+ * unscoped client (FR-024) — the route itself holds nothing that can query anything.
+ *
+ * A factory rather than a literal, for `scopedListEndpoint`'s reason: `artigo`, `aula` and
+ * `modelo3d` carry downloads too (002b), and two copies drift — the day one of them forgets the
+ * tenant-resolved host is the day FR-016 stops holding for that collection. It lives here until
+ * the second caller lands and moves to `lib/content/` with it.
+ */
+export function downloadEndpoint(
+  collectionSlug: string,
+  /**
+   * The attachment field on THIS collection. Required, with no default: a default would be
+   * `projeto`'s `arquivos`, and the three collections that named the field differently would
+   * silently get a route that serves nothing — which is exactly what happened before this
+   * parameter existed.
+   */
+  attachmentField: string,
+): Omit<Endpoint, 'root'> {
+  return {
+    path: '/:id/download/:midiaId',
+    method: 'get',
+    handler: async (req: PayloadRequest) => {
+      const params = (req.routeParams ?? {}) as { id?: unknown; midiaId?: unknown }
+      const id = routeSegment(params.id)
+      const midiaId = routeSegment(params.midiaId)
+      if (!id || !midiaId) return notFound()
+
+      return serveDownload(
+        req,
+        { collection: collectionSlug, id, midiaId, field: attachmentField },
+        { objects: mediaObjectReader(req) },
+      )
+    },
+  }
+}
 
 /**
  * A project made at **one** lab (FR-001, FR-021, T024) — and the template the other twelve
@@ -85,7 +149,7 @@ export const Projeto: CollectionConfig = {
   // The custom-endpoint surface of the isolation harness (FR-021, SC-002). Not decoration:
   // `isolation.test.ts` throws for a scoped collection that declares no `/mine`, because a
   // surface with no subject asserts nothing.
-  endpoints: [scopedListEndpoint('projeto')],
+  endpoints: [scopedListEndpoint('projeto'), downloadEndpoint('projeto', 'arquivos')],
   access: {
     read: scopedAccess(),
     create: scopedAccess(),

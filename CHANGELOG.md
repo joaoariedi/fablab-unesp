@@ -10,6 +10,63 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) �
 
 ### Added
 
+- **The content model** (feature 002) — thirteen per-organization collections the whole
+  product renders from: `projeto`, `modelo3d`, `aula`, `artigo`, `evento`, their three
+  category collections, `local` and `maquina`, `perfilMaker`, `curtida` and `progressoAula`.
+  Every field traces to a page spec's *Modelo de conteúdo* table, labels are PT-BR, and each
+  collection is declared in the versioned scope registry, so the registry test fails in both
+  directions. `perfilMaker` is scoped rather than folded into the global `usuario`: level, XP
+  and skills are per-organization, so one person making at two labs has one login and two
+  profiles (CLR-002).
+- **A review queue.** `rascunho → em_revisao → publicado`, with `publicado` reachable only by
+  the lab team through field access, and `evento` keeping the calendar's own set. Approval is
+  stamped **once per document and never cleared** — the stamp is re-asserted onto the outgoing
+  write, because `beforeChange` receives the request body and an unpublish carrying
+  `aprovacaoRegistrada: false` would otherwise erase it and let the next publish credit twice.
+  This feature grants **no XP**; feature 005 reads the stamp (CLR-001).
+- **An anonymous read path**, `getPublicScopedPayload(host)` — the public site had none, and it
+  is the same defect as feature 001's theme gap: `scopedAccess` opens `if (!user) return false`.
+  It resolves the organization from the host and filters to `publicado`, and it goes **around**
+  collection access rather than through it, because the multi-tenant plugin AND-s
+  `tenant IN memberships` onto whatever access returns — a "public" branch written in
+  collection access is empty for a signed-in visitor from another lab and refused outright for
+  a fresh account with no membership, which would then see *less* than a logged-out visitor.
+- **Uploads go through Node** (decision D1, 2026-09-06) — `clientUploads` is off, because with
+  it on Payload returns from `generateFileData` before `checkFileRestrictions`, which makes
+  `mimeTypes`, `filesize` and `imageSizes` inert on the only upload path the product has.
+  **Three media collections, one per group** (`midiaImagem`, `midiaModelo3d`,
+  `midiaDocumento`), because every knob Payload offers for format and size is per collection:
+  a single `midia` could only carry the union of the three allowlists and the largest of the
+  three caps — a cover-image field accepting a 200 MB archive. Extensions and caps are enforced
+  in a `beforeOperation` hook, since `UploadConfig` has no per-collection size option and the
+  one size the framework reads is global.
+- **Upload safety without a parser.** Object keys are generated, never attacker-chosen, so a
+  filename cannot traverse a path or shadow another organization's key; content is checked
+  against its leading bytes and **never interpreted** — a `.glb` is verified as a container,
+  never as a model, and the 3D preview renders client-side (CLR-003). Caps and allowlists have
+  one source: `lib/uploads/limits.ts` is tested against `docs/tech-stack.md` § Storage and
+  FR-011, so raising a cap is a documentation change first.
+- **Anonymous downloads are served and counted** — no account, with the counter write resolving
+  its organization from the host and passing through the tenancy choke point like every other
+  write; a cross-organization request is a 404 byte-identical to a draft's, so the difference
+  is not an oracle. Likes still require an account.
+- **One counter strategy** for `curtidas`, `downloads`, `totalModelos` and `formatos`: stored on
+  the document rather than counted on read (a twenty-card grid would otherwise issue twenty
+  counts), maintained inside the **same transaction** as the write that caused it via the
+  caller's own `req`, and recomputed from source rows by a reconciliation test in CI — the
+  drift an admin bulk delete or a manual SQL fix causes is mitigated, not hoped away.
+- **`payload-locked-documents` closed** (FR-018, CLR-004) — feature 000 escalated it in
+  writing: its rows name our scoped documents by collection and id and the plugin does not
+  scope it, so an editor opening a project published that id platform-wide. Every content
+  collection sets `lockDocuments: false`, Payload's supported per-collection switch, so no row
+  is written and there is nothing to enumerate. The cost is priced rather than discovered: no
+  "someone else is editing this" warning on those collections.
+- **[`docs/content-model.md`](docs/content-model.md)** — the collections, their scope, the
+  review queue, the public read path, the upload rules and the derived counters, in PT-BR for
+  the lab team, with the source of truth for every number named rather than copied.
+
+### Added — feature 001
+
 - **Design system** (`@fablab/ui`, feature 001) — the identity layer the product renders
   from. Tokens (palette, two font faces with a whole-pixel type scale, breakpoints/spacing/
   radii/hard shadow), nine components, the isometric shape vocabulary, and the responsive

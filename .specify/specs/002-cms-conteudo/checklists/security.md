@@ -14,49 +14,49 @@ behaving differently from how the spec assumed.
 
 | ID | Check | Dimension | Ref | Status |
 |----|-------|-----------|-----|--------|
-| CHK032 | Every accepted extension is enumerated per field group; no "and similar formats" | [input-sanitization] | FR-011 | [ ] |
-| CHK033 | Size caps are stated as values, not as "reasonable limits", and trace to `tech-stack.md` rather than being invented | [input-sanitization] | FR-012 | [ ] |
-| CHK034 | The cap is enforced **at presign**, and the requirement says so — a cap checked after the bytes land has already paid the cost it existed to prevent | [input-sanitization] | FR-012, SC-007 | [ ] |
-| CHK035 | Stored object keys are **generated**; the requirement states the original filename is metadata only | [input-sanitization] | FR-013 | [ ] |
-| CHK036 | Two concrete hostile filenames are named (`../../etc/passwd`, `a.png.svg`) rather than "sanitise the filename" | [testability] | SC-008 | [ ] |
-| CHK037 | Type is verified against the file's **bytes**, and the requirement is explicit that no attacker-supplied binary is parsed | [input-sanitization] | FR-014, CLR-003 | [ ] |
-| CHK038 | The residual risk is NAMED: a `.glb` is verified as a container, never as a model. A reader cannot mistake this for model validation | [clarity] | CLR-003 | [ ] |
-| CHK039 | **Collection-level `mimeTypes`/`filesize` are documented as NOT running** on the clientUploads path, so nobody adds them and believes the surface is covered | [completeness] | FR-011, spike S1 | [ ] |
-| CHK040 | The requirement states the post-upload check is the **only** validation layer, not defence in depth | [clarity] | FR-014, spike S1 | [ ] |
-| CHK041 | Unverified objects are unreachable: the quarantine prefix is stated as **not publicly served**, not merely as a naming convention | [data-protection] | FR-013, SC-008 | [ ] |
-| CHK042 | Abandoned uploads have an owner — the orphan reaper is a requirement, not an observation | [completeness] | FR-019 | [ ] |
-| CHK043 | Deep scanning is recorded as a **named follow-up** rather than left as an unstated gap | [clarity] | CLR-003 | [ ] |
+| CHK032 | Every accepted extension is enumerated per field group; no "and similar formats" | [input-sanitization] | FR-011 | [x] |
+| CHK033 | Size caps are stated as values, not as "reasonable limits", and trace to `tech-stack.md` rather than being invented | [input-sanitization] | FR-012 | [x] |
+| CHK034 | The cap is enforced **at presign**, and the requirement says so — a cap checked after the bytes land has already paid the cost it existed to prevent. **OPEN — D1 deleted the step this names.** The cap is enforced by `refuseOffPolicyUpload` in `collections/Media.ts`, a `beforeOperation` hook that runs before `generateFileData` and so before storage; but the bytes now pass through Node first, which is the ingress cost presign existed to avoid. D1 names that cost and defers it to feature 008, so the row is superseded rather than met | [input-sanitization] | FR-012, SC-007 | [ ] |
+| CHK035 | Stored object keys are **generated**; the requirement states the original filename is metadata only. **OPEN — the generated key has no production caller.** `generateObjectKey` and `QUARANTINE_PREFIX` are exercised only by `tests/uploads/keys.test.ts`; on the shipped native path the object key is the filename Payload derives from the upload. The FR-013 wording is fine, the binding is missing | [input-sanitization] | FR-013 | [ ] |
+| CHK036 | Two concrete hostile filenames are named (`../../etc/passwd`, `a.png.svg`) rather than "sanitise the filename" | [testability] | SC-008 | [x] |
+| CHK037 | Type is verified against the file's **bytes**, and the requirement is explicit that no attacker-supplied binary is parsed. Delivered by Payload own byte sniff (`checkFileRestrictions` against the collection `mimeTypes`), driven with real bytes in `tests/uploads/native-upload.test.ts`. Nothing parses the file | [input-sanitization] | FR-014, CLR-003 | [x] |
+| CHK038 | The residual risk is NAMED: a `.glb` is verified as a container, never as a model. A reader cannot mistake this for model validation | [clarity] | CLR-003 | [x] |
+| CHK039 | **Collection-level `mimeTypes`/`filesize` are documented as NOT running** on the clientUploads path, so nobody adds them and believes the surface is covered. **OPEN — inverted by D1.** With `clientUploads` off, collection-level `mimeTypes` DOES run, and the media collections declare it deliberately. The correction is recorded in `spec.md` D1, in the `lib/uploads/verify.ts` header and in `tests/tasks-preamble-facts.test.ts`, but `plan.md` Sketch 4 still states the old claim unqualified | [completeness] | FR-011, spike S1 | [ ] |
+| CHK040 | The requirement states the post-upload check is the **only** validation layer, not defence in depth. **OPEN — inverted by D1.** There are now two layers, not one: the framework sniff plus `refuseOffPolicyUpload`. The requirement as written would have a reader remove one of them | [clarity] | FR-014, spike S1 | [ ] |
+| CHK041 | Unverified objects are unreachable: the quarantine prefix is stated as **not publicly served**, not merely as a naming convention. Provisioned private and driven in `tests/storage-quarantine.test.ts`. Post-D1 nothing writes to the prefix, so the property holds by construction as well as by statement | [data-protection] | FR-013, SC-008 | [x] |
+| CHK042 | Abandoned uploads have an owner — the orphan reaper is a requirement, not an observation. **OPEN — the owner points at an empty prefix.** The lifecycle rule exists and is driven (`tests/storage-reaper.test.ts`), but it expires objects under `quarantine/`, and post-D1 no upload lands there. An upload abandoned on the native path is covered by nothing | [completeness] | FR-019 | [ ] |
+| CHK043 | Deep scanning is recorded as a **named follow-up** rather than left as an unstated gap | [clarity] | CLR-003 | [x] |
 
 ## The read-access widening
 
 | ID | Check | Dimension | Ref | Status |
 |----|-------|-----------|-----|--------|
-| CHK044 | The public path is stated to run with `overrideAccess: true`, so the reader knows nothing downstream will catch a mistake | [authorization] | FR-010, FR-024 | [ ] |
-| CHK045 | It is stated as **unexported** from `lib/tenancy/index.ts`, so the import boundary keeps it in one module | [authorization] | FR-024 | [ ] |
-| CHK046 | The published-only constraint is derived from the collection configs, not from a hand-kept list that can rot | [testability] | FR-010 | [ ] |
-| CHK047 | The requirement says why this is a client rather than an access function — the plugin ANDs its own tenant constraint and would nullify a public branch | [clarity] | FR-010, round 1 | [ ] |
-| CHK048 | **Four vantage points** are required, including the two round 1 measured as broken: member of another organization, and signed-in with no membership | [authorization] | SC-002 | [ ] |
-| CHK049 | The public path joins the isolation-mutation set, so breaking it must be noticed | [testability] | SC-002, SC-012 | [ ] |
-| CHK050 | Feature 000's contract is restated as inherited, not re-derived: access on scoped collections returns a **query constraint, never a boolean** | [consistency] | FR-006 | [ ] |
+| CHK044 | The public path is stated to run with `overrideAccess: true`, so the reader knows nothing downstream will catch a mistake | [authorization] | FR-010, FR-024 | [x] |
+| CHK045 | It is stated as **unexported** from `lib/tenancy/index.ts`, so the import boundary keeps it in one module | [authorization] | FR-024 | [x] |
+| CHK046 | The published-only constraint is derived from the collection configs, not from a hand-kept list that can rot | [testability] | FR-010 | [x] |
+| CHK047 | The requirement says why this is a client rather than an access function — the plugin ANDs its own tenant constraint and would nullify a public branch | [clarity] | FR-010, round 1 | [x] |
+| CHK048 | **Four vantage points** are required, including the two round 1 measured as broken: member of another organization, and signed-in with no membership | [authorization] | SC-002 | [x] |
+| CHK049 | The public path joins the isolation-mutation set, so breaking it must be noticed | [testability] | SC-002, SC-012 | [x] |
+| CHK050 | Feature 000's contract is restated as inherited, not re-derived: access on scoped collections returns a **query constraint, never a boolean** | [consistency] | FR-006 | [x] |
 
 ## Anonymous writes, and who may publish
 
 | ID | Check | Dimension | Ref | Status |
 |----|-------|-----------|-----|--------|
-| CHK051 | The anonymous download counter is acknowledged as a **write from an unauthenticated request** and the requirement names how it resolves its organization | [authorization] | FR-015, FR-016 | [ ] |
-| CHK052 | Open downloads and account-only likes are stated as a deliberate asymmetry, with both PO decisions dated | [consistency] | FR-015, FR-017 | [ ] |
-| CHK053 | "The lab team" is defined against data that exists — the `admin \| staff \| maker` membership role — rather than as an undefined concept | [authorization] | FR-008 | [ ] |
-| CHK054 | The publish gate returns a constraint, so a staff member of lab A cannot publish lab B's content even if a route forgets to check | [authorization] | FR-008, SC-005 | [ ] |
-| CHK055 | Field-level and collection-level publish control are stated as **two functions**, because Payload types field access as boolean-only | [feasibility] | FR-008 | [ ] |
-| CHK056 | Approval is recorded idempotently, and the requirement says what stops a republish crediting twice | [data-protection] | FR-009, SC-004 | [ ] |
+| CHK051 | The anonymous download counter is acknowledged as a **write from an unauthenticated request** and the requirement names how it resolves its organization | [authorization] | FR-015, FR-016 | [x] |
+| CHK052 | Open downloads and account-only likes are stated as a deliberate asymmetry, with both PO decisions dated | [consistency] | FR-015, FR-017 | [x] |
+| CHK053 | "The lab team" is defined against data that exists — the `admin \| staff \| maker` membership role — rather than as an undefined concept | [authorization] | FR-008 | [x] |
+| CHK054 | The publish gate returns a constraint, so a staff member of lab A cannot publish lab B's content even if a route forgets to check | [authorization] | FR-008, SC-005 | [x] |
+| CHK055 | Field-level and collection-level publish control are stated as **two functions**, because Payload types field access as boolean-only | [feasibility] | FR-008 | [x] |
+| CHK056 | Approval is recorded idempotently, and the requirement says what stops a republish crediting twice | [data-protection] | FR-009, SC-004 | [x] |
 
 ## Tenant isolation, extended
 
 | ID | Check | Dimension | Ref | Status |
 |----|-------|-----------|-----|--------|
-| CHK057 | Every new collection is declared `scoped` or `global` with a justification; the registry test fails on an omission | [authorization] | FR-004, SC-001 | [ ] |
-| CHK058 | Every relationship between two scoped collections carries the same-tenant validator | [data-protection] | FR-007 | [ ] |
-| CHK059 | Relationship **pickers** are named explicitly as an isolation surface a scoped list view does not cover | [authorization] | FR-021 | [ ] |
-| CHK060 | `payload-locked-documents` names the specific risk — enumerating another organization's document IDs — rather than "audit Payload's tables" | [completeness] | FR-018 | [ ] |
-| CHK061 | SC-003 requires being seen **failing first** against today's behaviour, so the fix is proven rather than assumed | [testability] | SC-003 | [ ] |
-| CHK062 | The cost of the chosen remedy is stated: `lockDocuments: false` removes the edit-lock warning, so two team members can overwrite each other on a shared admin | [clarity] | FR-018, CLR-004 | [ ] |
+| CHK057 | Every new collection is declared `scoped` or `global` with a justification; the registry test fails on an omission | [authorization] | FR-004, SC-001 | [x] |
+| CHK058 | Every relationship between two scoped collections carries the same-tenant validator | [data-protection] | FR-007 | [x] |
+| CHK059 | Relationship **pickers** are named explicitly as an isolation surface a scoped list view does not cover | [authorization] | FR-021 | [x] |
+| CHK060 | `payload-locked-documents` names the specific risk — enumerating another organization's document IDs — rather than "audit Payload's tables" | [completeness] | FR-018 | [x] |
+| CHK061 | SC-003 requires being seen **failing first** against today's behaviour, so the fix is proven rather than assumed. Same basis as CHK022 and CHK029 | [testability] | SC-003 | [x] |
+| CHK062 | The cost of the chosen remedy is stated: `lockDocuments: false` removes the edit-lock warning, so two team members can overwrite each other on a shared admin | [clarity] | FR-018, CLR-004 | [x] |

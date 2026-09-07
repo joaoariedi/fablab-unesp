@@ -231,6 +231,56 @@ whoever knows the VM.
 | T032 ✅ | Migration for `projeto` + `categoriaProjeto`. The drift gate from feature 000 is live throughout this feature | FR-001 | `apps/web/migrations/` | T025 |
 | T033 ✅ | Review-queue tests: publish → unpublish → republish yields **one** approval record; a maker cannot publish | SC-004, SC-005 | `apps/web/tests/content/review.test.ts` | T028 |
 
+## Run 7 (`wf_7e16eba0-43e`, 2026-09-07) — all twelve collections, and one shared defect
+
+Six accepted, eight rejected, and **all twelve 002b collections landed** — `apps/web` went from
+734 tests to 1,239. Every rejection was confirmed by execution; all but T050 are repaired.
+
+**The dominant finding was one defect of mine, wearing three hats.** T038, T039 and T040 each
+registered `downloadEndpoint` and each shipped a **dead route**: `serveDownload` resolved
+`doc.arquivos` unconditionally, and `arquivos` is `projeto`'s name for the field. The other
+collections name it `anexos`, `arquivosModelo` and `materiais`, so all three resolved
+`undefined ?? []`, answered 404 for every attachment they carry, and left their `downloads`
+counters permanently 0 — counting happens only after the media is found. Worse than three
+missing routes, because a registered one reads as covered to the isolation harness and to
+anyone checking the page spec's field table. The attachment field is now a **required
+parameter** of `downloadEndpoint`, with no default: a default would have been `arquivos`, which
+is precisely how the three silent failures happened. Watched failing against the old hardcoding.
+
+**A reference doc stated the opposite of the code.** `docs/content-model.md` said the content
+collections store *text keys*, quoting D3 — one commit after option ii had made them
+relationships. Its declared audience is feature 003, so the sentence would have sent a 003
+author to resolve storage keys against S3, which is the dependency option Principle 1 rejected.
+Markdown lint and link integrity cannot detect a false claim about code; `tests/content-model-doc.test.ts`
+now can, reading the field types out of the collection and requiring the prose to agree.
+
+**A field's requiredness was dropped on a false premise.** `evento.inscricaoObrigatoria` is
+`obrigatório` in `calendario.md` and shipped optional, justified by "Payload's checkbox
+validation rejects a falsy value when `required` is set". Measured against the installed
+package: `checkbox(false, { required: true })` returns `true` — accepted — and only `undefined`
+is refused. On a checkbox `required` means "must carry a boolean", which is what the spec wants
+and what the default already gave, so it costs nothing and is now declared.
+
+**Four gates the run left red**, all repaired: the 002b migration was never added to
+`migrations/index.ts` (so it would never have run); six approval-stamp pairs and two `evento`
+ones were undeclared in the FR-020 rot guard; `curtidas` recounted through `alvo`, a field
+T043 named `conteudo` and declared polymorphic, so the query raised `QueryError` rather than
+drifting; and `formatos` still carried its 002a placeholder. That placeholder did exactly what
+it was built for — it refused to stay quiet once `modelo3d` existed — and `formatos` now has a
+real recount from the linked media documents' filenames, closing FR-020's fourth derived value.
+
+**T049 unticked one row.** CHK088 claimed upload rejections are in PT-BR; post-D1 only half are
+— a renamed `.exe` is refused by our hook in Portuguese, a corrupt `.png` by Payload's own
+English message. The verifier also found T049's gate only pins the *open* set and never
+re-measures the 79 ticks, which is why a wrong tick survived; that weakness is recorded here
+rather than silently patched.
+
+**T050 is correctly rejected and stays ⛔.** SC-012 is genuinely unmet: `Colour tokens` and
+`Isolation harness can fail (public-path)` run on every PR and neither is a required status
+check on `main` or `dev`. Verified against the live protection API. **This is the PO's action**
+— it needs repository-admin rights — and it is the last thing standing between feature 002 and
+its own acceptance criterion.
+
 ## Option ii applied (2026-09-07) — file fields are media relationships
 
 `projeto.imagemCapa`, `galeria` and `arquivos` are relationships to the media collections
@@ -434,26 +484,26 @@ reason against the enlarged matrix.
 | T034 ✅ | **Drive the real flow, do not report green tests.** Upload one image through the actual **admin/native** path — `clientUploads` is off (D1), so there is no presigned path to drive — and assert Payload generated the `imageSizes` derivatives itself, that a disallowed type is refused by the collection's `mimeTypes`, and that an over-cap file is refused by the size hook. ~~presigned path / left quarantine~~ superseded by D1 | FR-011, FR-014, SC-006 | `apps/web/tests/uploads/` | T023b |
 | T035 ✅ | Public read proven end to end: anonymous `GET` of a published project returns it; an unpublished one 404s; another organization's returns 404 | SC-002, FR-010 | `apps/web/tests/tenancy/public-read.test.ts` | T012, T024 |
 | T036a ✅ | **Download policy**, driven against real rows: anonymous GET of a published project's attachment returns it and increments `downloads`; a draft, another organization's, an unlisted key, a missing object and a **non-allow-listed collection** each return the same 404. The last one was the defect: `PublicReadDeniedError` escaped, so a caller-supplied collection produced a rejection where `projeto` produced 404 — a 500-vs-404 oracle telling a prober which collections are public | FR-015, FR-016, SC-009, SC-010 | `apps/web/lib/content/downloads.ts` | T030, T035 |
-| T036b | **The download ROUTE and its object reader.** Decision taken (option ii, applied 2026-09-07): the file fields are relationships to the media collections, so the route reads the media document *through* the published project at `depth: 1` and needs no anonymous read of the media collections at all. `serveDownload` has no production caller, so FR-015 ("downloads are open, and anonymous ones are counted") is true only inside the test harness. Registering it needs an `ObjectSource`, and what that reads depends on an unanswered question — see § "T036b: text keys or media relationships?" | FR-015, FR-016, SC-009 | `apps/web/collections/content/Projeto.ts` | **decision** |
+| T036b ✅ | **The download ROUTE and its object reader.** Decision taken (option ii, applied 2026-09-07): the file fields are relationships to the media collections, so the route reads the media document *through* the published project at `depth: 1` and needs no anonymous read of the media collections at all. `serveDownload` has no production caller, so FR-015 ("downloads are open, and anonymous ones are counted") is true only inside the test harness. Registering it needs an `ObjectSource`, and what that reads depends on an unanswered question — see § "T036b: text keys or media relationships?" | FR-015, FR-016, SC-009 | `apps/web/collections/content/Projeto.ts` | **decision** |
 | T037 ✅ | **002a acceptance**: all gates green, the template reviewed, and the preamble's measured facts re-checked — noting that facts 3 and 4 (`imageSizes` and `checkFileRestrictions` never running) describe `clientUploads: true` and are **scoped, not wrong**; D1 turned it off, so both now run. Update the preamble to say so. 002b is blocked on this | all | — | T034, T035, T036 |
 
 ## Phase 002b: the remaining twelve, against a proven template
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T038 | [P] `categoriaArtigo` and `artigo` | FR-001, FR-002 | `apps/web/collections/content/` | T037 |
-| T039 | [P] `categoriaModelo` and `modelo3d`, with `formatos` derived from the uploaded extensions at save | FR-001, FR-002, FR-020 | `apps/web/collections/content/` | T037 |
-| T040 | [P] `aula` and `progressoAula` | FR-001, FR-003 | `apps/web/collections/content/` | T037 |
-| T041 | [P] `local`, `maquina`, then `evento` — which relates to both, so they land first | FR-001, FR-003 | `apps/web/collections/content/` | T037 |
-| T042 | [P] `perfilMaker` — scoped, carrying `nome` and `handle`. Avatar is 004's and level/XP are 005's; they extend this collection rather than reshaping `usuario` (CLR-002) | FR-003b, FR-005 | `apps/web/collections/content/PerfilMaker.ts` | T037 |
-| T043 | [P] `curtida` — requires a signed-in user; there is no anonymous like | FR-017 | `apps/web/collections/content/Curtida.ts` | T037 |
-| T044 | Registry entries and `sameTenant` on every new relationship, plus `lockDocuments: false` on each | FR-004, FR-007, FR-018 | `apps/web/lib/tenancy/scope-registry.ts` | T038, T039, T040, T041, T042, T043 |
-| T045 | `payload-locked-documents`: **the failing test first**, against today's behaviour, then confirm `lockDocuments: false` closes it. Feature 000 escalated this in writing and deferred it to this feature | FR-018, SC-003 | `apps/web/tests/tenancy/locked-documents.test.ts` | T044 |
-| T046 | Isolation harness extended to every new collection — admin, REST, GraphQL and **relationship pickers**, which a scoped list view does not cover by itself | FR-021, SC-002 | `apps/web/tests/tenancy/isolation.test.ts` | T044 |
-| T047 | Migration for the twelve | FR-001 | `apps/web/migrations/` | T044 |
-| T048 | [P] Content-model docs and CHANGELOG | — | `docs/`, `CHANGELOG.md` | T044 |
-| T049 | Tick CHK001–CHK095 across all four checklists against the implementation; **leave open anything not genuinely satisfied** | all | `checklists/requirements.md` | T045, T046 |
-| T050 | Confirm every feature-000 and feature-001 gate still passes and the new ones are merge-blocking — **verified against the live protection API**, not the workflow file | SC-012 | protection API, `.github/workflows/ci.yml` | T049 |
+| T038 ✅ | [P] `categoriaArtigo` and `artigo` | FR-001, FR-002 | `apps/web/collections/content/` | T037 |
+| T039 ✅ | [P] `categoriaModelo` and `modelo3d`, with `formatos` derived from the uploaded extensions at save | FR-001, FR-002, FR-020 | `apps/web/collections/content/` | T037 |
+| T040 ✅ | [P] `aula` and `progressoAula` | FR-001, FR-003 | `apps/web/collections/content/` | T037 |
+| T041 ✅ | [P] `local`, `maquina`, then `evento` — which relates to both, so they land first | FR-001, FR-003 | `apps/web/collections/content/` | T037 |
+| T042 ✅ | [P] `perfilMaker` — scoped, carrying `nome` and `handle`. Avatar is 004's and level/XP are 005's; they extend this collection rather than reshaping `usuario` (CLR-002) | FR-003b, FR-005 | `apps/web/collections/content/PerfilMaker.ts` | T037 |
+| T043 ✅ | [P] `curtida` — requires a signed-in user; there is no anonymous like | FR-017 | `apps/web/collections/content/Curtida.ts` | T037 |
+| T044 ✅ | Registry entries and `sameTenant` on every new relationship, plus `lockDocuments: false` on each | FR-004, FR-007, FR-018 | `apps/web/lib/tenancy/scope-registry.ts` | T038, T039, T040, T041, T042, T043 |
+| T045 ✅ | `payload-locked-documents`: **the failing test first**, against today's behaviour, then confirm `lockDocuments: false` closes it. Feature 000 escalated this in writing and deferred it to this feature | FR-018, SC-003 | `apps/web/tests/tenancy/locked-documents.test.ts` | T044 |
+| T046 ✅ | Isolation harness extended to every new collection — admin, REST, GraphQL and **relationship pickers**, which a scoped list view does not cover by itself | FR-021, SC-002 | `apps/web/tests/tenancy/isolation.test.ts` | T044 |
+| T047 ✅ | Migration for the twelve | FR-001 | `apps/web/migrations/` | T044 |
+| T048 ✅ | [P] Content-model docs and CHANGELOG | — | `docs/`, `CHANGELOG.md` | T044 |
+| T049 ✅ | Tick CHK001–CHK095 across all four checklists against the implementation; **leave open anything not genuinely satisfied** | all | `checklists/requirements.md` | T045, T046 |
+| T050 ⛔ | Confirm every feature-000 and feature-001 gate still passes and the new ones are merge-blocking — **verified against the live protection API**, not the workflow file | SC-012 | protection API, `.github/workflows/ci.yml` | T049 |
 
 ## Coverage
 

@@ -55,6 +55,12 @@ type DerivedField = CounterField | 'formatos'
 type DerivedSource =
   /** Recount: the rows exist, so the stored value can be re-derived from them. */
   | { from: { collection: string; foreignKey: string } }
+  /**
+   * Derived from the document's OWN field rather than from rows elsewhere. `formatos` is the
+   * only one: it is the set of extensions of the media documents `arquivosModelo` links to,
+   * computed on save. There is no foreign key to count, so the recount reads the row itself.
+   */
+  | { fromOwnRelationship: { field: string; how: string } }
   /** No rows exist to count. Stated with its reason — see the inventory test below. */
   | { noSourceRows: string }
   /**
@@ -66,7 +72,11 @@ type DerivedSource =
   | { awaitingSubject: { collection: string; task: string; derivedFrom: string } }
 
 const DERIVED_SOURCES = {
-  curtidas: { from: { collection: 'curtida', foreignKey: 'alvo' } },
+  // `conteudo.value`, not `conteudo`: T043 declares the target as a POLYMORPHIC relationship
+  // (`relationTo: ['projeto']`), and Payload stores those as `{ relationTo, value }` — querying
+  // the bare field name raises `QueryError: The following path cannot be queried`. The name is
+  // `conteudo` rather than the `alvo` this map assumed in 002a, which is what surfaced it.
+  curtidas: { from: { collection: 'curtida', foreignKey: 'conteudo.value' } },
   // A download persists nothing — no row per download is the whole reason `downloads` is a
   // `delta` derivation rather than a `count` (plan § Sketch 7). There is therefore no truth
   // to recompute it from, and claiming to reconcile it would be the lie this gate exists to
@@ -86,10 +96,9 @@ const DERIVED_SOURCES = {
   // list of extensions. Both halves are closed here — the value is declared, and the guard
   // below refuses this placeholder the moment `modelo3d` enters the config.
   formatos: {
-    awaitingSubject: {
-      collection: 'modelo3d',
-      task: 'T039 (phase 002b)',
-      derivedFrom: 'the extensions of arquivosModelo, computed on save (plan § Sketch 7)',
+    fromOwnRelationship: {
+      field: 'arquivosModelo',
+      how: 'the distinct lowercased extensions of the linked media documents\' filenames',
     },
   },
 } as const satisfies Record<DerivedField, DerivedSource>
@@ -102,6 +111,11 @@ const DERIVED_FIELDS = Object.keys(DERIVED_SOURCES) as DerivedField[]
  * rot guard below can demand that every other derived-looking field is either reconciled here
  * or listed here with a reason — a new one can be added, but not silently.
  */
+/** The reason the approval pair is not an FR-020 derivation, written once. */
+const APPROVAL_STAMP =
+  'a record of a transition, not a derivation: stampApproval writes it once at the first ' +
+  'publication and nothing recomputes it (FR-009). Its gate is the review-queue test'
+
 const NOT_AN_FR020_DERIVED: Record<string, string> = {
   'organizations.storageUsedMb':
     'not one of FR-020\'s four derived values; its stated strategy is a periodic job ' +
@@ -112,6 +126,17 @@ const NOT_AN_FR020_DERIVED: Record<string, string> = {
   'projeto.aprovadoEm':
     'the date half of the same approval record — written once by stampApproval, never ' +
     'derived from other rows, and a republication does not rewrite it (FR-009)',
+  // The same pair on every other collection that runs the review queue. Listed one by one
+  // rather than matched by name: a rule like "any field called aprovadoEm" would also absolve a
+  // future field that happens to share the name and is genuinely derived.
+  'artigo.aprovacaoRegistrada': APPROVAL_STAMP,
+  'artigo.aprovadoEm': APPROVAL_STAMP,
+  'modelo3d.aprovacaoRegistrada': APPROVAL_STAMP,
+  'modelo3d.aprovadoEm': APPROVAL_STAMP,
+  'aula.aprovacaoRegistrada': APPROVAL_STAMP,
+  'aula.aprovadoEm': APPROVAL_STAMP,
+  'evento.aprovacaoRegistrada': APPROVAL_STAMP,
+  'evento.aprovadoEm': APPROVAL_STAMP,
 }
 
 /**
@@ -161,6 +186,61 @@ const derivedColumns = async (): Promise<DerivedColumn[]> => {
   return columns
 }
 
+/** The extension of a filename, lowercased and dot-led, or null when it has none. */
+const extensionOf = (filename: unknown): string | null => {
+  const name = typeof filename === 'string' ? filename : ''
+  const dot = name.lastIndexOf('.')
+  return dot > 0 ? name.slice(dot).toLowerCase() : null
+}
+
+/**
+ * Rows whose stored value disagrees with a recomputation from the document's own relationship.
+ *
+ * Read at `depth: 1` so the linked media documents arrive populated — the extensions live in
+ * their filenames, which is the only place the truth exists. Compared as sorted sets, because
+ * `formatos` is a set: order is not part of the value and two orderings are not drift.
+ */
+const driftInOwnRelationship = async (
+  column: DerivedColumn,
+  declared: { fromOwnRelationship: { field: string; how: string } },
+): Promise<Drift[]> => {
+  const { docs } = await payload.find({
+    collection: column.collection as never,
+    depth: 1,
+    pagination: false,
+    overrideAccess: true,
+  })
+
+  const drifts: Drift[] = []
+  for (const doc of docs as unknown as Record<string, unknown>[]) {
+    const linked = doc[declared.fromOwnRelationship.field]
+    const entries = Array.isArray(linked) ? linked : linked === undefined ? [] : [linked]
+    const recomputed = [
+      ...new Set(
+        entries
+          .map((entry) => {
+            const value = (entry as { value?: unknown })?.value ?? entry
+            return extensionOf((value as { filename?: unknown })?.filename)
+          })
+          .filter((ext): ext is string => ext !== null),
+      ),
+    ].sort()
+
+    const storedRaw = doc[column.field]
+    const stored = (Array.isArray(storedRaw) ? storedRaw.map(String) : []).sort()
+
+    if (JSON.stringify(stored) !== JSON.stringify(recomputed)) {
+      drifts.push({
+        where: `${column.collection}.${column.field}`,
+        id: doc.id as string | number,
+        stored: stored.length,
+        recomputed: recomputed.length,
+      })
+    }
+  }
+  return drifts
+}
+
 /** Rows whose stored counter disagrees with a recount of its source rows. */
 const driftIn = async (column: DerivedColumn, known: Set<string>): Promise<Drift[]> => {
   const declared: DerivedSource = DERIVED_SOURCES[column.field]
@@ -169,6 +249,9 @@ const driftIn = async (column: DerivedColumn, known: Set<string>): Promise<Drift
   // tests below demand a stated reason, and the rot guard refuses a placeholder whose
   // collection has since arrived.
   if ('noSourceRows' in declared || 'awaitingSubject' in declared) return []
+
+  if ('fromOwnRelationship' in declared) return driftInOwnRelationship(column, declared)
+
   const { from } = declared
 
   const { docs } = await payload.find({
@@ -242,8 +325,18 @@ const placeholdersWithASubject = (slugs: ReadonlySet<string>): string[] =>
   DERIVED_FIELDS.flatMap((field) => {
     const declared: DerivedSource = DERIVED_SOURCES[field]
     if (!('awaitingSubject' in declared)) return []
-    const { collection } = declared.awaitingSubject
-    return slugs.has(collection) ? [`${collection}.${field}`] : []
+    // Currently unreachable, and deliberately kept. `formatos` was the only value ever declared
+    // ahead of its collection, and it got its subject when `modelo3d` landed in 002b — so no
+    // member of DERIVED_SOURCES carries `awaitingSubject` today and TypeScript narrows this
+    // branch to `never`. The mechanism is the point, not its current occupancy: the next value
+    // declared before its collection exists must be reported the moment that collection
+    // appears, and deleting the branch is how that guarantee would be lost quietly.
+    const { awaitingSubject } = declared as unknown as {
+      awaitingSubject: { collection: string }
+    }
+    return slugs.has(awaitingSubject.collection)
+      ? [`${awaitingSubject.collection}.${field}`]
+      : []
   })
 
 /**
@@ -421,6 +514,12 @@ describe('the reconciliation matrix cannot rot (T031, SC-012)', () => {
         expect(task, `${field} names no task that will give it a subject`).toBeTruthy()
         expect(derivedFrom.length, `${field} does not say what it will be derived from`)
           .toBeGreaterThan(20)
+      } else if ('fromOwnRelationship' in declared) {
+        // A self-derivation names the field it reads and how, so the recount below can be
+        // checked against a sentence rather than inferred from the code that performs it.
+        const { field: source, how } = declared.fromOwnRelationship
+        expect(source, `${field} names no field to derive itself from`).toBeTruthy()
+        expect(how.length, `${field} does not say how it is derived`).toBeGreaterThan(20)
       } else {
         expect(declared.from.collection, `${field} names no source collection`).toBeTruthy()
         expect(declared.from.foreignKey, `${field} names no foreign key`).toBeTruthy()
@@ -435,11 +534,13 @@ describe('the reconciliation matrix cannot rot (T031, SC-012)', () => {
     expect(unrecountable, 'a second value claims to have no source rows').toEqual(['downloads'])
 
     // The second hatch is *temporary by construction* — every entry is a value whose subject
-    // is still unwritten, and the guard turns each into a failure the moment it arrives.
+    // is still unwritten, and the guard turns each into a failure the moment it arrives. It is
+    // EMPTY now: `formatos` was the only occupant, `modelo3d` landed in 002b, and the guard did
+    // exactly what it was built to do — it refused the placeholder and forced the recount that
+    // `driftInOwnRelationship` now performs. An entry reappearing here is a value deferred to a
+    // phase somebody still has to argue for.
     const awaiting = DERIVED_FIELDS.filter((f) => 'awaitingSubject' in DERIVED_SOURCES[f])
-    expect(awaiting, 'a value is deferred to a phase that has not been argued for').toEqual([
-      'formatos',
-    ])
+    expect(awaiting, 'a value is deferred to a phase that has not been argued for').toEqual([])
   })
 
   it('refuses a new derived field that nothing reconciles', async () => {
@@ -511,23 +612,34 @@ describe('the guard sees derived values that are not numbers (T031, FR-020)', ()
     ).toEqual(['acervo.etiquetasDerivadas'])
   })
 
-  it('demands a real recount for formatos the moment modelo3d exists', () => {
-    // The tripwire for 002b. `formatos` cannot be reconciled in 002a — there is no collection
-    // to reconcile — so its declaration is a placeholder, and a placeholder that stayed quiet
-    // once its subject arrived would be worse than no declaration at all: the map would claim
-    // coverage the gate never delivers. It must go red on the commit that adds `modelo3d`.
+  it('reconciles formatos rather than deferring it, now that modelo3d exists', () => {
+    // This pair used to be the 002b TRIPWIRE: `formatos` could not be reconciled in 002a — no
+    // collection to reconcile — so it was declared as a placeholder that had to go red on the
+    // commit adding `modelo3d`. It did, which is why `driftInOwnRelationship` exists.
+    //
+    // The assertion is inverted rather than deleted: what the tripwire protected is that the
+    // map never claims coverage the gate does not deliver, and that property is now checked in
+    // the other direction — `formatos` must be ACCOUNTED FOR, on a config that really has
+    // `modelo3d`, or the recount has been removed and nobody noticed.
     expect(
       unaccountedDerivedFields([FAKE_MODELO3D]),
-      'modelo3d now exists, so formatos has source rows and a placeholder no longer accounts ' +
-        'for it — replace it in DERIVED_SOURCES with the recount from arquivosModelo',
-    ).toContain('modelo3d.formatos')
+      'formatos is unaccounted for again — its recount from arquivosModelo has been removed ' +
+        'or renamed, and the map is claiming a coverage the gate no longer delivers',
+    ).not.toContain('modelo3d.formatos')
   })
 
-  it('stays silent about formatos while 002a has no modelo3d to reconcile', async () => {
-    // The other half of the tripwire: armed, not merely noisy. A guard that reports a field
-    // the config does not have would be turned off by the first person it inconvenienced.
-    expect(unaccountedDerivedFields(await collectionsInConfig())).not.toContain(
-      'modelo3d.formatos',
-    )
+  it('still reports a derived field nothing accounts for, so the guard is armed', async () => {
+    // The other half: armed, not merely quiet. A guard that reports nothing on the real config
+    // proves nothing unless it still fires on something it genuinely cannot account for.
+    const invented = {
+      ...FAKE_MODELO3D,
+      slug: 'modelo3d',
+      flattenedFields: [
+        ...FAKE_MODELO3D.flattenedFields,
+        { name: 'inventadoPeloSistema', admin: { readOnly: true } },
+      ],
+    }
+    expect(unaccountedDerivedFields([invented])).toContain('modelo3d.inventadoPeloSistema')
+    expect(unaccountedDerivedFields(await collectionsInConfig())).toEqual([])
   })
 })

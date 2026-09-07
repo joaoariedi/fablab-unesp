@@ -9,7 +9,18 @@ import type { CollectionConfig } from 'payload'
 import { buildConfig } from 'payload'
 import sharp from 'sharp'
 
+import { Artigo } from './collections/content/Artigo'
+import { Aula } from './collections/content/Aula'
+import { CategoriaArtigo } from './collections/content/CategoriaArtigo'
+import { CategoriaModelo } from './collections/content/CategoriaModelo'
 import { CategoriaProjeto } from './collections/content/CategoriaProjeto'
+import { Curtida } from './collections/content/Curtida'
+import { Evento } from './collections/content/Evento'
+import { Local } from './collections/content/Local'
+import { Maquina } from './collections/content/Maquina'
+import { Modelo3d } from './collections/content/Modelo3d'
+import { PerfilMaker } from './collections/content/PerfilMaker'
+import { ProgressoAula } from './collections/content/ProgressoAula'
 import { Projeto } from './collections/content/Projeto'
 import { MEDIA_COLLECTIONS, MEDIA_SLUGS } from './collections/Media'
 import { Organizations } from './collections/Organizations'
@@ -34,6 +45,20 @@ const collections = [
   PendingInvites,
   CategoriaProjeto,
   Projeto,
+  // The 002b eleven (T044). Order mirrors SCOPE_REGISTRY, which `fixtures.ts` seeds in and
+  // `resetWorld` deletes in reverse — keeping the two lists in the same order is what makes a
+  // "did this one land?" question answerable by reading them side by side.
+  PerfilMaker,
+  CategoriaArtigo,
+  Artigo,
+  CategoriaModelo,
+  Modelo3d,
+  Aula,
+  ProgressoAula,
+  Local,
+  Maquina,
+  Evento,
+  Curtida,
   // The upload collections D1 made necessary (T023b). Spread rather than listed one by one:
   // they are derived from MEDIA_GROUPS, so a fourth media group arrives here on its own
   // instead of existing in `limits.ts` with nowhere to be uploaded to.
@@ -200,6 +225,21 @@ export default buildConfig({
         pendingInvites: {},
         categoriaProjeto: {},
         projeto: {},
+        // The 002b eleven (T044). Every one carries content, a roster or an interaction that
+        // belongs to exactly one lab, so every one is listed: a collection reaching the config
+        // but not this map would carry no tenant column at all, and `scopedAccess()` would then
+        // constrain on a field that does not exist.
+        perfilMaker: {},
+        categoriaArtigo: {},
+        artigo: {},
+        categoriaModelo: {},
+        modelo3d: {},
+        aula: {},
+        progressoAula: {},
+        local: {},
+        maquina: {},
+        evento: {},
+        curtida: {},
         // Uploaded media is one lab's. Derived from MEDIA_SLUGS for the same reason the
         // collections themselves are: a media group that reached the config but not this map
         // would carry no tenant column at all, and every lab would list every other lab's

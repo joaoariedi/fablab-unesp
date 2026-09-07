@@ -61,6 +61,54 @@ export const SCOPE_REGISTRY = {
     scope: 'scoped',
     why: 'Content belongs to the lab that made it; every content collection is scoped (FR-005)',
   },
+  // The 002b eleven (T044). Declaration order still obeys the two rules above: `fixtures.ts`
+  // seeds in this order and `resetWorld` deletes in reverse, so each collection follows every
+  // collection it relates to. `perfilMaker` therefore leads — `artigo`, `aula`, `modelo3d` and
+  // `evento` all carry an author — and `curtida` trails, because a like points at content.
+  perfilMaker: {
+    scope: 'scoped',
+    why: 'A person who makes at two labs has one login and two profiles; level and XP are per-lab (CLR-002, FR-003b)',
+  },
+  categoriaArtigo: {
+    scope: 'scoped',
+    why: 'A second lab names its own vocabulary; a global set would impose CITe\'s (FR-002)',
+  },
+  artigo: {
+    scope: 'scoped',
+    why: 'Content belongs to the lab that made it (FR-005)',
+  },
+  categoriaModelo: {
+    scope: 'scoped',
+    why: 'Same as categoriaArtigo — vocabulary is the lab\'s, never the platform\'s (FR-002)',
+  },
+  modelo3d: {
+    scope: 'scoped',
+    why: 'Content belongs to the lab that made it (FR-005)',
+  },
+  aula: {
+    scope: 'scoped',
+    why: 'Content belongs to the lab that made it (FR-005)',
+  },
+  progressoAula: {
+    scope: 'scoped',
+    why: 'Progress is a person\'s standing in ONE lab\'s course; the row names the lab\'s aula (FR-003)',
+  },
+  local: {
+    scope: 'scoped',
+    why: 'A room is inside one lab\'s building; a global list would offer another lab\'s rooms (FR-003)',
+  },
+  maquina: {
+    scope: 'scoped',
+    why: 'A machine sits in one lab; sharing the row would share its booking and its downtime (FR-003)',
+  },
+  evento: {
+    scope: 'scoped',
+    why: 'An event happens at one lab, in its room, on its machine (FR-003)',
+  },
+  curtida: {
+    scope: 'scoped',
+    why: 'A like points at one lab\'s content, so it is counted and read inside that lab (FR-017)',
+  },
 } as const satisfies Record<string, ScopeEntry>
 
 /**

@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 
 import { serveDownload, type ObjectSource, type StoredObject } from '../../lib/content/downloads'
 import { PublicWriteDeniedError, TenantUnresolvedError } from '../../lib/tenancy/errors'
-import { getPublicCounterStore } from '../../lib/tenancy/public-payload'
+import { getPublicCounterStore, getPublicScopedPayload } from '../../lib/tenancy/public-payload'
 import { buildWorld, type Fixture } from '../tenancy/fixtures'
 
 /**
@@ -71,12 +71,16 @@ class FakeObjectStore {
   }
 }
 
+const KEY_ANEXO = 'anexo-artigo.stl'
+
 const newStore = (): FakeObjectStore =>
   new FakeObjectStore(
     new Map([
       [KEY_A, BYTES_A],
       [KEY_B, BYTES_B],
       [KEY_UNLISTED, BYTES_A],
+      // The artigo attachment, for the cross-collection regression at the end of this file.
+      [KEY_ANEXO, BYTES_A],
     ]),
   )
 
@@ -197,7 +201,7 @@ describe('an anonymous download is served and counted (T036, FR-015, SC-009)', (
     const store = newStore()
     const response = await serveDownload(
       anonymousRequest(world.orgA.host),
-      { collection: 'projeto', id: publishedA, midiaId: midiaA },
+      { collection: 'projeto', id: publishedA, midiaId: midiaA, field: 'arquivos' },
       { objects: store.get },
     )
 
@@ -216,7 +220,7 @@ describe('an anonymous download is served and counted (T036, FR-015, SC-009)', (
 
     await serveDownload(
       anonymousRequest(world.orgA.host),
-      { collection: 'projeto', id: publishedA, midiaId: midiaA },
+      { collection: 'projeto', id: publishedA, midiaId: midiaA, field: 'arquivos' },
       { objects: store.get },
     )
 
@@ -235,7 +239,7 @@ describe('an anonymous download is served and counted (T036, FR-015, SC-009)', (
     const twice = async () =>
       serveDownload(
         anonymousRequest(world.orgA.host),
-        { collection: 'projeto', id: publishedA, midiaId: midiaA },
+        { collection: 'projeto', id: publishedA, midiaId: midiaA, field: 'arquivos' },
         { objects: store.get },
       )
 
@@ -253,7 +257,7 @@ describe('an anonymous download is served and counted (T036, FR-015, SC-009)', (
     const store = newStore()
     const response = await serveDownload(
       anonymousRequest(world.orgA.host),
-      { collection: 'projeto', id: publishedA, midiaId: midiaA },
+      { collection: 'projeto', id: publishedA, midiaId: midiaA, field: 'arquivos' },
       { objects: store.get },
     )
 
@@ -273,7 +277,7 @@ describe('a cross-organization download is a 404, not the bytes (T036, SC-010)',
       // The id is A's and the host is B's: an id is the one thing an anonymous caller fully
       // controls, so this is the request FR-016 exists for.
       anonymousRequest(world.orgB.host),
-      { collection: 'projeto', id: publishedA, midiaId: midiaA },
+      { collection: 'projeto', id: publishedA, midiaId: midiaA, field: 'arquivos' },
       { objects: store.get },
     )
 
@@ -299,7 +303,7 @@ describe('a cross-organization download is a 404, not the bytes (T036, SC-010)',
     const store = newStore()
     const response = await serveDownload(
       anonymousRequest(world.orgA.host),
-      { collection: 'projeto', id: publishedB, midiaId: midiaB },
+      { collection: 'projeto', id: publishedB, midiaId: midiaB, field: 'arquivos' },
       { objects: store.get },
     )
 
@@ -313,7 +317,7 @@ describe('a cross-organization download is a 404, not the bytes (T036, SC-010)',
     const store = newStore()
     const response = await serveDownload(
       anonymousRequest(world.orgB.host),
-      { collection: 'projeto', id: publishedB, midiaId: midiaB },
+      { collection: 'projeto', id: publishedB, midiaId: midiaB, field: 'arquivos' },
       { objects: store.get },
     )
 
@@ -325,7 +329,7 @@ describe('a cross-organization download is a 404, not the bytes (T036, SC-010)',
     const store = newStore()
     const response = await serveDownload(
       anonymousRequest('nowhere.example.com'),
-      { collection: 'projeto', id: publishedA, midiaId: midiaA },
+      { collection: 'projeto', id: publishedA, midiaId: midiaA, field: 'arquivos' },
       { objects: store.get },
     )
 
@@ -344,7 +348,7 @@ describe('only published rows, and only their own files (T036, FR-010, FR-013)',
 
     const response = await serveDownload(
       anonymousRequest(world.orgA.host),
-      { collection: 'projeto', id: draftA, midiaId: midiaA },
+      { collection: 'projeto', id: draftA, midiaId: midiaA, field: 'arquivos' },
       { objects: store.get },
     )
 
@@ -366,7 +370,7 @@ describe('only published rows, and only their own files (T036, FR-010, FR-013)',
       // The object is really in the store, and it is really in this organization. What it is
       // not is one of *this document's* `arquivos` — so serving it would make the key, not the
       // document, the unit of authorisation, and every stored object reachable by guessing.
-      { collection: 'projeto', id: publishedA, midiaId: midiaUnlisted },
+      { collection: 'projeto', id: publishedA, midiaId: midiaUnlisted, field: 'arquivos' },
       { objects: store.get },
     )
 
@@ -387,7 +391,7 @@ describe('only published rows, and only their own files (T036, FR-010, FR-013)',
 
     const response = await serveDownload(
       anonymousRequest(world.orgA.host),
-      { collection: 'projeto', id: publishedA, midiaId: midiaA },
+      { collection: 'projeto', id: publishedA, midiaId: midiaA, field: 'arquivos' },
       { objects: store.get },
     )
 
@@ -497,7 +501,7 @@ describe('the refusal is uniform across COLLECTIONS too (T036, SC-010)', () => {
       const store = newStore()
       const response = await serveDownload(
         anonymousRequest(world.orgA.host),
-        { collection, id: publishedA, midiaId: midiaA },
+        { collection, id: publishedA, midiaId: midiaA, field: 'arquivos' },
         { objects: store.get },
       )
 
@@ -515,9 +519,86 @@ describe('the refusal is uniform across COLLECTIONS too (T036, SC-010)', () => {
     const store = newStore()
     const response = await serveDownload(
       anonymousRequest(world.orgA.host),
-      { collection: 'projeto', id: publishedA, midiaId: midiaA },
+      { collection: 'projeto', id: publishedA, midiaId: midiaA, field: 'arquivos' },
       { objects: store.get },
     )
     expect(response.status).toBe(200)
+  })
+})
+
+describe('the attachment field is a parameter, not projeto\'s name (regression)', () => {
+  /**
+   * `serveDownload` resolved `doc.arquivos` unconditionally, and `arquivos` is `projeto`'s name
+   * for the field. Every other content collection names it something else — `artigo.anexos`,
+   * `modelo3d.arquivosModelo`, `aula.materiais` — so the endpoint each of them registered
+   * resolved `undefined ?? []`, found nothing, and answered 404 for every attachment it
+   * carries. Their `downloads` counters stayed permanently 0, because counting happens only
+   * after the media is found.
+   *
+   * Three registered, dead routes — worse than three missing ones, because a registered route
+   * reads as covered to the isolation harness and to anyone checking the page spec's field
+   * table against the code.
+   */
+  it('serves an attachment through a field that is not called arquivos', async () => {
+    // The fixture already seeds one `artigo` per organization with every required field; this
+    // only has to give it an attachment. Rebuilding the document here would mean restating
+    // artigos.md's required set and would rot the first time that set changes.
+    const artigoId = world.rows.artigo?.A
+    expect(artigoId, 'the fixture seeded no artigo to attach anything to').toBeDefined()
+
+    const midia = await seedMedia('midiaModelo3d', 'A', KEY_ANEXO)
+    await world.payload.update({
+      collection: 'artigo',
+      id: artigoId as never,
+      data: {
+        anexos: [{ relationTo: 'midiaModelo3d', value: midia }],
+        status: 'publicado',
+      } as never,
+      overrideAccess: true,
+    })
+
+    // Read it back through the public client first: if the artigo is not publicly visible the
+    // download would 404 for a reason that has nothing to do with the field name, and this
+    // regression would be testing the wrong thing.
+    const db = await getPublicScopedPayload(world.orgA.host)
+    const visible = await db.findByID<Record<string, unknown>>({
+      collection: 'artigo',
+      id: artigoId as never,
+      depth: 1,
+    })
+    expect(visible, 'the published artigo is not readable on the public path').not.toBeNull()
+    expect(
+      Array.isArray(visible?.anexos) && (visible?.anexos as unknown[]).length,
+      'the anexo did not persist on the artigo',
+    ).toBe(1)
+
+    const store = newStore()
+    const response = await serveDownload(
+      anonymousRequest(world.orgA.host),
+      { collection: 'artigo', id: artigoId as number, midiaId: midia, field: 'anexos' },
+      { objects: store.get },
+    )
+
+    expect(
+      response.status,
+      'an artigo attachment was refused. `anexos` is the field artigos.md names, and the ' +
+        'download policy must read the field the collection actually declares.',
+    ).toBe(200)
+    expect(store.reads).toEqual([KEY_ANEXO])
+  })
+
+  it('still refuses when the named field is not the one carrying the media', async () => {
+    // Non-vacuity, and the property the parameter must not lose: naming a field is not the same
+    // as being listed by it. A caller passing `arquivos` for an artigo must get the same 404 as
+    // a caller naming a document that lists nothing.
+    const midia = await seedMedia('midiaModelo3d', 'A', 'nao-listado-t038.stl')
+    const store = newStore()
+    const response = await serveDownload(
+      anonymousRequest(world.orgA.host),
+      { collection: 'projeto', id: publishedA, midiaId: midia, field: 'arquivos' },
+      { objects: store.get },
+    )
+    expect(response.status).toBe(404)
+    expect(store.reads).toEqual([])
   })
 })
