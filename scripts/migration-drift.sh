@@ -24,9 +24,20 @@ WEB="$ROOT/apps/web"
 # repo unable to build, because index.ts imports a file the developer then deletes by hand.
 # Measured the hard way: `next build` failed with
 # `Cannot find module './20260826_140718___drift_check'`.
+# `index.ts` is restored from a COPY taken before the probe, never with `git checkout --`.
+#
+# The probe registers itself in that file, so it has to be un-registered afterwards. Checking it
+# out of git looks equivalent and is not: it discards whatever was ALREADY uncommitted there,
+# which is exactly what a legitimate new migration looks like before it is committed. Measured
+# on 2026-09-07 — running this gate locally silently deleted a registration that had just been
+# added, and the suite went red on a file that had already been fixed.
+INDEX_BACKUP="$(mktemp)"
+cp "$WEB/migrations/index.ts" "$INDEX_BACKUP"
+
 cleanup() {
   rm -f "$WEB"/migrations/*__drift_check* 2>/dev/null || true
-  git -C "$ROOT" checkout -- apps/web/migrations/index.ts 2>/dev/null || true
+  cp "$INDEX_BACKUP" "$WEB/migrations/index.ts" 2>/dev/null || true
+  rm -f "$INDEX_BACKUP" 2>/dev/null || true
 }
 trap cleanup EXIT
 

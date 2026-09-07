@@ -7,7 +7,14 @@ import type React from 'react'
 import '@fablab/ui/styles.css'
 import { Footer, HeaderNav, MenuSheet, MobileTabBar } from '@fablab/ui'
 
-import { getTenantScopedPayloadForRSC, TenantUnresolvedError } from '../../lib/tenancy'
+import { TenantUnresolvedError } from '../../lib/tenancy'
+// Deep import on purpose: the anonymous read path is NOT re-exported from lib/tenancy's
+// index, because it runs with `overrideAccess: true` and that unexported-ness is one of the
+// two locks the module documents. This is its first production caller.
+import {
+  getPublicScopedPayloadForRSC,
+  readPublicOrganizationTheme,
+} from '../../lib/tenancy/public-payload'
 import { themeStyle } from '../../lib/theme'
 
 // The public site. Feature 001 brings the design system (@fablab/ui) and feature 003 the
@@ -29,39 +36,34 @@ const DISPLAY_FONT_HREF = '/fonts/aldo-the-apache.woff2'
 export type ThemedOrganization = { theme?: { primaryColor?: unknown } }
 
 /**
- * The organization serving this request, read through the tenancy choke point (FR-003, US2).
+ * The organization serving this request, read through the **anonymous** path (FR-003, US2).
  *
- * `getTenantScopedPayloadForRSC()` resolves the host and **throws `TenantUnresolvedError`**
+ * `getPublicScopedPayloadForRSC()` resolves the host and **throws `TenantUnresolvedError`**
  * when nothing claims it — the layout below is what turns that into a 404. It is not caught
  * here: this function's caller needs to tell "no such site" apart from "no accent colour",
  * and swallowing the throw would erase the distinction at the only place it exists.
  *
- * **The read of the record itself is best-effort, and the reason is not defensive coding.**
- * `organizations.read` is `masterOnly()` (lib/tenancy/access.ts), and Payload's
- * `executeAccess` throws `Forbidden` on a `false` access result — so an anonymous visitor's
- * read of the organization it is already scoped to fails today. That is a *theming* gap, not
- * a tenancy failure: the host resolved and the tenant is known. Taking the whole public site
- * down over a missing accent colour would be strictly worse than rendering the platform
- * defaults, which FR-004 sanctions ("a missing theme is never a broken page"), so the failure
- * is reported to the server log and the default stands.
+ * **Why the anonymous client and not the choke point (T014).** `organizations.read` is
+ * `masterOnly()` (lib/tenancy/access.ts), and Payload's `executeAccess` throws `Forbidden` on
+ * a `false` access result — so the session-scoped client refused this read for every visitor
+ * of the public site, which has no session at all. Feature 001 delivered the token, the
+ * validator and the `<body>` override and co-branding still never appeared, because the read
+ * underneath them could not succeed. Feature 002 opens the one sanctioned path for a caller
+ * with no user, and `readPublicOrganizationTheme` is that path's single, projected read of
+ * the `organizations` record — the same fix as the public content path, one symptom later.
  *
- * The gap is real and belongs to the tenancy layer, not to this file: access.ts already
- * records that an organization "reaches them through host resolution", and host resolution
- * (`ResolvedOrganization`) carries id/slug/name/status but no `theme`. Until it does — a
- * feature-000 contract change — a co-branded accent will not appear for anonymous visitors,
- * however correct everything downstream of `themeStyle()` is.
+ * **The read itself stays best-effort.** A record that cannot be read is a missing accent
+ * colour, not a missing site: taking the whole public site down over it would be strictly
+ * worse than rendering the platform defaults, which FR-004 sanctions ("a missing theme is
+ * never a broken page"). Resolution failures are the caller's to classify and are not caught.
  *
  * @example const org = await currentOrganization() // { theme: { primaryColor: '#3760AA' } }
  */
 export async function currentOrganization(): Promise<ThemedOrganization | null> {
-  const db = await getTenantScopedPayloadForRSC()
+  const db = await getPublicScopedPayloadForRSC()
 
   try {
-    return await db.findByID<ThemedOrganization>({
-      collection: 'organizations',
-      id: db.tenantId,
-      depth: 0,
-    })
+    return await readPublicOrganizationTheme(db)
   } catch (err) {
     // Loud in the log, invisible to the visitor — FR-004's "the default is used and the
     // problem is reported", applied to a record that could not be read rather than a colour

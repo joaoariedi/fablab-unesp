@@ -34,7 +34,8 @@ nothing from feature 004 — 004 adds the public sign-up UI, not authentication 
 | `apps/web/lib/tenancy/access.ts` | modify | `teamOnly(): Access` and `canPublishField: FieldAccess` — two functions, because Payload types field access as boolean-only |
 | `apps/web/lib/tenancy/scope-registry.ts` | modify | Thirteen new entries; `payload-locked-documents` moves out of "not ours to declare" |
 | `apps/web/collections/content/*.ts` | create | `projeto` `modelo3d` `aula` `artigo` `evento` and their categories, `local`, `maquina`, `perfilMaker`, `curtida`, `progressoAula` |
-| `apps/web/lib/uploads/verify.ts` | create | Post-upload signature check and quarantine release |
+| `apps/web/lib/uploads/verify.ts` | create | Post-upload signature check, **derivative generation**, quarantine release |
+| `apps/web/payload.config.ts` (sharp) | modify | Pass `sharp` to `buildConfig` and declare it in `apps/web` — spike S1 measured it absent, which makes `imageSizes` a no-op on **every** path |
 | `apps/web/lib/uploads/limits.ts` | create | The three caps and three allowlists as named constants |
 | `apps/web/lib/content/counters.ts` | create | The one counter strategy every derived field uses |
 | `apps/web/lib/content/review.ts` | create | The status transition and its idempotent approval stamp |
@@ -235,6 +236,25 @@ mechanism that can. Objects land in a `quarantine/` prefix that is not publicly 
 passing check moves them. A `.glb` is confirmed to be a **container**, never a model — stated
 in the spec so nobody later reads this as model validation.
 
+**Spike S1 changed what this pass is responsible for.** Reading
+`payload/dist/uploads/generateFileData.js`: with `clientUploads` there is no `req.file`, so the
+function returns at `if (!file)` — **before** `checkFileRestrictions`. Three consequences the
+plan previously did not account for:
+
+- **`imageSizes` produces nothing.** The size fields exist on the document and stay empty
+  forever. Derivatives must be generated here, explicitly with `sharp`, in this same pass.
+- **Collection-level `mimeTypes` and `filesize` never execute.** FR-011 and FR-012 declare
+  allowlists and caps as though putting them on the field enforces them; on this path they are
+  decorative. This pass is therefore **not defence in depth — it is the only defence**, and the
+  plan says so rather than letting a later reader assume two layers.
+- **Size must be enforced at presign, not here.** A 200 MB cap checked after the bytes are in
+  the bucket has already paid the cost it existed to prevent, and `tech-stack.md` names disk as
+  failure number one. The signed URL carries the policy.
+
+`sharp` is also **not currently wired into `buildConfig`** and is not a declared dependency of
+`apps/web` — measured, not read — so `imageSizes` is a no-op on every path today. Declaring it
+is a second dependency addition and carries the same Principle 1 note as the storage adapter.
+
 ### Sketch 5: the review transition, stamped once
 
 **File:** `apps/web/lib/content/review.ts` (new)
@@ -342,20 +362,26 @@ but it obeys the same rule: derived at write, verified by the same reconciliatio
 | Presigned upload bypasses verification | An unverified object is served | Objects land in `quarantine/`, which is not publicly served; only a passing check moves them |
 | Abandoned presigned uploads accumulate | Disk exhaustion — `tech-stack.md` names disk as failure number one | Bucket lifecycle rule; owned by this feature rather than left unowned |
 | Counter drift | Card grids show wrong numbers, quietly | Reconciliation test in CI; the drift paths are named in Sketch 7 |
-| `imageSizes` misbehaves with direct upload | Thumbnails silently absent | **Unresolved — see below.** `tech-stack.md` requires this spike *before* the 002 spec is fixed |
+| ~~`imageSizes` misbehaves with direct upload~~ | — | **Resolved by spike S1**: it does not run at all on the clientUploads path, and `sharp` is not wired in regardless. Derivatives move into the post-upload pass |
+| Collection `mimeTypes`/`filesize` look like a safety net and are not | A reviewer sees two layers of upload validation where there is one | Spike S1 measured that `checkFileRestrictions` sits after the no-file return. Stated in Sketch 4; size enforced at presign |
 | Thirteen collections at once | A template error replicated twelve times | One collection end to end first, then the rest |
 
-## Open, and it belongs to the PO
+## Spike S1 — run, and it closed this
 
-`tech-stack.md` § *Absorções do benchmark* item 3 asks for a spike **before this spec is
-fixed**: *"Validar também o comportamento real de `imageSizes` com upload direto antes de fixar
-a spec da feature 002."* It has not been run. Either it runs before `/speckit.tasks`, or
-`imageSizes` leaves the plan and thumbnails are generated another way. The plan does not assume
-an answer.
+`tech-stack.md` § *Absorções do benchmark* item 3 required it before the spec was fixed.
+[`spikes/S1-imagesizes.md`](spikes/S1-imagesizes.md) has the evidence. Short version:
+`imageSizes` does not run on the clientUploads path, `checkFileRestrictions` does not either,
+and `sharp` is not wired into this app at all. Thumbnails move into the post-upload pass and
+`sharp` gets declared.
+
+The spike is **source analysis, not an end-to-end run** — it is labelled that way, and 002a
+carries an acceptance criterion to confirm it by execution: upload one image through the real
+presigned flow, assert the derivatives exist and a disallowed type is refused.
 
 ## Quick Start
 
-1. Run the `imageSizes` spike, or decide to drop it.
+1. ~~Run the `imageSizes` spike~~ — done, see `spikes/S1-imagesizes.md`. Declare `sharp` in
+   `apps/web` and pass it to `buildConfig` as part of step 4.
 2. `getPublicScopedPayload` in `lib/tenancy/public-payload.ts`, plus `teamOnly` and
    `canPublishField` in `access.ts`. Harness extended and mutation points marked **before** any
    collection exists to use them — including the member-of-another-org and

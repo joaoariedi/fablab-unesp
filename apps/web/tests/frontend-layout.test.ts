@@ -38,7 +38,7 @@ const mocks = vi.hoisted(() => {
     notFound: vi.fn((): never => {
       throw NOT_FOUND
     }),
-    getTenantScopedPayloadForRSC: vi.fn(),
+    getPublicScopedPayloadForRSC: vi.fn(),
   }
 })
 
@@ -49,11 +49,21 @@ vi.mock('../lib/tenancy', async () => {
   // layout's `instanceof TenantUnresolvedError` must be tested against the *real* class, or
   // the branch would pass for a layout that matched on a message string instead.
   const errors = await import('../lib/tenancy/errors')
-  return {
-    ...errors,
-    getTenantScopedPayloadForRSC: mocks.getTenantScopedPayloadForRSC,
-  }
+  return { ...errors }
 })
+
+/**
+ * T014 re-pointed this suite: the layout used to read its organization through
+ * `getTenantScopedPayloadForRSC`, which cannot work for the public site —
+ * `organizations.read` is `masterOnly()` and no visitor is signed in. Only the *entry point*
+ * is mocked here. `readPublicOrganizationTheme` is deliberately the real one, so §1 still has
+ * a real subject to observe issuing the read, and a layout that stopped reading
+ * `organizations` by the resolved tenant id would still be caught.
+ */
+vi.mock('../lib/tenancy/public-payload', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/tenancy/public-payload')>()),
+  getPublicScopedPayloadForRSC: mocks.getPublicScopedPayloadForRSC,
+}))
 
 const { default: FrontendLayout, currentOrganization } = await import('../app/(frontend)/layout')
 
@@ -101,7 +111,7 @@ const renderLayout = async () =>
 
 const bodyStyleFor = async (theme: unknown): Promise<Record<string, unknown> | undefined> => {
   const db = new FakeScopedPayload('7', { id: 7, theme })
-  mocks.getTenantScopedPayloadForRSC.mockResolvedValue(db)
+  mocks.getPublicScopedPayloadForRSC.mockResolvedValue(db)
   const body = findTag(await renderLayout(), 'body')
   expect(body, 'the layout rendered no <body> at all').not.toBeNull()
   return body?.props.style
@@ -112,7 +122,7 @@ beforeEach(() => {
 })
 
 describe('T015 / FR-003, US2 — the frontend layout injects the per-organization accent', () => {
-  describe('§1 — currentOrganization() reads the record through the choke point', () => {
+  describe('§1 — currentOrganization() reads the record through the anonymous path', () => {
     it('is exported, so the layout is not the only thing that can resolve the tenant', () => {
       expect(
         typeof currentOrganization,
@@ -122,20 +132,23 @@ describe('T015 / FR-003, US2 — the frontend layout injects the per-organizatio
       ).toBe('function')
     })
 
-    it('asks the choke point for its own organization, addressed by the resolved tenant id', async () => {
+    it('asks the anonymous client for its own organization, addressed by the resolved tenant id', async () => {
       const db = new FakeScopedPayload('42', { id: 42, theme: { primaryColor: '#3760AA' } })
-      mocks.getTenantScopedPayloadForRSC.mockResolvedValue(db)
+      mocks.getPublicScopedPayloadForRSC.mockResolvedValue(db)
 
       const org = await currentOrganization()
 
-      expect(mocks.getTenantScopedPayloadForRSC).toHaveBeenCalledTimes(1)
+      expect(mocks.getPublicScopedPayloadForRSC).toHaveBeenCalledTimes(1)
       expect(
         db.calls,
         'currentOrganization() did not read `organizations` by the resolved tenant id. A ' +
           'read addressed any other way is a second data path — the one Principle 2 says ' +
-          'this feature must not add.',
+          'this feature must not add. `organizations` is a global collection, so the tenant ' +
+          'id in this call is the only thing confining the read to one organization.',
       ).toEqual([{ collection: 'organizations', id: '42' }])
-      expect(org).toEqual({ id: 42, theme: { primaryColor: '#3760AA' } })
+      // Projected, not the whole row: the anonymous path runs with overrideAccess: true, so
+      // everything it returns is public (T014).
+      expect(org).toEqual({ theme: { primaryColor: '#3760AA' } })
     })
   })
 
@@ -184,7 +197,7 @@ describe('T015 / FR-003, US2 — the frontend layout injects the per-organizatio
     })
 
     it('keeps the display-face preload the layout already carried (T010b)', async () => {
-      mocks.getTenantScopedPayloadForRSC.mockResolvedValue(new FakeScopedPayload('7', { id: 7 }))
+      mocks.getPublicScopedPayloadForRSC.mockResolvedValue(new FakeScopedPayload('7', { id: 7 }))
       const link = findTag(await renderLayout(), 'link')
 
       expect(
@@ -198,7 +211,7 @@ describe('T015 / FR-003, US2 — the frontend layout injects the per-organizatio
 
   describe('§3 — an unresolved host is a 404, never another tenant’s identity', () => {
     it('converts TenantUnresolvedError into notFound()', async () => {
-      mocks.getTenantScopedPayloadForRSC.mockRejectedValue(new TenantUnresolvedError('x.example'))
+      mocks.getPublicScopedPayloadForRSC.mockRejectedValue(new TenantUnresolvedError('x.example'))
 
       await expect(renderLayout()).rejects.toBe(mocks.NOT_FOUND)
       expect(
@@ -211,7 +224,7 @@ describe('T015 / FR-003, US2 — the frontend layout injects the per-organizatio
     })
 
     it('does not fall back to the default theme for an unresolved host', async () => {
-      mocks.getTenantScopedPayloadForRSC.mockRejectedValue(new TenantUnresolvedError(null))
+      mocks.getPublicScopedPayloadForRSC.mockRejectedValue(new TenantUnresolvedError(null))
 
       // The observable difference between "404" and "rendered with defaults" is whether a
       // tree comes back at all. A layout that swallowed the error would resolve here.
@@ -224,7 +237,7 @@ describe('T015 / FR-003, US2 — the frontend layout injects the per-organizatio
 
     it('lets every other resolution failure propagate untouched', async () => {
       const boom = new Error('the database is down')
-      mocks.getTenantScopedPayloadForRSC.mockRejectedValue(boom)
+      mocks.getPublicScopedPayloadForRSC.mockRejectedValue(boom)
 
       await expect(
         renderLayout(),
@@ -235,13 +248,14 @@ describe('T015 / FR-003, US2 — the frontend layout injects the per-organizatio
     })
 
     it('degrades to the platform defaults when the theme itself cannot be read', async () => {
-      // `organizations.read` is `masterOnly()`, so an anonymous visitor's read of its own
-      // record throws Forbidden today. That is a theming gap, not a tenancy failure: the host
-      // resolved, the tenant is known, and 404-ing or 500-ing the entire public site over a
+      // A record that cannot be read is a theming gap, not a tenancy failure: the host
+      // resolved and the tenant is known, so 404-ing or 500-ing the entire public site over a
       // missing accent colour is strictly worse than rendering the CITe defaults (FR-004 —
-      // a missing theme is never a broken page).
+      // a missing theme is never a broken page). Until T014 this branch fired on *every*
+      // request, because `organizations.read` is `masterOnly()` and the read was issued with
+      // access control on; it now covers a genuine read failure only.
       const db = new FakeScopedPayload('7', new Error('Forbidden'))
-      mocks.getTenantScopedPayloadForRSC.mockResolvedValue(db)
+      mocks.getPublicScopedPayloadForRSC.mockResolvedValue(db)
 
       const body = findTag(await renderLayout(), 'body')
       expect(body?.props.style).toBeUndefined()
@@ -269,14 +283,15 @@ describe('T015 / FR-003, US2 — the frontend layout injects the per-organizatio
       ).toMatch(/import\s+['"]@fablab\/ui\/styles\.css['"]/)
     })
 
-    it('reaches Payload only through the tenancy choke point', () => {
+    it('reaches Payload only through the tenancy module', () => {
       const text = source()
 
       expect(
         text,
-        'the layout does not import getTenantScopedPayloadForRSC from lib/tenancy. Any other ' +
-          'route to the data is a second data path around the choke point.',
-      ).toMatch(/getTenantScopedPayloadForRSC/)
+        'the layout does not import its client from lib/tenancy/public-payload. T014 moved ' +
+          'this read to the anonymous path — the one place sanctioned to read for a caller ' +
+          'with no user — and any other route to the data is a second data path around it.',
+      ).toMatch(/from '\.\.\/\.\.\/lib\/tenancy\/public-payload'/)
       expect(
         text,
         'the layout imports getPayload directly, bypassing every tenant constraint.',

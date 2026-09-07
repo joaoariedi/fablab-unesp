@@ -18,6 +18,15 @@ import { scopedListEndpoint } from '../lib/tenancy/scoped-endpoint'
  */
 export const PendingInvites: CollectionConfig = {
   slug: 'pendingInvites',
+  // No row is ever written to `payload-locked-documents` for this collection, so there is
+  // nothing in it for another organization to enumerate (FR-018, SC-003, CLR-004). That
+  // internal collection is not scoped by the multi-tenant plugin and each of its rows names a
+  // document by collection and id. Locking is ON by default — Payload's predicate is
+  // `lockDocuments !== false` — so the leak reopens by omission, which is why
+  // `tests/tenancy/locked-documents.test.ts` asserts this over the whole scope registry rather
+  // than per collection. The cost is CLR-004's, priced rather than discovered: no "someone
+  // else is editing this" warning here.
+  lockDocuments: false,
   labels: {
     singular: 'Convite pendente',
     plural: 'Convites pendentes',

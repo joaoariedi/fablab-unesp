@@ -1,0 +1,13 @@
+# Findings gitleaks has already adjudicated, one fingerprint per line.
+#
+# A fingerprint is `commit:file:rule:line`, so an entry silences exactly one occurrence in one
+# commit — not a file, not a rule, not a path. That precision is the point: allow-listing
+# `**/tests/**` would have silenced this one and every real credential a test file ever gains.
+#
+# ── f288aac, review.test.ts:49 ────────────────────────────────────────────────────────────────
+# A fixture password for a user the test creates and the test alone ever logs in as. It was
+# flagged by `generic-api-key` on ENTROPY (3.68), not on a pattern: the sibling fixtures use
+# `fixture-password-123`, whose repetition scores lower, and were never flagged. The literal is
+# now that same shared value, so the finding cannot recur — but the string stays in this commit
+# forever, and a scan of the branch's history still reaches it.
+f288aac04bf25d761a4d742381d7a6b478bd07aa:apps/web/tests/content/review.test.ts:generic-api-key:49
