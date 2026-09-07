@@ -55,3 +55,32 @@ export class PublicReadDeniedError extends Error {
     this.collection = collection
   }
 }
+
+/**
+ * The anonymous **write** path was asked for something other than the single column of the
+ * single row it was opened for (FR-016, T036).
+ *
+ * US4 is the only anonymous write in the product: a download is served to a visitor with no
+ * session and the counter must move with it. That means a client with `update` on it, running
+ * `overrideAccess: true`, reachable by a request nobody authenticated — so whatever it *can*
+ * write, an anonymous caller can write. The tenant constraint alone is not enough: it would
+ * still leave `status: 'publicado'` on any row of the host organization within reach of the
+ * download endpoint, which is SC-005 fenced around through the one door FR-015 has to leave
+ * open.
+ *
+ * So the store is opened for one collection, one id and one field, and every other operation
+ * raises this. Narrow by construction rather than by the caller remembering to be careful.
+ */
+export class PublicWriteDeniedError extends Error {
+  readonly attempted: string
+
+  constructor(attempted: string, reason: string) {
+    super(
+      `The anonymous write path refuses ${attempted}: ${reason}. ` +
+        'It is opened for exactly one column of one document — the counter of a download ' +
+        'that has already been resolved through the public read path.',
+    )
+    this.name = 'PublicWriteDeniedError'
+    this.attempted = attempted
+  }
+}

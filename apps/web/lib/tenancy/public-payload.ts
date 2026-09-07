@@ -1,4 +1,4 @@
-import { flattenAllFields, getPayload, type Where } from 'payload'
+import { flattenAllFields, getPayload, type PayloadRequest, type Where } from 'payload'
 import { cache } from 'react'
 
 import {
@@ -6,8 +6,10 @@ import {
   type ByIDArgs,
   type FindArgs,
   type PaginatedResult,
+  type TenantScopedPayload,
+  type UpdateArgs,
 } from './client'
-import { PublicReadDeniedError, TenantUnresolvedError } from './errors'
+import { PublicReadDeniedError, PublicWriteDeniedError, TenantUnresolvedError } from './errors'
 import { resolveTenant, type HostLookup, type ResolvedOrganization } from './resolve'
 import { isScoped } from './scope-registry'
 
@@ -363,4 +365,127 @@ export async function readPublicOrganizationTheme(
   })
 
   return record ? { theme: record.theme } : null
+}
+
+/**
+ * The **one write** an anonymous visitor may cause (FR-015, FR-016, T036).
+ *
+ * A download is served without an account and is counted, so US4 is the only place in the
+ * product where a request nobody authenticated has to move a column. `getPublicScopedPayload`
+ * deliberately exposes no writer — a public reader writes nothing — and widening it would put
+ * `update` on the same object every anonymous page read already holds. This is the narrow
+ * endpoint that docstring promises instead.
+ *
+ * **Opened for one column of one row, and nothing else.** The client runs with
+ * `overrideAccess: true` on behalf of a visitor with no session, so anything it *can* write is
+ * something an anonymous request can write. Confining it to the host's tenant is not enough:
+ * that still leaves `status: 'publicado'` on every row of the host organization inside the
+ * download path's reach, which is T033's publish guard fenced around through the one door
+ * FR-015 has to leave open. So the target is named when the store is opened — after the caller
+ * has already resolved that document through the *public read* path, which is what proves it
+ * is published and belongs to this host — and every other operation raises
+ * `PublicWriteDeniedError`.
+ *
+ * **`find` refuses outright.** `downloads` is a `delta` derivation precisely because nothing is
+ * persisted per download (counters.ts, plan § Sketch 7), so there are no source rows for this
+ * store to count and a listing here would only ever be a widening.
+ *
+ * The cross-tenant answer stays `buildTenantClient`'s: the tenant clause is AND-ed onto the
+ * update, so a store opened on A's host matches **no row** for B's document and returns `null`
+ * rather than throwing — which `syncCounter` turns into `CrossTenantError`.
+ *
+ * @example
+ *   const store = await getPublicCounterStore(host, { collection: 'projeto', id, field: 'downloads' })
+ *   await syncCounter({ req, target: { collection: 'projeto', id }, field: 'downloads',
+ *                       derive: { kind: 'delta', by: 1 } }, { getStore: async () => store })
+ */
+export type PublicCounterTarget = {
+  collection: string
+  id: string | number
+  /** The single column this store may write. Any other key in `data` is refused. */
+  field: string
+}
+
+export type PublicCounterOptions = {
+  /** Injectable so tests can resolve without `next/cache` (spike S8), as everywhere else. */
+  lookup?: HostLookup
+  /**
+   * The request the download is being served under, propagated so the counter joins **its**
+   * transaction rather than opening a second connection — the property `counters.ts` rests on
+   * and `system-payload.ts` measured the cost of losing.
+   */
+  req?: PayloadRequest
+}
+
+/**
+ * Deliberately a `Pick` of the tenant client rather than a new shape: `CounterStore` in
+ * `lib/content/counters.ts` is the same three operations, so this satisfies it structurally
+ * without `lib/tenancy` importing anything from `lib/content`.
+ */
+export type PublicCounterStore = Pick<TenantScopedPayload, 'find' | 'findByID' | 'update'> & {
+  /** The organization the host resolved to. Every operation is confined to it. */
+  tenantId: string
+}
+
+export async function getPublicCounterStore(
+  host: string,
+  target: PublicCounterTarget,
+  options: PublicCounterOptions = {},
+): Promise<PublicCounterStore> {
+  const organization = await resolveTenantOnce(host ?? '', options.lookup)
+
+  // Same asymmetry as the read path, and it matters more here: nobody is signed in to notice
+  // that a missing tenant quietly became "any tenant" on a write.
+  if (!organization) throw new TenantUnresolvedError(host)
+
+  const payload = await getPayload({ config: (await import('../../payload.config')).default })
+  const base = buildTenantClient({
+    payload,
+    tenantId: String(organization.id),
+    overrideAccess: true,
+    ...(options.req ? { req: options.req } : {}),
+  })
+
+  const assertTarget = (collection: string, id: string | number): void => {
+    if (collection === target.collection && String(id) === String(target.id)) return
+    throw new PublicWriteDeniedError(
+      `${collection} ${String(id)}`,
+      `this store was opened for ${target.collection} ${String(target.id)} only`,
+    )
+  }
+
+  const assertField = (data: Record<string, unknown>): void => {
+    const other = Object.keys(data).filter((key) => key !== target.field)
+    if (other.length === 0) return
+    throw new PublicWriteDeniedError(
+      `${target.collection}.${other.join(', ')}`,
+      `this store may write "${target.field}" and nothing else`,
+    )
+  }
+
+  return {
+    tenantId: base.tenantId,
+
+    find: async () => {
+      throw new PublicWriteDeniedError(
+        'a listing',
+        'a delta counter has no source rows to count, so nothing here needs to list',
+      )
+    },
+
+    findByID: async <T>(args: ByIDArgs) => {
+      // The read half of a read-modify-write on the counter, and it is checked for the same
+      // reason the write is: an unchecked one would hand the download path a way to read any
+      // row of the host organization, drafts included, through a client that answers to no
+      // access control.
+      assertTarget(args.collection, args.id)
+      return base.findByID<T>(args)
+    },
+
+    update: async <T>(args: UpdateArgs) => {
+      assertTarget(args.collection, args.id)
+      assertField(args.data)
+      return base.update<T>(args)
+    },
+  }
 }

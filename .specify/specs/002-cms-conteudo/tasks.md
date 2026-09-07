@@ -12,7 +12,9 @@ recorded in the plan — this list is generated against the post-spike plan.
 ## Read before starting
 
 Seven things are load-bearing. Six of them fail quietly, and every one was measured rather
-than reasoned about.
+than reasoned about. **Three were overtaken by decision D1** and carry their correction
+inline — re-checked against the tree at T037, not re-read. A measurement that a later
+decision scoped is kept, never deleted: it is the reason the decision was taken.
 
 1. **The plugin AND-s its own tenant constraint onto whatever collection access returns.**
    `withTenantAccess.js` pushes `{ tenant: { in: userTenantIDs } }` whenever `req.user` exists
@@ -23,14 +25,24 @@ than reasoned about.
    wrapper returns `false` outright. They would see *less* than a logged-out visitor. That is a
    required harness case, not a curiosity.
 3. **`imageSizes` produces nothing on the clientUploads path** (spike S1): `generateFileData`
-   returns at `if (!file)` before any resizing. Derivatives are generated explicitly in the
-   post-upload pass.
+   returns at `if (!file)` before any resizing. **Scoped, not wrong — and D1 turned that path
+   off** (2026-09-06): the bytes pass through Node, so Payload now generates the derivatives
+   itself from the `imageSizes` the image media collection declares. The explicit post-upload
+   pass this fact once pointed at (`lib/uploads/verify.ts`) has no production caller; only
+   `DERIVATIVE_WIDTHS` is still imported from it. Do not hand-roll a derivative pass for a
+   collection the framework already resizes.
 4. **Collection-level `mimeTypes` and `filesize` never execute on that path either** —
-   `checkFileRestrictions` sits *after* that return. The post-upload check is the **only**
-   validation layer, not a second one, and size is enforced at **presign** because a cap
-   checked after the bytes land has already paid the cost it existed to prevent.
-5. **`sharp` is not wired into `buildConfig` and is not declared in `apps/web`** — measured. So
-   `imageSizes` is a no-op on *every* path today, not just the direct-upload one.
+   `checkFileRestrictions` sits *after* that return. **Same scope, same reversal by D1**: with
+   `clientUploads: false`, `checkFileRestrictions` runs and each media collection's declared
+   `mimeTypes` is enforced by Payload. `filesize` still is not, for a different reason —
+   `UploadConfig` declares no per-collection size option (verified in payload 3.88) — so the
+   cap is ours, a `beforeOperation` hook (`refuseOffPolicyUpload`) that refuses before
+   anything is stored. There is no presigned step left to enforce it at.
+5. **`sharp` was neither wired into `buildConfig` nor declared in `apps/web`** — measured, and
+   while that held, `imageSizes` was a no-op on *every* path, not just the direct-upload one.
+   **Closed by T002**: both are on disk, and `tests/sharp-dependency.test.ts` goes red if
+   either is dropped — including in the child-process resolution check that catches a
+   dependency vitest resolves and `next build` does not.
 6. **A gate nobody has watched fail is not a gate.** Feature 001 produced thirteen measured
    instances of one reporting success while checking nothing. SC-003, every upload rejection,
    and the counter reconciliation test each require a planted violation and an observed red.
@@ -219,6 +231,42 @@ whoever knows the VM.
 | T032 ✅ | Migration for `projeto` + `categoriaProjeto`. The drift gate from feature 000 is live throughout this feature | FR-001 | `apps/web/migrations/` | T025 |
 | T033 ✅ | Review-queue tests: publish → unpublish → republish yields **one** approval record; a maker cannot publish | SC-004, SC-005 | `apps/web/tests/content/review.test.ts` | T028 |
 
+## Run 6 (`wf_35f15b73-95e`, 2026-09-07) — what it left behind
+
+T034, T035 and T037 accepted; T036 rejected on two counts, both confirmed by execution.
+
+**The uniform 404 was not uniform across collections.** `serveDownload`'s docstring makes the
+single refusal a security property — "any difference between them is an oracle an anonymous
+prober can use to enumerate ids, hosts or keys" — and all 13 of its calls passed
+`collection: 'projeto'`. For anything else the anonymous client denies by default, `findByID`
+threw `PublicReadDeniedError`, and nothing caught it. On the natural route shape the collection
+is caller-supplied, so that was an unhandled rejection on anonymous input and exactly the
+discriminator the uniform answer exists to deny. Folded into the 404, with a matrix over
+`users`, `pendingInvites` and a slug that does not exist, plus the allow-listed case as the
+non-vacuity pair. Watched failing without the catch: 3 of 21 red.
+
+**The module has no production caller**, which is why T036 is now split. T036a is the policy and
+is done. T036b is the route, and it is deferred rather than attempted because it turns on a
+question this feature has not answered.
+
+## T036b: text keys or media relationships?
+
+D3 chose text columns holding storage keys, and that was right *at the time*: the presigned path
+was still live, and a text key is mechanism-agnostic. D1 then removed that path, and T023b gave
+the product three media collections whose uploads are ordinary Payload documents. So the two
+decisions now meet at a seam neither of them anticipated, and `projeto.arquivos` is on the wrong
+side of it.
+
+| | Option | Cost |
+|---|---|---|
+| **i** | Keep the text keys | The route needs its own S3 reader. `@payloadcms/storage-s3` is a declared dependency but exports a plugin, not an object reader — so this means `@aws-sdk/client-s3` as a direct dependency, which is a stack addition under Principle 1 |
+| **ii** | Make `arquivos`/`galeria`/`imagemCapa` relationships to the media collections | No new dependency: the media document already knows its own URL and Payload serves the bytes. Costs a schema change and a migration on fields that landed hours ago, and the media collections carry no `status`, so they need an explicit public-read declaration for the anonymous path to resolve them |
+| **iii** | Keep the keys, resolve them to a media document by filename | No schema change and no dependency, but it makes the key a foreign key without a constraint — the exact "stringly-typed relation" the same-tenant validator exists to prevent elsewhere |
+
+**Recommendation: ii.** It is the only one where the file has an owner the database knows about,
+it removes a dependency question rather than answering it, and the public-read declaration it
+needs is work 002b has to do anyway for the category collections.
+
 ## Run 5 (`wf_1f5b2700-6f2`, 2026-09-06) — what it left behind
 
 T031 accepted, T023b rejected. The rejection's headline — a red suite — had already been
@@ -340,10 +388,11 @@ reason against the enlarged matrix.
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T034 | **Drive the real flow, do not report green tests.** Upload one image through the actual **admin/native** path — `clientUploads` is off (D1), so there is no presigned path to drive — and assert Payload generated the `imageSizes` derivatives itself, that a disallowed type is refused by the collection's `mimeTypes`, and that an over-cap file is refused by the size hook. ~~presigned path / left quarantine~~ superseded by D1 | FR-011, FR-014, SC-006 | `apps/web/tests/uploads/` | T023b |
-| T035 | Public read proven end to end: anonymous `GET` of a published project returns it; an unpublished one 404s; another organization's returns 404 | SC-002, FR-010 | `apps/web/tests/tenancy/public-read.test.ts` | T012, T024 |
-| T036 | Anonymous download served and counted, and a cross-organization download is a 404 | FR-015, FR-016, SC-009, SC-010 | `apps/web/tests/content/downloads.test.ts` | T030, T035 |
-| T037 | **002a acceptance**: all gates green, the template reviewed, and the preamble's measured facts re-checked — noting that facts 3 and 4 (`imageSizes` and `checkFileRestrictions` never running) describe `clientUploads: true` and are **scoped, not wrong**; D1 turned it off, so both now run. Update the preamble to say so. 002b is blocked on this | all | — | T034, T035, T036 |
+| T034 ✅ | **Drive the real flow, do not report green tests.** Upload one image through the actual **admin/native** path — `clientUploads` is off (D1), so there is no presigned path to drive — and assert Payload generated the `imageSizes` derivatives itself, that a disallowed type is refused by the collection's `mimeTypes`, and that an over-cap file is refused by the size hook. ~~presigned path / left quarantine~~ superseded by D1 | FR-011, FR-014, SC-006 | `apps/web/tests/uploads/` | T023b |
+| T035 ✅ | Public read proven end to end: anonymous `GET` of a published project returns it; an unpublished one 404s; another organization's returns 404 | SC-002, FR-010 | `apps/web/tests/tenancy/public-read.test.ts` | T012, T024 |
+| T036a ✅ | **Download policy**, driven against real rows: anonymous GET of a published project's attachment returns it and increments `downloads`; a draft, another organization's, an unlisted key, a missing object and a **non-allow-listed collection** each return the same 404. The last one was the defect: `PublicReadDeniedError` escaped, so a caller-supplied collection produced a rejection where `projeto` produced 404 — a 500-vs-404 oracle telling a prober which collections are public | FR-015, FR-016, SC-009, SC-010 | `apps/web/lib/content/downloads.ts` | T030, T035 |
+| T036b ⛔ | **The download ROUTE and its object reader — blocked on a decision.** `serveDownload` has no production caller, so FR-015 ("downloads are open, and anonymous ones are counted") is true only inside the test harness. Registering it needs an `ObjectSource`, and what that reads depends on an unanswered question — see § "T036b: text keys or media relationships?" | FR-015, FR-016, SC-009 | `apps/web/collections/content/Projeto.ts` | **decision** |
+| T037 ✅ | **002a acceptance**: all gates green, the template reviewed, and the preamble's measured facts re-checked — noting that facts 3 and 4 (`imageSizes` and `checkFileRestrictions` never running) describe `clientUploads: true` and are **scoped, not wrong**; D1 turned it off, so both now run. Update the preamble to say so. 002b is blocked on this | all | — | T034, T035, T036 |
 
 ## Phase 002b: the remaining twelve, against a proven template
 

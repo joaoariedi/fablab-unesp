@@ -118,11 +118,11 @@ const publicClientAs = async (vantage: Vantage, host: string) => {
  * `scopedAccess()` (which Payload raises as Forbidden) is normalised to zero rows rather than
  * failing the test for the wrong reason.
  */
-const accessRead = async (vantage: Vantage): Promise<Row[]> => {
+const accessRead = async (vantage: Vantage, collection = COLLECTION): Promise<Row[]> => {
   const session = sessionOf(vantage)
   try {
     const result = await world.payload.find({
-      collection: COLLECTION,
+      collection: collection as never,
       depth: 0,
       limit: 100,
       overrideAccess: false,
@@ -304,4 +304,188 @@ describe('the published-only filter survives a session (FR-010)', () => {
       expect(where, `the tenant constraint was dropped for ${vantage}`).toContain(world.orgA.id)
     })
   }
+})
+
+/**
+ * ## T035 — the same three answers, demanded of real content (SC-002, FR-010)
+ *
+ * Everything above was written before a content collection existed, so its row-level half had
+ * to be asserted against `organizations` — the one public read that was real at the time — and
+ * its published-only half against an injected `publishable` set. Both were proxies, and both
+ * say so in their own docstrings.
+ *
+ * `projeto` (T024) is the first scoped collection that actually carries `status`, so the three
+ * answers the task names can now be demanded of the thing itself, with **nothing injected**:
+ * the publishable set is derived from the real config, the host is resolved by the real
+ * resolver, and the rows are real rows.
+ *
+ *   - a **published** project on its own host is served;
+ *   - an **unpublished** one — `rascunho` and `em_revisao`, the two review states — is not
+ *     found, which is the 404 a page renders from `null`;
+ *   - **another organization's**, published or not, is not found either.
+ *
+ * The published case is asserted from all four vantage points for the reason the first block
+ * exists: "drafts are hidden from logged-out visitors and served to signed-in ones" and "the
+ * host's own content is invisible to a visitor who belongs to another lab" are both bugs that
+ * only a per-vantage assertion catches, and both were measured in round 1.
+ */
+describe('a published project reads publicly, an unpublished one does not (T035)', () => {
+  /** Both organizations publish under this slug, so a cross-tenant hit cannot pass as luck. */
+  const SHARED_SLUG = 't035-mesmo-slug'
+
+  type Marker = 'A' | 'B'
+
+  /**
+   * A project needs a category from its **own** organization or `sameTenant` refuses the
+   * create (T026), so the id comes from the seeded world rather than a literal. The throw
+   * names the missing collection: without it a registry rename would surface here as
+   * "cannot read property A of undefined" from inside Payload, two layers from the cause.
+   */
+  const categoriaOf = (marker: Marker): string | number => {
+    const ids = world.rows.categoriaProjeto
+    if (!ids) {
+      throw new Error(
+        'fixtures seeded no `categoriaProjeto` row — the T035 block cannot create a project ' +
+          'without a category from the same tenant',
+      )
+    }
+    return ids[marker]
+  }
+
+  const seedProject = async (
+    marker: Marker,
+    slug: string,
+    status: 'rascunho' | 'em_revisao' | 'publicado',
+  ): Promise<string> => {
+    const org = marker === 'A' ? world.orgA : world.orgB
+    const created = await world.payload.create({
+      collection: 'projeto',
+      // `overrideAccess: true` for the same reason `fixtures.ts` gives: building the world is
+      // not the subject. It also side-steps `canPublishField`, which is T033's subject and
+      // would otherwise make this block fail for someone else's reason.
+      overrideAccess: true,
+      data: {
+        titulo: `Projeto ${slug} (${marker})`,
+        slug,
+        descricaoCurta: `Conteúdo de ${marker} para o T035.`,
+        imagemCapa: 'media/image/00000000-0000-4000-8000-000000000002.png',
+        categoria: categoriaOf(marker),
+        tenant: org.id,
+        downloads: 0,
+        curtidas: 0,
+        status,
+      } as never,
+    })
+    return String((created as { id: string | number }).id)
+  }
+
+  let publishedA: string
+  let inReviewA: string
+  let draftA: string
+  let publishedB: string
+
+  beforeAll(async () => {
+    publishedA = await seedProject('A', SHARED_SLUG, 'publicado')
+    inReviewA = await seedProject('A', 't035-em-revisao', 'em_revisao')
+    draftA = await seedProject('A', 't035-rascunho', 'rascunho')
+    publishedB = await seedProject('B', SHARED_SLUG, 'publicado')
+  }, 60_000)
+
+  for (const vantage of VANTAGES) {
+    it(`serves organization A's published project to a visitor who is ${vantage}`, async () => {
+      const db = await publicClientAs(vantage, world.orgA.host)
+      const doc = await db.findByID<{ id: unknown; status?: unknown }>({
+        collection: 'projeto',
+        id: publishedA,
+      })
+
+      expect(
+        String(doc?.id),
+        `a visitor who is ${vantage} was not served a published project on its own host`,
+      ).toBe(publishedA)
+      expect(doc?.status).toBe('publicado')
+    })
+
+    it(`does not find an unpublished project as ${vantage}`, async () => {
+      const db = await publicClientAs(vantage, world.orgA.host)
+      for (const [state, id] of [
+        ['em_revisao', inReviewA],
+        ['rascunho', draftA],
+      ] as const) {
+        expect(
+          await db.findByID({ collection: 'projeto', id }),
+          `a visitor who is ${vantage} read a project still in ${state} — FR-010 says only ` +
+            `publicado is public, and a page would have rendered it instead of a 404`,
+        ).toBeNull()
+      }
+    })
+
+    it(`does not find organization B's published project on A's host as ${vantage}`, async () => {
+      const db = await publicClientAs(vantage, world.orgA.host)
+      expect(
+        await db.findByID({ collection: 'projeto', id: publishedB }),
+        `a visitor who is ${vantage} reached organization B's project through A's host`,
+      ).toBeNull()
+    })
+  }
+
+  it('lists only the host organization, and only what it published', async () => {
+    const db = await getPublicScopedPayload(world.orgA.host)
+    const { docs } = await db.find<{ id: unknown; tenant?: unknown; status?: unknown }>({
+      collection: 'projeto',
+      limit: 100,
+    })
+
+    expect(docs.map((row) => String(row.id)), 'the published project was missing from the listing')
+      .toContain(publishedA)
+    expect(
+      docs.filter((row) => row.status !== 'publicado'),
+      'the public listing carried a row that is not publicado',
+    ).toHaveLength(0)
+    expect(
+      docs.filter((row) => tenantIdOf(row as Row) !== world.orgA.id),
+      "the public listing carried another organization's rows",
+    ).toHaveLength(0)
+  })
+
+  it('serves each host its own project when both published the same slug', async () => {
+    const bySlug = async (host: string): Promise<string[]> => {
+      const db = await getPublicScopedPayload(host)
+      const { docs } = await db.find<{ id: unknown }>({
+        collection: 'projeto',
+        where: { slug: { equals: SHARED_SLUG } },
+        limit: 100,
+      })
+      return docs.map((row) => String(row.id))
+    }
+
+    // The slug is the public URL (`/projetos/{slug}`), and it is unique per organization
+    // rather than per platform — so the read that resolves it is the one most likely to serve
+    // the wrong lab's row, and the one worth pinning.
+    expect(await bySlug(world.orgA.host)).toEqual([publishedA])
+    expect(await bySlug(world.orgB.host)).toEqual([publishedB])
+  })
+
+  it('cannot be widened by a where the caller supplies', async () => {
+    const db = await getPublicScopedPayload(world.orgA.host)
+    const { docs } = await db.find<{ id: unknown }>({
+      collection: 'projeto',
+      // Asking for exactly what the filter hides. It is AND-ed, never replaced, so this is a
+      // contradiction rather than an override — the property `buildTenantClient` documents,
+      // asserted here against the status filter the public client adds on top of it.
+      where: { status: { equals: 'rascunho' } },
+      limit: 100,
+    })
+    expect(docs, 'a caller-supplied where widened the public read back onto drafts').toHaveLength(0)
+  })
+
+  it('serves the same published project through collection access to nobody anonymous', async () => {
+    // The public answer above must not have arrived by widening `scopedAccess()`. Same
+    // assertion as the canary block makes, now on the collection that actually has content.
+    expect(
+      await accessRead('anonymous', 'projeto'),
+      'collection access served projects to an anonymous reader — the public read path is ' +
+        'the client, and access must stay closed',
+    ).toHaveLength(0)
+  })
 })
