@@ -340,10 +340,10 @@ reason against the enlarged matrix.
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T034 | **Drive the real flow, do not report green tests.** Upload one image through the actual presigned path; assert the derivatives exist, a disallowed type is refused, and the object left quarantine. Spike S1 is source analysis — this is the execution that confirms it | SC-006, SC-007 | manual + `apps/web/tests/uploads/e2e.test.ts` | T019, T021 |
+| T034 | **Drive the real flow, do not report green tests.** Upload one image through the actual **admin/native** path — `clientUploads` is off (D1), so there is no presigned path to drive — and assert Payload generated the `imageSizes` derivatives itself, that a disallowed type is refused by the collection's `mimeTypes`, and that an over-cap file is refused by the size hook. ~~presigned path / left quarantine~~ superseded by D1 | FR-011, FR-014, SC-006 | `apps/web/tests/uploads/` | T023b |
 | T035 | Public read proven end to end: anonymous `GET` of a published project returns it; an unpublished one 404s; another organization's returns 404 | SC-002, FR-010 | `apps/web/tests/tenancy/public-read.test.ts` | T012, T024 |
 | T036 | Anonymous download served and counted, and a cross-organization download is a 404 | FR-015, FR-016, SC-009, SC-010 | `apps/web/tests/content/downloads.test.ts` | T030, T035 |
-| T037 | **002a acceptance**: all gates green, the template reviewed, and the four measured facts in the preamble still true. 002b is blocked on this | all | — | T034, T035, T036 |
+| T037 | **002a acceptance**: all gates green, the template reviewed, and the preamble's measured facts re-checked — noting that facts 3 and 4 (`imageSizes` and `checkFileRestrictions` never running) describe `clientUploads: true` and are **scoped, not wrong**; D1 turned it off, so both now run. Update the preamble to say so. 002b is blocked on this | all | — | T034, T035, T036 |
 
 ## Phase 002b: the remaining twelve, against a proven template
 
