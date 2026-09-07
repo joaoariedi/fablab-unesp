@@ -492,3 +492,196 @@ describe('a published project reads publicly, an unpublished one does not (T035)
     ).toHaveLength(0)
   })
 })
+
+/**
+ * ## T005 — the four doors `publicList` opened, and the walls that stayed up (SC-003, SC-007)
+ *
+ * T004 gave `categoriaProjeto`, `categoriaArtigo`, `categoriaModelo` and `maquina` a
+ * `publicList` reason, which is the **second** way past `assertPubliclyReadable` and the first
+ * one that is not "this row is published". Every previous assertion in this file was written
+ * against a gate with one door; this block is the one that says the second door did not become
+ * a corridor.
+ *
+ * The four collections asserted here are the ones a mistaken generalisation would take with it:
+ *
+ *   - `midiaImagem` — **scoped, no `status`**, exactly like a category. The distinction is not a
+ *     property of the row, it is the sentence somebody wrote: a category is *enumerated* by the
+ *     tabs, a cover image is *populated* behind a project the published-only filter already
+ *     cleared. "Has no status" would admit both, and it would hand out every file the lab ever
+ *     uploaded — the ones attached to drafts included.
+ *   - `perfilMaker` — the public maker profile is a future spec (spec § Scope), so nothing may
+ *     list it yet; a listing is every maker's handle and the account behind it.
+ *   - `curtida` — a like row names the **person**, not the count. FR-015 shows a count; it never
+ *     shows who.
+ *   - `users` — `global`, so `buildTenantClient` puts no tenant clause on it at all. A
+ *     `publicList` reason could not confine it even if somebody wrote one, which is why the
+ *     refusal message for it says something different from the other three.
+ *
+ * And the positive half, which is what stops the block above from being satisfiable by a client
+ * that refuses everything: a card still gets its category chip and its cover image, because
+ * `depth: 1` populates them **through** a published `projeto`. That path is the reason
+ * `midiaImagem` needs no declaration — and if it ever stopped working, the pressure to give it
+ * one would be immediate.
+ */
+describe('publicList opened four doors and nothing else (T005)', () => {
+  /**
+   * `users` is `global` and therefore absent from `world.rows`, which only carries scoped
+   * collections. Its id comes from the seeded member instead — the point is that the refusal
+   * happens for a row that genuinely exists.
+   */
+  const idOfRefused = (collection: string): string | number => {
+    if (collection === 'users') return (world.userA as { id: string | number }).id
+    const ids = world.rows[collection]
+    if (!ids) {
+      throw new Error(
+        `fixtures seeded no "${collection}" row, so its refusal would be indistinguishable ` +
+          `from "no such document" — the T005 negative needs a real id to be refused`,
+      )
+    }
+    return ids.A
+  }
+
+  /** Refused collection → the half of the gate's message that must name its reason. */
+  const REFUSED = [
+    ['midiaImagem', 'declares no `status`'],
+    ['perfilMaker', 'declares no `status`'],
+    ['curtida', 'declares no `status`'],
+    ['users', 'it is `global`'],
+  ] as const
+
+  for (const [collection, reason] of REFUSED) {
+    for (const vantage of VANTAGES) {
+      it(`refuses ${collection} to a visitor who is ${vantage}`, async () => {
+        const db = await publicClientAs(vantage, world.orgA.host)
+
+        await expect(
+          db.find({ collection, limit: 100 }),
+          `a visitor who is ${vantage} listed ${collection} — no page enumerates it, so the ` +
+            `only way it became readable is a publicList reason nobody should have written`,
+        ).rejects.toBeInstanceOf(PublicReadDeniedError)
+
+        // The id half too: `findByID` builds its own `where`, so a widening there would not
+        // show up in the `find` assertion above. The id is the row the fixture seeded, so a
+        // refusal cannot be mistaken for "no such document".
+        await expect(
+          db.findByID({ collection, id: idOfRefused(collection) }),
+          `a visitor who is ${vantage} read a ${collection} row by id`,
+        ).rejects.toBeInstanceOf(PublicReadDeniedError)
+
+        await expect(db.find({ collection })).rejects.toThrow(reason)
+      })
+    }
+  }
+
+  const SLUG = 't005-populado'
+  let projectId: string
+  let categoriaId: string
+  let categoriaNome: string
+  let capaId: string
+
+  beforeAll(async () => {
+    const ids = world.rows.categoriaProjeto
+    const media = world.rows.midiaImagem
+    if (!ids || !media) {
+      throw new Error(
+        'fixtures seeded no `categoriaProjeto` or `midiaImagem` row — the T005 population ' +
+          'assertion has nothing to populate through',
+      )
+    }
+    categoriaId = String(ids.A)
+    capaId = String(media.A)
+
+    const categoria = await world.payload.findByID({
+      collection: 'categoriaProjeto',
+      id: ids.A,
+      overrideAccess: true,
+    })
+    // Through `unknown`: without the generated `payload-types.ts` — which is gitignored, so CI
+    // never has it — Payload types this as `JsonObject & TypeWithID`, which does not overlap
+    // with the shape asserted here and makes the direct cast a compile error in the pipeline
+    // while passing locally.
+    categoriaNome = String((categoria as unknown as { nome: unknown }).nome)
+
+    const created = await world.payload.create({
+      collection: 'projeto',
+      // Same reason `fixtures.ts` gives: building the world is not the subject, and
+      // `canPublishField` (T033) would otherwise fail this block for someone else's reason.
+      overrideAccess: true,
+      data: {
+        titulo: 'Projeto populado (T005)',
+        slug: SLUG,
+        descricaoCurta: 'O card precisa da categoria e da capa junto com a linha.',
+        imagemCapa: media.A,
+        categoria: ids.A,
+        tenant: world.orgA.id,
+        downloads: 0,
+        curtidas: 0,
+        status: 'publicado',
+      } as never,
+    })
+    projectId = String((created as { id: string | number }).id)
+  }, 60_000)
+
+  /** The populated shape: an object carrying its own fields, not the id Payload started from. */
+  type Populated = { id: unknown; nome?: unknown }
+  type CardRow = { id: unknown; categoria?: unknown; imagemCapa?: unknown }
+
+  const populated = (value: unknown, field: string): Populated => {
+    expect(
+      value !== null && typeof value === 'object',
+      `\`${field}\` came back as ${JSON.stringify(value)} rather than a populated document — ` +
+        `a card cannot render a chip or a cover from an id`,
+    ).toBe(true)
+    return value as Populated
+  }
+
+  it('populates the category through a published projeto at depth 1', async () => {
+    const db = await getPublicScopedPayload(world.orgA.host)
+    const doc = await db.findByID<CardRow>({ collection: 'projeto', id: projectId, depth: 1 })
+
+    const categoria = populated(doc?.categoria, 'categoria')
+    expect(String(categoria.id)).toBe(categoriaId)
+    // `nome` exists only on the populated row — it is what the chip prints, and asserting it
+    // is what stops `{ id }` echoed back from passing as population.
+    expect(categoria.nome, 'the populated category carried no `nome` for the chip to print').toBe(
+      categoriaNome,
+    )
+  })
+
+  it('populates the cover image it refuses to list, at depth 1', async () => {
+    // The whole justification for `midiaImagem` having no `publicList` reason: the card gets
+    // its cover *through* a document the published-only filter already cleared. If this ever
+    // goes red, the refusal above stops being a decision and becomes a missing feature.
+    const db = await getPublicScopedPayload(world.orgA.host)
+    const doc = await db.findByID<CardRow>({ collection: 'projeto', id: projectId, depth: 1 })
+
+    expect(String(populated(doc?.imagemCapa, 'imagemCapa').id)).toBe(capaId)
+  })
+
+  it('populates the same two fields through the listing, not only by id', async () => {
+    // The grid is a `find`, and it builds its `where` separately from `findByID` — so the
+    // listing has to be asserted rather than inferred from the detail read.
+    const db = await getPublicScopedPayload(world.orgA.host)
+    const { docs } = await db.find<CardRow>({
+      collection: 'projeto',
+      where: { slug: { equals: SLUG } },
+      depth: 1,
+      limit: 100,
+    })
+
+    expect(docs.map((row) => String(row.id))).toEqual([projectId])
+    expect(String(populated(docs[0]?.categoria, 'categoria').id)).toBe(categoriaId)
+    expect(String(populated(docs[0]?.imagemCapa, 'imagemCapa').id)).toBe(capaId)
+  })
+
+  it('leaves both fields unpopulated at depth 0', async () => {
+    // Non-vacuity for the three assertions above: without this they would also pass against a
+    // client that populated everything regardless of `depth`, and the depth the page asks for
+    // would be decoration rather than the thing being tested.
+    const db = await getPublicScopedPayload(world.orgA.host)
+    const doc = await db.findByID<CardRow>({ collection: 'projeto', id: projectId, depth: 0 })
+
+    expect(typeof doc?.categoria, '`categoria` was populated at depth 0').not.toBe('object')
+    expect(typeof doc?.imagemCapa, '`imagemCapa` was populated at depth 0').not.toBe('object')
+  })
+})

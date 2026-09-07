@@ -39,15 +39,55 @@ lives here, in the artifact — not in a launch note. It does **not** mean commi
 is built end to end as the template the other pages copy, the performance gate is armed *before*
 the asset most likely to trip it exists, and the Home is last.
 
+## Run 1 (`wf_090be5dd-886`, 2026-09-07) — Phase 1, and a tree-clobbering incident
+
+T003 and T004 accepted; T001 and T002 rejected. Both rejections were confirmed and repaired, and
+one of them found a **caller-reachable hole in the anonymous security gate**.
+
+**T002 — the testability seam was a deny→allow override.** To observe the admission before T004
+declared a real collection, the implementation added `registry?: ScopeRegistryLike` to
+`PublicPayloadOptions`. That bag flows straight through `getPublicScopedPayloadForRSC` to any
+page module, so a page could have passed
+`{ pendingInvites: { scope: 'scoped', publicList: 'x' } }` and served every invite row of the
+host tenant, e-mail addresses included — the exact collection this gate's docstring names as the
+measured 002 leak. It is **not** the equivalent of the `publishable` seam it cited as precedent:
+injecting `publishable` forces a `status` clause Payload rejects on a statusless collection, so
+it cannot widen anything; this one widened by removing the filter entirely. Seam removed. The
+tests it existed for now read `categoriaProjeto`, which genuinely declares one — a stronger check
+than the fake was.
+
+**T001 — the test did not defend the thing the code was written for.** `publicListCollections`
+filters on `!== undefined` rather than truthiness *on purpose*, so that an entry declared with an
+empty reason is still visible to T003's rot guard. Nothing pinned it: mutating the filter to
+`Boolean(entry.publicList)` left all ten tests green, and under that mutation the rot guard would
+iterate straight past the one case it exists to catch. The fake now carries `vazioFake` with an
+empty reason, and the mutation dies. Separately, the shipped-registry assertion was vacuous when
+written — no collection declared `publicList` until T004 — and it restated the accessor against a
+direct read of the same field. It self-armed with T004, and a second assertion now pins **which
+four** collections are declared, because that set is the decision with the security consequence.
+
+**The incident.** Mid-verification the working tree was reverted: all four modified files
+rewritten back to `HEAD` at one instant, which the verifier correctly reported as its deliverable
+having vanished. The work was on disk again afterwards. `scripts/isolation-mutation.sh` restores
+only its four `TARGETS` from copies and cannot explain files outside that list, so the likeliest
+cause is concurrent agents sharing one working tree — the hazard
+[[fablab-parallel-execution-limit]] already records. **Nothing was lost**, but a verifier spent a
+round on it, and the report reads as a code defect when it is an orchestration one.
+
+**Verified after the repairs**: `pnpm lint` 0; `pnpm typecheck` 0 **both** with and without
+`payload-types.ts`; `pnpm test` 0 — 745 in `packages/ui`, 1,294 in `apps/web`. All three
+`isolation-mutation.sh` layers red for the right reason. Two CI-only errors were caught by the
+without-types run and would otherwise have failed the pipeline.
+
 ## Phase 1: The mechanism everything else reads through
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T001 | `ScopeEntry.publicList?: string` — a **reason**, not a boolean. Anonymous visitors may LIST this collection with the tenant constraint and no status filter | FR-002 | `apps/web/lib/tenancy/scope-registry.ts` | — |
-| T002 | `assertPubliclyReadable` admits a `publicList` collection; deny stays the default for everything else | FR-002, SC-003 | `apps/web/lib/tenancy/public-payload.ts` | T001 |
-| T003 | **Rot guard**: every `publicList` collection must carry a non-empty reason AND declare no `status` — if it had one it should be publishable instead. Watch it red against a collection declared both ways | FR-002, SC-012 | `apps/web/tests/tenancy/public-list.test.ts` | T002 |
-| T004 | Declare `publicList` on `categoriaProjeto`, `categoriaArtigo`, `categoriaModelo` and `maquina`, each with the page-spec reason. **Nothing else** — media, `perfilMaker` and `local` are reached by population and must NOT get one | FR-002, FR-004, FR-008 | `apps/web/collections/content/` | T003 |
-| T005 | Assert the negative: the anonymous client still refuses `midiaImagem`, `perfilMaker`, `curtida` and `users`, and still populates a category **through** a published `projeto` at `depth: 1` | SC-003, SC-007 | `apps/web/tests/tenancy/public-read.test.ts` | T004 |
+| T001 ✅ | `ScopeEntry.publicList?: string` — a **reason**, not a boolean. Anonymous visitors may LIST this collection with the tenant constraint and no status filter | FR-002 | `apps/web/lib/tenancy/scope-registry.ts` | — |
+| T002 ✅ | `assertPubliclyReadable` admits a `publicList` collection; deny stays the default for everything else | FR-002, SC-003 | `apps/web/lib/tenancy/public-payload.ts` | T001 |
+| T003 ✅ | **Rot guard**: every `publicList` collection must carry a non-empty reason AND declare no `status` — if it had one it should be publishable instead. Watch it red against a collection declared both ways | FR-002, SC-012 | `apps/web/tests/tenancy/public-list.test.ts` | T002 |
+| T004 ✅ | Declare `publicList` on `categoriaProjeto`, `categoriaArtigo`, `categoriaModelo` and `maquina`, each with the page-spec reason. **Nothing else** — media, `perfilMaker` and `local` are reached by population and must NOT get one | FR-002, FR-004, FR-008 | `apps/web/collections/content/` | T003 |
+| T005 ✅ | Assert the negative: the anonymous client still refuses `midiaImagem`, `perfilMaker`, `curtida` and `users`, and still populates a category **through** a published `projeto` at `depth: 1` | SC-003, SC-007 | `apps/web/tests/tenancy/public-read.test.ts` | T004 |
 
 ## Phase 2: The listing contract
 
