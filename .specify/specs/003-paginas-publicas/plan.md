@@ -42,8 +42,12 @@ small and nameable: the filter tabs and the machine select.
 | `packages/ui/src/components/Pagination.tsx` | create | Numbered pages, links only — no client boundary |
 | `packages/ui/src/components/CardProjeto.tsx` | create | The card the mockups draw |
 | `packages/ui/src/components/EmptyState.tsx` | create | Shared empty/error body |
-| `packages/ui/src/components/ModelViewer.tsx` | create | `'use client'` — the only 3D island |
-| `apps/web/app/(frontend)/_islands/` | create | The bounded set of client components |
+| `packages/ui/src/components/ModelViewer.tsx` | create | `'use client'` — the 3D island |
+| `packages/ui/src/components/LikeButton.tsx` | create | `'use client'` — count and the account invitation |
+| `packages/ui/src/components/SearchInput.tsx` | modify | Becomes `'use client'`: debounce needs state |
+| `packages/ui/src/components/ProjectCarousel.tsx` | create | `'use client'` — the Home carousel |
+| `packages/ui/src/components/CalendarDayPanel.tsx` | create | `'use client'` — the day drawer |
+| `packages/ui/tests/islands.test.ts` | create | The island inventory, scanning **both** trees |
 | `scripts/lcp-budget.sh` | create | The SC-006 gate |
 | `scripts/lcp-mutation.sh` | create | Proves that gate can fail |
 | `.github/workflows/ci.yml` | modify | Two jobs: `Performance budget`, `Performance budget can fail` |
@@ -179,6 +183,13 @@ export function Pagination({ page, totalPages, hrefFor }: PaginationProps) {
 URL that can be linked, shared and indexed. `CARREGAR MAIS` would have made all four listings
 client components for a control that cannot be bookmarked.
 
+**One Next-specific caveat, stated rather than discovered.** The search island reads
+`useSearchParams`, which forces its subtree to be dynamic unless it sits inside a `<Suspense>`
+boundary. That costs nothing here — these routes resolve their tenant from the host header and
+are dynamic already — but it must be written down, because the symptom otherwise is a build-time
+warning about a route nobody expected to be dynamic, on a page whose pagination is deliberately
+static.
+
 ### Sketch 5: the 3D viewer island and its fallback
 
 **File:** `packages/ui/src/components/ModelViewer.tsx` (new)
@@ -199,25 +210,47 @@ export function ModelViewer({ src, poster, alt }: ModelViewerProps) {
 case never loads the library at all; `onError` covers the one that loads and fails. Both land on
 the same thumbnail the card already shows, so a visitor never meets an empty canvas.
 
+**The dependency, corrected.** An earlier draft of this plan claimed `three` was not needed
+because "model-viewer carries its own renderer". That is false and was caught in review:
+`@google/model-viewer@4.3.1` declares `peerDependencies: { three: '^0.183.0' }`, and with pnpm 10
+and no `.npmrc` overriding it, auto-install-peers puts `three` in the tree whether it is declared
+or not. Both are therefore added explicitly, and the constitution's Tech Stack line — which names
+`@google/model-viewer` **and** `three` together — was right where the plan was wrong. What
+remains true is the narrower point: the STL/OBJ/3MF **loaders** are not needed, because FR-014
+falls those formats back to the thumbnail rather than rendering them.
+
 ### Sketch 6: the bounded island set
 
-**File:** `apps/web/tests/islands.test.ts` (new)
-**Intent:** make FR-024 and SC-012 checkable rather than aspirational.
+**File:** `packages/ui/tests/islands.test.ts` (new)
+**Intent:** make FR-024 and SC-012 checkable — and cover the tree the islands actually live in.
 
 ```ts
-const ALLOWED_ISLANDS = {
-  'ModelViewer.tsx': 'WebGL and camera controls; detail page only (CLR-002)',
-  'SearchInput.tsx': 'debounced typing — a form post would reload on every keystroke',
-  'LikeButton.tsx': 'optimistic count and the account invitation (FR-015)',
-  'ProjectCarousel.tsx': 'the Home carousel decided on 2026-08-23',
+// Keyed by PATH, not by bare filename: islands live in packages/ui beside the components they
+// belong to, and two trees can hold two files of the same name.
+const ALLOWED_ISLANDS: Record<string, string> = {
+  'packages/ui/src/shell/MenuSheet.tsx': 'feature 001 — the compact-breakpoint nav, opened and closed',
+  'packages/ui/src/components/ModelViewer.tsx': 'WebGL and camera controls; detail page only (CLR-002)',
+  'packages/ui/src/components/SearchInput.tsx': 'debounced typing — a form post would reload per keystroke',
+  'packages/ui/src/components/LikeButton.tsx': 'optimistic count and the account invitation (FR-015)',
+  'packages/ui/src/components/ProjectCarousel.tsx': 'the Home carousel, decided 2026-08-23',
+  'packages/ui/src/components/CalendarDayPanel.tsx': 'the day drawer opened from a month cell',
 }
+
 it('adds no client component without a reason', async () => {
-  expect(await modulesDeclaringUseClient()).toEqual(Object.keys(ALLOWED_ISLANDS).sort())
+  // Scans the WHOLE workspace source, not a list of roots. Naming roots is how the first draft
+  // of this guard would have passed while never seeing ModelViewer — and a two-root version
+  // still misses an island added under apps/web/lib or any directory nobody thought of. The
+  // exclusions are build output, never source.
+  expect(await modulesDeclaringUseClient({ exclude: ['**/node_modules/**', '**/.next/**', '**/dist/**'] }))
+    .toEqual(Object.keys(ALLOWED_ISLANDS).sort())
 })
 ```
 
-**Why this shape:** the same inventory-with-a-reason device the FR-020 counter guard uses. A new
-`'use client'` fails the suite until someone writes the sentence justifying it.
+**Why this shape:** the same inventory-with-a-reason device the FR-020 counter guard uses. Two
+corrections over the first draft, both measured: `MenuSheet.tsx` is a real feature-001 client
+module and was missing, so the guard would have been red on day one; and the calendar's day
+panel is a drawer, which is interactive and was missing too. `MobileTabBar` is **not** a client
+component — verified, and worth recording so nobody adds it here on the assumption that it is.
 
 ### Sketch 7: the LCP budget gate, and the proof it can fail
 
@@ -225,7 +258,19 @@ it('adds no client component without a reason', async () => {
 **Intent:** SC-006 measured per page on a named profile, and watched failing first.
 
 ```bash
-# lcp-budget.sh — one assertion per URL, never an average across them
+# lcp-budget.sh
+#
+# SEEDING IS PART OF THE GATE, not a precondition someone remembers. `apps/web/seed/index.ts`
+# gives CITe `domains: ['localhost', '127.0.0.1']`, and without those rows every route 404s and
+# Lighthouse measures an error page at a very good LCP. The test suite DESTROYS those rows —
+# measured, and it has already cost this project a debugging round — so this job must own a
+# database the test job does not share.
+pnpm --filter @fablab/web migrate
+pnpm --filter @fablab/web seed          # published content in a resolvable organization
+pnpm --filter @fablab/web build && pnpm --filter @fablab/web start &
+wait_for_http 200 "http://localhost:3000/" -H 'Host: localhost'
+
+# one assertion per URL, never an average across them
 for url in / /projetos /artigos /aulas /biblioteca-3d /calendario; do
   lhci collect --url="http://localhost:3000$url" --settings.preset=desktop=false \
        --settings.throttling.rttMs=150 --settings.throttling.throughputKbps=1638   # mid-range 4G
@@ -241,6 +286,12 @@ cp test/fixtures/hero-oversized.png apps/web/public/hero.png
 plant a violation, require a *named* failure, and refuse to accept exit code alone. Per-URL
 rather than averaged, because an average lets the Home hide behind five cheap pages — and the
 Home is the page at risk.
+
+**A gate that cannot start is worse than no gate**, so the preconditions are steps rather than
+assumptions: migrate, seed, build, start, and wait for a real 200 before measuring anything. The
+`Host` header matters — tenancy resolves from it, and the seeded domains are what make it
+resolve. Median of three runs per URL, asserting **LCP only** and not a composite score, so the
+gate fails for the reason it names.
 
 ### Sketch 8: the hero
 
@@ -263,11 +314,13 @@ enough.
 
 ## Constitution compliance
 
-- [x] **Principle 1 — locked stack, swappable services.** One dependency is added:
-  `@google/model-viewer`, which the constitution's own Tech Stack section pre-sanctions for
-  GLB/GLTF preview. `three` is *not* added — CLR-002 puts the viewer on one page and
-  `model-viewer` carries its own renderer. Lighthouse CI is a CI-only devDependency and adds
-  nothing to the runtime.
+- [x] **Principle 1 — locked stack, swappable services.** Two runtime dependencies are added,
+  and the constitution's Tech Stack section pre-sanctions both by name: `@google/model-viewer`
+  and `three`, which is its declared peer (`^0.183.0`) and enters the tree with or without an
+  explicit declaration. An earlier draft claimed `three` was unnecessary; that was wrong, and the
+  correction is recorded in Sketch 5 rather than quietly edited. The STL/OBJ/3MF **loaders** are
+  still not added — FR-014 falls those formats back to the thumbnail. Lighthouse CI is a CI-only
+  devDependency and adds nothing to the runtime.
 - [x] **Principle 2 — tenancy is a property of the data.** No page calls `payload.find`; every
   read goes through `getPublicScopedPayloadForRSC`. The `publicList` declaration widens *what may
   be listed*, never *whose rows are returned* — the tenant constraint is applied by
