@@ -22,6 +22,9 @@ import {
   IsoShape,
   LOGO_CHIP_COLOURS,
   LogoChip,
+  CardProjeto,
+  EmptyState,
+  ListingGrid,
   MenuSheet,
   MobileTabBar,
   PixelImage,
@@ -266,6 +269,41 @@ function meterSpecimens(): ReactElement[] {
     <Specimen key="search" title="SearchInput — on navy, and on a white content area">
       <SearchInput label="Buscar projetos" placeholder="Buscar projetos..." />
       <SearchInput label="Buscar artigos" placeholder="Buscar artigos..." surface="light" />
+    </Specimen>,
+    <Specimen key="grid" title="ListingGrid + CardProjeto — 3/2/1 across the breakpoints">
+      <ListingGrid label="Projetos">
+        <CardProjeto
+          titulo="Luminária paramétrica"
+          descricao="Luminária decorativa impressa em 3D com design paramétrico e encaixes precisos."
+          categoria="Impressão 3D"
+          href="/projetos/luminaria-parametrica"
+          capa={null}
+          autor={{ nome: 'Maria Silva', handle: 'mariasilva', nivel: 7 }}
+          curtidas={32}
+        />
+        <CardProjeto
+          titulo="Cadeira encaixe"
+          descricao="Cadeira produzida em MDF cortado a laser, com design minimalista e modular."
+          categoria="Móveis"
+          href="/projetos/cadeira-encaixe"
+          capa={null}
+          autor={{ nome: 'João Pereira', handle: 'joaopereira', nivel: 6 }}
+          curtidas={28}
+        />
+      </ListingGrid>
+    </Specimen>,
+    <Specimen key="empty" title="EmptyState — the two states a listing can end in">
+      <EmptyState
+        variant="vazio"
+        titulo="Nenhum projeto encontrado."
+        descricao="Tente outra categoria ou limpe a busca."
+        acao={{ label: 'Limpar filtros', href: '/projetos' }}
+      />
+      <EmptyState
+        variant="erro"
+        titulo="Não foi possível carregar os projetos."
+        acao={{ label: 'Tentar novamente', href: '/projetos' }}
+      />
     </Specimen>,
   ]
 }

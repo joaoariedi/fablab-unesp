@@ -339,3 +339,136 @@ describe('the audit reports the violations it exists to catch (non-vacuity)', ()
     expect(listIslands(root)).toEqual([])
   })
 })
+
+/**
+ * T009 / FR-024, SC-012 — the island INVENTORY, on top of the T033 audit above.
+ *
+ * The audit already asks every island to justify itself. It cannot ask the tree a different
+ * question: *is this island one somebody decided on?* A new `'use client'` with a fluent reason
+ * comment and a `useState` passes every assertion above while nobody reviewed the decision.
+ * SC-012 is that second question — *"an assertion listing `'use client'` modules, failing on an
+ * unlisted addition"* — so the list lives here, in code, and a new island is a diff against it.
+ *
+ * ── Keyed by PATH, not by bare filename (plan § Sketch 6) ───────────────────────────────
+ *
+ * Islands live in `packages/ui` beside the components they belong to, and two trees can hold
+ * two files of the same name. A bare-filename key would let `apps/web/.../SearchInput.tsx` walk
+ * in under the entry written for the `packages/ui` one.
+ *
+ * ── Why the scan is the whole workspace ─────────────────────────────────────────────────
+ *
+ * It inherits {@link sourceFiles} from the audit above, which walks `REPO_ROOT` and skips only
+ * build output and installed packages. Naming roots instead is how the first draft of this guard
+ * would have passed while never seeing `ModelViewer`, and a two-root version still misses an
+ * island added under `apps/web/lib` or any directory nobody thought of.
+ */
+const ALLOWED_ISLANDS: Record<string, string> = {
+  'packages/ui/src/shell/MenuSheet.tsx':
+    'feature 001 — the compact-breakpoint nav, opened and closed by a press',
+  'packages/ui/src/components/ModelViewer.tsx':
+    'WebGL and camera controls; the detail page only, never a listing card (FR-014, CLR-002)',
+  'packages/ui/src/components/SearchInput.tsx':
+    'debounced typing at ~300ms — a form post would reload the page on every keystroke (FR-020)',
+  'packages/ui/src/components/LikeButton.tsx':
+    'the count and the account invitation a click opens for a logged-out visitor (FR-015)',
+  'packages/ui/src/components/ProjectCarousel.tsx':
+    "the Home's ÚLTIMOS PROJETOS carousel, decided 2026-08-23 — it scrolls under a control",
+  'packages/ui/src/components/CalendarDayPanel.tsx':
+    'the day drawer opened from a month cell, which opens and closes in place (FR-008)',
+}
+
+/**
+ * The islands found on disk that no one put on the list — the whole of SC-012.
+ *
+ * Split out from the assertion so the fixture cases below can run it over a tree that HAS a
+ * rogue island; the committed tree, by construction, must never have one to look at.
+ *
+ * @example unlistedIslands([{ file: 'src/Rogue.tsx' }], {}) // => ['src/Rogue.tsx']
+ */
+function unlistedIslands(
+  found: readonly Pick<Island, 'file'>[],
+  allowed: Record<string, string>,
+): string[] {
+  return found.map((island) => island.file).filter((file) => !(file in allowed))
+}
+
+describe('the island set is bounded by a list somebody decided on (FR-024, SC-012)', () => {
+  it('has no client component that is not on the list', () => {
+    expect(
+      unlistedIslands(islands, ALLOWED_ISLANDS),
+      "FR-024: client components are for the interactive islands, and SC-012 bounds them to a " +
+        'reviewed list. This file carries a `use client` directive and no entry in ' +
+        'ALLOWED_ISLANDS. Either make it a server component, or add it to the list WITH the ' +
+        'interactivity it is paying for — the entry is the review, not a formality.',
+    ).toEqual([])
+  })
+
+  /**
+   * The bound is only real while the scanner can see. `MenuSheet.tsx` is the one island that
+   * exists at T009, so if the scan comes back empty the guard is green over a blind scan rather
+   * than a clean tree — the failure mode the audit's own first case guards, restated here
+   * because THIS assertion is the one that would pass vacuously and silently.
+   */
+  it('is checking a tree it can actually see — MenuSheet is found and listed', () => {
+    expect(islands.map((island) => island.file)).toContain('packages/ui/src/shell/MenuSheet.tsx')
+    expect(Object.keys(ALLOWED_ISLANDS)).toContain('packages/ui/src/shell/MenuSheet.tsx')
+  })
+
+  /**
+   * Not `toEqual(Object.keys(ALLOWED_ISLANDS).sort())`, and that is a measured decision rather
+   * than a softening. At T009 the tree holds ONE of the six: `ModelViewer`, `LikeButton`,
+   * `ProjectCarousel` and `CalendarDayPanel` are created in phases 3–7, and `SearchInput.tsx`
+   * exists today as a server component that becomes an island when FR-020's debounce lands.
+   * Equality would therefore be red on day one over four files nobody has written yet — the
+   * exact red-for-the-wrong-reason this task's note about `MenuSheet.tsx` warns against, and it
+   * would be silenced by shrinking the list, which is the opposite of seeding it.
+   *
+   * What is NOT relaxed is the direction SC-012 names: an unlisted addition fails, above. This
+   * case keeps the other direction honest in the way it can be checked now — a seat on the list
+   * must name the interactivity, so the list cannot decay into a row of bare paths that admits
+   * anything.
+   */
+  it('gives every seat on the list a stated reason, not a bare path', () => {
+    const thin = Object.entries(ALLOWED_ISLANDS)
+      .filter(([, reason]) => reason.trim().length < MIN_REASON_CHARS)
+      .map(([file, reason]) => `${file} (reason: ${JSON.stringify(reason)})`)
+    expect(
+      thin,
+      'an entry here is the record of a decision: which interactivity is worth a client bundle ' +
+        'on this page. A path with no reason beside it admits the next island by precedent.',
+    ).toEqual([])
+  })
+
+  it('lists .tsx components under a workspace source tree, so a key can be opened', () => {
+    const malformed = Object.keys(ALLOWED_ISLANDS).filter(
+      (file) => !/^(?:apps|packages)\/[\w.-]+\/(?:src|app|lib)\/[\w./-]+\.tsx$/.test(file),
+    )
+    expect(
+      malformed,
+      'keys are repo-relative paths, matching what the scanner reports. An absolute path or a ' +
+        'bare filename never matches a scanned file, so its island would read as unlisted while ' +
+        'the list looks like it covers it.',
+    ).toEqual([])
+  })
+})
+
+describe('the inventory reports the addition it exists to catch (non-vacuity)', () => {
+  it('names an island the list does not mention', () => {
+    const source =
+      "'use client'\n" +
+      '// A rogue island: reasoned at length, genuinely interactive, and decided by nobody.\n' +
+      'export const Rogue = () => <button onClick={flip} />\n'
+    const found = listIslands(fixtureWith('Rogue.tsx', source))
+    expect(found.map((island) => island.file)).toEqual(['src/Rogue.tsx'])
+    expect(
+      unlistedIslands(found, ALLOWED_ISLANDS),
+      'this island clears every assertion of the audit above — reason comment, real handler, ' +
+        'directive on line 1. Only the list catches it, and that is why the list exists.',
+    ).toEqual(['src/Rogue.tsx'])
+  })
+
+  it('passes a rogue island that has been added to the list', () => {
+    const found = [{ file: 'src/Rogue.tsx' }]
+    expect(unlistedIslands(found, { ...ALLOWED_ISLANDS, 'src/Rogue.tsx': 'decided' })).toEqual([])
+  })
+})

@@ -39,6 +39,49 @@ lives here, in the artifact — not in a launch note. It does **not** mean commi
 is built end to end as the template the other pages copy, the performance gate is armed *before*
 the asset most likely to trip it exists, and the Home is last.
 
+## Run 2 (`wf_28842973-970`, 2026-09-07) — Phase 2 and most of Phase 3
+
+Seven accepted (T006-T009, T011, T013, T014), two rejected. **T012 is repaired; T010 is still
+open**, and the reason it failed is the most useful finding of the run.
+
+**T010 never ran — the whole tree was in plan-only mode.** `.specify/.plan-in-progress` was still
+on disk, so the `plan-phase-write-block` hook rejected every `Write`/`Edit` outside `.specify/`.
+The task wrote nothing and reported as failed. Three separate causes stacked up, and each is
+worth knowing on its own:
+
+1. **The marker was committed.** A `git add -A` in `9d41362` swept up a file that is transient by
+   design. Once tracked, it survives deletion and comes back on any checkout. It is now
+   `.gitignore`d, with the reason recorded there.
+2. **`plan-phase-end` reported success without doing anything.** The helper runs
+   `rm -f .specify/.plan-in-progress` on a **relative** path and always prints "cleared" — so run
+   from `apps/web`, as it was, it removed nothing and still said it had. `rm -f` cannot fail, so
+   there is no exit code to notice.
+3. **The block was partial, which is what made it look like a flaky task.** The hook intercepts
+   `Write`/`Edit`; agents writing through shell heredocs were unaffected. So most of Phase 2 and 3
+   landed normally while one task could not create a single file. To its credit the T010 verifier
+   diagnosed this exactly and refused to route around the hook, which is the right call — the
+   marker is orchestrator state, not an obstacle to step over.
+
+**T012's central assertion was tautological.** The test titled *"renders one CardProjeto per
+project"* only ever rendered a **one-document** fixture, so `toHaveLength(1)` is equally true of a
+page that maps the list and one that renders `docs[0]` and discards the rest. Measured: mutating
+the page to `docs.slice(0, 1).map(...)` — a listing showing one of twelve projects on every page —
+passed all 27 tests. Two more branches had no coverage at all: the first-row `eager` rule that
+T015's LCP budget will depend on (a flat `'lazy'` also passed 27/27), and the ellipsis window,
+which only ever saw `totalPages` 2 and 3 where the gap branch is unreachable (deleting the
+`RETICENCIAS` push passed 27/27).
+
+All three now have tests, each **watched failing** against the exact mutation that used to
+survive. The ellipsis assertion is scoped to the pagination landmark, because a bare document
+scan also matches a card's like count — numbers that are not pages.
+
+**T011 shipped three components the workbench never showed**, which feature 001's own gate caught:
+`CardProjeto`, `EmptyState` and `ListingGrid` are exported from `packages/ui` and were absent from
+the frame US7 requires every component to appear in. Added, with the states the page specs draw.
+
+**Verified after the repairs**: `pnpm lint` 0; `pnpm typecheck` 0 **both** with and without
+`payload-types.ts`; `pnpm test` 0 — 783 in `packages/ui`, 1,421 in `apps/web`.
+
 ## Run 1 (`wf_090be5dd-886`, 2026-09-07) — Phase 1, and a tree-clobbering incident
 
 T003 and T004 accepted; T001 and T002 rejected. Both rejections were confirmed and repaired, and
@@ -93,20 +136,20 @@ without-types run and would otherwise have failed the pipeline.
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T006 | `lib/public/params.ts` — parse and **validate** the URL state once: category, search, page. An unknown category falls back to `TODOS`; a page past the end clamps to the last | FR-010, US2 | `apps/web/lib/public/params.ts` | — |
-| T007 | Its tests **first**: the round-trip (a filtered URL loads to the same result), the unknown-category fallback, and the clamp | FR-010, SC-005 | `apps/web/tests/public/params.test.ts` | T006 |
-| T008 | `lib/public/listing.ts` — one reader: `getPublicScopedPayloadForRSC`, `depth: 1`, `PAGE_SIZE = 12`. The caller never names a tenant or a status | FR-002, FR-011, FR-029 | `apps/web/lib/public/listing.ts` | T002, T007 |
-| T009 | **The island inventory**, scanning the whole workspace source with build output excluded. Seeded with the six real islands — `MenuSheet.tsx` included, or it is red on day one. Watch it red against an unlisted `'use client'` | FR-024, SC-012 | `packages/ui/tests/islands.test.ts` | — |
+| T006 ✅ | `lib/public/params.ts` — parse and **validate** the URL state once: category, search, page. An unknown category falls back to `TODOS`; a page past the end clamps to the last | FR-010, US2 | `apps/web/lib/public/params.ts` | — |
+| T007 ✅ | Its tests **first**: the round-trip (a filtered URL loads to the same result), the unknown-category fallback, and the clamp | FR-010, SC-005 | `apps/web/tests/public/params.test.ts` | T006 |
+| T008 ✅ | `lib/public/listing.ts` — one reader: `getPublicScopedPayloadForRSC`, `depth: 1`, `PAGE_SIZE = 12`. The caller never names a tenant or a status | FR-002, FR-011, FR-029 | `apps/web/lib/public/listing.ts` | T002, T007 |
+| T009 ✅ | **The island inventory**, scanning the whole workspace source with build output excluded. Seeded with the six real islands — `MenuSheet.tsx` included, or it is red on day one. Watch it red against an unlisted `'use client'` | FR-024, SC-012 | `packages/ui/tests/islands.test.ts` | — |
 
 ## Phase 3: `projeto` end to end — the template the other pages copy
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
 | T010 | `Pagination` — anchors, not buttons; no `'use client'`. Twelve per page, window with ellipsis, `aria-current` on the current page | FR-029, FR-023 | `packages/ui/src/components/Pagination.tsx` | — |
-| T011 | `CardProjeto`, `EmptyState` and the shared listing chrome, against `projetos.md` § Grid | FR-004, FR-017, FR-018 | `packages/ui/src/components/` | — |
-| T012 | Projetos listing: hero, category tabs as **links**, search island, 3/2/1 grid, pagination | FR-004, FR-021, US1, US2 | `apps/web/app/(frontend)/projetos/page.tsx` | T008, T010, T011 |
-| T013 | Projeto detail: long text, gallery, attachments linking the existing download route. **404 for draft, foreign and unknown alike** | FR-030, US10 | `apps/web/app/(frontend)/projetos/[slug]/page.tsx` | T012 |
-| T014 | Prove the 404 tells nothing: draft, other organization and nonexistent slug all return the same status and body | US10, SC-002, SC-007 | `apps/web/tests/public/detalhe.test.ts` | T013 |
+| T011 ✅ | `CardProjeto`, `EmptyState` and the shared listing chrome, against `projetos.md` § Grid | FR-004, FR-017, FR-018 | `packages/ui/src/components/` | — |
+| T012 ✅ | Projetos listing: hero, category tabs as **links**, search island, 3/2/1 grid, pagination | FR-004, FR-021, US1, US2 | `apps/web/app/(frontend)/projetos/page.tsx` | T008, T010, T011 |
+| T013 ✅ | Projeto detail: long text, gallery, attachments linking the existing download route. **404 for draft, foreign and unknown alike** | FR-030, US10 | `apps/web/app/(frontend)/projetos/[slug]/page.tsx` | T012 |
+| T014 ✅ | Prove the 404 tells nothing: draft, other organization and nonexistent slug all return the same status and body | US10, SC-002, SC-007 | `apps/web/tests/public/detalhe.test.ts` | T013 |
 
 ## Phase 4: The performance gate, armed before the asset that threatens it
 
