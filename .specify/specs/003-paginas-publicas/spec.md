@@ -157,6 +157,19 @@ Feature 000 and 002 shipped these; this feature consumes them and must not weake
 - **Error**: this must hold for a signed-in visitor from A browsing B's host, which the plugin's
   wrapper handles differently from an anonymous one
 
+### US10: A visitor opens a project, a model or an article in full [P1]
+
+- **Given** a published `projeto`, `modelo3d` or `artigo`
+- **When** the visitor follows the card's arrow
+- **Then** they get a detail page carrying the long text, the gallery and the downloadable
+  attachments — the `descricaoCompleta`, `galeria` and `arquivos` feature 002 stores and no
+  listing renders
+- **Edge**: a document whose optional parts are empty renders without them rather than showing
+  empty headings; only the required fields are guaranteed to be there
+- **Error**: an unpublished or foreign slug is a 404, the same answer as an unknown one — the
+  detail route is a public read and inherits the deny-by-default path, so it must not
+  distinguish "exists but is a draft" from "does not exist"
+
 ## Functional Requirements
 
 | ID | Requirement | Priority | Scenario |
@@ -174,7 +187,7 @@ Feature 000 and 002 shipped these; this feature consumes them and must not weake
 | FR-011 | Listings are ordered most-recent-first by default, from the publication date | P1 | US2 |
 | FR-012 | Downloads are served to anonymous visitors and counted, through the tenancy choke point | P1 | US3 |
 | FR-013 | Classes play without an account; no progress, badge or resume is shown to a visitor | P1 | US4 |
-| FR-014 | The 3D preview renders `.glb`/`.gltf`; anything else falls back to the thumbnail | P2 | US6 |
+| FR-014 | The 3D preview renders `.glb`/`.gltf` **on the detail page only**; a listing card shows the stored thumbnail and loads no 3D code (CLR-002) | P2 | US6 |
 | FR-015 | The heart shows its count to everyone and, clicked by a visitor, opens the account invitation without changing the count | P1 | US7 |
 | FR-016 | Publish CTAs do not render for a visitor | P2 | US7 |
 | FR-017 | Every listing has a defined empty state with a clearing action | P2 | US2 |
@@ -189,6 +202,8 @@ Feature 000 and 002 shipped these; this feature consumes them and must not weake
 | FR-026 | The isolation harness gains the anonymous public surface for every page and action | P1 | US9 |
 | FR-027 | No hexadecimal colour literal is introduced; all six pages resolve identity from tokens | P1 | US1 |
 | FR-028 | The two light pages use navy text and never pink for small text on white | P1 | US1 |
+| FR-029 | Every listing paginates with numbered pages at 12 per page; the page number is a URL parameter (CLR-003) | P1 | US2 |
+| FR-030 | `projeto`, `modelo3d` and `artigo` each have a detail page rendering the long text, gallery and attachments feature 002 stores (CLR-001) | P1 | US10 |
 
 ## Success Criteria
 
@@ -212,35 +227,48 @@ Feature 000 and 002 shipped these; this feature consumes them and must not weake
 Three questions change what gets built rather than how, so they are left for the PO rather than
 decided here. Everything else the page specs left open has been decided below, with the reason.
 
-### [NEEDS CLARIFICATION] CLR-001: Do detail pages ship in 003? [scope]
+### CLR-001: Detail pages ship for `projeto`, `modelo3d` and `artigo` [scope] — decided
 
-Four page specs describe a card whose arrow opens "the detail page", and every one of them marks
-that destination `(proposta)` — `projetos.md` question 4, `biblioteca-3d.md` question 5, plus
-the article and class equivalents. `calendario.md` goes further and proposes a route,
-`/calendario/<slug>`.
+**Decision**: three detail pages, not five. `aula` and `evento` stay list-only.
 
-This roughly doubles the feature: four more page templates, four more content shapes, the
-gallery, the rich-text body, the attachment list. **Recommendation: yes for `projeto`,
-`modelo3d` and `artigo`, no for `aula` and `evento`** — the first three carry files and long
-text that have nowhere else to live, whereas a class is its video and an event's essentials fit
-the day panel. If the answer is no across the board, the card arrow needs a destination and the
-`descricao_completa`, `galeria` and `arquivos` fields 002 shipped stay unrendered.
+**Rationale**: those three carry files and long text that have nowhere else to live — feature
+002 shipped `descricaoCompleta`, `galeria` and `arquivos`, and no surface currently renders any
+of them. A class is essentially its video, which the listing already plays, and an event's
+essentials fit the calendar's day panel. `calendario.md`'s proposed `/calendario/<slug>` is
+therefore deferred rather than rejected.
 
-### [NEEDS CLARIFICATION] CLR-002: Where does the 3D preview render? [performance]
+**Impact**: three new page templates and their routes; US6 and FR-014 (the 3D preview now has a
+home); the card arrow on Projetos, Biblioteca 3D and Artigos gets its destination. The arrow on
+Aulas and Calendário does not, and what it does instead is a planning question.
 
-`@google/model-viewer` plus `three` loaders is the heaviest client island in the product, and it
-lands on Biblioteca 3D, which shows ten cards per page. Preview-per-card is ten viewers against
-a 2.5s LCP budget. **Recommendation: on the detail page only, and on the card as a static
-thumbnail** — with an on-demand "preview" affordance if the card must have one. This depends on
-CLR-001: if there is no detail page, the preview has nowhere else to go.
+### CLR-002: The 3D preview renders on the detail page only [performance] — decided
 
-### [NEEDS CLARIFICATION] CLR-003: One pagination mechanism, or the mockups' two? [design]
+**Decision**: `model-viewer` loads on the `modelo3d` detail page. The card keeps the stored
+thumbnail, which feature 002 already renders on a navy background inside the white card.
 
-Biblioteca 3D's mockup draws numbered pagination (`‹ 1 2 3 4 5 … 124 ›`, ten per page); Projetos,
-Artigos and Aulas all propose `CARREGAR MAIS`. **Recommendation: numbered pagination
-everywhere.** It is the only one drawn rather than proposed, it is linkable and indexable, and
-`CARREGAR MAIS` needs a client component on pages that would otherwise need none. Page size per
-breakpoint is still open (`biblioteca-3d.md` question 8).
+**Rationale**: it is the heaviest client island in the product, and Biblioteca 3D shows twelve
+cards — preview-per-card means twelve WebGL contexts competing with the 2.5s LCP budget this
+feature is the one that measures. One viewer, on a page the visitor chose to open, is the only
+placement that does not put SC-006 at risk on first paint.
+
+**Impact**: FR-014, US6, SC-011. The listing needs no 3D dependency at all, which keeps
+Biblioteca 3D server-rendered apart from its filters.
+
+### CLR-003: Numbered pagination on every listing, twelve per page [design] — decided
+
+**Decision**: one mechanism — numbered pagination (`‹ 1 2 3 … ›`) — on all five listings, at
+**12 items per page**.
+
+**Rationale**: numbered pagination is the only mechanism actually drawn rather than proposed
+(`biblioteca-3d.md`); it is linkable and indexable, which `CARREGAR MAIS` is not, since page 4
+of a listing would have no URL; and it needs no client component on pages that would otherwise
+be fully server-rendered, which is a direct saving against FR-025. Twelve divides evenly into
+the 3-, 2- and 1-column grids, so no breakpoint ends on a ragged row. Biblioteca 3D's two
+columns give six rows rather than the mockup's five — a deviation from a drawing whose row count
+was never the point.
+
+**Impact**: FR-010 (the page number is part of the URL state), FR-017, FR-019 and a new FR-029.
+Closes `biblioteca-3d.md` question 8.
 
 ### CLR-004: The Home ships without its gamified panels [scope] — decided
 
