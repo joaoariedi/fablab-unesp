@@ -2,6 +2,7 @@ import * as migration_20260825_195946_initial from './20260825_195946_initial';
 import * as migration_20260906_184621_projeto_categoria_projeto from './20260906_184621_projeto_categoria_projeto';
 import * as migration_20260906_194532_projeto_campos_de_conteudo from './20260906_194532_projeto_campos_de_conteudo';
 import * as migration_20260906_200327_midia_uploads from './20260906_200327_midia_uploads';
+import * as migration_20260907_035137_projeto_midia_relacionamentos from './20260907_035137_projeto_midia_relacionamentos';
 
 export const migrations = [
   {
@@ -22,6 +23,11 @@ export const migrations = [
   {
     up: migration_20260906_200327_midia_uploads.up,
     down: migration_20260906_200327_midia_uploads.down,
-    name: '20260906_200327_midia_uploads'
+    name: '20260906_200327_midia_uploads',
+  },
+  {
+    up: migration_20260907_035137_projeto_midia_relacionamentos.up,
+    down: migration_20260907_035137_projeto_midia_relacionamentos.down,
+    name: '20260907_035137_projeto_midia_relacionamentos'
   },
 ];

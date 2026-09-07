@@ -143,7 +143,7 @@ type Drift = {
 }
 
 let payload: Payload
-let seeded: { org: number; categoria: number; projeto: number }
+let seeded: { org: number; categoria: number; midia: number; projeto: number }
 
 const collectionsInConfig = async () => (await configPromise).collections
 
@@ -307,6 +307,13 @@ beforeAll(async () => {
     data: { nome: 'Marcenaria', slug: 'marcenaria-reconciliacao', tenant: org.id },
     overrideAccess: true,
   })
+  // Fileless media row: `filesRequiredOnCreate` is false on the media collections, and the
+  // subject here is the counter, not the bytes.
+  const midia = await payload.create({
+    collection: 'midiaImagem',
+    data: { tenant: org.id },
+    overrideAccess: true,
+  })
   const projeto = await payload.create({
     collection: 'projeto',
     data: {
@@ -314,7 +321,7 @@ beforeAll(async () => {
       slug: 'banco-de-marcenaria',
       descricaoCurta: 'Um banco feito no lab.',
       // Required (obrigatório in projetos.md): a storage key, generated, never a filename.
-      imagemCapa: 'media/image/00000000-0000-4000-8000-000000000001.png',
+      imagemCapa: midia.id as number,
       downloads: 0,
       categoria: categoria.id,
       tenant: org.id,
@@ -327,7 +334,7 @@ beforeAll(async () => {
     overrideAccess: true,
   })
 
-  seeded = { org: org.id, categoria: categoria.id, projeto: projeto.id }
+  seeded = { org: org.id, categoria: categoria.id, midia: midia.id as number, projeto: projeto.id }
 }, 120_000)
 
 afterAll(async () => {

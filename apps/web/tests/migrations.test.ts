@@ -147,3 +147,24 @@ describe('committed migrations', () => {
     expect(committedSql()).toContain('"categoria_projeto_id"')
   })
 })
+
+describe('foreign keys whose ON DELETE must not be Payload\'s default', () => {
+  it('restricts deletion of a cover image a project still references', () => {
+    // Payload generates `ON DELETE set null` for every relationship, and `required: true`
+    // generates NOT NULL. Together they are unsatisfiable: deleting a referenced row runs a
+    // SET NULL that violates the NOT NULL, the statement fails, and the transaction aborts
+    // with 25P02 — surfacing several frames away, in whatever the next query happens to be.
+    //
+    // This assertion exists because the fix is a HAND EDIT to a generated file. Regenerating
+    // the migration would quietly restore `set null`, and the failure it causes does not name
+    // the constraint, the column or even the collection.
+    const fk = /"projeto_imagem_capa_id_midia_imagem_id_fk"[^;]*ON DELETE (\w+)/.exec(committedSql())
+    expect(fk, 'the cover-image foreign key is gone from the committed migrations').not.toBeNull()
+    expect(
+      fk?.[1],
+      'the cover-image FK is back to Payload\'s generated `set null`, which cannot coexist ' +
+        'with the NOT NULL that `required: true` produces. Deleting a referenced image will ' +
+        'abort the transaction with 25P02, and the error will not name this constraint.',
+    ).toBe('restrict')
+  })
+})

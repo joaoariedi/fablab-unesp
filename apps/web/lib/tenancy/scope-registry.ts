@@ -39,10 +39,10 @@ export const SCOPE_REGISTRY = {
     scope: 'scoped',
     why: 'A second lab names its own vocabulary; a global set would impose CITe\'s (FR-002)',
   },
-  projeto: {
-    scope: 'scoped',
-    why: 'Content belongs to the lab that made it; every content collection is scoped (FR-005)',
-  },
+  // Declared BEFORE `projeto`, and the order is load-bearing twice over: `fixtures.ts`
+  // seeds in registry order and a collection may only relate to one declared earlier, and
+  // `resetWorld` deletes in REVERSE order so a referrer goes before the row it points at.
+  // `projeto.imagemCapa` relates to `midiaImagem`, so media must come first.
   // The three upload collections (T023b). One per media group, because every knob Payload
   // offers for FR-011 and FR-012 is per collection — see `collections/Media.ts`.
   midiaImagem: {
@@ -56,6 +56,10 @@ export const SCOPE_REGISTRY = {
   midiaDocumento: {
     scope: 'scoped',
     why: 'Same as midiaImagem — the group changes the cap and the allowlist, never the tenancy',
+  },
+  projeto: {
+    scope: 'scoped',
+    why: 'Content belongs to the lab that made it; every content collection is scoped (FR-005)',
   },
 } as const satisfies Record<string, ScopeEntry>
 

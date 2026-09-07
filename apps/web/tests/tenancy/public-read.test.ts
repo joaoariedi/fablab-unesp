@@ -368,7 +368,10 @@ describe('a published project reads publicly, an unpublished one does not (T035)
         titulo: `Projeto ${slug} (${marker})`,
         slug,
         descricaoCurta: `Conteúdo de ${marker} para o T035.`,
-        imagemCapa: 'media/image/00000000-0000-4000-8000-000000000002.png',
+        // The media row the fixture seeded for THIS organization. A bare key stopped being
+        // valid when `imagemCapa` became a relationship (decision D3 revised) — and
+        // `sameTenant` would refuse a media document belonging to the other lab.
+        imagemCapa: world.rows.midiaImagem?.[marker],
         categoria: categoriaOf(marker),
         tenant: org.id,
         downloads: 0,

@@ -37,7 +37,7 @@ const ISO_8601 = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/
 type Doc = Record<string, unknown>
 
 let payload: Payload
-let seeded: { org: number; categoria: number; maker: Doc; staff: Doc }
+let seeded: { org: number; categoria: number; midia: number; maker: Doc; staff: Doc }
 const createdProjetos: number[] = []
 
 /** A signed-in member of this lab, as the Local API receives one from a session. */
@@ -68,7 +68,7 @@ const draft = async (slug: string): Promise<number> => {
       slug,
       descricaoCurta: 'Uma prensa feita no lab.',
       // Required (obrigatório in projetos.md): a storage key, generated, never a filename.
-      imagemCapa: 'media/image/00000000-0000-4000-8000-000000000001.png',
+      imagemCapa: seeded.midia,
       downloads: 0,
       categoria: seeded.categoria,
       tenant: seeded.org,
@@ -142,7 +142,17 @@ beforeAll(async () => {
     overrideAccess: true,
   })
 
+  // A fileless media row. `upload.filesRequiredOnCreate` is false on the media collections
+  // precisely so a document can exist without an object store, which these tests do not run —
+  // and the subject here is the relationship, not the bytes.
+  const midia = await payload.create({
+    collection: 'midiaImagem',
+    data: { tenant: org.id },
+    overrideAccess: true,
+  })
+
   seeded = {
+    midia: midia.id as number,
     org: org.id as number,
     categoria: categoria.id as number,
     maker: await member(`maker@fila-de-revisao.example`, 'maker', org.id as number),
@@ -291,7 +301,7 @@ describe('SC-005: a maker cannot publish', () => {
         slug: `prensa-criada-${ORG_SLUG}`,
         descricaoCurta: 'Criada já publicada.',
         // Required (obrigatório in projetos.md): a storage key, generated, never a filename.
-        imagemCapa: 'media/image/00000000-0000-4000-8000-000000000001.png',
+        imagemCapa: seeded.midia,
         downloads: 0,
         categoria: seeded.categoria,
         tenant: seeded.org,
@@ -334,7 +344,7 @@ describe('the approval stamp cannot be written by a request (SC-004, SC-005)', (
         slug: 'prensa-forjada',
         descricaoCurta: 'Um rascunho que se autodeclara aprovado.',
         // Required (obrigatório in projetos.md): a storage key, generated, never a filename.
-        imagemCapa: 'media/image/00000000-0000-4000-8000-000000000001.png',
+        imagemCapa: seeded.midia,
         downloads: 0,
         categoria: seeded.categoria,
         tenant: seeded.org,

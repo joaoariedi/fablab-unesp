@@ -170,8 +170,38 @@ const refusalOf = async (attempt: Promise<unknown>): Promise<string> => {
   throw new Error('Expected the upload to be refused, but it succeeded.')
 }
 
+/**
+ * Rows belonging to THIS suite's organization.
+ *
+ * Unscoped, it counted every `midiaImagem` row in the database and only came out right because
+ * the fixture used to delete them all — including rows other suites' projects reference. A
+ * count that depends on the rest of the suite having been wiped is not measuring this suite.
+ */
 const rowCount = async (): Promise<number> =>
-  (await payload.count({ collection: IMAGE_SLUG as never, overrideAccess: true })).totalDocs
+  (
+    await payload.count({
+      collection: IMAGE_SLUG as never,
+      where: { tenant: { equals: org } },
+      overrideAccess: true,
+    })
+  ).totalDocs
+
+/** This suite's own media only — found through the organization it creates. */
+const deleteOwnMedia = async (): Promise<void> => {
+  const { docs } = await payload.find({
+    collection: 'organizations',
+    where: { slug: { equals: ORG_SLUG } },
+    limit: 1,
+    overrideAccess: true,
+  })
+  const owner = docs[0]?.id
+  if (owner === undefined) return
+  await payload.delete({
+    collection: IMAGE_SLUG as never,
+    where: { tenant: { equals: owner } },
+    overrideAccess: true,
+  })
+}
 
 beforeAll(async () => {
   // Set before the config module is evaluated: `readEnv()` runs at import time, and the
@@ -190,7 +220,13 @@ beforeAll(async () => {
   payload = await getPayload({ config, key: 'native-upload-t034' })
 
   // Re-runnable: an interrupted run must not fail the next one on a unique slug.
-  await payload.delete({ collection: IMAGE_SLUG as never, where: { id: { exists: true } }, overrideAccess: true })
+  //
+  // Scoped to THIS suite's organization. It used to delete every `midiaImagem` row in the
+  // database, which reached rows other suites' projects reference — and since
+  // `projeto.imagemCapa` is NOT NULL, the delete aborted the transaction and took two
+  // unrelated suites down with a `25P02` naming `payload_preferences`. A fixture may only
+  // clean up what it created.
+  await deleteOwnMedia()
   await payload.delete({
     collection: 'organizations',
     where: { slug: { equals: ORG_SLUG } },
@@ -208,7 +244,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (payload) {
-    await payload.delete({ collection: IMAGE_SLUG as never, where: { id: { exists: true } }, overrideAccess: true })
+    await deleteOwnMedia()
     await payload.delete({
       collection: 'organizations',
       where: { slug: { equals: ORG_SLUG } },

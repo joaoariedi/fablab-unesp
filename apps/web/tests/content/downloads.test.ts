@@ -44,10 +44,15 @@ const BYTES_A = new Uint8Array([0x73, 0x6f, 0x6c, 0x69, 0x64, 0x41]) // "solidA"
 const BYTES_B = new Uint8Array([0x73, 0x6f, 0x6c, 0x69, 0x64, 0x42]) // "solidB"
 
 /** Generated keys (FR-013): the filename never shapes them, so a UUID is the realistic shape. */
-const KEY_A = 'media/document/11111111-1111-4111-8111-111111111111.stl'
-const KEY_B = 'media/document/22222222-2222-4222-8222-222222222222.stl'
+/**
+ * Filenames, not storage keys. `projeto.arquivos` is a relationship to the media collections
+ * now (decision D3 revised), so the caller names a media DOCUMENT and the filename is read from
+ * the row the database says the project owns — the visitor never supplies a key at all.
+ */
+const KEY_A = '11111111-1111-4111-8111-111111111111.stl'
+const KEY_B = '22222222-2222-4222-8222-222222222222.stl'
 /** Stored on A, but never listed in `arquivos` — the key nobody may ask for. */
-const KEY_UNLISTED = 'media/document/33333333-3333-4333-8333-333333333333.stl'
+const KEY_UNLISTED = '33333333-3333-4333-8333-333333333333.stl'
 
 /**
  * A named fake for object storage (`.claude/rules/code-quality.md` — named classes, not
@@ -92,11 +97,41 @@ let draftA: string
 
 type Marker = 'A' | 'B'
 
+/**
+ * A fileless media document carrying an explicit `filename`.
+ *
+ * `upload.filesRequiredOnCreate` is false on the media collections precisely so a row can exist
+ * with no object behind it, which is what lets these tests run without MinIO — CI has no object
+ * store. The filename is the only part `serveDownload` reads, and the bytes are the injected
+ * fake, so nothing here pretends a file was uploaded.
+ */
+const seedMedia = async (
+  collection: 'midiaImagem' | 'midiaModelo3d',
+  marker: Marker,
+  filename: string,
+): Promise<number> => {
+  const org = marker === 'A' ? world.orgA : world.orgB
+  const created = await world.payload.create({
+    collection,
+    // `mimeType` travels with `filename`: Payload validates the pair, and a document with a
+    // name and no type is not a state a real upload can produce.
+    data: {
+      tenant: org.id,
+      filename,
+      mimeType: filename.endsWith('.png') ? 'image/png' : 'model/stl',
+      filesize: 1,
+    } as never,
+    overrideAccess: true,
+  })
+  return (created as { id: number }).id
+}
+
 const seedProject = async (
   marker: Marker,
   slug: string,
   status: 'rascunho' | 'publicado',
-  chave: string,
+  midiaId: number,
+  capaId: number,
 ): Promise<string> => {
   const org = marker === 'A' ? world.orgA : world.orgB
   const ids = world.rows.categoriaProjeto
@@ -115,10 +150,10 @@ const seedProject = async (
       titulo: `Projeto ${slug} (${marker})`,
       slug,
       descricaoCurta: `Conteúdo de ${marker} para o T036.`,
-      imagemCapa: 'media/image/00000000-0000-4000-8000-000000000003.png',
+      imagemCapa: capaId,
       categoria: ids[marker],
       tenant: org.id,
-      arquivos: [{ chave }],
+      arquivos: [{ relationTo: 'midiaModelo3d', value: midiaId }],
       downloads: 0,
       curtidas: 0,
       status,
@@ -138,11 +173,23 @@ const downloadsOf = async (id: string): Promise<number> => {
   return typeof doc.downloads === 'number' ? doc.downloads : Number(doc.downloads ?? 0)
 }
 
+let midiaA: number
+let midiaB: number
+let midiaUnlisted: number
+
 beforeAll(async () => {
   world = await buildWorld()
-  publishedA = await seedProject('A', 't036-publicado-a', 'publicado', KEY_A)
-  publishedB = await seedProject('B', 't036-publicado-b', 'publicado', KEY_B)
-  draftA = await seedProject('A', 't036-rascunho-a', 'rascunho', KEY_A)
+  const capaA = await seedMedia('midiaImagem', 'A', 'capa-a.png')
+  const capaB = await seedMedia('midiaImagem', 'B', 'capa-b.png')
+  midiaA = await seedMedia('midiaModelo3d', 'A', KEY_A)
+  midiaB = await seedMedia('midiaModelo3d', 'B', KEY_B)
+  // Belongs to organization A but is listed by no project — the "key the document does not
+  // carry" case, now expressed as a media document the project does not relate to.
+  midiaUnlisted = await seedMedia('midiaModelo3d', 'A', KEY_UNLISTED)
+
+  publishedA = await seedProject('A', 't036-publicado-a', 'publicado', midiaA, capaA)
+  publishedB = await seedProject('B', 't036-publicado-b', 'publicado', midiaB, capaB)
+  draftA = await seedProject('A', 't036-rascunho-a', 'rascunho', midiaA, capaA)
 }, 120_000)
 
 describe('an anonymous download is served and counted (T036, FR-015, SC-009)', () => {
@@ -150,7 +197,7 @@ describe('an anonymous download is served and counted (T036, FR-015, SC-009)', (
     const store = newStore()
     const response = await serveDownload(
       anonymousRequest(world.orgA.host),
-      { collection: 'projeto', id: publishedA, chave: KEY_A },
+      { collection: 'projeto', id: publishedA, midiaId: midiaA },
       { objects: store.get },
     )
 
@@ -169,7 +216,7 @@ describe('an anonymous download is served and counted (T036, FR-015, SC-009)', (
 
     await serveDownload(
       anonymousRequest(world.orgA.host),
-      { collection: 'projeto', id: publishedA, chave: KEY_A },
+      { collection: 'projeto', id: publishedA, midiaId: midiaA },
       { objects: store.get },
     )
 
@@ -188,7 +235,7 @@ describe('an anonymous download is served and counted (T036, FR-015, SC-009)', (
     const twice = async () =>
       serveDownload(
         anonymousRequest(world.orgA.host),
-        { collection: 'projeto', id: publishedA, chave: KEY_A },
+        { collection: 'projeto', id: publishedA, midiaId: midiaA },
         { objects: store.get },
       )
 
@@ -206,7 +253,7 @@ describe('an anonymous download is served and counted (T036, FR-015, SC-009)', (
     const store = newStore()
     const response = await serveDownload(
       anonymousRequest(world.orgA.host),
-      { collection: 'projeto', id: publishedA, chave: KEY_A },
+      { collection: 'projeto', id: publishedA, midiaId: midiaA },
       { objects: store.get },
     )
 
@@ -226,7 +273,7 @@ describe('a cross-organization download is a 404, not the bytes (T036, SC-010)',
       // The id is A's and the host is B's: an id is the one thing an anonymous caller fully
       // controls, so this is the request FR-016 exists for.
       anonymousRequest(world.orgB.host),
-      { collection: 'projeto', id: publishedA, chave: KEY_A },
+      { collection: 'projeto', id: publishedA, midiaId: midiaA },
       { objects: store.get },
     )
 
@@ -252,7 +299,7 @@ describe('a cross-organization download is a 404, not the bytes (T036, SC-010)',
     const store = newStore()
     const response = await serveDownload(
       anonymousRequest(world.orgA.host),
-      { collection: 'projeto', id: publishedB, chave: KEY_B },
+      { collection: 'projeto', id: publishedB, midiaId: midiaB },
       { objects: store.get },
     )
 
@@ -266,7 +313,7 @@ describe('a cross-organization download is a 404, not the bytes (T036, SC-010)',
     const store = newStore()
     const response = await serveDownload(
       anonymousRequest(world.orgB.host),
-      { collection: 'projeto', id: publishedB, chave: KEY_B },
+      { collection: 'projeto', id: publishedB, midiaId: midiaB },
       { objects: store.get },
     )
 
@@ -278,7 +325,7 @@ describe('a cross-organization download is a 404, not the bytes (T036, SC-010)',
     const store = newStore()
     const response = await serveDownload(
       anonymousRequest('nowhere.example.com'),
-      { collection: 'projeto', id: publishedA, chave: KEY_A },
+      { collection: 'projeto', id: publishedA, midiaId: midiaA },
       { objects: store.get },
     )
 
@@ -297,7 +344,7 @@ describe('only published rows, and only their own files (T036, FR-010, FR-013)',
 
     const response = await serveDownload(
       anonymousRequest(world.orgA.host),
-      { collection: 'projeto', id: draftA, chave: KEY_A },
+      { collection: 'projeto', id: draftA, midiaId: midiaA },
       { objects: store.get },
     )
 
@@ -319,7 +366,7 @@ describe('only published rows, and only their own files (T036, FR-010, FR-013)',
       // The object is really in the store, and it is really in this organization. What it is
       // not is one of *this document's* `arquivos` — so serving it would make the key, not the
       // document, the unit of authorisation, and every stored object reachable by guessing.
-      { collection: 'projeto', id: publishedA, chave: KEY_UNLISTED },
+      { collection: 'projeto', id: publishedA, midiaId: midiaUnlisted },
       { objects: store.get },
     )
 
@@ -340,7 +387,7 @@ describe('only published rows, and only their own files (T036, FR-010, FR-013)',
 
     const response = await serveDownload(
       anonymousRequest(world.orgA.host),
-      { collection: 'projeto', id: publishedA, chave: KEY_A },
+      { collection: 'projeto', id: publishedA, midiaId: midiaA },
       { objects: store.get },
     )
 
@@ -450,7 +497,7 @@ describe('the refusal is uniform across COLLECTIONS too (T036, SC-010)', () => {
       const store = newStore()
       const response = await serveDownload(
         anonymousRequest(world.orgA.host),
-        { collection, id: publishedA, chave: KEY_A },
+        { collection, id: publishedA, midiaId: midiaA },
         { objects: store.get },
       )
 
@@ -468,7 +515,7 @@ describe('the refusal is uniform across COLLECTIONS too (T036, SC-010)', () => {
     const store = newStore()
     const response = await serveDownload(
       anonymousRequest(world.orgA.host),
-      { collection: 'projeto', id: publishedA, chave: KEY_A },
+      { collection: 'projeto', id: publishedA, midiaId: midiaA },
       { objects: store.get },
     )
     expect(response.status).toBe(200)

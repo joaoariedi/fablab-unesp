@@ -120,13 +120,27 @@ async function defaultRelationshipRefusal(
   // guarantee that was measured missing and it must not depend on how rich the caller's
   // options happen to be.
   if (required && empty) return 'validation:required'
+  return null
+}
 
-  // The rest of Payload's checks — invalid ids, filterOptions — need a live `req.payload` to
-  // query with. Unit callers construct options by hand and have none; delegating regardless
-  // would turn "this validator was called without a request" into a TypeError that reads like
-  // a tenancy failure. Where a request exists (every production path) the full validator runs.
+/**
+ * Payload's remaining relationship checks — invalid ids, `filterOptions`.
+ *
+ * Deliberately run **after** the tenant comparison, not before it. Payload's message names the
+ * offending ids ("This field has the following invalid selections: 23"), and for a cross-tenant
+ * reference that is precisely the disclosure this validator refuses to make: feed it ids, read
+ * back which ones exist in a neighbour's organization. Our own refusal names the field and
+ * nothing else, so it has to win that race.
+ *
+ * They also need a live `req.payload` to query with. Unit callers construct options by hand and
+ * have none; delegating regardless would turn "called without a request" into a TypeError that
+ * reads like a tenancy failure. Every production path has one.
+ */
+async function payloadRelationshipRefusal(
+  value: unknown,
+  options: ValidateOptions,
+): Promise<string | null> {
   if (!(options as { req?: { payload?: unknown } } | undefined)?.req?.payload) return null
-
   const result = await validations.relationship(value as never, options as never)
   return result === true ? null : (result as string)
 }
@@ -177,5 +191,5 @@ export async function sameTenant(value: unknown, options: ValidateOptions): Prom
     }
   }
 
-  return true
+  return payloadRelationshipRefusal(value, options).then((refusal) => refusal ?? true)
 }

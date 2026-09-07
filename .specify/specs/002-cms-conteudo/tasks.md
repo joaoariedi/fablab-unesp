@@ -231,6 +231,49 @@ whoever knows the VM.
 | T032 ✅ | Migration for `projeto` + `categoriaProjeto`. The drift gate from feature 000 is live throughout this feature | FR-001 | `apps/web/migrations/` | T025 |
 | T033 ✅ | Review-queue tests: publish → unpublish → republish yields **one** approval record; a maker cannot publish | SC-004, SC-005 | `apps/web/tests/content/review.test.ts` | T028 |
 
+## Option ii applied (2026-09-07) — file fields are media relationships
+
+`projeto.imagemCapa`, `galeria` and `arquivos` are relationships to the media collections
+instead of text columns holding storage keys. `imagemCapa` and `galeria` point at
+`midiaImagem`; `arquivos` is polymorphic over `midiaModelo3d` and `midiaDocumento`, because
+`projetos.md` lets a project attach meshes and documents and those carry different caps.
+
+**The media collections deliberately get NO public-read declaration.** The download route reads
+the media document *through* the published project at `depth: 1`, so reachability is the access
+rule: a file is public exactly when a published project lists it. Declaring the media
+collections publicly readable would instead have made every draft's files enumerable.
+
+`serveDownload` now takes a **media id** rather than a storage key, and derives the filename
+from the row the database says the project owns — so the caller no longer names a key at all,
+and the `content-disposition` filename comes from a Payload-managed document rather than a text
+field a team member typed.
+
+**Four defects surfaced while applying it, three of them latent:**
+
+1. **`ON DELETE set null` on a `NOT NULL` column.** Payload generates `set null` for every
+   relationship and `required: true` generates `NOT NULL`; together they are unsatisfiable, and
+   Postgres only says so when someone deletes a referenced row — the SET NULL violates the NOT
+   NULL, the statement fails, and the transaction aborts with `25P02` several frames away, in
+   whatever query came next. Hand-changed to `ON DELETE restrict`, which is also what the
+   field's comment promises. `migrations.test.ts` asserts it, because regenerating the migration
+   would silently restore `set null`.
+2. **`sameTenant`'s composition leaked ids.** Running Payload's default validator *first* meant
+   its message — "This field has the following invalid selections: 23" — reached the caller for
+   a cross-tenant reference, which is exactly the enumeration oracle the neutral refusal exists
+   to deny. Caught by feature 000's own test. Payload's checks now run last, after ours.
+3. **Two fixtures deleted rows they did not create.** `native-upload.test.ts` deleted every
+   `midiaImagem` row in the database and counted every row in the database, and only came out
+   right because the wholesale delete had wiped everyone else's. Both are now scoped to the
+   organization the suite creates.
+4. **`migrate:create` prompts, and `push: true` reaches the same prompt at config load.**
+   When a new table could be a rename of one being dropped, drizzle-kit asks — a raw-TTY select
+   that piped input cannot answer. In a non-TTY it waits forever: twelve suites reported
+   `Hook timed out in 120000ms` with no error naming a cause. **Use `scripts/migrate-create.sh`**,
+   which drives it over a pty and answers "create table".
+
+The dev database was rebuilt from an empty schema by `payload migrate`, which also proved the
+committed migration chain constructs the schema from scratch the way CI does.
+
 ## Run 6 (`wf_35f15b73-95e`, 2026-09-07) — what it left behind
 
 T034, T035 and T037 accepted; T036 rejected on two counts, both confirmed by execution.
@@ -391,7 +434,7 @@ reason against the enlarged matrix.
 | T034 ✅ | **Drive the real flow, do not report green tests.** Upload one image through the actual **admin/native** path — `clientUploads` is off (D1), so there is no presigned path to drive — and assert Payload generated the `imageSizes` derivatives itself, that a disallowed type is refused by the collection's `mimeTypes`, and that an over-cap file is refused by the size hook. ~~presigned path / left quarantine~~ superseded by D1 | FR-011, FR-014, SC-006 | `apps/web/tests/uploads/` | T023b |
 | T035 ✅ | Public read proven end to end: anonymous `GET` of a published project returns it; an unpublished one 404s; another organization's returns 404 | SC-002, FR-010 | `apps/web/tests/tenancy/public-read.test.ts` | T012, T024 |
 | T036a ✅ | **Download policy**, driven against real rows: anonymous GET of a published project's attachment returns it and increments `downloads`; a draft, another organization's, an unlisted key, a missing object and a **non-allow-listed collection** each return the same 404. The last one was the defect: `PublicReadDeniedError` escaped, so a caller-supplied collection produced a rejection where `projeto` produced 404 — a 500-vs-404 oracle telling a prober which collections are public | FR-015, FR-016, SC-009, SC-010 | `apps/web/lib/content/downloads.ts` | T030, T035 |
-| T036b ⛔ | **The download ROUTE and its object reader — blocked on a decision.** `serveDownload` has no production caller, so FR-015 ("downloads are open, and anonymous ones are counted") is true only inside the test harness. Registering it needs an `ObjectSource`, and what that reads depends on an unanswered question — see § "T036b: text keys or media relationships?" | FR-015, FR-016, SC-009 | `apps/web/collections/content/Projeto.ts` | **decision** |
+| T036b | **The download ROUTE and its object reader.** Decision taken (option ii, applied 2026-09-07): the file fields are relationships to the media collections, so the route reads the media document *through* the published project at `depth: 1` and needs no anonymous read of the media collections at all. `serveDownload` has no production caller, so FR-015 ("downloads are open, and anonymous ones are counted") is true only inside the test harness. Registering it needs an `ObjectSource`, and what that reads depends on an unanswered question — see § "T036b: text keys or media relationships?" | FR-015, FR-016, SC-009 | `apps/web/collections/content/Projeto.ts` | **decision** |
 | T037 ✅ | **002a acceptance**: all gates green, the template reviewed, and the preamble's measured facts re-checked — noting that facts 3 and 4 (`imageSizes` and `checkFileRestrictions` never running) describe `clientUploads: true` and are **scoped, not wrong**; D1 turned it off, so both now run. Update the preamble to say so. 002b is blocked on this | all | — | T034, T035, T036 |
 
 ## Phase 002b: the remaining twelve, against a proven template

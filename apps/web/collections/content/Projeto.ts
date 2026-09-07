@@ -155,38 +155,52 @@ export const Projeto: CollectionConfig = {
     },
     {
       name: 'imagemCapa',
-      type: 'text',
+      type: 'relationship',
+      relationTo: 'midiaImagem',
       required: true,
       label: 'Imagem de capa',
       admin: {
-        description: 'Chave do objeto no storage. Gerada no upload, nunca o nome do arquivo.',
+        description: 'O arquivo enviado para a biblioteca de imagens desta organização.',
       },
-      // **A storage KEY, not a Payload upload relationship**, and the precedent is
-      // `Organizations.ts`, which declares its media the same way. Two reasons it is text here:
-      // the key is generated (FR-013), so the client's filename never shapes it and a
-      // traversing name cannot escape the prefix; and it is mechanism-agnostic — the same
-      // column holds the key whether the bytes arrive through Payload's own upload path or
-      // through a presigned PUT, so the D1 decision does not rewrite the schema.
+      // **A relationship, not a text key** (decision D3 revised, 2026-09-07).
+      //
+      // D3 first chose a text column holding a storage key, and that was right while the
+      // presigned path was still live: a key is mechanism-agnostic. D1 removed that path and
+      // T023b gave the product media collections whose uploads are ordinary Payload documents,
+      // so a bare key became a foreign key with no constraint — the stringly-typed relation
+      // `sameTenant` exists to prevent everywhere else. Now the database knows the file has an
+      // owner, deleting a referenced image is refused rather than silently orphaning a card,
+      // and the download route reads the media document through THIS relationship instead of
+      // needing an anonymous read of the media collection.
+      validate: sameTenant,
     },
     {
       name: 'galeria',
-      type: 'array',
+      type: 'relationship',
+      relationTo: 'midiaImagem',
+      hasMany: true,
       label: 'Galeria',
       admin: {
         description: 'Imagens adicionais da página de detalhe.',
       },
-      fields: [{ name: 'chave', type: 'text', required: true, label: 'Chave do objeto' }],
+      validate: sameTenant,
     },
     {
       name: 'arquivos',
-      type: 'array',
+      // Polymorphic: `projetos.md` lets a project attach meshes AND documents
+      // (.stl .3mf .obj .gltf .glb alongside .zip .pdf .svg .dxf), and those live in different
+      // media collections because each group carries its own cap and allowlist. One field over
+      // two targets keeps that split without asking the maker to know about it.
+      type: 'relationship',
+      relationTo: ['midiaModelo3d', 'midiaDocumento'],
+      hasMany: true,
       label: 'Arquivos',
       admin: {
         description: 'Arquivos fabricáveis anexos. O download é aberto e é contado (FR-016).',
       },
-      fields: [{ name: 'chave', type: 'text', required: true, label: 'Chave do objeto' }],
-      // `projetos.md`: downloads are open — no account required — and anonymous downloads are
-      // counted. That is what `downloads` below exists for, and what T036 asserts against.
+      // `normalizeRefs` already handles the `{ relationTo, value }` shape a polymorphic
+      // relationship arrives in — it was written for exactly this and is not being stretched.
+      validate: sameTenant,
     },
     {
       name: 'downloads',

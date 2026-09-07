@@ -59,8 +59,15 @@ export type ObjectSource = (key: string) => Promise<StoredObject | null>
 export type DownloadRequest = {
   collection: string
   id: string | number
-  /** The storage key the visitor asked for. Checked against the document, never trusted. */
-  chave: string
+  /**
+   * The **media document** the visitor asked for. Checked against the document's own
+   * `arquivos`, never trusted.
+   *
+   * An id rather than a storage key (decision D3 revised, 2026-09-07): the files are media
+   * documents now, so the key is derived from the one this document actually lists instead of
+   * being supplied by the caller and string-matched. A caller can no longer name a key at all.
+   */
+  midiaId: string | number
 }
 
 export type DownloadDeps = {
@@ -71,8 +78,15 @@ export type DownloadDeps = {
   lookup?: HostLookup
 }
 
-/** A document's `arquivos` rows, as `Projeto` declares them: a generated key per row. */
-type DocumentWithFiles = { arquivos?: { chave?: unknown }[] | null }
+/** One populated media document — Payload fills `filename` for an upload collection. */
+type MediaDoc = { id?: unknown; filename?: unknown }
+
+/**
+ * A document's `arquivos`, as `Projeto` declares them: a **polymorphic hasMany relationship**
+ * over the media collections, so each entry arrives as `{ relationTo, value }` and `value` is
+ * the populated document at depth ≥ 1.
+ */
+type DocumentWithFiles = { arquivos?: ({ value?: MediaDoc | unknown } | unknown)[] | null }
 
 /**
  * One answer for every refusal, and deliberately the same one.
@@ -89,23 +103,35 @@ const hostFromRequest = (req: PayloadRequest): string =>
   req?.headers?.get('x-tenant-host') ?? req?.headers?.get('host') ?? ''
 
 /**
- * Whether the document itself lists this key.
+ * The media document this row lists under `arquivos`, or null when it lists no such id.
  *
- * String comparison against the stored value, with no normalisation, decoding or prefix
- * matching: every one of those is a place where "looks like the same key" and "is the same
- * key" diverge, and the divergence always favours the caller.
+ * String comparison against the stored id, with no normalisation, decoding or prefix matching:
+ * every one of those is a place where "looks like the same id" and "is the same id" diverge,
+ * and the divergence always favours the caller.
+ *
+ * Returning the DOCUMENT rather than a boolean is the point of the change. The filename now
+ * comes from the row the database says this project owns, so the caller never names a storage
+ * key and there is nothing to traverse with — where a text key had to be matched *and* trusted
+ * enough to hand to the object store.
  */
-const carriesKey = (doc: DocumentWithFiles, chave: string): boolean =>
-  (doc.arquivos ?? []).some((arquivo) => String(arquivo?.chave ?? '') === chave)
+const listedMedia = (doc: DocumentWithFiles, midiaId: string | number): MediaDoc | null => {
+  for (const entry of doc.arquivos ?? []) {
+    const value = (entry as { value?: unknown })?.value
+    const media = (typeof value === 'object' && value !== null ? value : entry) as MediaDoc
+    if (String(media?.id ?? '') === String(midiaId)) return media
+  }
+  return null
+}
 
 /**
  * The safe characters of a generated key's last segment (`keys.ts` emits a UUID and a
  * lowercased extension from a frozen allowlist).
  *
- * A filename is echoed into a response header, and `arquivos.chave` is a *text* field a team
- * member types in the admin — so it is not guaranteed to be a generated key even though every
- * key this product writes is one. Anything outside this alphabet gets no `filename` rather
- * than a quoted-string the next parser in the chain may re-split.
+ * A filename is echoed into a response header. It now comes from a Payload-managed upload
+ * document rather than a text field a team member typed, which makes a hostile value far less
+ * likely — and the guard stays anyway, because "less likely" is not "impossible" and the cost
+ * of keeping it is one regex. Anything outside this alphabet gets no `filename` rather than a
+ * quoted-string the next parser in the chain may re-split.
  */
 const SAFE_FILENAME = /^[A-Za-z0-9._-]+$/
 
@@ -121,7 +147,7 @@ const dispositionFor = (chave: string): string => {
  *
  * @example
  *   // In a route handler holding a PayloadRequest:
- *   return serveDownload(req, { collection: 'projeto', id, chave }, { objects: readFromBucket })
+ *   return serveDownload(req, { collection: 'projeto', id, midiaId }, { objects: readFromBucket })
  */
 export async function serveDownload(
   req: PayloadRequest,
@@ -144,7 +170,7 @@ export async function serveDownload(
   // Published-only and tenant-confined by the client itself — this is SC-010 and FR-010.
   //
   // `PublicReadDeniedError` is folded into the same 404 rather than escaping. The collection is
-  // caller-supplied on the natural route shape (`/:collection/:id/download/:chave`), and the
+  // caller-supplied on the natural route shape (`/:collection/:id/download/:midiaId`), and the
   // anonymous client denies by default — so without this, a request naming `users`, or a slug
   // that does not exist, produced an unhandled rejection where `projeto` produced a 404. That
   // difference is exactly the oracle this function's uniform refusal exists to deny: it tells a
@@ -152,14 +178,20 @@ export async function serveDownload(
   // caller controls. Measured on the real fixture world: `users` and `naoexiste` threw while
   // `projeto` returned 404.
   const doc = await db
-    .findByID<DocumentWithFiles>({ collection: request.collection, id: request.id, depth: 0 })
+    // `depth: 1` so `arquivos` arrives populated: the media document carries the filename, and
+    // reading it through THIS relationship is what lets the media collections stay closed to
+    // anonymous readers. A direct read of `midiaImagem` would have made every draft's files
+    // enumerable; reachability through a published project is the whole access rule.
+    .findByID<DocumentWithFiles>({ collection: request.collection, id: request.id, depth: 1 })
     .catch((err: unknown) => {
       if (err instanceof PublicReadDeniedError) return null
       throw err
     })
-  if (!doc || !carriesKey(doc, request.chave)) return notFound()
+  const media = doc ? listedMedia(doc, request.midiaId) : null
+  const filename = typeof media?.filename === 'string' ? media.filename : null
+  if (!filename) return notFound()
 
-  const object = await deps.objects(request.chave)
+  const object = await deps.objects(filename)
   // The row points at a key storage does not have. Nothing was downloaded, so nothing is
   // counted: inflating the metric for a failed fetch is drift with a plausible excuse.
   if (!object) return notFound()
@@ -170,7 +202,7 @@ export async function serveDownload(
     status: 200,
     headers: {
       'content-type': object.contentType ?? 'application/octet-stream',
-      'content-disposition': dispositionFor(request.chave),
+      'content-disposition': dispositionFor(filename),
     },
   })
 }

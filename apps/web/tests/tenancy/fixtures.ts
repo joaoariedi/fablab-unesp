@@ -95,7 +95,10 @@ function seedDataFor(
         slug: `projeto-${marker}`,
         descricaoCurta: `Projeto de fixture ${marker}.`,
         // Required (obrigatório in projetos.md): a storage key, generated, never a filename.
-        imagemCapa: 'media/image/00000000-0000-4000-8000-000000000001.png',
+        // The media row seeded for THIS organization, resolved through `seeded` — a bare key
+        // would now be a foreign key with no constraint, and `sameTenant` would refuse a media
+        // document belonging to the other lab.
+        imagemCapa: seeded.midiaImagem,
         downloads: 0,
         categoria: seeded.categoriaProjeto,
         curtidas: 0,
