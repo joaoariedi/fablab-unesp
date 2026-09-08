@@ -123,6 +123,83 @@ describe('published-only (FR-010)', () => {
   })
 
   /**
+   * ── `evento` is not on the three-state queue, and the calendar depends on that ────────────
+   *
+   * spec.md § Notes for planning: *"`evento` uses a different status set (`rascunho ·
+   * publicado · cancelado · concluido`), so 'published only' is not the same predicate on the
+   * calendar as elsewhere. A cancelled event that was public must keep showing as cancelled
+   * rather than vanishing."*
+   *
+   * The calendar page's own tests could not see this. They drive the page through a fake client
+   * that returns whatever fixture array it is handed, so `{ status: 'cancelado' }` arrived at
+   * the renderer in a test and could never arrive in production — the gate that removes it sits
+   * one layer BELOW the page, and every one of those tests replaced that layer. The assertions
+   * here are on the gate itself, which is the only place the behaviour is decided.
+   */
+  it('shows a cancelled or concluded event, which was public and has only moved on', async () => {
+    const spy = vi.spyOn(world.payload, 'find').mockResolvedValue({
+      docs: [],
+      totalDocs: 0,
+    } as never)
+
+    const db = await getPublicScopedPayload(world.orgA.host, {
+      lookup: stubHostLookup(world.orgA.id),
+    })
+    await db.find({ collection: 'evento' })
+
+    const where = JSON.stringify(spy.mock.calls.at(-1)?.[0]?.where ?? {})
+    for (const status of ['publicado', 'cancelado', 'concluido']) {
+      expect(
+        where,
+        `an ${status} event is filtered out of the anonymous agenda. A cancellation that ` +
+          'vanishes is worse than one that is shown: a visitor who saw the event yesterday ' +
+          'concludes it is still on.',
+      ).toContain(status)
+    }
+    expect(where, 'the tenant constraint was dropped when the status set widened').toContain(
+      world.orgA.id,
+    )
+  })
+
+  it('still hides a draft event, the one status that was never public', () => {
+    // The direction that matters. `rascunho` is the only `evento` status this widening could
+    // leak, so it is asserted separately from the three above rather than inferred from them.
+    const spy = vi.spyOn(world.payload, 'find').mockResolvedValue({
+      docs: [],
+      totalDocs: 0,
+    } as never)
+
+    return (async () => {
+      const db = await getPublicScopedPayload(world.orgA.host, {
+        lookup: stubHostLookup(world.orgA.id),
+      })
+      await db.find({ collection: 'evento' })
+      expect(
+        JSON.stringify(spy.mock.calls.at(-1)?.[0]?.where ?? {}),
+        'a draft event is reachable anonymously',
+      ).not.toContain('rascunho')
+    })()
+  })
+
+  it('widens nothing for a collection that did not ask, keeping publicado exact', async () => {
+    // The default stays strict: a collection absent from the map gets `equals: publicado`, so
+    // a review-queue collection cannot inherit the calendar's exception by accident.
+    const spy = vi.spyOn(world.payload, 'find').mockResolvedValue({
+      docs: [],
+      totalDocs: 0,
+    } as never)
+
+    const db = await getPublicScopedPayload(world.orgA.host, {
+      lookup: stubHostLookup(world.orgA.id),
+    })
+    await db.find({ collection: 'projeto' })
+
+    expect(spy.mock.calls.at(-1)?.[0]?.where).toMatchObject({
+      and: expect.arrayContaining([{ status: { equals: 'publicado' } }]),
+    })
+  })
+
+  /**
    * This case used to assert the opposite — "leaves a collection without a status field
    * unfiltered" — and that is the defect, pinned as a requirement. Unfiltered on this client
    * does not mean "no status filter"; it means **no constraint the caller can see the absence

@@ -14,6 +14,7 @@ import type { CSSProperties, ReactElement, ReactNode } from 'react'
  */
 import {
   Button,
+  CalendarDayPanel,
   Card,
   Chip,
   Footer,
@@ -27,6 +28,7 @@ import {
   ListingGrid,
   MenuSheet,
   MobileTabBar,
+  ModelViewer,
   Pagination,
   PixelImage,
   profileHref,
@@ -388,6 +390,53 @@ function tabBarSpecimen(isSignedIn: boolean): ReactElement {
   )
 }
 
+/**
+ * The two islands feature 003 added (T021, T023).
+ *
+ * Both are `'use client'`, and a workbench frame is a server render — so what a reviewer sees
+ * here is each island's **server-rendered first paint**, which is the state that matters most
+ * and the one that is otherwise never looked at: it is what a crawler indexes, what a visitor
+ * on a slow connection reads first, and what remains for good if the bundle never arrives.
+ *
+ * `ModelViewer` is shown on both branches of FR-014 because they are different components in
+ * practice: with a `src` it renders `<model-viewer>` (inert until the chunk loads), and with
+ * none it renders the poster as a plain image. CLR-002 puts it on detail pages only, so the
+ * gallery is where the two branches sit side by side at all.
+ */
+function islandSpecimens(): ReactElement[] {
+  return [
+    <Specimen key="viewer" title="ModelViewer — a model to load, and the thumbnail fallback">
+      <div style={{ width: '100%', maxWidth: '320px' }}>
+        <ModelViewer
+          src="/modelos/luminaria.glb"
+          poster="/modelos/luminaria-poster.png"
+          alt="Pré-visualização 3D da luminária paramétrica"
+        />
+      </div>
+      <div style={{ width: '100%', maxWidth: '320px' }}>
+        <ModelViewer
+          src={null}
+          poster="/modelos/cadeira-poster.png"
+          alt="Miniatura da cadeira de encaixe"
+        />
+      </div>
+    </Specimen>,
+    <Specimen key="daypanel" title="CalendarDayPanel — the drawer a ?dia= link opens">
+      <CalendarDayPanel titulo="SÁBADO, 22 DE AGOSTO" fecharHref="/calendario?mes=2026-08">
+        <Card
+          title="OFICINA DE IMPRESSÃO 3D"
+          category="OFICINA"
+          author={{ handle: 'fablabcite', level: 1 }}
+          likes={4}
+          outline="primary"
+        >
+          14h00 — Sala Maker
+        </Card>
+      </CalendarDayPanel>
+    </Specimen>,
+  ]
+}
+
 /** The shell. These are the specimens the three frame widths exist for. */
 function shellSpecimens(): ReactElement[] {
   return [
@@ -443,6 +492,7 @@ function specimenGallery(width: string): ReactElement {
       {contentSpecimens()}
       {meterSpecimens()}
       {paginationSpecimen()}
+      {islandSpecimens()}
       {shellSpecimens()}
       {shapeSpecimens()}
     </main>

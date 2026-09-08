@@ -5,7 +5,8 @@ import { describe, expect, it } from 'vitest'
 
 import { PRIMARY_BUTTON_STYLE } from '../src/components/Button'
 import { CardProjeto, type CardProjetoProps } from '../src/components/CardProjeto'
-import { EmptyState, type EmptyStateProps } from '../src/components/EmptyState'
+import { EMPTY_STATE_CSS, EmptyState, type EmptyStateProps } from '../src/components/EmptyState'
+import { DOCUMENTED_PAIRS } from '../src/tokens'
 import { LISTING_GRID_COLUMNS, ListingGrid } from '../src/components/ListingGrid'
 import { IsoShape } from '../src/shapes/IsoShape'
 
@@ -341,6 +342,73 @@ describe('CardProjeto — the card the mockups draw (FR-004)', () => {
     expect(surface.get('border')).toBe('1px solid var(--color-claro)')
     expect(surface.get('background')).toBe('var(--color-navy)')
     expect(surface.get('border-radius')).toBe('var(--radius-md)')
+  })
+})
+
+describe('EmptyState — the light surface (FR-028, FR-006)', () => {
+  /**
+   * The other half of `apps/web/tests/public/aulas-page.test.ts` § "asks every surface-aware
+   * component for its light variant": that file proves the page ASKS, this one proves the ask
+   * is worth something.
+   *
+   * The defect it closes: `EMPTY_STATE_CSS` declared `color: var(--color-claro)` with no
+   * variant at all, and a class rule beats the `color: var(--text-on-light)` a light page sets
+   * on its `<main>`. On `/aulas` and `/biblioteca-3d` that put #DCE7E3 on #FFFFFF — **1.27:1**
+   * — across the entire message of both the empty and the error state, while the pink action
+   * button beside it kept its navy label, so the block still read as a state. `SearchInput`
+   * and `Pagination` already took a `surface` prop; this was the one shared component that did
+   * not, and it was dropped onto both light pages unchanged.
+   */
+  const rootClass = (props: Partial<EmptyStateProps>): string =>
+    String(byClass(EmptyState(emptyProps(props)), 'fl-empty-state').props['className'] ?? '')
+
+  it('defaults to the navy surface, where the base ink is right', () => {
+    expect(rootClass({})).not.toContain('fl-empty-state--light')
+  })
+
+  it('carries the light modifier when asked for it', () => {
+    const className = rootClass({ surface: 'light' })
+    expect(className, 'the light surface changed nothing about the element').toContain(
+      'fl-empty-state--light',
+    )
+    expect(
+      className,
+      'the modifier replaced the base class rather than joining it, so every rule that is not ' +
+        'a colour — the layout, the centring, the focus ring — is gone with it',
+    ).toContain('fl-empty-state')
+  })
+
+  it('re-declares the ink and the ornament under that modifier, and nothing else', () => {
+    // Scoped to the modifier block, because the BASE rule must keep `claro`: it is correct on
+    // the navy pages, which are most of the product. Asserting its absence would be asserting
+    // the wrong thing — the question is whether a light page has something that beats it.
+    const block = /\.fl-empty-state--light\s*\{([^}]*)\}/.exec(EMPTY_STATE_CSS)?.[1] ?? ''
+    expect(block, 'no rule targets the light modifier at all').not.toBe('')
+    expect(
+      block,
+      'the light surface does not re-declare `color`, so the base rule still wins and the ' +
+        'modifier is decoration',
+    ).toMatch(/color:\s*var\(--color-navy\)/)
+
+    const ornament =
+      /\.fl-empty-state--light\s+\.fl-empty-state__ornamento\s*\{([^}]*)\}/.exec(EMPTY_STATE_CSS)?.[1] ?? ''
+    expect(
+      ornament,
+      'the ornament keeps --color-teal on white: 2.32:1, and it is the one element of the ' +
+        'state that carries no text to fall back on',
+    ).toMatch(/color:\s*var\(--color-azul\)/)
+  })
+
+  it('uses only pairs the contrast fence has scored', () => {
+    // navy-on-claro and azul-on-claro are both in DOCUMENTED_PAIRS at `small`. The light page
+    // is #FFFFFF, which is LIGHTER than `claro` — so a dark ink that passes on claro passes on
+    // white by a wider margin, and scoring against claro is the conservative direction.
+    for (const fg of ['navy', 'azul'] as const) {
+      expect(
+        DOCUMENTED_PAIRS.some((pair) => pair.fg === fg && pair.bg === 'claro'),
+        `${fg} on a light surface is not a documented pair, so nothing has scored it`,
+      ).toBe(true)
+    }
   })
 })
 

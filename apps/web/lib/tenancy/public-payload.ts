@@ -272,6 +272,45 @@ export async function getPublicScopedPayload(
   }
 
   /**
+   * The statuses a collection shows anonymously BEYOND `publicado`.
+   *
+   * `projeto`, `artigo`, `aula` and `modelo3d` run the three-state review queue, where
+   * `publicado` is the whole of the public set. `evento` does not: `data-model.md` gives the
+   * agenda its own four states per `calendario.md`, and spec.md § Notes for planning says what
+   * that means here — *"'published only' is not the same predicate on the calendar as
+   * elsewhere. A cancelled event that was public must keep showing as cancelled rather than
+   * vanishing."*
+   *
+   * Both extra states were already public and have simply moved on. Filtering them out does not
+   * protect anything — it deletes the agenda's past and turns a cancellation into a silent
+   * disappearance, which is the one outcome a calendar must not produce: a visitor who saw the
+   * event yesterday concludes it is still on.
+   *
+   * **`rascunho` is not here and must never be.** It is the only status on this collection that
+   * was never public, so it is the only one this map could leak. A collection absent from the
+   * map keeps `publicado` alone, so the default stays the strict one and a new collection is
+   * confined until someone writes a line here saying otherwise.
+   */
+  const PUBLIC_STATUSES_BEYOND_PUBLISHED: Readonly<Record<string, readonly string[]>> = {
+    evento: ['cancelado', 'concluido'],
+  }
+
+  /**
+   * The status clause for one collection: `publicado`, plus whatever that collection declares.
+   *
+   * Delegates to {@link publishedOnly} for the ordinary case rather than inlining the same
+   * object, and that is deliberate: `scripts/isolation-mutation.sh public-path` rewrites that
+   * function's exact expression to prove the anonymous gate can fail, matching it by text. A
+   * rewrite of that line here would leave the mutation matching nothing and reporting success
+   * on a tree it never touched — the defect `isolation-mutation-layers.test.ts` exists for.
+   */
+  const publiclyVisible = (collection: string): Where => {
+    const beyond = PUBLIC_STATUSES_BEYOND_PUBLISHED[collection]
+    if (beyond === undefined) return publishedOnly()
+    return { status: { in: [PUBLISHED_STATUS, ...beyond] } } as Where
+  }
+
+  /**
    * The clause every public read is confined by, and the one place the two admissions differ.
    *
    * A `publicList` collection gets **no status clause at all**, and that is not a shortcut:
@@ -283,7 +322,7 @@ export async function getPublicScopedPayload(
    */
   const publicWhere = (collection: string): Where | undefined => {
     assertPubliclyReadable(collection)
-    return PUBLISHABLE.has(collection) ? publishedOnly() : undefined
+    return PUBLISHABLE.has(collection) ? publiclyVisible(collection) : undefined
   }
 
   const base = buildTenantClient({

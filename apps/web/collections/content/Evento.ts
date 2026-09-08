@@ -424,8 +424,10 @@ export const Evento: CollectionConfig = {
       ],
       admin: {
         description:
-          'Só em publicado o evento aparece na agenda pública. INSCRIÇÕES ABERTAS, LOTADO e ' +
-          'ENCERRADO são derivados do prazo, das vagas e do fim — não deste campo.',
+          'Rascunho é o único status invisível na agenda pública: publicado, cancelado e ' +
+          'concluído aparecem, porque um evento que já foi público não deve sumir — quem o viu ' +
+          'ontem concluiria que ele continua de pé. INSCRIÇÕES ABERTAS, LOTADO e ENCERRADO são ' +
+          'derivados do prazo, das vagas e do fim — não deste campo.',
       },
       // **Four states, not the three-state review queue.** `data-model.md` § Review queue
       // gives this collection its own set per `calendario.md`; `em_revisao` has no meaning for

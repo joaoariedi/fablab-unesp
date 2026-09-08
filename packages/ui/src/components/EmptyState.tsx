@@ -43,10 +43,15 @@ const CLASS = {
   titulo: 'fl-empty-state__titulo',
   descricao: 'fl-empty-state__descricao',
   acao: 'fl-empty-state__acao',
+  /** Applied to the root on a light page; the ink and the ornament both answer to it. */
+  light: 'fl-empty-state--light',
 } as const
 
 /** Which of the two defined states this is. */
 export type EmptyStateVariant = 'vazio' | 'erro'
+
+/** Which background the state sits on: the navy base, or a white content page. */
+export type EmptyStateSurface = 'navy' | 'light'
 
 /** The clearing or retrying action — a destination, never a handler. */
 export interface EmptyStateAcao {
@@ -57,6 +62,19 @@ export interface EmptyStateAcao {
 }
 
 export interface EmptyStateProps {
+  /**
+   * Defaults to `'navy'` — the base background every page starts from (FR-011).
+   *
+   * Not cosmetic, and the reason this prop exists at all: the ink below is declared in a CLASS
+   * rule, which beats the `color: var(--text-on-light)` a light page sets on its `<main>`. On
+   * `/aulas` and `/biblioteca-3d` that put `--color-claro` (#DCE7E3) on `--surface-inverted`
+   * (#FFFFFF) — **1.27:1**, against 16.63:1 for the navy the requirement asks for — so the
+   * whole message ("NENHUMA AULA ENCONTRADA.", "NÃO FOI POSSÍVEL CARREGAR AS AULAS.") was
+   * invisible while the pink action button beside it was not. `SearchInput` and `Pagination`
+   * already took this prop for the same reason; this component was the one that did not, and
+   * it was dropped onto both light pages unchanged.
+   */
+  readonly surface?: EmptyStateSurface
   readonly variant: EmptyStateVariant
   readonly titulo: string
   /** The second line. Optional: the error state of the page spec has none, and an empty
@@ -121,6 +139,15 @@ export const EMPTY_STATE_CSS = `
   text-transform: uppercase;
   font-family: var(--font-display);
 }
+/* The light page, where the two colours above are near-invisible. Both replacements are
+   pairs DOCUMENTED_PAIRS already scores against 'claro', and white is lighter than 'claro',
+   so a pair that passes there passes here: navy ink 16.63:1, the azul ornament 6.15:1. */
+.${CLASS.light} {
+  color: var(--color-navy);
+}
+.${CLASS.light} .${CLASS.ornamento} {
+  color: var(--color-azul);
+}
 .${CLASS.acao}:focus-visible {
   /* FR-023 / SC-009 — the 2px ring projetos.md § Estados requires on every interactive target.
      Claro, not the accent: the ring sits ON the accent fill, where pink on pink is invisible. */
@@ -137,10 +164,16 @@ export const EMPTY_STATE_CSS = `
  *             descricao="Tente outra categoria ou limpe a busca."
  *             acao={{ label: 'Limpar filtros', href: '/projetos' }} />
  */
-export function EmptyState({ variant, titulo, descricao, acao }: EmptyStateProps): ReactElement {
+export function EmptyState({
+  variant,
+  titulo,
+  descricao,
+  acao,
+  surface = 'navy',
+}: EmptyStateProps): ReactElement {
   return (
     <section
-      className={CLASS.state}
+      className={surface === 'light' ? `${CLASS.state} ${CLASS.light}` : CLASS.state}
       // A failure is announced; "no results for this filter" is ordinary content and must not
       // be. Giving both the alert role would train a screen-reader user to ignore it.
       role={variant === 'erro' ? 'alert' : undefined}

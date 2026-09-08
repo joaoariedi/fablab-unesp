@@ -216,6 +216,94 @@ describe('listPublic — the category filter (US2, FR-010)', () => {
   })
 })
 
+describe('listPublic — the declared content filters (FR-007, CLR-006)', () => {
+  /**
+   * The seam the Biblioteca 3D page needed and shipped without, so `nivel` and `formato` were
+   * rendered, validated, linked — and dropped. It is an ALLOWLIST rather than a `where`
+   * parameter: a page still cannot name a tenant, a status or a page size (Sketch 1), and the
+   * fields a listing may narrow by are declared in `LISTING_SHAPES` beside its search fields.
+   */
+  it('narrows by a declared single-value filter', async () => {
+    const client = serving(0)
+
+    await listPublic({
+      collection: 'modelo3d',
+      params: unfiltered,
+      filtros: { nivel: 'avancado' },
+    })
+
+    expect(client.onlyCall.where).toEqual({ nivelDificuldade: { equals: 'avancado' } })
+  })
+
+  it('uses `in` for a hasMany field, where `equals` would match almost nothing', async () => {
+    const client = serving(0)
+
+    // `modelo3d.formatos` is `hasMany: true` — a model carries `['.stl', '.3mf']`. `equals`
+    // on that column matches a row only when the column holds `.stl` ALONE, so a model
+    // offering two formats would disappear from a filter it satisfies.
+    await listPublic({
+      collection: 'modelo3d',
+      params: unfiltered,
+      filtros: { formato: '.stl' },
+    })
+
+    expect(client.onlyCall.where).toEqual({ formatos: { in: ['.stl'] } })
+  })
+
+  it('ANDs the filters with the category and the search, never widening them', async () => {
+    const client = serving(0)
+
+    await listPublic({
+      collection: 'modelo3d',
+      params: { categoria: 'animais', busca: 'lobo', page: 1 },
+      filtros: { nivel: 'iniciante', formato: '.obj' },
+    })
+
+    expect(client.onlyCall.where).toEqual({
+      and: [
+        { 'categoria.slug': { equals: 'animais' } },
+        { or: [{ titulo: { like: 'lobo' } }, { descricaoCurta: { like: 'lobo' } }, { 'autor.nome': { like: 'lobo' } }] },
+        { nivelDificuldade: { equals: 'iniciante' } },
+        { formatos: { in: ['.obj'] } },
+      ],
+    })
+  })
+
+  it('treats an empty value as no choice, not as a filter for the empty string', async () => {
+    const client = serving(0)
+
+    // Every page passes its whole filter map, chosen or not — `''` is what a select at its
+    // default sends. A clause for it would return zero rows on the unfiltered listing.
+    await listPublic({
+      collection: 'modelo3d',
+      params: unfiltered,
+      filtros: { nivel: '', formato: '' },
+    })
+
+    expect(client.onlyCall.where).toBeUndefined()
+  })
+
+  it('raises on a filter the collection does not declare, rather than dropping it', async () => {
+    serving(0)
+
+    // The whole point. Silently ignoring an unknown key reproduces the original defect inside
+    // the reader, one layer further from anyone who could notice it — a page renders a control,
+    // the reader discards it, and nothing is red because there is nothing to be red.
+    await expect(
+      listPublic({ collection: 'aula', params: unfiltered, filtros: { nivel: 'avancado' } }),
+    ).rejects.toThrow(/no filter named "nivel"/)
+  })
+
+  it('names the value and the declared filters in that message', async () => {
+    serving(0)
+
+    // An error you cannot reproduce from its own message is one you cannot fix.
+    await expect(
+      listPublic({ collection: 'modelo3d', params: unfiltered, filtros: { cor: 'azul' } }),
+    ).rejects.toThrow(/"azul".*Declared here: nivel, formato/s)
+  })
+})
+
 describe('listPublic — the search term (FR-020)', () => {
   it('matches the title, the description and the author', async () => {
     const client = serving(0)

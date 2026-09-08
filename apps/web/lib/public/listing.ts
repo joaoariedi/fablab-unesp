@@ -76,6 +76,30 @@ type ListingShape = {
   readonly busca: readonly string[]
   /** The date the listing orders by, descending (FR-011, CLR-007). */
   readonly ordem: string
+  /**
+   * The content filters this listing may narrow by, keyed by the URL parameter that carries
+   * them — `nivel` → `nivelDificuldade`, and so on.
+   *
+   * **An allowlist, and that is the whole design.** A free `where` parameter would let a caller
+   * name `tenant`, `status` or `_id`, which is exactly what Sketch 1 keeps out of this
+   * function's signature: the anonymous reader decides those, never the page. Declaring the
+   * filters per collection means a page can only narrow by fields this file has agreed to, and
+   * a page that asks for one this collection does not declare gets an exception rather than a
+   * silently unfiltered list — which is the defect this seam was added to repair.
+   */
+  readonly filtros?: Readonly<Record<string, FiltroShape>>
+}
+
+/**
+ * One narrowable field: the document field it constrains, and how it matches.
+ *
+ * `in` rather than `equals` for a `hasMany` select — `modelo3d.formatos` holds several
+ * extensions per model, and `equals` on a multi-value column matches a row only when the
+ * column holds that one value alone.
+ */
+type FiltroShape = {
+  readonly campo: string
+  readonly operador: 'equals' | 'in'
 }
 
 const LISTING_SHAPES: Record<ListableCollection, ListingShape> = {
@@ -97,6 +121,12 @@ const LISTING_SHAPES: Record<ListableCollection, ListingShape> = {
     categoria: 'categoria',
     busca: ['titulo', 'descricaoCurta', 'autor.nome'],
     ordem: 'dataPublicacao',
+    // FR-007's two content selects. `nivelDificuldade` is CLR-006's subject — the MODEL's
+    // difficulty, not the maker's level — and `formatos` is `hasMany`, hence `in`.
+    filtros: {
+      nivel: { campo: 'nivelDificuldade', operador: 'equals' },
+      formato: { campo: 'formatos', operador: 'in' },
+    },
   },
   evento: {
     busca: ['titulo', 'descricaoCurta'],
@@ -137,15 +167,57 @@ const buscaClause = (shape: ListingShape, busca: string): Where | undefined => {
 }
 
 /**
+ * The declared content filters that carry a value, as clauses.
+ *
+ * An undeclared key **throws**, and the message names both the key and what this collection
+ * does declare. Measured on the shipped first draft of the Biblioteca 3D page: `nivel` and
+ * `formato` were parsed, validated against their option lists, written into every link and set
+ * as each select's `defaultValue` — and never reached the query. A visitor chose "Avançado",
+ * pressed APLICAR, and got the identical unfiltered catalogue with the select showing a filter
+ * that had never been applied. Nothing was red, because there was nothing to be red: the value
+ * was simply dropped. Ignoring an unknown key here would reproduce that failure inside the
+ * reader, one layer further from anyone who could notice.
+ */
+const filtroClauses = (
+  shape: ListingShape,
+  filtros: Readonly<Record<string, string>>,
+): Where[] => {
+  const declared = shape.filtros ?? {}
+  return Object.entries(filtros)
+    .filter(([, valor]) => valor !== '')
+    .map(([chave, valor]) => {
+      const filtro = declared[chave]
+      if (filtro === undefined) {
+        throw new Error(
+          `listPublic: no filter named ${JSON.stringify(chave)} on this listing (value ` +
+            `${JSON.stringify(valor)}). Declared here: ` +
+            `${Object.keys(declared).join(', ') || '(none)'}. Add it to LISTING_SHAPES with the ` +
+            'document field it narrows, or stop rendering a control the query cannot honour.',
+        )
+      }
+      return (
+        filtro.operador === 'in'
+          ? { [filtro.campo]: { in: [valor] } }
+          : { [filtro.campo]: { equals: valor } }
+      ) as Where
+    })
+}
+
+/**
  * Category AND search — never `or`.
  *
  * Widening the two into an `or` would return rows outside the category whose tab stays
  * highlighted, which reads as the filter having silently failed.
  */
-const whereFor = (shape: ListingShape, params: ListingParams): Where | undefined => {
+const whereFor = (
+  shape: ListingShape,
+  params: ListingParams,
+  filtros: Readonly<Record<string, string>>,
+): Where | undefined => {
   const clauses = [
     categoriaClause(shape, params.categoria),
     buscaClause(shape, params.busca),
+    ...filtroClauses(shape, filtros),
   ].filter((clause): clause is Where => clause !== undefined)
 
   if (clauses.length === 0) return undefined
@@ -156,11 +228,16 @@ export async function listPublic<T = Record<string, unknown>>(args: {
   collection: ListableCollection
   /** Already parsed and validated by `params.ts`; nothing here re-checks it. */
   params: ListingParams
+  /**
+   * The collection-specific selects, by URL key — `{ nivel: 'avancado' }`. An empty string is
+   * "no choice" and narrows nothing; a key this collection does not declare throws.
+   */
+  filtros?: Readonly<Record<string, string>>
 }): Promise<ListingPage<T>> {
   const shape = LISTING_SHAPES[args.collection]
   const db = await getPublicScopedPayloadForRSC()
 
-  const where = whereFor(shape, args.params)
+  const where = whereFor(shape, args.params, args.filtros ?? {})
   const read = (page: number) =>
     db.find<T>({
       collection: args.collection,
