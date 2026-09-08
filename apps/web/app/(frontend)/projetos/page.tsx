@@ -2,7 +2,7 @@ import type { CSSProperties, ReactElement, ReactNode } from 'react'
 
 import { notFound } from 'next/navigation'
 
-import { CardProjeto, EmptyState, ListingGrid, SearchInput, Tabs } from '@fablab/ui'
+import { CardProjeto, EmptyState, ListingGrid, Pagination, SearchInput, Tabs } from '@fablab/ui'
 
 import { listPublic } from '../../../lib/public/listing'
 import {
@@ -45,13 +45,16 @@ import { getPublicScopedPayloadForRSC } from '../../../lib/tenancy/public-payloa
  *    load for a relationship whose target does not exist. `CardProjeto.autor` is required, since
  *    the design draws the strip on every card. See {@link AUTORIA_PENDENTE} for what the card
  *    credits until the field lands, and why it is not an invented maker.
- * 2. **`Pagination` (T010) is not on disk.** Its task was blocked before it wrote anything —
- *    a stale `.specify/.plan-in-progress` marker turned every write outside `.specify/` into a
- *    hook denial — so the shared component the plan draws in § Sketch 4 does not exist yet.
- *    Shipping a paginated listing with no way to reach page 2 would fail FR-029 outright, so
- *    {@link paginacao} renders the same anchors here. It is a placeholder with a forwarding
- *    address: when T010 lands, this function is deleted and `<Pagination hrefFor={…} />` takes
- *    its place — the hrefs already come from `listingHref`, which is the whole contract.
+ * 2. ~~**`Pagination` (T010) is not on disk.**~~ **Closed.** T010 landed the shared control and
+ *    this page's interim `janela`/`paginacao` pair was deleted in the same change, exactly as
+ *    the forwarding address promised — `<Pagination hrefFor={…} />` now draws the bar and the
+ *    hrefs still come from `listingHref`, which was always the whole contract. Two things moved
+ *    with it, deliberately: the window widened from the interim page±1 to the component's five
+ *    numbers (the mockup's `1 2 3 4 5 … 124`, and a fixed width so the targets stop sliding
+ *    under the cursor), and `‹`/`›` appeared, which the interim bar never drew. §6 of
+ *    `tests/public/projetos-page.test.ts` was corrected to the new contract in the same commit
+ *    — a green test defending the window this page no longer draws is the failure that rule
+ *    exists for.
  */
 
 export const metadata = { title: 'PROJETOS — Fab Lab CITe Bauru' }
@@ -110,9 +113,6 @@ const CATEGORIA_LIMIT = 50
 
 /** The widest row the grid draws (LISTING_GRID_COLUMNS.desktop). */
 const PRIMEIRA_LINHA = 3
-
-/** The gap marker in the page window. A span, never a link — there is no page `…`. */
-const RETICENCIAS = '…'
 
 /**
  * Run a public read, and answer the two failures a visitor can actually meet.
@@ -230,65 +230,6 @@ function cardDe(projeto: ProjetoDoc, posicao: number): ReactElement {
 }
 
 /**
- * The page numbers to draw: the first, the last, and the current with its neighbours.
- *
- * A listing with forty pages must not print forty links — the bar would be longer than the
- * grid. The window is the same one plan § Sketch 4 draws for the shared component.
- */
-function janela(page: number, totalPages: number): (number | typeof RETICENCIAS)[] {
-  const candidatas = [1, page - 1, page, page + 1, totalPages]
-  const visiveis = [...new Set(candidatas)]
-    .filter((n) => n >= 1 && n <= totalPages)
-    .sort((a, b) => a - b)
-
-  const saida: (number | typeof RETICENCIAS)[] = []
-  let anterior = 0
-  for (const n of visiveis) {
-    if (anterior !== 0 && n - anterior > 1) saida.push(RETICENCIAS)
-    saida.push(n)
-    anterior = n
-  }
-  return saida
-}
-
-/**
- * Numbered pagination, as anchors (FR-029, CLR-003).
- *
- * **Interim.** The shared `Pagination` component is T010's deliverable and is not on disk; see
- * this module's docblock for why. The contract is already the plan's: every page is a URL built
- * by `listingHref`, `aria-current="page"` marks the one being shown, and nothing here needs a
- * client boundary.
- */
-function paginacao(params: ListingParams, page: number, totalPages: number): ReactElement | null {
-  // One page is not a choice, and a control offering it is noise the design does not draw.
-  if (totalPages <= 1) return null
-  return (
-    <nav aria-label="Paginação" style={ESTILO.paginacao}>
-      {janela(page, totalPages).map((n, indice) =>
-        n === RETICENCIAS ? (
-          // Announced, "…" is read as "ellipsis" or spelled out; the numbers around it already
-          // tell a reader the list is not contiguous.
-          <span key={`intervalo-${indice}`} aria-hidden={true} style={ESTILO.intervalo}>
-            {RETICENCIAS}
-          </span>
-        ) : (
-          <a
-            key={n}
-            href={listingHref(PROJETOS_PATH, { ...params, page: n })}
-            // `page`, not `true`: these anchors navigate, and `page` is the token that says the
-            // destination is the document being shown.
-            aria-current={n === page ? 'page' : undefined}
-            style={n === page ? ESTILO.paginaAtual : ESTILO.pagina}
-          >
-            {n}
-          </a>
-        ),
-      )}
-    </nav>
-  )
-}
-
-/**
  * The hero band (`projetos.md` § Hero).
  *
  * `--surface-band` and not `--surface-page`: the band is the one surface that must not follow
@@ -388,7 +329,16 @@ function resultado(
       <ListingGrid label="Projetos">
         {listagem.docs.map((projeto, posicao) => cardDe(projeto, posicao))}
       </ListingGrid>
-      {paginacao(params, listagem.page, listagem.totalPages)}
+      {/* The shared control (T010), not a second copy of the window: this page is the template
+          the other four listings are cut from, and a bar defined here is one they would each
+          have to reproduce. `hrefFor` is the whole of the URL contract — every page is a link
+          `listingHref` builds, so the filter and the search term ride along and the control
+          itself never learns what a listing URL looks like. */}
+      <Pagination
+        page={listagem.page}
+        totalPages={listagem.totalPages}
+        hrefFor={(n) => listingHref(PROJETOS_PATH, { ...params, page: n })}
+      />
     </>
   )
 }
@@ -472,34 +422,4 @@ const ESTILO: Record<string, CSSProperties> = {
   },
   busca: { display: 'flex', alignItems: 'center', gap: 'var(--space-2)' },
   conteudo: { padding: '0 var(--space-5) var(--space-10)' },
-  paginacao: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 'var(--space-3)',
-    paddingTop: 'var(--space-8)',
-    fontFamily: 'var(--font-display)',
-  },
-  pagina: {
-    color: 'var(--color-claro)',
-    textDecoration: 'none',
-    // FR-022: at least 44x44 on the compact breakpoints, written unconditionally — a target
-    // that is only large below 834 is a rule nobody can check on the device in their hand.
-    minWidth: '44px',
-    minHeight: '44px',
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  paginaAtual: {
-    color: 'var(--color-primary)',
-    textDecoration: 'underline',
-    textUnderlineOffset: 'var(--space-1)',
-    minWidth: '44px',
-    minHeight: '44px',
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  intervalo: { color: 'var(--color-claro)' },
 }

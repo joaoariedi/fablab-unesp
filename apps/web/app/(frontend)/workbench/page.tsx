@@ -27,6 +27,7 @@ import {
   ListingGrid,
   MenuSheet,
   MobileTabBar,
+  Pagination,
   PixelImage,
   profileHref,
   ProgressBar,
@@ -253,6 +254,58 @@ function contentSpecimens(): ReactElement[] {
   ]
 }
 
+/** A light box, so the `light` specimens are looked at on the surface they were drawn for.
+ *  The gallery's own background is `--surface-page` (navy), where navy ink is invisible — a
+ *  specimen nobody can see reviews nothing, which is the failure the workbench exists to catch. */
+const LIGHT_SURFACE_STYLE: CSSProperties = {
+  background: 'var(--surface-light)',
+  padding: 'var(--space-4)',
+  width: '100%',
+}
+
+/**
+ * The pagination bar (T010 / FR-029, CLR-003).
+ *
+ * Three specimens, because the three things a reviewer has to look at never appear in the same
+ * bar. Only a long listing prints a `…` and both arrows. Only page 1 shows the bar with `‹`
+ * **absent** — the ends omit the step rather than disabling it, so the row is one target
+ * narrower there and that asymmetry is a design decision someone should see rather than read.
+ * And the light surface changes the current page in kind, not in value: underlined pink ink on
+ * navy becomes the mockup's *"chip rosa"* — a pink fill with navy ink — because pink small text
+ * on white is the pair FR-028 forbids and `contrast.test.ts` will not certify.
+ *
+ * The hrefs are the real listing URLs rather than `#`: the control's whole contract is that a
+ * page is a link, and a specimen wired to `#` would look identical while proving nothing.
+ */
+function paginationSpecimen(): ReactElement {
+  const pageHref = (base: string) => (n: number) => `${base}?pagina=${n}`
+  return (
+    <Specimen key="pagination" title="Pagination — long listing / first page / on a white content area">
+      <Pagination
+        page={60}
+        totalPages={124}
+        hrefFor={pageHref('/biblioteca-3d')}
+        label="Paginação — 124 páginas, no meio"
+      />
+      <Pagination
+        page={1}
+        totalPages={3}
+        hrefFor={pageHref('/projetos')}
+        label="Paginação — primeira página, sem ‹"
+      />
+      <div style={LIGHT_SURFACE_STYLE}>
+        <Pagination
+          page={60}
+          totalPages={124}
+          surface="light"
+          hrefFor={pageHref('/artigos')}
+          label="Paginação — sobre área clara"
+        />
+      </div>
+    </Specimen>
+  )
+}
+
 /** The meters and the field: components whose whole subject is a value at the ends of a range. */
 function meterSpecimens(): ReactElement[] {
   return [
@@ -389,6 +442,7 @@ function specimenGallery(width: string): ReactElement {
       {identitySpecimens()}
       {contentSpecimens()}
       {meterSpecimens()}
+      {paginationSpecimen()}
       {shellSpecimens()}
       {shapeSpecimens()}
     </main>

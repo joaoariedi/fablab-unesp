@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import type { ReactElement, ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { CardProjeto, EmptyState, ListingGrid, SearchInput, Tabs } from '@fablab/ui'
+import { CardProjeto, EmptyState, ListingGrid, Pagination, SearchInput, Tabs } from '@fablab/ui'
 
 import { ALL_CATEGORIES } from '../../lib/public/params'
 import type { FindArgs } from '../../lib/tenancy/client'
@@ -412,51 +412,89 @@ describe('§5 — the 3/2/1 grid of cards (FR-004, FR-021)', () => {
 })
 
 describe('§6 — numbered pagination (FR-029, CLR-003)', () => {
+  /** The pagination landmark's markup, or `undefined` when the page drew no bar.
+   *
+   *  Rendered rather than walked, and that is the point of §6 rather than an implementation
+   *  detail: since T010 the bar is `<Pagination>` from `@fablab/ui`, so the tree this page
+   *  returns holds an unrendered element and `findAll(tree, 'nav')` finds nothing — the two
+   *  cases below went red exactly that way when the interim bar was deleted. Rendering keeps
+   *  the assertion where FR-029 puts it: the anchors a visitor can actually click, produced by
+   *  this page's own props, not the component's contract tested a second time. */
+  const paginationMarkup = (tree: ReactNode): string | undefined =>
+    /<nav[^>]*aria-label="[^"]*[Pp]agina[^"]*"[\s\S]*?<\/nav>/.exec(
+      renderToStaticMarkup(tree as never),
+    )?.[0]
+
+  /** Every `href` in the bar, in document order — the step arrows included, since `‹` and `›`
+   *  are links to real pages and a wrong one sends the visitor somewhere no number does. */
+  const hrefsIn = (nav: string): string[] =>
+    [...nav.matchAll(/href="([^"]*)"/g)].map((m) => m[1]!.replaceAll('&amp;', '&'))
+
+  it('draws the shared control, not a second copy of the window', async () => {
+    // T010's whole deliverable. This page is the template the other four listings are cut from,
+    // so a window re-implemented here is one each of them inherits — and the interim version
+    // that stood in for the component used a different window (page±1 against the component's
+    // five), which is precisely how two bars that both "work" end up disagreeing.
+    const { tree } = await render({ pagina: '2' }, { page: 2, totalPages: 3, totalDocs: 30 })
+    const bar = findOne(tree, Pagination)
+
+    expect(
+      bar,
+      'the listing renders no <Pagination> from @fablab/ui. Identity, not shape: this file ' +
+        'imports the same module instance the page does, so a local look-alike fails here.',
+    ).toBeDefined()
+    expect(bar?.props.page).toBe(2)
+    expect(bar?.props.totalPages).toBe(3)
+  })
+
   it('emits the ellipsis, and only where pages are actually hidden', async () => {
-    // §6 otherwise renders only totalPages 2 and 3, where `janela`'s candidates collapse to a
-    // contiguous run and the gap branch is unreachable. Measured: deleting the
-    // `saida.push(RETICENCIAS)` line passed all 27 tests. This page carries the pagination that
-    // stands in for T010 — whose task line names "window with ellipsis" — so the one part of
-    // that contract it reproduced was the one part nothing checked.
+    // §6 otherwise renders only totalPages 2 and 3, where the window covers every page and the
+    // gap branch is unreachable. Measured on the interim bar this page shipped before T010:
+    // deleting its `saida.push(RETICENCIAS)` line passed all 27 tests of the day.
     const { tree } = await render({ pagina: '5' }, { page: 5, totalPages: 10, totalDocs: 120 })
     // Scoped to the pagination landmark: a bare scan of the document also picks up a card's
     // like count, which would make this assert on numbers that are not pages at all.
-    const nav = /<nav[^>]*aria-label="[^"]*[Pp]agina[^"]*"[\s\S]*?<\/nav>/.exec(
-      renderToStaticMarkup(tree as never),
-    )?.[0]
+    const nav = paginationMarkup(tree)
     expect(nav, 'the page rendered no pagination landmark').toBeDefined()
     const slots = [...(nav ?? '').matchAll(/>(\d+|…)</g)].map((m) => m[1])
 
-    // 1 … 4 5 6 … 10 — an ellipsis on each side, standing for a real gap.
-    expect(slots).toEqual(['1', '…', '4', '5', '6', '…', '10'])
+    // 1 … 3 4 5 6 7 … 10 — an ellipsis on each side, standing for a real gap. Five numbers
+    // around the current page, not three: the component slides a fixed-width window (the
+    // mockup's `1 2 3 4 5 … 124`) where the interim bar clamped page±1, so the bar no longer
+    // changes width as the visitor pages through it.
+    expect(slots).toEqual(['1', '…', '3', '4', '5', '6', '7', '…', '10'])
   })
 
   it('draws no ellipsis when nothing is hidden', async () => {
     // The pair: an ellipsis that replaces a single page hides a reachable page behind an
     // unclickable glyph, and looks correct in any screenshot.
     const { tree } = await render({ pagina: '2' }, { page: 2, totalPages: 3, totalDocs: 30 })
-    const nav = /<nav[^>]*aria-label="[^"]*[Pp]agina[^"]*"[\s\S]*?<\/nav>/.exec(
-      renderToStaticMarkup(tree as never),
-    )?.[0]
+    const nav = paginationMarkup(tree)
     expect(nav).toBeDefined()
     expect(nav).not.toContain('…')
   })
 
   it('links every page, and marks the current one', async () => {
     const { tree } = await render({ pagina: '2' }, { page: 2, totalPages: 3, totalDocs: 30 })
-    const nav = findAll(tree, 'nav').find((node) => node.props['aria-label'] === 'Paginação')
+    const nav = paginationMarkup(tree)
 
     expect(nav, 'a listing of 30 projects rendered no pagination (FR-029)').toBeDefined()
-    const links = findAll(nav ?? null, 'a')
-    expect(links.map((link) => textOf(link))).toEqual(['1', '2', '3'])
+    // ‹ 1 2 3 › — the steps flank the numbers and point one page either side of the current.
     // Anchors, not buttons: every page has a URL that can be linked, shared and indexed, and
     // the control needs no client boundary (CLR-003, plan § Sketch 4).
-    expect(links.map((link) => link.props.href)).toEqual([
+    expect(hrefsIn(nav ?? '')).toEqual([
+      '/projetos',
       '/projetos',
       '/projetos?pagina=2',
       '/projetos?pagina=3',
+      '/projetos?pagina=3',
     ])
-    expect(links.map((link) => link.props['aria-current'])).toEqual([undefined, 'page', undefined])
+    expect(
+      (nav ?? '').match(/aria-current="page"/g)?.length,
+      'exactly one anchor may claim to be the page being shown; page 1 appearing both as the ' +
+        'first link and inside the window is how a bar ends up with two.',
+    ).toBe(1)
+    expect(nav).toMatch(/aria-current="page"[^>]*>2</)
   })
 
   it('keeps the filter and the term in every page link', async () => {
@@ -464,10 +502,14 @@ describe('§6 — numbered pagination (FR-029, CLR-003)', () => {
       { categoria: 'impressao-3d', busca: 'cartaz' },
       { page: 1, totalPages: 2, totalDocs: 20 },
     )
-    const nav = findAll(tree, 'nav').find((node) => node.props['aria-label'] === 'Paginação')
+    const nav = paginationMarkup(tree)
+    expect(nav, 'the page rendered no pagination landmark').toBeDefined()
 
-    expect(findAll(nav ?? null, 'a').map((link) => link.props.href)).toEqual([
+    // No `‹` on page 1: the control omits the step at the ends rather than disabling it, so a
+    // visitor never meets a target that does nothing or one pointing at page 0.
+    expect(hrefsIn(nav ?? '')).toEqual([
       '/projetos?categoria=impressao-3d&busca=cartaz',
+      '/projetos?categoria=impressao-3d&busca=cartaz&pagina=2',
       '/projetos?categoria=impressao-3d&busca=cartaz&pagina=2',
     ])
   })
@@ -475,7 +517,7 @@ describe('§6 — numbered pagination (FR-029, CLR-003)', () => {
   it('renders nothing at all for a listing that fits on one page', async () => {
     const { tree } = await render({}, { page: 1, totalPages: 1 })
 
-    expect(findAll(tree, 'nav').find((n) => n.props['aria-label'] === 'Paginação')).toBeUndefined()
+    expect(paginationMarkup(tree)).toBeUndefined()
   })
 })
 

@@ -26,6 +26,8 @@ export { LISTING_GRID_COLUMNS, LISTING_GRID_CSS, ListingGrid } from './ListingGr
 export type { ListingGridProps } from './ListingGrid'
 export { ACTIVE_TAB_STYLE, TAB_STYLE, Tabs, TABS_STYLE } from './Tabs'
 export type { TabItem, TabsProps } from './Tabs'
+export { currentPageStyle, gapStyle, ITEMS_PER_PAGE, PAGE_GAP, PAGINATION_STYLE, Pagination, pageStyle, pageWindow, totalPagesFor } from './Pagination'
+export type { PageSlot, PaginationProps, PaginationSurface } from './Pagination'
 export { clampScale, PIXEL_IMAGE_STYLE, PixelImage } from './PixelImage'
 export type { PixelImageProps } from './PixelImage'
 export { percentOf, PROGRESS_BAR_STYLE, PROGRESS_FILL_STYLE, PROGRESS_TRACK_STYLE, ProgressBar, progressFillStyle } from './ProgressBar'

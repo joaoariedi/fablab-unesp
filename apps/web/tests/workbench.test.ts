@@ -9,6 +9,7 @@ import {
   DEFAULT_LOGO_CHIP_COLOUR,
   LOGO_CHIP_COLOURS,
 } from '../../../packages/ui/src/components/LogoChip'
+import { PAGE_GAP, pageWindow } from '../../../packages/ui/src/components/Pagination'
 import { percentOf } from '../../../packages/ui/src/components/ProgressBar'
 import { SKILL_PIP_COUNT } from '../../../packages/ui/src/components/SkillPips'
 import { ISO_SHAPE_NAMES } from '../../../packages/ui/src/shapes/geometry'
@@ -391,6 +392,31 @@ describe('T037 / FR-016, US7 — the component workbench', () => {
           "§ PERFIL), so a state the workbench omits is a destination nobody reviews — and " +
           'US7 is "every component is visible in its **states**", not one specimen apiece.',
       ).toEqual(new Set([true, false]))
+    })
+
+    it('shows the pagination bar on both surfaces, and long enough to print its gap', async () => {
+      // Two states that are invisible in a short navy bar. `surface` changes the current page
+      // in KIND — underlined pink ink on navy, a pink fill with navy ink on white (FR-028
+      // forbids the naive alternative, small pink text on white) — and the `…` only appears on
+      // a listing long enough to hide pages, which is the branch feature 003's Run 2 measured
+      // as unreachable in the interim bar the projetos page shipped: deleting the gap push
+      // passed all 27 of that page's tests.
+      const bars = propsFor(await frame(), 'Pagination')
+      expect(bars.length, 'no Pagination specimen').toBeGreaterThan(0)
+
+      expect(
+        new Set(bars.map((props) => props.surface ?? 'navy')),
+        'the workbench shows the pagination bar on one surface only.',
+      ).toEqual(new Set(['navy', 'light']))
+
+      const withGap = bars.filter((props) =>
+        pageWindow(Number(props.page), Number(props.totalPages)).includes(PAGE_GAP),
+      )
+      expect(
+        withGap.length,
+        'every pagination specimen is short enough to print every page number, so the window ' +
+          'and its `…` — the whole reason this control is not a row of links — go unreviewed.',
+      ).toBeGreaterThan(0)
     })
 
     it('shows every shape in the FR-015 vocabulary', async () => {

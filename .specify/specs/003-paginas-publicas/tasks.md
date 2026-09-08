@@ -39,6 +39,51 @@ lives here, in the artifact — not in a launch note. It does **not** mean commi
 is built end to end as the template the other pages copy, the performance gate is armed *before*
 the asset most likely to trip it exists, and the Home is last.
 
+## Run 3 (`wf_efd9f725-7d6`, 2026-09-08) — T010, and the same gate for the third time
+
+Nothing accepted. **T010's component was sound** — the verifier could not break it on the
+requirement lens and confirmed fourteen distinct mutations all bite — and it was rejected for
+what adding it did to a gate elsewhere: `tests/workbench.test.ts` went red on four cases, three
+of them *"these components are in packages/ui/src but never reach the workbench: Pagination"*,
+one per breakpoint, plus the import check.
+
+**This is Run 2's T011 failure, verbatim, on the next task.** It was recorded in this file, and
+stated in the launch note for the run (*"add it to the barrel … AND to the workbench … it caught
+three in run 2"*). The implementer ran `component-barrel.test.ts` and `islands.test.ts` — the two
+obvious gates — and not the third with the same trigger. The lesson is not "remember the
+workbench": it is that **a component added to `packages/ui/src` has three consumers that must be
+updated together**, and the way to find them is to run the whole suite of both packages, never
+the files whose names match what was written.
+
+Repaired, with both new assertions watched failing:
+
+- The workbench draws the bar in the three states that are never visible in one specimen — a long
+  listing (the only one that prints `…` and both arrows), page 1 (the only one that shows the row
+  with `‹` *absent*, since the control omits the step at the ends rather than disabling it), and
+  the light surface, in a light box, because navy ink on the gallery's navy is a specimen nobody
+  can see. `workbench.test.ts` §4 now asserts both surfaces and at least one window with a gap;
+  dropping `surface="light"` and shortening the listing were each observed red on their own.
+- **The projetos page now uses the component**, and T012's interim `janela`/`paginacao` pair is
+  deleted, exactly as its docblock's forwarding address promised. Without this the secondary
+  finding stands: the only consumer of `Pagination` was its own test, and FR-029's *"every
+  listing paginates"* was unmet at the page level.
+
+Two things moved with that swap and the tests moved with them in the same change, per note 3 —
+a green test defending the window the page no longer draws is precisely the failure that rule is
+for. The window widened from the interim page±1 to the component's five numbers (the mockup's
+`1 2 3 4 5 … 124`, at a fixed width so the targets stop sliding under the cursor as the visitor
+pages through), and `‹`/`›` appeared, which the interim bar never drew. §6 of
+`tests/public/projetos-page.test.ts` renders the tree now rather than walking it — since the bar
+is an unrendered `<Pagination>` element, `findAll(tree, 'nav')` finds nothing — and gained an
+identity check that the page composes the shared control and not a local look-alike. Watched
+failing against a wrapper rendering byte-identical markup: **only that one case went red**, which
+is the evidence that the other five could not have caught it.
+
+**Verified on this tree**: `pnpm lint` 0; `pnpm typecheck` 0 **both** with and without
+`payload-types.ts`; `pnpm test` 0 — 817 in `packages/ui`, 1,423 in `apps/web`, including
+`tests/content/counters.test.ts` and `tests/tenancy/seed.test.ts`, whose failures during the run
+were database state and are green here rather than assumed to be.
+
 ## Run 2 (`wf_28842973-970`, 2026-09-07) — Phase 2 and most of Phase 3
 
 Seven accepted (T006-T009, T011, T013, T014), two rejected. **T012 is repaired; T010 is still
@@ -145,7 +190,7 @@ without-types run and would otherwise have failed the pipeline.
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T010 | `Pagination` — anchors, not buttons; no `'use client'`. Twelve per page, window with ellipsis, `aria-current` on the current page | FR-029, FR-023 | `packages/ui/src/components/Pagination.tsx` | — |
+| T010 ✅ | `Pagination` — anchors, not buttons; no `'use client'`. Twelve per page, window with ellipsis, `aria-current` on the current page | FR-029, FR-023 | `packages/ui/src/components/Pagination.tsx` | — |
 | T011 ✅ | `CardProjeto`, `EmptyState` and the shared listing chrome, against `projetos.md` § Grid | FR-004, FR-017, FR-018 | `packages/ui/src/components/` | — |
 | T012 ✅ | Projetos listing: hero, category tabs as **links**, search island, 3/2/1 grid, pagination | FR-004, FR-021, US1, US2 | `apps/web/app/(frontend)/projetos/page.tsx` | T008, T010, T011 |
 | T013 ✅ | Projeto detail: long text, gallery, attachments linking the existing download route. **404 for draft, foreign and unknown alike** | FR-030, US10 | `apps/web/app/(frontend)/projetos/[slug]/page.tsx` | T012 |
