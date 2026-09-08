@@ -39,6 +39,100 @@ lives here, in the artifact — not in a launch note. It does **not** mean commi
 is built end to end as the template the other pages copy, the performance gate is armed *before*
 the asset most likely to trip it exists, and the Home is last.
 
+## Run 5 (`wf_77a5d951-f8f`, 2026-09-08) — Phase 5, and five controls that looked like they worked
+
+T018 (⛔, skipped cleanly) and T024 accepted; T019, T020, T021, T022 and T023 rejected. Every
+rejection was reproduced by execution before anything was changed, and every new assertion was
+watched failing against the code it condemns.
+
+They are one defect in five costumes: **a page that renders its promise, and a layer below it
+that does not keep it**. In each case the suite was green because it tested the half that was
+right.
+
+### The workbench gate, for the FOURTH time — and now closed structurally
+
+`ModelViewer` (T021) and `CalendarDayPanel` (T023) were absent from the frame US7 requires, so
+`apps/web/tests/workbench.test.ts` was red and the repo shipped red. That is after
+`CardProjeto`/`EmptyState`/`ListingGrid` in run 2 and `Pagination` in run 3 — four rounds, three
+of them *after* it was written into this file and restated in the launch note.
+
+The recurrence is not carelessness, it is geography: the gate lives in `apps/web`, the work
+happens in `packages/ui`, and that package's own 848-test suite says nothing. So the check now
+also exists at `packages/ui/tests/workbench-coverage.test.ts`. It is deliberately redundant and
+deliberately weaker — it reads the workbench's imports rather than rendering it, and says so —
+because what it changes is **where you find out**.
+
+### The four content defects
+
+- **T022 / T020 — `EmptyState` was invisible on both light pages.** `EMPTY_STATE_CSS` hard-coded
+  `color: var(--color-claro)` in a class rule, which beats the `--text-on-light` a light page
+  sets on `<main>`: #DCE7E3 on #FFFFFF is **1.27:1**, against 16.63:1 for the navy FR-006 asks
+  for. The entire message of the empty and error states was gone, while the pink action button
+  beside it kept its navy label and the block still read as a state. It now takes the `surface`
+  prop `SearchInput` and `Pagination` already had. The FR-028 ink scan could not have caught it:
+  it read `props.style.color` only, and this colour lives in a stylesheet the component hoists
+  itself. Correcting that scan found a second trap of the same kind — walking the page's tree
+  never reaches a `<style>` inside an unrendered `<EmptyState>` element, so the first repair
+  passed with the defect restored. The page-side gate now asserts the **prop**, and
+  `listing-chrome.test.ts` owns what the prop is worth.
+- **T020 — two of the three Biblioteca 3D selects filtered nothing.** `nivel` and `formato` were
+  parsed, validated against their option lists, written into every link and set as each select's
+  `defaultValue`, then dropped: `listPublic` had no seam for them. A visitor chose "Avançado",
+  pressed APLICAR, and got the identical catalogue with the select showing a filter that had
+  never been applied. `lib/public/listing.ts` now takes a `filtros` map — an **allowlist**, not a
+  `where` parameter, so a page still cannot name a tenant or a status (Sketch 1), and a key the
+  collection does not declare **raises** rather than being ignored, because ignoring it would
+  reproduce the same defect one layer further from anyone who could notice.
+- **T019 — `PUBLICAÇÃO` appeared in the Artigos tabs.** CLR-009 makes it a `categoria_artigo` row
+  *"shown on the card chip, absent from the tab set"*; the page built its bar from every row the
+  vocabulary read returned, and had no mechanism that could exclude one. The suite was green
+  because the fixture seeded two other categories and never the row the rule is about. The page's
+  own docblock stated the opposite of what CLR-009 decided and cited it as justification.
+- **T023 — cancelled events vanished from the calendar.** `getPublicScopedPayload` AND-s
+  `{ status: { equals: 'publicado' } }` onto every publishable collection, and `evento` runs four
+  states where the others run three. spec.md § Notes for planning is explicit: *"A cancelled
+  event that was public must keep showing as cancelled rather than vanishing."* §6's tests passed
+  only because `FakePublicClient` returns whatever fixture it is handed — every one of them
+  replaced the layer that removes the row. The published set is now per-collection;
+  **`rascunho`, the only `evento` status that was never public, stays out**, and that direction
+  is asserted separately from the three that are admitted. `publishedOnly` keeps the exact
+  expression `scripts/isolation-mutation.sh` matches by text, and the harness was **run** to
+  confirm it still goes red.
+
+### T021 — an error path wired to a handler nothing can call
+
+React 19.2 drops `onError` on a custom element. `setPropOnCustomElement`'s `default` branch
+checks `registrationNameDependencies.hasOwnProperty(key)` and, for a registered synthetic event
+name, validates the type and attaches nothing; `error` is non-delegated, so only a capture-phase
+root listener exists and it never sees an event dispatched on a custom element.
+`@google/model-viewer` signals a failed model with exactly
+`dispatchEvent(new CustomEvent('error', …))`. So `setFailed(true)` was unreachable: a `.glb` that
+404s left the visitor with a dead element and the page reported nothing. The listener is attached
+from the effect through a ref.
+
+Two more things came with it. US6's error clause has **two** verbs — *"falls back to the
+thumbnail **and reports the failure in place**"* — and only the first was implemented, so a
+failed preview was indistinguishable from a model that never had one; the report is now rendered,
+and only on failure, because a mesh-only model is the edge case rather than a fault. And a mutant
+survived all eighteen tests: deleting `if (!isViewer) return` from the effect, which the
+component's own comment says is what makes CLR-002 true at runtime. The fake dispatcher only
+*recorded* effects; running them, and asserting that the fallback branch returns no cleanup, is
+what turns the recording into evidence.
+
+**The detail page was missing entirely.** T021 is titled *"Modelo3d detail + the `ModelViewer`
+island"*, and no `biblioteca-3d/[slug]/page.tsx` existed — so FR-014's positive half was realised
+nowhere, the listing card's title and arrow both linked at a 404, and `ModelViewer`'s only
+consumers were its own test and the workbench. That is the preamble's rule verbatim: *"a module
+or endpoint with tests and no caller is not a feature."* Built against the `projeto`/`artigo`
+template, with the distinguishing part asserted: `Modelo3d.ts` registers
+`downloadEndpoint('modelo3d', 'arquivosModelo')` where `artigo` names it `anexos` and `projeto`
+`arquivos`, so a page copied from either would 404 every file while looking correct.
+
+**Verified on this tree**: `pnpm lint` 0; `pnpm typecheck` 0 **both** with and without
+`payload-types.ts`; `pnpm test` 0 — 848 in `packages/ui`, 1,680 in `apps/web`; and
+`scripts/isolation-mutation.sh public-path` still goes red on the mutation, which the change to
+the anonymous read path had to leave true.
+
 ## Run 4 (`wf_c57dabcc-9a2`, 2026-09-08) — Phase 4, and two gates that could not fail
 
 T017 accepted; T015 and T016 rejected, and both rejections were **reproduced by execution
@@ -286,12 +380,12 @@ without-types run and would otherwise have failed the pipeline.
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T019 | [P] Artigos listing + detail. `anexos` is its attachment field | FR-005, FR-030 | `apps/web/app/(frontend)/artigos/` | T014 |
-| T020 | [P] Biblioteca 3D listing — light background, teal sidebar whose category items filter, three selects, numbered cards | FR-007, US3 | `apps/web/app/(frontend)/biblioteca-3d/page.tsx` | T014 |
-| T021 | Modelo3d detail + the `ModelViewer` island. `three` is a declared peer of `@google/model-viewer` and is added explicitly; the STL/OBJ/3MF **loaders** are not, because FR-014 falls those back to the thumbnail | FR-014, US6, CLR-002 | `packages/ui/src/components/ModelViewer.tsx` | T020, T009 |
-| T022 | [P] Aulas listing — light background, `ASSISTIR` plays without an account, no progress or badge for a visitor | FR-006, FR-013, US4 | `apps/web/app/(frontend)/aulas/page.tsx` | T014 |
-| T023 | Calendário: month grid + list view, period navigation, type and machine filters, the day-panel island. `evento`'s status set is **not** the three-state queue — a cancelled event that was public still shows as cancelled | FR-008, US5 | `apps/web/app/(frontend)/calendario/page.tsx` | T014 |
-| T024 | The anonymous download driven end to end on a second collection, proving the attachment-field parameter is real | FR-012, US3, SC-004 | `apps/web/tests/public/download.test.ts` | T019 |
+| T019 ✅ | [P] Artigos listing + detail. `anexos` is its attachment field | FR-005, FR-030 | `apps/web/app/(frontend)/artigos/` | T014 |
+| T020 ✅ | [P] Biblioteca 3D listing — light background, teal sidebar whose category items filter, three selects, numbered cards | FR-007, US3 | `apps/web/app/(frontend)/biblioteca-3d/page.tsx` | T014 |
+| T021 ✅ | Modelo3d detail + the `ModelViewer` island. `three` is a declared peer of `@google/model-viewer` and is added explicitly; the STL/OBJ/3MF **loaders** are not, because FR-014 falls those back to the thumbnail | FR-014, US6, CLR-002 | `packages/ui/src/components/ModelViewer.tsx` | T020, T009 |
+| T022 ✅ | [P] Aulas listing — light background, `ASSISTIR` plays without an account, no progress or badge for a visitor | FR-006, FR-013, US4 | `apps/web/app/(frontend)/aulas/page.tsx` | T014 |
+| T023 ✅ | Calendário: month grid + list view, period navigation, type and machine filters, the day-panel island. `evento`'s status set is **not** the three-state queue — a cancelled event that was public still shows as cancelled | FR-008, US5 | `apps/web/app/(frontend)/calendario/page.tsx` | T014 |
+| T024 ✅ | The anonymous download driven end to end on a second collection, proving the attachment-field parameter is real | FR-012, US3, SC-004 | `apps/web/tests/public/download.test.ts` | T019 |
 
 ## Phase 6: The Home, last
 
