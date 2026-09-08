@@ -259,7 +259,18 @@ main() {
   trap cleanup EXIT
 
   echo "── applying migrations"
-  pnpm --filter @fablab/web migrate
+  # `--force-accept-warning`, and it is not a shortcut. `payload migrate` asks
+  # "you've run Payload in dev mode … data loss will occur. Would you like to proceed? (y/N)"
+  # whenever the target database carries schema that was pushed rather than migrated — which is
+  # any database a previous run of this gate left half-built. On a CI runner there is nobody to
+  # answer, so the gate hangs on an invisible prompt until `timeout-minutes: 45` kills the job,
+  # and the failure arrives with no error text at all: exactly the shape tasks.md § "Read before
+  # starting" item 5 records for `migrate:create`. Measured here on 2026-09-08, on a scratch
+  # database left dirty by an interrupted run.
+  #
+  # Accepting the warning is correct for THIS caller and only this one: the gate migrates a
+  # database it seeds from empty in the next step, so there is no data any answer could protect.
+  pnpm --filter @fablab/web migrate --force-accept-warning
   echo "── seeding published content in a resolvable organization"
   pnpm --filter @fablab/web seed
   echo "── building"

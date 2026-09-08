@@ -33,6 +33,7 @@ import {
   PixelImage,
   profileHref,
   ProgressBar,
+  ProjectCarousel,
   SearchInput,
   SkillPips,
   Tabs,
@@ -346,6 +347,40 @@ function meterSpecimens(): ReactElement[] {
           curtidas={28}
         />
       </ListingGrid>
+    </Specimen>,
+    <Specimen
+      key="carousel"
+      title="ProjectCarousel — the Home's ÚLTIMOS PROJETOS, one screenful per arrow"
+    >
+      <ProjectCarousel label="Últimos projetos">
+        <CardProjeto
+          titulo="Luminária paramétrica"
+          descricao="Luminária decorativa impressa em 3D com design paramétrico e encaixes precisos."
+          categoria="Impressão 3D"
+          href="/projetos/luminaria-parametrica"
+          capa={null}
+          autor={{ nome: 'Maria Silva', handle: 'mariasilva', nivel: 7 }}
+          curtidas={32}
+        />
+        <CardProjeto
+          titulo="Cadeira encaixe"
+          descricao="Cadeira produzida em MDF cortado a laser, com design minimalista e modular."
+          categoria="Móveis"
+          href="/projetos/cadeira-encaixe"
+          capa={null}
+          autor={{ nome: 'João Pereira', handle: 'joaopereira', nivel: 6 }}
+          curtidas={28}
+        />
+        <CardProjeto
+          titulo="Vaso serigrafado"
+          descricao="Vaso de cerâmica com padrão geométrico aplicado em serigrafia manual."
+          categoria="Serigrafia"
+          href="/projetos/vaso-serigrafado"
+          capa={null}
+          autor={{ nome: 'Ana Souza', handle: 'anasouza', nivel: 4 }}
+          curtidas={11}
+        />
+      </ProjectCarousel>
     </Specimen>,
     <Specimen key="empty" title="EmptyState — the two states a listing can end in">
       <EmptyState
