@@ -39,6 +39,83 @@ lives here, in the artifact — not in a launch note. It does **not** mean commi
 is built end to end as the template the other pages copy, the performance gate is armed *before*
 the asset most likely to trip it exists, and the Home is last.
 
+## Run 4 (`wf_c57dabcc-9a2`, 2026-09-08) — Phase 4, and two gates that could not fail
+
+T017 accepted; T015 and T016 rejected, and both rejections were **reproduced by execution
+before anything was changed**. T018 was skipped cleanly on its ⛔ marker, which is what that
+marker was added for.
+
+Both defects are the same shape as everything this feature has hit: **a gate that reports
+success while checking nothing**, arrived at by a mechanism no unit test could see.
+
+### T015 — the budget printed `PASS  LCP 0ms` and exited 0 on six unreadable reports
+
+`lcp_ms_from_report` refuses a report whose `largest-contentful-paint` audit carries no numeric
+value — Lighthouse writes `scoreDisplayMode: "error"` for NO_LCP, a page that never painted, a
+failed navigation. It refused correctly, and **the caller threw the refusal away**. Measured on
+this tree (bash 5.3.15), by sourcing the real script and driving `measure_url` with an errored
+report:
+
+- `samples+=("$(lcp_ms_from_report "$report")")` — an **array append** — does not trip `set -e`
+  when its command substitution fails. All three runs proceeded; `samples` became three empty
+  strings; the median was the empty string.
+- `printf '%.0f' ""` prints `0` and **exits 0**. There is no status to check. `[ 0 -le 2500 ]`
+  passed, and the gate printed `── PASS  /  LCP 0ms` for all six pages and returned 0.
+- `main` calls the assertion as `assert_lcp_at_most … || failures+=("$page")`, and a trailing
+  `||` **suppresses errexit for the whole command** — so even the `printf` failure that aborts
+  that function when it is called bare does nothing in the context production uses.
+
+That last point caught this repair's own first draft: the new unit case called the function
+bare, where errexit rescued it, and passed against the unguarded script. It now runs it with the
+`||` attached, exactly as `main` does. The guard is on the **value**, not on an exit status,
+because that is the only thing true in both contexts.
+
+Also fixed, from the same rejection's secondary notes: `--throttling.rttMs`/`throughputKbps` are
+the **Lantern** keys, read only by `--throttling-method=simulate`. Under `devtools` the browser
+is throttled from `requestLatencyMs`/`downloadThroughputKbps` (`enableNetworkThrottling`,
+`core/lib/emulation.js`), which those flags never set — so the two flags the test asserted were
+**inert**, and the profile was right only because the unset keys fell back to `mobileSlow4G`'s
+own defaults. Both pairs are now passed explicitly, and `--max-wait-for-load` is pinned rather
+than inherited, because T016 sizes its asset against it.
+
+### T016 — the planted hero was too large to be measured at all
+
+12 MB (2000 x 2000 x 3 bytes of incompressible noise, measured at 12,021,354 bytes) against a
+throttle of 188,743 B/s is **63.7 seconds** on the wire, and Lighthouse abandons the load at
+`maxWaitForLoad` = 45,000 ms — verified by fetching `lighthouse@12.8.2` and reading
+`core/config/constants.js`, not from memory. An image LCP entry is emitted on load-and-paint, so
+an asset that never finishes loading is never an LCP candidate: the largest element that *does*
+paint is the `<h1>` beside it, at a fine LCP. The budget would have reported `── PASS  /`, and
+this script's verdict would then have printed *"the LCP budget PASSED with a deliberately
+oversized hero"* — **accusing a gate that was measuring correctly** and leaving
+`Performance budget can fail` permanently red.
+
+Nothing in the suite could have shown it: the npx stub's slowness comes from `FAKE_SLOW_URL`,
+never from the asset, so the measured value is identical whether a hero was planted or not.
+
+The hero now has **two** bounds, both derived from the budget script's own constants rather than
+retyped: a floor at four times the budget (1,887,430 B) and a ceiling at 60% of the load cap
+(5,096,061 B). `HERO_EDGE` drops 2000 → 1080, and the generated asset measures **3,505,983
+bytes** — 18.6s on the wire, 7.4x the budget it must blow and 41% of the cap it must fit inside.
+A test asserts the two scripts agree about throughput and cap, the way `ITEMS_PER_PAGE` is held
+against `lib/public/listing.ts`.
+
+The rejection's third note was a **concurrency** finding, and it is repaired too: this script
+rewrites a tracked source file in the shared working tree, and during the review a concurrent run
+left the tree half-mutated and corrupted two measurements. The damage is worse than a wrong
+number — the loser's `restore` copies its own backup over the winner's mutation, so a run can
+measure the real Home while reporting on a planted hero. It now takes a descriptor `flock` and
+refuses outright on a Home that already carries the marker. (`exec flock … "$0"` was the first
+draft and is wrong: `exec` replaces the shell, so the diagnostic can never print.)
+
+**Every new assertion was watched failing** against the code it condemns: the errored-report case
+and the non-numeric case against the pre-fix script (`── PASS  /projetos  LCP 0ms`), and the
+window cases against `HERO_EDGE=2000` (*"a 2000px hero needs 63.6s against a 45s cap"*, plus the
+script's own ceiling guard taking the end-to-end runs down with it).
+
+**Verified on this tree**: `pnpm lint` 0; `pnpm typecheck` 0 **both** with and without
+`payload-types.ts`; `pnpm test` 0 — 817 in `packages/ui`, 1,464 in `apps/web`.
+
 ## Run 3 (`wf_efd9f725-7d6`, 2026-09-08) — T010, and the same gate for the third time
 
 Nothing accepted. **T010's component was sound** — the verifier could not break it on the
@@ -200,9 +277,9 @@ without-types run and would otherwise have failed the pipeline.
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T015 | `scripts/lcp-budget.sh` — migrate, **seed**, build, start, wait for a real 200 with the `Host` header, then measure. Per URL, median of three, **LCP only**, never averaged across pages | FR-025, SC-006 | `scripts/lcp-budget.sh` | T012 |
-| T016 | `scripts/lcp-mutation.sh` — plant a deliberately oversized hero and require the budget to fail **naming the URL and the measured value**. Exit code alone is not accepted | SC-006, SC-012 | `scripts/lcp-mutation.sh` | T015 |
-| T017 | Two CI jobs: `Performance budget`, `Performance budget can fail`. The job must own a database the test job does not share — the suite destroys the seeded host domains | SC-006, SC-012 | `.github/workflows/ci.yml` | T016 |
+| T015 ✅ | `scripts/lcp-budget.sh` — migrate, **seed**, build, start, wait for a real 200 with the `Host` header, then measure. Per URL, median of three, **LCP only**, never averaged across pages | FR-025, SC-006 | `scripts/lcp-budget.sh` | T012 |
+| T016 ✅ | `scripts/lcp-mutation.sh` — plant a deliberately oversized hero and require the budget to fail **naming the URL and the measured value**. Exit code alone is not accepted | SC-006, SC-012 | `scripts/lcp-mutation.sh` | T015 |
+| T017 ✅ | Two CI jobs: `Performance budget`, `Performance budget can fail`. The job must own a database the test job does not share — the suite destroys the seeded host domains | SC-006, SC-012 | `.github/workflows/ci.yml` | T016 |
 | T018 ⛔ | **User action, repo-admin**: add both new contexts to required status checks on `main` and `dev`. Exactly as feature 002's T050, **which is still outstanding** along with `Colour tokens` and `Isolation harness can fail (public-path)` | SC-012 | — | T017 |
 
 ## Phase 5: The remaining pages, against the proven template
