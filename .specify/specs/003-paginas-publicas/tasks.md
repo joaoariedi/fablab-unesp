@@ -203,7 +203,7 @@ without-types run and would otherwise have failed the pipeline.
 | T015 | `scripts/lcp-budget.sh` — migrate, **seed**, build, start, wait for a real 200 with the `Host` header, then measure. Per URL, median of three, **LCP only**, never averaged across pages | FR-025, SC-006 | `scripts/lcp-budget.sh` | T012 |
 | T016 | `scripts/lcp-mutation.sh` — plant a deliberately oversized hero and require the budget to fail **naming the URL and the measured value**. Exit code alone is not accepted | SC-006, SC-012 | `scripts/lcp-mutation.sh` | T015 |
 | T017 | Two CI jobs: `Performance budget`, `Performance budget can fail`. The job must own a database the test job does not share — the suite destroys the seeded host domains | SC-006, SC-012 | `.github/workflows/ci.yml` | T016 |
-| T018 | **User action, repo-admin**: add both new contexts to required status checks on `main` and `dev`. Exactly as feature 002's T050, **which is still outstanding** along with `Colour tokens` and `Isolation harness can fail (public-path)` | SC-012 | — | T017 |
+| T018 ⛔ | **User action, repo-admin**: add both new contexts to required status checks on `main` and `dev`. Exactly as feature 002's T050, **which is still outstanding** along with `Colour tokens` and `Isolation harness can fail (public-path)` | SC-012 | — | T017 |
 
 ## Phase 5: The remaining pages, against the proven template
 
@@ -234,5 +234,7 @@ without-types run and would otherwise have failed the pipeline.
 
 ---
 
-**Legend**: `[P]` = parallelizable | `✅` = accepted and on disk | `FR-NNN` / `SC-NNN` / `US#`
+**Legend**: `[P]` = parallelizable | `✅` = accepted and on disk | `⛔` = outside the run's
+reach — it needs a human with repository-admin rights, so a workflow skips it rather than
+reporting it done | `FR-NNN` / `SC-NNN` / `US#`
 reference `spec.md`.
