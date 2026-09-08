@@ -39,6 +39,83 @@ lives here, in the artifact — not in a launch note. It does **not** mean commi
 is built end to end as the template the other pages copy, the performance gate is armed *before*
 the asset most likely to trip it exists, and the Home is last.
 
+## Runs 6 and 7 (2026-09-08) — a deadlock, then the number this feature exists to produce
+
+**Run 6 (`wf_7572b15c-9ff`) accepted nothing and never reached Phase 6.** T018 is a
+branch-protection change requiring repository-admin rights on GitHub, so no agent can perform
+it: every attempt is correctly refused, the phase gate reads that as a failed phase, and the run
+stops there permanently. It had survived run 5 only because that run's implementer happened to
+word its refusal as a success — the outcome turned on phrasing, not on anything real. A phase
+table is the work list a run executes, so T018 moved to § *Outstanding, and not executable by a
+run*. **Moving it did not close it**, and it has not been closed.
+
+**Run 7 (`wf_04209566-aa2`) reached Phase 6.** T025 accepted; T026 and T027 rejected.
+
+### T027 measured SC-006 and found it unmet — which is the point
+
+`scripts/lcp-budget.sh`, run unmodified against a scratch database: **`/` at 3360 ms against the
+2500 ms budget**, the five listing pages passing with ~740 ms to spare. The implementer recorded
+it, left the assertion red, and refused to soften the gate. That is the gate T015–T017 built
+doing exactly what it was built for, on the first page that could make it fail.
+
+The waterfall said the cause was not the hero alone: ~339 KB arrives before the LCP element on a
+188,743 B/s link, of which 229 KB is script and font bytes. The two honest levers were those
+bytes, or a hero small enough to fit what was left — roughly 40 KB.
+
+### T026 had dropped the fix
+
+`home.md` § *Adaptação mobile* records a dedicated vertical hero as **v2, oficial**, art
+delivered 2026-08-24, and strikes out the panoramic crop under an overlaid panel — which is
+exactly what a 390px visitor was getting, on the one page for which bespoke mobile art was
+commissioned. T025 handed that obligation forward in a comment; T026 did the layout work without
+it; no later task claimed it. So the missing requirement and T027's named lever were **the same
+change**, and neither rejection could be closed without it.
+
+The scene is cropped from `design/home-mobile.png` at 432w — **37,527 bytes** of AVIF against
+the panorama's 96,047. The crop drops the mockup's header bar (`HeaderNav` renders that) and
+stops above the fence sign, which shares its band with the drawn headline: cropping below it
+would bake `CRIE.` / `EXPERIMENTE.` / `TRANSFORME.` into the image while the page also renders
+those words as text. The two arts **partition** the viewport at `--bp-tablet` rather than forming
+a ladder, and both preload hints carry the same conditions — a `srcSet` ladder would have lost
+the budget outright, since Lighthouse's mobile profile is 412 CSS px at DPR 1.75 and a browser
+offered an 864w candidate takes it.
+
+**Re-measured: `/` at 2255 ms, 245 ms inside budget, every page green.** Linear arithmetic
+predicted only 310 ms of the 860 ms gap; the real saving was 1105 ms, because contention is not
+linear — a hero that finishes early stops competing, so the bytes behind it arrive sooner too.
+
+A second lever is measured and deliberately unspent: `comfortaa.woff2` is a 79,872-byte variable
+font that subsets to 27,900 for Latin + pt-BR, OFL-permitted, no visual change. It is recorded in
+`docs/lcp-measurements.md` as the first thing to reach for if the ~10% margin goes.
+
+### Three defects found by running the gate rather than reading it
+
+1. **`payload migrate` can hang the gate forever.** It prompts *"you've run Payload in dev mode …
+   data loss will occur. Proceed? (y/N)"* on any database carrying pushed rather than migrated
+   schema — which is any database an interrupted run left half-built. On a runner nobody answers,
+   so the job sits on an invisible prompt until `timeout-minutes: 45` kills it, with no error
+   text at all: the shape item 5 of the preamble records for `migrate:create`, recurring on a
+   different command. Now `--force-accept-warning`, correct for this caller alone because it
+   seeds from empty in the next step.
+2. **The documented reproduce line did not run.** It omitted `PAYLOAD_SECRET` and `CHROME_PATH`
+   and died at `── applying migrations`. CI supplies both, so the gap appears only on a developer
+   machine — the one place a reproduce line is read.
+3. **The hero reflowed on mobile.** The `img` width/height reserve the wide art's 1.20 ratio
+   while the mobile branch paints 0.675, so the page jumped when the portrait image decoded — a
+   layout shift that can re-elect the LCP candidate mid-load. The mobile rule now states its own
+   `aspect-ratio`.
+
+Two of this round's own bugs are worth the same note, because both are one trap: CSS written
+inside a template literal must contain neither a backtick nor tag syntax. A backtick ends the
+string; a literal `<img>` is rendered into the document by the `<style>` element and was then
+matched by four tests looking for the hero, which reported an `<img>` carrying no attributes at
+all.
+
+**Verified on this tree**: `pnpm lint` 0; `pnpm typecheck` 0 **both** with and without
+`payload-types.ts`; `pnpm test` 0 — 861 in `packages/ui`, 1,724 in `apps/web`; and the LCP gate
+green on all six pages, re-run against the committed tree rather than the one the first
+post-fix measurement was taken from.
+
 ## Run 5 (`wf_77a5d951-f8f`, 2026-09-08) — Phase 5, and five controls that looked like they worked
 
 T018 (⛔, skipped cleanly) and T024 accepted; T019, T020, T021, T022 and T023 rejected. Every
@@ -398,9 +475,9 @@ without-types run and would otherwise have failed the pipeline.
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T025 | The pixel-art hero: AVIF + WebP fallback, preloaded, never lazy, `image-rendering: pixelated`. **Record the measured byte counts** — they are a deliverable, not an assumption | FR-009, SC-006 | `apps/web/app/(frontend)/page.tsx` | T017 |
-| T026 | Home v1: hero, `ÚLTIMOS PROJETOS` carousel island, footer. **No gamified panels** — they read data only feature 005 creates (CLR-004) | FR-009, US1 | `apps/web/app/(frontend)/page.tsx` | T025 |
-| T027 | The budget re-measured with the real hero in place, per page, and recorded | SC-006 | — | T026 |
+| T025 ✅ | The pixel-art hero: AVIF + WebP fallback, preloaded, never lazy, `image-rendering: pixelated`. **Record the measured byte counts** — they are a deliverable, not an assumption | FR-009, SC-006 | `apps/web/app/(frontend)/page.tsx` | T017 |
+| T026 ✅ | Home v1: hero, `ÚLTIMOS PROJETOS` carousel island, footer. **No gamified panels** — they read data only feature 005 creates (CLR-004) | FR-009, US1 | `apps/web/app/(frontend)/page.tsx` | T025 |
+| T027 ✅ | The budget re-measured with the real hero in place, per page, and recorded | SC-006 | — | T026 |
 
 ## Phase 7: Acceptance
 
