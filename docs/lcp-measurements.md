@@ -10,12 +10,19 @@ every public page with the delivered hero on disk.
 list and the files in `apps/web/public/hero`, so it cannot quietly stop describing the tree it
 was taken from.
 
-**Verdict: every page is inside the budget. `/` measures 2243 ms against 2500 ms.**
+**Verdict: every page is inside the budget. `/` measures 2255 ms against 2500 ms.**
 
 It did not start there. The first run of this gate, against the panoramic hero the Home shipped
 with, measured **3360 ms** — 860 ms over. § *What the miss was made of, and what closed it*
 records both numbers, because the arithmetic is the useful part: the fix was not "make the hero
-smaller" in general, and the margin now is 257 ms rather than comfortable.
+smaller" in general, and the margin now is 245 ms rather than comfortable.
+
+**This transcript is the run that matches the committed tree.** An earlier post-fix run measured
+`/` at 2243 ms, before the mobile rule was given its own `aspect-ratio` — the two differ by
+12 ms, which is the run-to-run variance of a median-of-three on a bandwidth-bound metric, and is
+the reason the margin is quoted rather than the exact figure treated as a constant. The 2243 run
+is not recorded here: a measurement taken from a tree that is not this one is a number nobody
+can reproduce.
 
 ## The profile it was measured on
 
@@ -66,12 +73,12 @@ wire, which is where the 860 ms went.
 ── building
 ── production server starting on port 3100 (pid 1712446)
 ── ready: http://127.0.0.1:3100/ answered 200 as Host: localhost (attempt 2/60)
-── PASS  /                LCP 2243ms (budget 2500ms)
-── PASS  /projetos        LCP 1762ms (budget 2500ms)
-── PASS  /artigos         LCP 1758ms (budget 2500ms)
-── PASS  /aulas           LCP 1761ms (budget 2500ms)
+── PASS  /                LCP 2255ms (budget 2500ms)
+── PASS  /projetos        LCP 1759ms (budget 2500ms)
+── PASS  /artigos         LCP 1760ms (budget 2500ms)
+── PASS  /aulas           LCP 1758ms (budget 2500ms)
 ── PASS  /biblioteca-3d   LCP 1762ms (budget 2500ms)
-── PASS  /calendario      LCP 1764ms (budget 2500ms)
+── PASS  /calendario      LCP 1766ms (budget 2500ms)
 ── PASS: every public page is within the 2500ms LCP budget on the 4G profile.
 ```
 
@@ -81,12 +88,12 @@ Median of three runs, LCP only, never averaged across pages.
 
 | Page | Median LCP (ms) | Budget (ms) | Verdict |
 |---|---|---|---|
-| / | 2243 | 2500 | within budget, by 257 ms |
-| /projetos | 1762 | 2500 | within budget |
-| /artigos | 1758 | 2500 | within budget |
-| /aulas | 1761 | 2500 | within budget |
+| / | 2255 | 2500 | within budget, by 245 ms |
+| /projetos | 1759 | 2500 | within budget |
+| /artigos | 1760 | 2500 | within budget |
+| /aulas | 1758 | 2500 | within budget |
 | /biblioteca-3d | 1762 | 2500 | within budget |
-| /calendario | 1764 | 2500 | within budget |
+| /calendario | 1766 | 2500 | within budget |
 
 ## What the miss was made of, and what closed it
 
@@ -135,7 +142,7 @@ same condition, so a phone does not fetch the panorama it will never paint — i
 was both the missing requirement and the named lever.
 
 Linear arithmetic predicted a 310 ms saving (58,520 fewer bytes at 188,743 B/s), which would have
-left the Home at ~3050 ms and still over. The measured saving was **1117 ms**. Contention is not
+left the Home at ~3050 ms and still over. The measured saving was **1105 ms**. Contention is not
 linear: a hero that finishes early stops competing, so the scripts and fonts behind it also
 arrive sooner, and the LCP element is no longer waiting on a queue it was itself lengthening.
 
