@@ -26,3 +26,6 @@
 @import './tokens/palette.css';
 @import './tokens/typography.css';
 @import './tokens/layout.css';
+/* Last, and a rule rather than tokens: the focus ring reads the palette above and must be the
+   floor every component's own `:focus-visible` can still override (T028 / FR-023). */
+@import './tokens/focus.css';

@@ -150,8 +150,11 @@ export const EMPTY_STATE_CSS = `
 }
 .${CLASS.acao}:focus-visible {
   /* FR-023 / SC-009 — the 2px ring projetos.md § Estados requires on every interactive target.
-     Claro, not the accent: the ring sits ON the accent fill, where pink on pink is invisible. */
-  outline: 2px solid var(--color-claro);
+     Not the accent: the ring sits ON the accent fill, where pink on pink is 1.00:1. Claro was
+     the first answer and it is not enough either — measured at **1.62:1** on that fill, against
+     WCAG 1.4.11's 3:1 for a non-text indicator. Navy is 8.12:1, and it is already the label
+     colour PRIMARY_BUTTON_STYLE paints here, so the ring matches the text it surrounds. */
+  outline: 2px solid var(--color-navy);
   outline-offset: 2px;
 }
 `

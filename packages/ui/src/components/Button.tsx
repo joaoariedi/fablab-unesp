@@ -49,11 +49,21 @@ export interface ButtonProps {
  * The canonical primary identity (FR-006), exported so the workbench (FR-016) and any future
  * variant can be read against it rather than restating it.
  */
-export const PRIMARY_BUTTON_STYLE: CSSProperties = {
+export const PRIMARY_BUTTON_STYLE = {
   // The per-organization accent, never the private raw default it falls back to: the two
   // render identically for CITe and diverge only once a second organization exists (CLR-001).
   background: 'var(--color-primary)',
   color: 'var(--color-navy)',
+  // The focus ring, on the one surface the global rule cannot guess: its own fill.
+  // `tokens/focus.css` resolves `--focus-ring-color` to the accent, and the accent on the
+  // accent is **1.00:1** — the ring vanishes on precisely the control a keyboard visitor is
+  // most likely to be aiming for. Navy scores 8.12:1 here and is already this button's label
+  // colour, so the ring is the text it rings rather than a third decision.
+  //
+  // Declared here rather than per page because this object IS the canonical primary
+  // (visual-identity.md, 2026-08-23): every CTA that spreads it inherits the fix, and one that
+  // paints the accent by hand does not — which `breakpoints-focus.test.ts` § 3 now scores.
+  '--focus-ring-color': 'var(--color-navy)',
   // The token, not `4px 4px 0 …` inline: a second definition is free to drift soft, and
   // `--shadow-hard`'s 0 blur is the whole point of the name.
   boxShadow: 'var(--shadow-hard)',
@@ -66,7 +76,7 @@ export const PRIMARY_BUTTON_STYLE: CSSProperties = {
   fontFamily: 'var(--font-body)',
   fontSize: 'var(--text-base)',
   cursor: 'pointer',
-}
+} as CSSProperties
 
 /**
  * The primary call to action: pink fill, navy label, hard offset shadow.

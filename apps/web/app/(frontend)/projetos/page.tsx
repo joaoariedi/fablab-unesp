@@ -390,12 +390,16 @@ const ESTILO: Record<string, CSSProperties> = {
   pagina_: { display: 'flex', flexDirection: 'column' },
   hero: {
     background: 'var(--surface-band)',
+    // The ring must follow the BAND, not only the page: the accent on this teal scores 1.13:1
+    // against WCAG 1.4.11's 3:1, so the ring on every target inside the band was invisible.
+    // Navy on teal is 7.18:1 and is the documented pair.
+    '--focus-ring-color': 'var(--text-on-light)',
     color: 'var(--text-on-light)',
     padding: 'var(--space-10) var(--space-5)',
     display: 'flex',
     flexDirection: 'column',
     gap: 'var(--space-4)',
-  },
+  } as CSSProperties,
   heroTitulo: {
     margin: 0,
     fontFamily: 'var(--font-display)',

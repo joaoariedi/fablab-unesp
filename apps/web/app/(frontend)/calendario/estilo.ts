@@ -103,13 +103,17 @@ export const ESTILO: Record<string, CSSProperties> = {
   },
   hero: {
     background: 'var(--surface-band)',
+    // The ring must follow the BAND, not only the page: the accent on this teal scores 1.13:1
+    // against WCAG 1.4.11's 3:1, so the ring on every target inside the band was invisible.
+    // Navy on teal is 7.18:1 and is the documented pair.
+    '--focus-ring-color': 'var(--text-on-light)',
     // Navy on teal is the documented pair; the light-on-dark default would be unreadable here.
     color: 'var(--text-on-light)',
     padding: 'var(--space-10) var(--space-5)',
     display: 'flex',
     flexDirection: 'column',
     gap: 'var(--space-4)',
-  },
+  } as CSSProperties,
   heroTitulo: {
     margin: 0,
     fontFamily: 'var(--font-display)',
@@ -198,13 +202,16 @@ export const ESTILO: Record<string, CSSProperties> = {
     minHeight: '44px',
     padding: '0 var(--space-4)',
     background: 'var(--color-primary)',
+    // On the accent fill the ring would be 1.00:1 — see PRIMARY_BUTTON_STYLE, which carries the
+    // same override for every CTA that spreads it. This region paints the fill by hand.
+    '--focus-ring-color': 'var(--color-navy)',
     color: 'var(--text-on-light)',
     border: 'none',
     borderRadius: 'var(--radius-sm)',
     boxShadow: 'var(--shadow-hard)',
     fontFamily: 'var(--font-display)',
     fontSize: 'var(--text-sm)',
-  },
+  } as CSSProperties,
   cabecalhoColuna: {
     fontFamily: 'var(--font-display)',
     fontSize: 'var(--text-xs)',

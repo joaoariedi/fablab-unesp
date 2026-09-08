@@ -1,0 +1,68 @@
+/*
+ * @fablab/ui — the keyboard focus ring (T028 / FR-023, SC-009).
+ *
+ * `spec.md` FR-023: *"Keyboard focus is visible on every interactive target"*; the page specs
+ * fix the drawing — `artigos.md` § *Hover / foco*: *"Foco visível obrigatório em todos os alvos
+ * interativos (WCAG AA)"*, `aulas.md` § *Estados*: *"Foco de teclado com anel visível de 2px
+ * (contraste AA) em card, busca e botões"*.
+ *
+ * ── Why one global rule, and not a ring per component ───────────────────────────────────────
+ *
+ * Six pages put ~60 interactive targets in front of a visitor: category tabs, the search field,
+ * three filter selects, the sidebar's category links, the pagination row, the calendar's month
+ * arrows and view switch, every card arrow. Most of them are style objects (`Tabs`, `Pagination`,
+ * `SearchInput`, and the pages' own `ESTILO` records), and a style object *cannot express
+ * `:focus-visible` at all* — React has no pseudo-class. A per-component ring would therefore
+ * have meant giving every one of those a stylesheet, and the ring would still be absent from
+ * whichever control was added next. Here it is the default: a new control is covered by the rule
+ * before anyone remembers it exists.
+ *
+ * ── Why `:where()` ─────────────────────────────────────────────────────────────────────────
+ *
+ * `:where()` contributes **zero** specificity, so this rule is the floor and never the ceiling:
+ * `.fl-empty-state__acao:focus-visible` (0,2,0) and `.fl-card-projeto__seta:focus-visible` still
+ * win, which is what lets a control on a pink fill keep the `--color-claro` ring it needs. With
+ * `:is()` — or a bare selector list — the two rings would collide on specificity and the winner
+ * would depend on import order.
+ *
+ * ── Why the colour is a token a region can re-declare ───────────────────────────────────────
+ *
+ * No single colour clears WCAG 1.4.11's 3:1 on both surfaces this product paints. The accent
+ * scores 8.12:1 on navy and **2.05:1 on the white content area** of Biblioteca 3D and Aulas —
+ * invisible on exactly the two pages FR-028 already singles out. So the ring is a custom
+ * property with the navy-page value at `:root`, and the light pages re-declare it beside the
+ * `--surface-page` they already re-declare (`--focus-ring-color: var(--text-on-light)`), the
+ * same mechanism `--surface-card` uses to follow a region rather than name a colour.
+ *
+ * ── Why this file lives under tokens/ ──────────────────────────────────────────────────────
+ *
+ * It carries a rule, not only tokens, which no other file here does. `styles.css` is the single
+ * entry the app imports and `tests/styles-entry.test.ts` requires every one of its imports to
+ * resolve under `./tokens/`; a sibling directory would be an import that test rejects. The
+ * colour-fence exemption on this directory is NOT why it is here — there is no literal below,
+ * and there must not be one.
+ */
+
+:root {
+  /* "anel visível de 2px": the width the design names. A 1px ring is what a browser default
+     already draws, which is the state this file exists to replace. */
+  --focus-ring-width: 2px;
+  /* Drawn outside the element, never on its own fill: a filled control (the pink CTA, the
+     current page's chip) swallows a ring painted on top of it. */
+  --focus-ring-offset: 2px;
+  /* The per-organization accent on the navy base — never the private raw pink behind it
+     (CLR-001), which renders identically for CITe and stops following a theme for anyone else. */
+  --focus-ring-color: var(--color-primary);
+}
+
+/*
+ * Every shape that holds keyboard focus. `a`/`area` only with an `href`, because an anchor
+ * without one is not in the tab order; `[tabindex="0"]` for the controls made focusable by hand
+ * (the carousel's rail is one). `tabindex="-1"` is deliberately absent: it is focusable only
+ * programmatically, and a ring there would fire on a click, which is what `:focus-visible`
+ * exists to avoid.
+ */
+:where(a[href], area[href], button, input, select, textarea, summary, [tabindex="0"]):focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}

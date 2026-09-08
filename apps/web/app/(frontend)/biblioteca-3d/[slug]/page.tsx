@@ -335,6 +335,12 @@ const ESTILO: Record<string, CSSProperties> = {
   },
   cabecalho: {
     background: 'var(--surface-band)',
+    // The ring must follow the BAND, not only the page. `--focus-ring-color` resolves from
+    // `:root` (or the page's own override) to the accent, and the accent on this teal scores
+    // **1.13:1** — WCAG 1.4.11 asks 3:1 for a focus indicator, so the ring on every target
+    // inside this band was invisible while the page-level override two rules away made the
+    // rest of the page correct. Navy on teal is 7.18:1 and is the documented pair.
+    '--focus-ring-color': 'var(--text-on-light)',
     // Navy on teal is the documented pair; the light-on-dark default would be unreadable here.
     color: 'var(--text-on-light)',
     padding: 'var(--space-8) var(--space-5)',
@@ -342,7 +348,7 @@ const ESTILO: Record<string, CSSProperties> = {
     flexDirection: 'column',
     alignItems: 'flex-start',
     gap: 'var(--space-3)',
-  },
+  } as CSSProperties,
   voltar: {
     fontFamily: 'var(--font-display)',
     fontSize: 'var(--text-sm)',

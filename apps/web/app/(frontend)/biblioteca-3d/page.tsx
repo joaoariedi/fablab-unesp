@@ -699,16 +699,26 @@ const ESTILO: Record<string, CSSProperties> = {
   // the cards would inherit that navy however this region redefines the page beneath them.
   pagina_: {
     '--surface-page': 'var(--surface-inverted)', '--surface-card': 'var(--surface-inverted)',
+    '--focus-ring-color': 'var(--text-on-light)',
+    // T028 / FR-023: the ring follows the region, exactly as the two surfaces above do. The
+    // `:root` default is the accent, which scores 2.05:1 on this white content area — a ring
+    // nobody can see. Navy scores 16.63:1 here and is the ink this page already writes in.
     background: 'var(--surface-page)', color: 'var(--text-on-light)',
     display: 'flex', flexDirection: 'column',
   } as CSSProperties,
   sidebar: {
     background: 'var(--surface-band)',
+    // The ring must follow the BAND, not only the page. `--focus-ring-color` resolves from
+    // `:root` (or the page's own override) to the accent, and the accent on this teal scores
+    // **1.13:1** — WCAG 1.4.11 asks 3:1 for a focus indicator, so the ring on every target
+    // inside this band was invisible while the page-level override two rules away made the
+    // rest of the page correct. Navy on teal is 7.18:1 and is the documented pair.
+    '--focus-ring-color': 'var(--text-on-light)',
     // Navy on teal is the documented pair; the light-on-dark default would be unreadable here.
     color: 'var(--text-on-light)',
     padding: 'var(--space-8) var(--space-5)',
     display: 'flex', flexDirection: 'column', gap: 'var(--space-5)',
-  },
+  } as CSSProperties,
   sidebarTitulo: {
     margin: 0, fontFamily: 'var(--font-display)',
     fontSize: 'var(--text-3xl)', textTransform: 'uppercase',
@@ -720,9 +730,14 @@ const ESTILO: Record<string, CSSProperties> = {
     display: 'flex', flexDirection: 'column', gap: 'var(--space-3)',
     // "card navy com contorno claro, cantos arredondados" — the one navy block inside the band.
     background: 'var(--color-navy)', color: 'var(--text-on-dark)',
+    // A navy island on a light page. The page re-declares `--focus-ring-color` to navy for its
+    // white surface, so a target in here would ring navy on navy — 1.00:1. The accent is
+    // 8.12:1 on navy and is what `:root` uses for exactly this surface, so the island hands
+    // the ring back rather than inventing a third colour.
+    '--focus-ring-color': 'var(--color-primary)',
     border: '1px solid var(--color-claro)', borderRadius: 'var(--radius-md)',
     padding: 'var(--space-4)',
-  },
+  } as CSSProperties,
   categoriasTitulo: {
     margin: 0, fontFamily: 'var(--font-display)',
     fontSize: 'var(--text-sm)', letterSpacing: '0.08em',
@@ -749,9 +764,12 @@ const ESTILO: Record<string, CSSProperties> = {
     minHeight: '44px', padding: '0 var(--space-4)', borderRadius: 'var(--radius-md)',
     // Navy ink ON the accent, never the accent AS ink (FR-028).
     background: 'var(--color-primary)', color: 'var(--text-on-light)',
+    // On the accent fill the ring would be 1.00:1 — see PRIMARY_BUTTON_STYLE, which carries the
+    // same override for every CTA that spreads it. This region paints the fill by hand.
+    '--focus-ring-color': 'var(--color-navy)',
     border: '1px solid var(--text-on-light)', cursor: 'pointer',
     fontFamily: 'var(--font-display)', fontSize: 'var(--text-sm)',
-  },
+  } as CSSProperties,
   numero: {
     // Navy, not the mockup's pink: this is small text on white (FR-028).
     color: 'var(--text-on-light)', border: '1px solid var(--text-on-light)',
@@ -761,8 +779,13 @@ const ESTILO: Record<string, CSSProperties> = {
   thumb: {
     // The render keeps its navy ground inside the white card (round 2, 2026-08-23).
     background: 'var(--color-navy)', borderRadius: 'var(--radius-sm)', overflow: 'hidden',
+    // A navy island on a light page. The page re-declares `--focus-ring-color` to navy for its
+    // white surface, so a target in here would ring navy on navy — 1.00:1. The accent is
+    // 8.12:1 on navy and is what `:root` uses for exactly this surface, so the island hands
+    // the ring back rather than inventing a third colour.
+    '--focus-ring-color': 'var(--color-primary)',
     flex: '0 0 auto', width: '96px', height: '96px', display: 'block',
-  },
+  } as CSSProperties,
   thumbImg: { display: 'block', width: '100%', height: '100%', objectFit: 'cover' },
   corpo: { display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', minWidth: 0, flex: 1 },
   titulo: {

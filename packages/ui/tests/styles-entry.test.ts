@@ -9,7 +9,7 @@ import { afterAll, describe, expect, it } from 'vitest'
  * T001d / FR-001 — `src/styles.css` is the entry the `./styles.css` export points at.
  *
  * The app gets ONE stylesheet import; this file is what makes that true. It is an
- * aggregator and nothing else: three `@import`s, no declarations of its own.
+ * aggregator and nothing else: four `@import`s, no declarations of its own.
  *
  * ── The assertion this file exists for ──────────────────────────────────────────────────
  *
@@ -32,11 +32,14 @@ const TOKENS_DIR = fileURLToPath(new URL('../src/tokens', import.meta.url))
 const REPO_ROOT = fileURLToPath(new URL('../../..', import.meta.url))
 const FENCE_SCRIPT = join(REPO_ROOT, 'scripts', 'check-colour-tokens.sh')
 
-/** In cascade order: palette defines the colours the other two may reference. */
+/** In cascade order: palette defines the colours the three below it may reference. */
 const EXPECTED_IMPORTS = [
   './tokens/palette.css',
   './tokens/typography.css',
   './tokens/layout.css',
+  // T028: the global focus ring (FR-023). Last, because it resolves `--color-primary` from the
+  // palette above; under tokens/ because this list requires it — see the file's own header.
+  './tokens/focus.css',
 ]
 
 /** `@import url('x')`, `@import "x"` and `@import 'x';` all reduce to the path. */
@@ -101,7 +104,7 @@ describe('packages/ui/src/styles.css', () => {
     expect(() => readStyles()).not.toThrow()
   })
 
-  it('imports palette, typography and layout, in that order and nothing else', () => {
+  it('imports palette, typography, layout and focus, in that order and nothing else', () => {
     expect(parseImportPaths(readStyles())).toEqual(EXPECTED_IMPORTS)
   })
 

@@ -39,6 +39,68 @@ lives here, in the artifact — not in a launch note. It does **not** mean commi
 is built end to end as the template the other pages copy, the performance gate is armed *before*
 the asset most likely to trip it exists, and the Home is last.
 
+## Run 8 (`wf_93e35585-341`, 2026-09-08) — Phase 7, and a gate blind to the medium it polices
+
+T029 and T030 accepted; T028 rejected on both lenses, and both rejections were right.
+
+### The gate could not see where the pages write
+
+All six pages express layout and outlines as `ESTILO: Record<string, CSSProperties>` objects,
+rendered into `style="…"` attributes. T028's scanner read `<style>` blocks only. Reproduced
+before changing anything: adding `outline: 'none'` to `ESTILO.titulo` in `biblioteca-3d/page.tsx`
+— the object applied to every card-title link on that listing — left all **47 cases green**. The
+global ring is `:where(…)`, zero specificity by design, so any inline `outline: none` beats it
+and the ring is gone for a keyboard visitor while looking perfect to a mouse. That is verbatim
+the defect the case's own comment claims to catch. A planted 900px inline box passed too.
+
+The scan now reads both media, and the box check strips `@media` preludes — without which every
+breakpoint reads as an oversized box, which it did on the first attempt, on all six pages.
+
+### §1 was a lint, not a breakpoint test — and the unit took three tries
+
+SC-010's stated method is *"breakpoint tests per page, **as feature 001 did for the shell**"*,
+and `shell.test.ts` RESOLVES the cascade at each width. Its docblock names what the weaker form
+misses: a block that is empty, one a later base rule overrides, and one that sets a property to
+what it already was. §1 counted queries and evaluated nothing.
+
+The resolver is ported. Finding the right unit needed two measured failures of my own:
+
+- **per page** — making `LISTING_GRID_CSS`'s 834 query restate the mobile column count left all
+  67 cases green, because `CardProjeto`'s live 834 rules changed something else in the same page;
+- **per stylesheet** — no better, and for a reason worth recording: React 19 hoists every
+  `<style href precedence>` and each page renders exactly **one**, so "per sheet" and "per page"
+  are the same partition. Probed, not assumed.
+- **per rule** — a media rule is dead when every declaration it makes is already in force at the
+  target below it. That kills the mutant, on exactly the two pages that render the grid.
+
+### The ring was scored against one surface per page, and the pages have several
+
+The contrast case flattened every custom property into one map and scored the last
+`--focus-ring-color` against the last `--surface-page`. Each page carries a teal `--surface-band`
+hero or sidebar with its own targets, and **the accent on that teal is 1.13:1** against WCAG
+1.4.11's 3:1. Worse, the model misreported in both directions: once the bands were given their
+own ring, the flattened map took *that* as the page's and scored navy-on-navy.
+
+It now scores every (ring, surface) that actually co-occurs, with the root defaults kept separate
+from the per-region declarations. That found three real failures beyond the reported one:
+
+- **the ring on the accent fill is 1.00:1** — pink on pink, on the CTA a keyboard visitor is
+  most likely aiming for. Fixed in `PRIMARY_BUTTON_STYLE` itself, so every CTA that spreads the
+  canonical primary inherits it;
+- **`EmptyState`'s ring was 1.62:1** — its comment had the right instinct (*"not the accent: pink
+  on pink is invisible"*) and the wrong colour. Navy is 8.12:1 and is already that button's label;
+- **navy islands on the light pages** inherit those pages' navy ring, 1.00:1 — the thumbnail box
+  and the numbered chip. They hand the ring back to the accent.
+
+Nine regions across eight files now declare a ring; `csstype` has no index signature for custom
+properties, so each carries the `as CSSProperties` cast the pages already used for
+`--surface-page`.
+
+**Verified on this tree**: `pnpm lint` 0; `pnpm typecheck` 0 **both** with and without
+`payload-types.ts`; `pnpm test` 0 — 862 in `packages/ui`, 1,806 in `apps/web`. Every new
+assertion watched failing against the code it condemns, including the two mutants that had
+defeated the original.
+
 ## Runs 6 and 7 (2026-09-08) — a deadlock, then the number this feature exists to produce
 
 **Run 6 (`wf_7572b15c-9ff`) accepted nothing and never reached Phase 6.** T018 is a
@@ -483,9 +545,9 @@ without-types run and would otherwise have failed the pipeline.
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T028 | Breakpoint tests per page at 390 / 834 / 1440, and a visible focus ring on every interactive target | FR-021, FR-023, SC-009, SC-010 | `apps/web/tests/public/` | T023, T026 |
-| T029 | `PageStub` has no importer left among the five routes it was written for | FR-001, SC-001 | `apps/web/tests/public/` | T026 |
-| T030 | Every feature-000/001/002 gate still passes, and the two new ones are **verified against the live protection API** rather than assumed | SC-012 | — | T028, T029 |
+| T028 ✅ | Breakpoint tests per page at 390 / 834 / 1440, and a visible focus ring on every interactive target | FR-021, FR-023, SC-009, SC-010 | `apps/web/tests/public/` | T023, T026 |
+| T029 ✅ | `PageStub` has no importer left among the five routes it was written for | FR-001, SC-001 | `apps/web/tests/public/` | T026 |
+| T030 ✅ | Every feature-000/001/002 gate still passes, and the two new ones are **verified against the live protection API** rather than assumed | SC-012 | — | T028, T029 |
 
 ---
 

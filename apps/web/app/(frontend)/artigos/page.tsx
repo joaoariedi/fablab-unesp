@@ -456,12 +456,18 @@ const ESTILO: Record<string, CSSProperties> = {
   pagina_: { display: 'flex', flexDirection: 'column' },
   hero: {
     background: 'var(--surface-band)',
+    // The ring must follow the BAND, not only the page. `--focus-ring-color` resolves from
+    // `:root` (or the page's own override) to the accent, and the accent on this teal scores
+    // **1.13:1** — WCAG 1.4.11 asks 3:1 for a focus indicator, so the ring on every target
+    // inside this band was invisible while the page-level override two rules away made the
+    // rest of the page correct. Navy on teal is 7.18:1 and is the documented pair.
+    '--focus-ring-color': 'var(--text-on-light)',
     color: 'var(--text-on-light)',
     padding: 'var(--space-10) var(--space-5)',
     display: 'flex',
     flexDirection: 'column',
     gap: 'var(--space-4)',
-  },
+  } as CSSProperties,
   heroTitulo: {
     margin: 0,
     fontFamily: 'var(--font-display)',
