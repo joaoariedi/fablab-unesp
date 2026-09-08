@@ -374,7 +374,14 @@ without-types run and would otherwise have failed the pipeline.
 | T015 ✅ | `scripts/lcp-budget.sh` — migrate, **seed**, build, start, wait for a real 200 with the `Host` header, then measure. Per URL, median of three, **LCP only**, never averaged across pages | FR-025, SC-006 | `scripts/lcp-budget.sh` | T012 |
 | T016 ✅ | `scripts/lcp-mutation.sh` — plant a deliberately oversized hero and require the budget to fail **naming the URL and the measured value**. Exit code alone is not accepted | SC-006, SC-012 | `scripts/lcp-mutation.sh` | T015 |
 | T017 ✅ | Two CI jobs: `Performance budget`, `Performance budget can fail`. The job must own a database the test job does not share — the suite destroys the seeded host domains | SC-006, SC-012 | `.github/workflows/ci.yml` | T016 |
-| T018 ⛔ | **User action, repo-admin**: add both new contexts to required status checks on `main` and `dev`. Exactly as feature 002's T050, **which is still outstanding** along with `Colour tokens` and `Isolation harness can fail (public-path)` | SC-012 | — | T017 |
+
+> **T018 is not in the table above, deliberately — see § *Outstanding, and not executable by a
+> run* at the end of this file.** It is a repository-admin action on GitHub branch protection,
+> and a phase table is the work list a run executes. Leaving it there deadlocked run 6: a task
+> an agent cannot perform is rejected on every attempt, the phase gate halts, and Phases 6 and 7
+> are never reached. It survived run 5 only because that run's implementer happened to word its
+> refusal as a success. **Moving it is not closing it** — SC-012 is genuinely unmet until the
+> contexts are required, and the section below is where that is tracked.
 
 ## Phase 5: The remaining pages, against the proven template
 
@@ -402,6 +409,56 @@ without-types run and would otherwise have failed the pipeline.
 | T028 | Breakpoint tests per page at 390 / 834 / 1440, and a visible focus ring on every interactive target | FR-021, FR-023, SC-009, SC-010 | `apps/web/tests/public/` | T023, T026 |
 | T029 | `PageStub` has no importer left among the five routes it was written for | FR-001, SC-001 | `apps/web/tests/public/` | T026 |
 | T030 | Every feature-000/001/002 gate still passes, and the two new ones are **verified against the live protection API** rather than assumed | SC-012 | — | T028, T029 |
+
+---
+
+## Outstanding, and not executable by a run
+
+### T018 ⛔ — make the two performance gates merge-blocking (SC-012)
+
+**Owner: the PO, or anyone with repository-admin rights on `joaoariedi/fablab-unesp`.** No agent
+can do this: it is GitHub branch-protection configuration, which lives outside this tree.
+
+**Verified against the live protection API on 2026-09-08**, not against `ci.yml`:
+
+```
+gh api repos/joaoariedi/fablab-unesp/branches/{main,dev}/protection \
+  --jq '.required_status_checks.contexts'
+```
+
+Both branches carry the same eleven contexts, and **four gates that run on every PR are not
+among them** — so each is advisory today, and a pull request that violates it can be merged:
+
+| Missing context | Job | Required now? |
+|---|---|---|
+| `Colour tokens` | `ci.yml` § *Colour tokens* | **yes** — the job is on `dev` already |
+| `Isolation harness can fail (public-path)` | the third `layer:` of the isolation matrix | **yes** — same |
+| `Performance budget` | `ci.yml` § *Performance budget* | only after 003 merges |
+| `Performance budget can fail` | `ci.yml` § *Performance budget can fail* | only after 003 merges |
+
+The last two exist **only on this branch**. Requiring a context that never appears blocks every
+merge forever, so they can be added only once 003 is on `dev`. The first two are inherited from
+feature 002's T050, which that file records as *"correctly rejected and stays ⛔"* — the same
+gap, now a feature older.
+
+No job carries an `if:` condition, so nothing is conditionally skipped and none of the four can
+hang a PR by never reporting.
+
+The additive endpoint, which does not require restating the existing list:
+
+```
+for b in main dev; do
+  gh api -X POST "repos/joaoariedi/fablab-unesp/branches/$b/protection/required_status_checks/contexts" \
+    -f 'contexts[]=Colour tokens' \
+    -f 'contexts[]=Isolation harness can fail (public-path)'
+done
+# and, once 003 is merged to dev:
+#   -f 'contexts[]=Performance budget' -f 'contexts[]=Performance budget can fail'
+```
+
+**T030 depends on this.** Its wording is *"the two new ones are verified against the live
+protection API rather than assumed"* — which is a check that will report the gap above until the
+contexts are added, and is correct to.
 
 ---
 
