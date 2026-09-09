@@ -275,7 +275,11 @@ English message. The verifier also found T049's gate only pins the *open* set an
 re-measures the 79 ticks, which is why a wrong tick survived; that weakness is recorded here
 rather than silently patched.
 
-**T050 is correctly rejected and stays ⛔.** SC-012 is genuinely unmet: `Colour tokens` and
+**T050 — closed 2026-09-09, one feature later.** It was correctly rejected here and stayed ⛔
+until the PO added the contexts to branch protection on `main` and `dev`; both branches now
+require all fifteen of `ci.yml`'s checks, verified against the live protection API in both
+directions. The paragraph below records why it was rejected, and it was right for the whole of
+feature 003: SC-012 is genuinely unmet: `Colour tokens` and
 `Isolation harness can fail (public-path)` run on every PR and neither is a required status
 check on `main` or `dev`. Verified against the live protection API. **This is the PO's action**
 — it needs repository-admin rights — and it is the last thing standing between feature 002 and
@@ -503,7 +507,7 @@ reason against the enlarged matrix.
 | T047 ✅ | Migration for the twelve | FR-001 | `apps/web/migrations/` | T044 |
 | T048 ✅ | [P] Content-model docs and CHANGELOG | — | `docs/`, `CHANGELOG.md` | T044 |
 | T049 ✅ | Tick CHK001–CHK095 across all four checklists against the implementation; **leave open anything not genuinely satisfied** | all | `checklists/requirements.md` | T045, T046 |
-| T050 ⛔ | Confirm every feature-000 and feature-001 gate still passes and the new ones are merge-blocking — **verified against the live protection API**, not the workflow file | SC-012 | protection API, `.github/workflows/ci.yml` | T049 |
+| T050 ✅ | Confirm every feature-000 and feature-001 gate still passes and the new ones are merge-blocking — **verified against the live protection API**, not the workflow file | SC-012 | protection API, `.github/workflows/ci.yml` | T049 |
 
 ## Coverage
 
