@@ -1,49 +1,61 @@
 # Requirements Checklist: 003-paginas-publicas
 <!-- Auto-generated from spec.md by /speckit.specify -->
-<!-- Date: 2026-09-06 -->
+<!-- Date: 2026-09-06 | Adjudicated against the merged implementation 2026-09-09 -->
 
 Requirement *quality* checks — whether each requirement is well-formed enough to build and to
 test. Not implementation tests. Tick a row only when the answer is evidenced, not assumed.
 
+**Adjudicated after the fact, which is not how this is meant to work.** The checklist step was
+skipped for 003: the pipeline ran specify → clarify → plan → review → tasks → implement, and
+these forty rows sat untouched from 2026-09-06 until the feature had shipped. Read as a
+pre-implementation gate they are late. Read as a post-mortem they are unusually well evidenced,
+because eight workflow runs and ~40 adjudicated rejections have since said which of these
+questions had teeth.
+
+Every `[ ]` carries an **OPEN** rationale naming what is still true, the way feature 002's
+`checklists-adjudicated.test.ts` requires of its own set. Nothing is ticked because it looks
+reasonable; each `[x]` names the artefact that answers it.
+
 | ID | Requirement (from FR) | Quality Check | Status |
 |----|----------------------|---------------|--------|
-| CHK001 | FR-001: placeholders replaced | Is "no remaining importer of `PageStub`" checkable by a command rather than by reading? | [ ] |
-| CHK002 | FR-002: public reads via the choke point | Does the requirement name the exact function, so a reviewer cannot satisfy it with a different one? [clarity] | [ ] |
-| CHK003 | FR-003: published-only | Is "including by direct slug" stated, so the obvious listing-only reading is closed? [completeness] | [ ] |
-| CHK004 | FR-003 | Does a negative case exist — content that must NOT appear — rather than only a positive one? [testability] | [ ] |
-| CHK005 | FR-004..FR-009: the six pages | Does each page requirement trace to a section of its own page spec in `docs/product/pages/`? [completeness] | [ ] |
-| CHK006 | FR-006, FR-007 | Are the two light-background pages distinguished from the four navy ones wherever it changes the requirement? [consistency] | [ ] |
-| CHK007 | FR-008: calendar | Is `evento`'s different status set accounted for, rather than assuming the three-state queue? [consistency] | [ ] |
-| CHK008 | FR-009: Home v1 | Is the boundary against feature 006 stated in terms of data that does not exist yet, not taste? [clarity] | [ ] |
-| CHK009 | FR-010: URL state | Is the set of parameters enumerated somewhere, or only implied by "filter, search, sort and page"? [completeness] | [ ] |
-| CHK010 | FR-011: default order | Is the ordering field named, and does it exist on every listed collection? [feasibility] | [ ] |
-| CHK011 | FR-012: anonymous downloads | Is the counter's semantics fixed — act, not unique visitor — so the test cannot be written both ways? [clarity] | [ ] |
-| CHK012 | FR-012 | Does it say downloads pass through the tenancy choke point, given this is an anonymous *write*? [completeness] | [ ] |
-| CHK013 | FR-013: classes play publicly | Is the absence of progress/badge/resume stated as correct behaviour rather than left as a gap? [clarity] | [ ] |
-| CHK014 | FR-014: 3D preview | Is the fallback defined for every format the data model allows, not just the happy one? [completeness] | [ ] |
-| CHK015 | FR-014 | Is the requirement independent of CLR-002's answer, or does it silently assume a placement? [consistency] | [ ] |
-| CHK016 | FR-015: the heart | Is "the count does not change" stated, so an optimistic update cannot pass? [testability] | [ ] |
-| CHK017 | FR-016: publish CTAs | Is "does not render" distinguished from "renders disabled"? [clarity] | [ ] |
-| CHK018 | FR-017, FR-018: empty and error | Does each listing have both, or do some pages inherit them by assumption? [completeness] | [ ] |
-| CHK019 | FR-019: skeletons | Is "preserves the grid" specific enough to fail a spinner? [testability] | [ ] |
-| CHK020 | FR-020: search | Are the searched fields enumerated, and is 300ms a requirement or an example? [clarity] | [ ] |
-| CHK021 | FR-021: breakpoints | Are the three targets the same ones feature 001 used, so the shell and pages cannot disagree? [consistency] | [ ] |
-| CHK022 | FR-022: touch targets | Does it name which elements, or only a size? [completeness] | [ ] |
-| CHK023 | FR-023: keyboard | Is card activation by Enter stated separately from focus visibility? [completeness] | [ ] |
-| CHK024 | FR-024: islands | Is "interactivity is real" operationalised into a list a test can check? [testability] | [ ] |
-| CHK025 | FR-025: LCP | Is the device profile named precisely enough to reproduce the measurement? [testability] | [ ] |
-| CHK026 | FR-025 | Is per-page stated, closing the average-across-pages loophole? [clarity] | [ ] |
-| CHK027 | FR-025 | Is there a stated consequence of missing it, rather than leaving a waiver implicit? [completeness] | [ ] |
-| CHK028 | FR-026: isolation harness | Is the new vantage point — anonymous public — named as distinct from the ones 002 added? [completeness] | [ ] |
-| CHK029 | FR-026 | Is the signed-in-visitor-from-another-org case covered, given the plugin treats it differently? [consistency] | [ ] |
-| CHK030 | FR-027: no hex literals | Is the rule stated generally, rather than as the list of files its gate happens to scan? [clarity] | [ ] |
-| CHK031 | FR-028: light pages | Is "never pink for small text on white" testable, or does it need a size threshold? [testability] | [ ] |
-| CHK032 | SC-006 | Is the LCP gate required to have been watched failing before it counts? [testability] | [ ] |
-| CHK033 | SC-003, SC-007, SC-008 | Does every gate inherited from 000/001/002 say what *extends* it here, rather than restating it? [consistency] | [ ] |
-| CHK034 | US7 vs 004 | Does the invitation point at a route that exists today (`/login`, stubbed in 001)? [feasibility] | [ ] |
-| CHK035 | CLR-001..003 | Would any of the three unresolved questions change work already specified as decided? [consistency] | [ ] |
-| CHK036 | CLR-002 vs FR-025 | Is the tension between the 3D viewer and the LCP budget stated where a planner will see it? [feasibility] | [ ] |
-| CHK037 | Scope: Home panels | Is the 003/006 split justified by data dependency, and does 006's row in the roadmap agree? [consistency] | [ ] |
-| CHK038 | Scope: no signed-in state | Does any FR accidentally require signed-in behaviour despite CLR-005? [consistency] | [ ] |
-| CHK039 | Whole spec | Does every FR trace to at least one US, and every US to at least one FR? [completeness] | [ ] |
-| CHK040 | Whole spec | Does every SC name a command or artefact that produces the evidence? [testability] | [ ] |
+| CHK001 | FR-001: placeholders replaced | Is "no remaining importer of `PageStub`" checkable by a command rather than by reading?<br>**Adjudicated 2026-09-09:** `tests/public/page-stub-retired.test.ts` (T029) greps the tree; the answer is a command. | [x] |
+| CHK002 | FR-002: public reads via the choke point | Does the requirement name the exact function, so a reviewer cannot satisfy it with a different one? [clarity]<br>**Adjudicated 2026-09-09:** FR-002 names `getPublicScopedPayload(host)` and forbids `payload`/`req.payload` by name. | [x] |
+| CHK003 | FR-003: published-only | Is "including by direct slug" stated, so the obvious listing-only reading is closed? [completeness]<br>**Adjudicated 2026-09-09:** The clause is in FR-003, and it is what the three detail pages' 404 path implements. | [x] |
+| CHK004 | FR-003 | Does a negative case exist — content that must NOT appear — rather than only a positive one? [testability]<br>**Adjudicated 2026-09-09:** US10's error case; `tests/public/detalhe.test.ts` drives draft, foreign and unknown to one answer. | [x] |
+| CHK005 | FR-004..FR-009: the six pages | Does each page requirement trace to a section of its own page spec in `docs/product/pages/`? [completeness]<br>**Adjudicated 2026-09-09:** Each FR quotes its page spec; the page docblocks cite the section they implement. | [x] |
+| CHK006 | FR-006, FR-007 | Are the two light-background pages distinguished from the four navy ones wherever it changes the requirement? [consistency]<br>**Adjudicated 2026-09-09:** FR-006, FR-007 and FR-028 all single them out — and the distinction proved load-bearing: `EmptyState` shipped 1.27:1 on both. | [x] |
+| CHK007 | FR-008: calendar | Is `evento`'s different status set accounted for, rather than assuming the three-state queue? [consistency]<br>**Adjudicated 2026-09-09:** § Notes for planning states it. Run 5 proved it mattered: the anonymous path dropped `cancelado` until the predicate was made per-collection. | [x] |
+| CHK008 | FR-009: Home v1 | Is the boundary against feature 006 stated in terms of data that does not exist yet, not taste? [clarity]<br>**Adjudicated 2026-09-09:** CLR-004 draws it at collections feature 005 creates; `home.test.ts` §3 asserts their absence by component identity. | [x] |
+| CHK009 | FR-010: URL state | Is the set of parameters enumerated somewhere, or only implied by "filter, search, sort and page"? [completeness]<br>**Adjudicated 2026-09-09:** **OPEN.** Never enumerated. `lib/public/params.ts` parses `categoria`, `busca` and `pagina`; **`sort` has no parameter at all**. Biblioteca 3D's `ordem` select is page-local with one option, and its `nivel`/`formato` siblings shipped parsing, linking and rendering their value while narrowing nothing — run 5's rejection. A requirement that names four kinds of state and enumerates none is how three of them get built to different depths. | [ ] |
+| CHK010 | FR-011: default order | Is the ordering field named, and does it exist on every listed collection? [feasibility]<br>**Adjudicated 2026-09-09:** `LISTING_SHAPES.ordem` names it per collection; `evento` deliberately carries no `dataPublicacao` and `Evento.ts` says why. | [x] |
+| CHK011 | FR-012: anonymous downloads | Is the counter's semantics fixed — act, not unique visitor — so the test cannot be written both ways? [clarity]<br>**Adjudicated 2026-09-09:** **OPEN.** FR-012 says "counted" and nothing more. Feature 002's `counters.ts` increments once per served download — an act — but the requirement admits the unique-visitor reading, and a future change in either direction would contradict no written rule. | [ ] |
+| CHK012 | FR-012 | Does it say downloads pass through the tenancy choke point, given this is an anonymous *write*? [completeness]<br>**Adjudicated 2026-09-09:** FR-012 says so in as many words, and `serveDownload` is reached only through the collection endpoint. | [x] |
+| CHK013 | FR-013: classes play publicly | Is the absence of progress/badge/resume stated as correct behaviour rather than left as a gap? [clarity]<br>**Adjudicated 2026-09-09:** FR-013 states the absence positively; `aulas-page.test.ts` §5 asserts it rather than assuming it. | [x] |
+| CHK014 | FR-014: 3D preview | Is the fallback defined for every format the data model allows, not just the happy one? [completeness]<br>**Adjudicated 2026-09-09:** US6's edge covers `.stl`/`.obj`/`.3mf`; `resolveModelPreview` implements the rule generally and `thumbnail` is `required: true`, so the fallback always exists. | [x] |
+| CHK015 | FR-014 | Is the requirement independent of CLR-002's answer, or does it silently assume a placement? [consistency]<br>**Adjudicated 2026-09-09:** FR-014 now cites CLR-002 explicitly and states the placement it chose. | [x] |
+| CHK016 | FR-015: the heart | Is "the count does not change" stated, so an optimistic update cannot pass? [testability]<br>**Adjudicated 2026-09-09:** Stated in FR-015 and in US7's Then. The requirement is well-formed — see CHK041 for the fact that half of it was never built. | [x] |
+| CHK017 | FR-016: publish CTAs | Is "does not render" distinguished from "renders disabled"? [clarity]<br>**Adjudicated 2026-09-09:** FR-016 says "do not render"; US7's edge argues the distinction. No public page renders one. | [x] |
+| CHK018 | FR-017, FR-018: empty and error | Does each listing have both, or do some pages inherit them by assumption? [completeness]<br>**Adjudicated 2026-09-09:** "Every listing" in both; all six pages render `EmptyState` in both variants, asserted per page. | [x] |
+| CHK019 | FR-019: skeletons | Is "preserves the grid" specific enough to fail a spinner? [testability]<br>**Adjudicated 2026-09-09:** **OPEN — and unbuilt.** The wording is specific enough (it names the shape and rejects the spinner). What is missing is the thing: there is **no `loading.tsx` anywhere under `apps/web/app`**, and no task in `tasks.md` owned FR-019. It is P3 and was dropped silently rather than deferred on the record. | [ ] |
+| CHK020 | FR-020: search | Are the searched fields enumerated, and is 300ms a requirement or an example? [clarity]<br>**Adjudicated 2026-09-09:** **OPEN — the requirement contradicts a later decision.** The fields are enumerated and implemented (`LISTING_SHAPES.busca`). The debounce is not: CLR-003 made the listings server-rendered and `SearchInput` a GET form with no client boundary, so **there is nothing to debounce**. FR-020 still says "debounced at ~300ms" and neither it nor CLR-003 was amended to notice. | [ ] |
+| CHK021 | FR-021: breakpoints | Are the three targets the same ones feature 001 used, so the shell and pages cannot disagree? [consistency]<br>**Adjudicated 2026-09-09:** They are `--bp-mobile/tablet/desktop`; `breakpoints-focus.test.ts` reads the widths out of the token layer rather than restating them. | [x] |
+| CHK022 | FR-022: touch targets | Does it name which elements, or only a size? [completeness]<br>**Adjudicated 2026-09-09:** **OPEN.** FR-022 gives 44x44 and no element set, so each component decided for itself what counts as a target. The suite now enumerates interactive elements per page, but that inventory is the test's, not the requirement's — a control the test's tag list misses is unbound by anything written. | [ ] |
+| CHK023 | FR-023: keyboard | Is card activation by Enter stated separately from focus visibility? [completeness]<br>**Adjudicated 2026-09-09:** Two clauses in one requirement, both checkable: cards are anchors, so Enter is native, and `breakpoints-focus.test.ts` pins tab order and the ring separately. | [x] |
+| CHK024 | FR-024: islands | Is "interactivity is real" operationalised into a list a test can check? [testability]<br>**Adjudicated 2026-09-09:** `islands.test.ts`'s `ALLOWED_ISLANDS` is that list. Verified: exactly four modules carry the directive as their first statement. | [x] |
+| CHK025 | FR-025: LCP | Is the device profile named precisely enough to reproduce the measurement? [testability]<br>**Adjudicated 2026-09-09:** `scripts/lcp-budget.sh` declares every throttling value and `docs/lcp-measurements.md` reads them out of the script rather than retyping them. | [x] |
+| CHK026 | FR-025 | Is per-page stated, closing the average-across-pages loophole? [clarity]<br>**Adjudicated 2026-09-09:** FR-025 says per page; the gate asserts each URL on its own and says so when it fails. | [x] |
+| CHK027 | FR-025 | Is there a stated consequence of missing it, rather than leaving a waiver implicit? [completeness]<br>**Adjudicated 2026-09-09:** plan.md § Risks: "a miss reopens hybrid C". The gate did miss, by 860 ms, and that sentence is what routed it rather than a shrug. | [x] |
+| CHK028 | FR-026: isolation harness | Is the new vantage point — anonymous public — named as distinct from the ones 002 added? [completeness]<br>**Adjudicated 2026-09-09:** `public-path` is its own matrix leg, and its mutation was run against this feature's change to the read path. | [x] |
+| CHK029 | FR-026 | Is the signed-in-visitor-from-another-org case covered, given the plugin treats it differently? [consistency]<br>**Adjudicated 2026-09-09:** `public-read.test.ts` drives anonymous, same-org member, other-org member and signed-in-with-no-membership. | [x] |
+| CHK030 | FR-027: no hex literals | Is the rule stated generally, rather than as the list of files its gate happens to scan? [clarity]<br>**Adjudicated 2026-09-09:** Stated as a rule about literals; the fence matches a pattern over a directory, so a new file is covered without an edit. | [x] |
+| CHK031 | FR-028: light pages | Is "never pink for small text on white" testable, or does it need a size threshold? [testability]<br>**Adjudicated 2026-09-09:** **OPEN.** No threshold is given, so "small text" is the reader's judgement. The implementation settled on WCAG's 4.5:1 for text and 3:1 for the focus indicator, but those numbers are the tests', not the requirement's. | [ ] |
+| CHK032 | SC-006 | Is the LCP gate required to have been watched failing before it counts? [testability]<br>**Adjudicated 2026-09-09:** SC-006 says so; T016 is the proof job and `Performance budget can fail` runs it on every PR. | [x] |
+| CHK033 | SC-003, SC-007, SC-008 | Does every gate inherited from 000/001/002 say what *extends* it here, rather than restating it? [consistency]<br>**Adjudicated 2026-09-09:** Each names its extension — the anonymous vantage point, the app tree, the six pages. | [x] |
+| CHK034 | US7 vs 004 | Does the invitation point at a route that exists today (`/login`, stubbed in 001)? [feasibility]<br>**Adjudicated 2026-09-09:** `/login` exists; the Home's CTA takes `LOGIN_HREF` from the shell rather than a literal, so it moves when 004 lands. | [x] |
+| CHK035 | CLR-001..003 | Would any of the three unresolved questions change work already specified as decided? [consistency]<br>**Adjudicated 2026-09-09:** All three were answered in `/speckit.clarify` before planning, and each is cited by the FRs it changed. | [x] |
+| CHK036 | CLR-002 vs FR-025 | Is the tension between the 3D viewer and the LCP budget stated where a planner will see it? [feasibility]<br>**Adjudicated 2026-09-09:** In plan § Risks and in `ModelViewer`'s own docblock: twelve WebGL contexts against a 2.5s budget. | [x] |
+| CHK037 | Scope: Home panels | Is the 003/006 split justified by data dependency, and does 006's row in the roadmap agree? [consistency]<br>**Adjudicated 2026-09-09:** CLR-004 justifies it by collections feature 005 creates; the roadmap row agrees. | [x] |
+| CHK038 | Scope: no signed-in state | Does any FR accidentally require signed-in behaviour despite CLR-005? [consistency]<br>**Adjudicated 2026-09-09:** None does. FR-015's invitation is explicitly the visitor's path, and FR-013 states the signed-out absence positively. | [x] |
+| CHK039 | Whole spec | Does every FR trace to at least one US, and every US to at least one FR? [completeness]<br>**Adjudicated 2026-09-09:** Every row of the FR table carries a scenario column; all ten scenarios appear in it. | [x] |
+| CHK040 | Whole spec | Does every SC name a command or artefact that produces the evidence? [testability]<br>**Adjudicated 2026-09-09:** Each SC names a gate, a script or a test file; SC-006's is `scripts/lcp-budget.sh` and its recorded run. | [x] |
+| CHK041 | FR-015, US7 (P1) | Was the heart's clicking half — the account invitation — actually built? [completeness]<br>**Adjudicated 2026-09-09:** **OPEN, and the largest gap this pass found.** The count renders everywhere; the click does not exist. `CardProjeto` takes a `curtir` island prop and **no page supplies one**, its docblock naming `LikeButton` as the missing piece. Grepping `tasks.md` for FR-015, US7 or LikeButton returns nothing — **no task ever owned it**, so it was neither built nor deferred. US7 is P1 and its Given/When/Then main path is unimplemented; FR-016's edge (publish CTAs absent) is the only half of that scenario that shipped. | [ ] |
