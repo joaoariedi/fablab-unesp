@@ -16,31 +16,33 @@ import { describe, expect, it } from 'vitest'
  * from `required_status_checks.contexts` runs on every PR, reports its red, and is merged
  * past. That is not a gate. It is a notification.
  *
- * It is not hypothetical. Queried live on 2026-09-08:
+ * It was not hypothetical. Queried live on 2026-09-08, both branches carried eleven contexts
+ * and FOUR jobs that run on every PR were not among them — `Colour tokens` and `Isolation
+ * harness can fail (public-path)`, inherited unmet from feature 002's T050, plus this feature's
+ * own `Performance budget` and `Performance budget can fail`. Each was advisory: it ran,
+ * reported its red, and was merged past.
  *
- *   gh api repos/joaoariedi/fablab-unesp/branches/{main,dev}/protection \
- *     --jq '.required_status_checks.contexts'
+ * **Closed on 2026-09-09.** Both branches now require all fifteen, `strict: true`, and
+ * `.github/required-checks.json` records that measurement. This file did the job it was written
+ * for — it made the gap impossible to keep claiming was closed — and what it guards now is the
+ * other direction: that a gate added tomorrow cannot quietly join CI without joining protection.
  *
- * both branches carry eleven contexts, and FOUR jobs that run on every PR are not among them
- * — `Colour tokens` and `Isolation harness can fail (public-path)` inherited unmet from
- * feature 002's T050, plus this feature's own `Performance budget` and `Performance budget
- * can fail`. Each is advisory today.
- *
- * T018 — adding those contexts — is a repository-admin action on GitHub and is outside any
- * run's reach; `tasks.md` § *Outstanding* tracks it. What IS in reach, and what this file is,
- * is making the gap **measured, pinned and visible** instead of assumed away:
+ * T018 was a repository-admin action on GitHub, outside any run's reach. What IS in reach, and
+ * what this file is, is making the state **measured, pinned and visible** instead of assumed:
  *
  *   * `.github/required-checks.json` is the live protection API's answer, recorded;
  *   * `scripts/required-checks.sh` re-queries the live API and fails on any disagreement with
  *     that record, so the record cannot quietly become a lie;
- *   * the assertions below pin the gap to exactly the four contexts `tasks.md` names, so a
- *     FIFTH gate cannot join them silently — which is the failure that let the first two sit
- *     unnoticed for a whole feature.
+ *   * the assertions below pin the advisory set to exactly what `tasks.md` names — today that
+ *     is nothing, so a gate that stops being required, or one added to `ci.yml` and not to
+ *     protection, fails here. That is the failure which let the first two sit unnoticed for a
+ *     whole feature.
  *
- * Deliberately NOT asserted: that the four are still missing. That would turn the human fix
- * into a red suite and give whoever performs it a reason to delete this file instead. What is
- * asserted is that the record and `tasks.md` agree — so closing T018 requires updating both,
- * and closing it in neither is impossible.
+ * Deliberately NOT asserted: any particular gate being missing. That would have turned the
+ * human fix into a red suite and given whoever performed it a reason to delete this file — and
+ * on 2026-09-09 it very nearly did anyway, through the table-must-exist check that has since
+ * been relaxed (see {@link documentedGaps}). What is asserted is that the record and `tasks.md`
+ * agree, in whichever state they are in.
  */
 
 const ROOT = join(import.meta.dirname, '..', '..', '..')
@@ -90,18 +92,25 @@ function snapshot(): Snapshot {
 }
 
 /**
- * The contexts `tasks.md` § *Outstanding* claims are missing: the backticked first cell of
- * every row in its "Missing context" table.
+ * The contexts `tasks.md` claims are missing: the backticked first cell of every row in a
+ * "Missing context" table, or NOTHING when the document declares no such table.
+ *
+ * The original required that table to exist, so that closing T018 could not be faked by
+ * deleting it. When T018 was actually closed on 2026-09-09 the table went with it — correctly,
+ * because there is no longer a gap to tabulate — and both cases below went red on a repo whose
+ * protection had just become *stricter*. A gate that fires when the thing it guards is fixed
+ * teaches one lesson, and it is to delete the gate.
+ *
+ * An absent table is now read as "no gap claimed", and the guarantee moves into the equality
+ * that uses it: if protection really does leave a gate advisory, `gaps` is non-empty, this
+ * returns `[]`, and the assertion fails — which is the case the table existed to catch. Hiding
+ * the gap by deleting the table is therefore still impossible; claiming there is none, when
+ * there is none, is now merely quiet.
  */
 function documentedGaps(): string[] {
   const lines = read(TASKS).split('\n')
   const header = lines.findIndex((line) => line.startsWith('| Missing context |'))
-  expect(
-    header,
-    `${TASKS} no longer has a "Missing context" table. T018's record of the live protection ` +
-      'API is the thing this test re-checks; if it was renamed or removed, the gap it tracks ' +
-      'has not been closed — it has been hidden.',
-  ).toBeGreaterThan(-1)
+  if (header === -1) return []
 
   const rows: string[] = []
   for (const line of lines.slice(header + 2)) {
@@ -165,7 +174,7 @@ describe('the recorded protection state is the live one (T030, SC-012)', () => {
 })
 
 describe('the gap between the gates and the protection is pinned (T030, T018, SC-012)', () => {
-  it('leaves exactly the gates tasks.md names as advisory', () => {
+  it('leaves exactly the gates tasks.md names as advisory — today, none', () => {
     const required = new Set(snapshot().branches.dev)
     const gaps = ciGateNames().filter((gate) => !required.has(gate))
     expect(

@@ -551,53 +551,42 @@ without-types run and would otherwise have failed the pipeline.
 
 ---
 
-## Outstanding, and not executable by a run
+## Closed after the feature merged
 
-### T018 ⛔ — make the two performance gates merge-blocking (SC-012)
+### T018 ✅ — the four gates are merge-blocking (SC-012)
 
-**Owner: the PO, or anyone with repository-admin rights on `joaoariedi/fablab-unesp`.** No agent
-can do this: it is GitHub branch-protection configuration, which lives outside this tree.
+**Done 2026-09-09**, by the PO, against `main` and `dev`. It closes feature 002's **T050** in the
+same call: that task was *"correctly rejected and stays ⛔"* because `Colour tokens` and
+`Isolation harness can fail (public-path)` were advisory, and they were, for a whole feature.
 
-**Verified against the live protection API on 2026-09-08**, not against `ci.yml`:
-
-```sh
-gh api repos/joaoariedi/fablab-unesp/branches/{main,dev}/protection \
-  --jq '.required_status_checks.contexts'
-```
-
-Both branches carry the same eleven contexts, and **four gates that run on every PR are not
-among them** — so each is advisory today, and a pull request that violates it can be merged:
-
-| Missing context | Job | Required now? |
-|---|---|---|
-| `Colour tokens` | `ci.yml` § *Colour tokens* | **yes** — the job is on `dev` already |
-| `Isolation harness can fail (public-path)` | the third `layer:` of the isolation matrix | **yes** — same |
-| `Performance budget` | `ci.yml` § *Performance budget* | only after 003 merges |
-| `Performance budget can fail` | `ci.yml` § *Performance budget can fail* | only after 003 merges |
-
-The last two exist **only on this branch**. Requiring a context that never appears blocks every
-merge forever, so they can be added only once 003 is on `dev`. The first two are inherited from
-feature 002's T050, which that file records as *"correctly rejected and stays ⛔"* — the same
-gap, now a feature older.
-
-No job carries an `if:` condition, so nothing is conditionally skipped and none of the four can
-hang a PR by never reporting.
-
-The additive endpoint, which does not require restating the existing list:
+Both branches now require **15** contexts with `strict: true`, and the set is exactly what
+`ci.yml` produces — verified against the live protection API in both directions, which is what
+T030's wording asks for and is the only check that catches the two ways this goes wrong:
 
 ```sh
-for b in main dev; do
-  gh api -X POST "repos/joaoariedi/fablab-unesp/branches/$b/protection/required_status_checks/contexts" \
-    -f 'contexts[]=Colour tokens' \
-    -f 'contexts[]=Isolation harness can fail (public-path)'
-done
-# and, once 003 is merged to dev:
-#   -f 'contexts[]=Performance budget' -f 'contexts[]=Performance budget can fail'
+gh api "repos/joaoariedi/fablab-unesp/branches/{main,dev}/protection/required_status_checks" \
+  --jq '.contexts | length'
+# 15, and set-differenced against ci.yml's job names both ways: [] and []
 ```
 
-**T030 depends on this.** Its wording is *"the two new ones are verified against the live
-protection API rather than assumed"* — which is a check that will report the gap above until the
-contexts are added, and is correct to.
+- **required but not produced** → every merge is blocked forever, on a context that never
+  reports. This is why the two `Performance budget` entries could not be added before PR #13
+  landed: they existed only on the feature branch.
+- **produced but not required** → the job runs, goes red, and merges anyway. That was the state
+  of four gates until today, including the LCP budget this feature was built around.
+
+The four added:
+
+| Context | Advisory since |
+|---|---|
+| `Colour tokens` | feature 001 |
+| `Isolation harness can fail (public-path)` | feature 002 (T050) |
+| `Performance budget` | feature 003 (T017) |
+| `Performance budget can fail` | feature 003 (T017) |
+
+Added with the **additive** endpoint
+(`POST …/required_status_checks/contexts`), which appends rather than replacing — the
+replacement form restates all fifteen and drops any it forgets, silently.
 
 ---
 
