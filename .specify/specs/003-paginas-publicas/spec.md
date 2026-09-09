@@ -315,6 +315,30 @@ second would mean a new collection in 002, which has shipped its model; the firs
 built and matches the mockup, where the chip shows a value the tabs do not list.
 **Impact**: FR-005.
 
+### CLR-010: FR-015's clicking half moves to feature 004 [scope] — decided 2026-09-09
+
+**Decision**: 003 ships the heart's **count** on every card, as it does today. The **click** —
+`LikeButton`, and the account invitation behind it — moves to feature 004 (`contas-avatar`).
+FR-015's first clause is met by 003; its second and US7's main path are 004's.
+
+**Rationale**: found by the checklist pass after 003 had merged (CHK041, CHK052). `CardProjeto`
+takes a `curtir` island prop, no page supplies one, and **no task in `tasks.md` ever owned it**
+— it was neither built nor deferred, so eight adversarial workflow runs never saw it: each
+checked a task against its own description, and nothing checked the spec against the task list.
+
+Given a choice between a 003 follow-up and 004, the invitation belongs where signup does. Its
+entire purpose is to start the flow 004 builds, and its microcopy — *"Crie sua conta para curtir
+e evoluir como maker"* — is a promise 004 has to keep. Building it here would mean a fifth island
+and an invitation pointing at a two-step signup that does not exist yet.
+
+**The cost, priced rather than discovered later**: until 004 ships, the heart on every card is
+**visibly inert** — it renders, it is not a target, and clicking it does nothing. That is a
+deliberate v1 state, not an oversight, and it is the reason this clarification exists rather than
+a silent edit to FR-015. FR-016's half of US7 (publish CTAs do not render) shipped and is
+unaffected.
+
+**Impact**: FR-015 (second clause), US7 (main path). FR-016 and US7's edge are unchanged.
+
 ## Notes for planning
 
 - The `workbench` route from feature 001 is not part of this feature; confirm it stays out of
