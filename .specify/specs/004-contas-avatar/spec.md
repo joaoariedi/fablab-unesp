@@ -104,13 +104,16 @@ performance and isolation gates measure.
   data go, and the content is handled by the rule CLR-003 fixes, rather than cascading silently
 - **Error**: deletion is requested twice — the second is a no-op that reports the first
 
-### US9: An unverified account is bounded [P1]
+### US9: Phase 1's account model is stated, not assumed [P1]
 
-- **Given** an account whose e-mail has not been confirmed
-- **When** they attempt the actions an account unlocks
-- **Then** what an unverified account may and may not do is enforced, not merely displayed
-- **Edge**: verification arrives later — the account gains the rest without re-registering
-- **Error**: the verification link is expired or already used — refused, with a way to resend
+- **Given** the platform in phase 1, with no e-mail verification
+- **When** someone creates an account
+- **Then** it is usable immediately, and the one setting that records this is a constant a
+  reviewer can find rather than an environment variable a deployment can differ on
+- **Edge**: the setting and the Payload config disagree — a test fails, because a config saying
+  one thing while the setting says another is how a security property is lost quietly
+- **Error**: phase 2 arrives and flips the setting — `research.md` already records that Payload
+  refuses login for an unverified account, so the flip is a decision rather than a discovery
 
 ### US10: Signed-in pages leak nothing across organizations [P1]
 
@@ -142,9 +145,9 @@ performance and isolation gates measure.
 | FR-014 | Login is e-mail + password, and a failure returns one neutral message for every cause | P1 | US3 |
 | FR-015 | Login is rate-limited per account and per source, and the limit is enforced server-side | P1 | US3 |
 | FR-016 | Login returns the visitor to the page they came from; a direct visit lands on Minha Conta | P2 | US3 |
-| FR-017 | Password reset issues a single-use, time-limited token and answers identically for registered and unregistered addresses | P1 | US4 |
+| FR-017 | Password reset issues a single-use, time-limited token and returns **the same response body and status** for registered and unregistered addresses. Timing is deliberately not equalised — SC-003 records why | P1 | US4 |
 | FR-018 | Session lifetime, renewal and sign-out are stated policy, and sign-out invalidates server-side | P1 | US3 |
-| FR-019 | E-mail verification exists. An unverified account may sign in, browse and like; it may **not** publish, and that boundary is enforced in the create access of the four publishable collections, never in the UI alone (CLR-006) | P1 | US9 |
+| FR-019 | Phase 1 ships **no e-mail verification** (`verify: false`). `EMAIL_VERIFICATION_REQUIRED` is a named constant recording the phase, and a test holds it and the Payload config to the same value so the two cannot disagree (CLR-006) | P1 | US9 |
 | FR-020 | Passwords are stored only as a hash, by Payload's own auth; no password or reset token is ever logged | P1 | US3, US4 |
 | FR-021 | Minha Conta shows the avatar, name, `@handle`, skills with level and pips, and the maker's own content | P1 | US5 |
 | FR-022 | Minha Conta **displays** skills and never awards them; XP, levels and missions are feature 005's | P1 | US5 |
@@ -167,7 +170,7 @@ performance and isolation gates measure.
 |----|-----------|-------------------|
 | SC-001 | A visitor completes signup and is signed in, with the avatar they built persisted | End-to-end test driving both steps |
 | SC-002 | A wrong password and an unregistered e-mail produce byte-identical responses | Test asserting body and status are equal, as 003's 404 test does |
-| SC-003 | A reset token cannot be reused, and an expired one is refused | Test over the token lifecycle |
+| SC-003 | A reset token cannot be reused, an expired one is refused, and both addresses get the same body and status | Test over the token lifecycle. **Timing is deliberately not asserted**: the registered branch writes and sends mail while the unregistered one returns immediately, so a timing oracle exists. Equalising it costs a dummy delay; asserting it costs a flaky test. Recorded and accepted — revisit if abuse appears |
 | SC-004 | Login is rate-limited: N failures lock the account for the stated window | Test driving N+1 attempts |
 | SC-005 | No password, hash or reset token appears in any log line | Test scanning emitted logs during auth flows |
 | SC-006 | Every collection added is in `scope-registry.ts`; CI fails on one that is not | The existing registry test, extended |
@@ -178,6 +181,7 @@ performance and isolation gates measure.
 | SC-011 | The avatar builder's LCP is measured and recorded with its profile and byte counts; the six public pages stay within the enforced budget | A recorded measurement for the builder; `scripts/lcp-budget.sh` unchanged for the six |
 | SC-012 | The island count is still bounded and every island is declared | `islands.test.ts`, extended |
 | SC-013 | Terms acceptance stores a version, and a person who accepted v1 is distinguishable from one who accepted v2 | Test over the stamp |
+| SC-014 | `EMAIL_VERIFICATION_REQUIRED` and `Users.auth.verify` agree, and an account can be created and used without verification | Test reading both, plus an end-to-end signup that signs in immediately |
 
 ## Clarifications
 
@@ -278,25 +282,41 @@ this the way `tokens/` is exempted, and the rule stays "no literal in a componen
 becoming "no literal anywhere".
 **Impact**: FR-034.
 
-### CLR-006: What an unverified account may do [security] — decided 2026-09-09
+### CLR-006: E-mail verification is phase 2; phase 1 ships without it [security] — decided 2026-09-09
 
-**Decision**: an unverified account may **sign in, browse and like**. It may **not publish** —
-a project, model or article requires a confirmed e-mail address.
+**Decision**: this feature ships **no e-mail verification**. `Users` sets `verify: false`, an
+account is usable the moment it is created, and a named setting —
+`EMAIL_VERIFICATION_REQUIRED` in `apps/web/lib/accounts/settings.ts` — records the phase and is
+the single place phase 2 flips.
 
-**Rationale**: the split follows the promise. FR-025 invites a visitor to create an account
-*"para curtir"*, so an account that cannot like breaks the flow at the moment it was meant to pay
-off — the person clicks the heart, signs up, and is told to check their e-mail before the thing
-they came for works. Publishing is the other side: it is public, it enters feature 002's review
-queue, and it costs the lab's team real work to moderate, so it is worth a confirmed address.
+**Why the first form of this clarification was withdrawn.** It read *"an unverified account may
+sign in, browse and like; it may not publish"*, and `/speckit.review` found that Payload 3.88.0
+cannot express it. `getAuthFields.js` adds `_verified` **only when `auth.verify` is true**, and
+`login.js` then refuses login outright for `_verified === false`. There are two states, not
+three: no verification at all, or verification that blocks sign-in. The middle state would have
+meant building a second verification beside the framework's — a real option, and not one worth
+taking to unblock account testing.
 
-**Enforced in access control, not in the UI** (FR-019). A hidden button is a decoration; the
-create access on the four publishable collections is where this rule lives, so an unverified
-account cannot publish through the admin, the API or a form it reached another way.
+**What bounds an unverified account in phase 1, and it is not nothing.** Feature 002's
+`canPublishField` makes the transition to `publicado` **staff-only and lab-scoped**. An account
+nobody verified can create a draft and submit it for review; it **cannot make anything public**.
+The exposure is a moderation queue a determined stranger can add noise to, not a publishing
+surface. That is a property of merged code, checked, not a promise.
 
-**The cost, priced**: unverified accounts can inflate like counts. The counter is a vanity metric
-rather than a permission, and feature 003's CHK066 already records that anonymous downloads are
-unbounded for the same reason — so this adds no new class of abuse, only more of one that is
-already accepted. Revisit if likes ever feed the XP economy feature 005 builds.
+**The setting is a constant, not an environment variable, and that is deliberate.** An env var
+would let production and development disagree about a security property, with a wrong value
+invisible until someone looked — the shape Principle 2 rejects for `TENANCY_MODE`. Verification
+is a **phase of the product**, identical in every environment, so changing it should be a commit
+somebody reviews. If it later needs to vary per deployment, that is a decision to take then.
+
+**The cost, priced**: e-mail addresses are unconfirmed for the whole of phase 1. Password
+recovery still works — it sends to whatever was typed — but the platform holds accounts it may
+not be able to contact, and a typo'd address is unrecoverable by its owner. Phase 2's first task
+is therefore not "turn on verification" but "decide, knowing login is refused, whether that is
+the rule we want", recorded in `research.md` so it is not rediscovered.
+
+**Impact**: FR-019, US9, SC-014. FR-025's invitation now pays off immediately, which was the
+reason the middle state was wanted in the first place.
 
 ## Notes for planning
 

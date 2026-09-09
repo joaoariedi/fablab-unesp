@@ -11,6 +11,9 @@ below:
    Payload's default — `maxLoginAttempts: 5`, `lockTime: 600000`, `tokenExpiration: 7200`,
    **`verify: false`**. Most of FR-014..FR-020 is therefore *configuration of an object that
    already exists*, and Principle 1 makes that the default rather than a shortcut.
+   **`verify` stays `false` in phase 1 (CLR-006)** — and that is now a decision rather than an
+   untouched default, because `/speckit.review` found that `verify: true` refuses login outright
+   for an unverified account. The middle state the first draft assumed does not exist.
 2. **`autor` is `required: true` on three collections and absent from `Projeto`.** CLR-003's
    tombstone is a migration against merged tables, and `Projeto`'s author — whenever it arrives —
    should be nullable from birth so it never needs one.
@@ -35,7 +38,7 @@ below:
 | `apps/web/lib/accounts/signup.ts` | create | Profile creation, skill assignment, terms stamp |
 | `apps/web/lib/accounts/deletion.ts` | create | Erasure, `curtida` removal, counter recomputation |
 | `apps/web/lib/tenancy/scope-registry.ts` | modify | Four new declarations with reasons |
-| `apps/web/lib/tenancy/access.ts` | modify | `verifiedOnly` for the publishable collections (CLR-006) |
+| `apps/web/lib/accounts/settings.ts` | create | `EMAIL_VERIFICATION_REQUIRED` — the phase, as one reviewable constant (CLR-006) |
 | `apps/web/app/(frontend)/criar-conta/page.tsx` | create | Step 1 — the builder |
 | `apps/web/app/(frontend)/criar-conta/dados/page.tsx` | create | Step 2 — personal data, terms, submit |
 | `apps/web/app/(frontend)/login/page.tsx` | modify | Replaces feature 001's stub |
@@ -93,13 +96,18 @@ place tenancy has to be got right.
 `Users` gains an options object and nothing else. Every value is *chosen* rather than inherited,
 because an inherited default is a decision nobody made:
 
-- `verify: true` — CLR-006 requires it, and it is `false` today.
+- `verify: EMAIL_VERIFICATION_REQUIRED` — **`false` in phase 1** (CLR-006), and held to the
+  constant by a test so the two cannot drift.
 - `maxLoginAttempts: 5`, `lockTime: 600000` — Payload's defaults, adopted deliberately.
 - `tokenExpiration: 7200` — two hours, adopted; FR-018 wanted a number and this is it.
 - `forgotPassword.expiration` — the reset window FR-017 asks for.
 
-FR-014's neutral failure and FR-017's identical answer are **already Payload's behaviour**; the
-work is asserting it, not building it (SC-002, SC-003).
+FR-014's neutral failure and FR-017's identical **body and status** are already Payload's
+behaviour — `forgotPassword.js` returns `null` for an unknown address and the handler answers
+`{message: success}` either way, with a comment saying it fails silently on purpose. So the work
+is asserting it, not building it (SC-002, SC-003). **Timing is not equalised**: the registered
+branch writes and sends mail, the unregistered one returns. FR-017 was narrowed to say so rather
+than leaving "identically" to mean whichever the implementer found convenient.
 
 ### The handle collision is resolved by the database, not by reading first
 
@@ -127,10 +135,17 @@ tombstone from that, so no page invents a placeholder object and no two pages wo
 The **page** is a server component that reads the catalogue through the choke point and passes it
 down. The **island** is the composer: selection state, the preview, and rotation.
 
-**Sprites are delivered as one spritesheet per category — nine requests, not ~100.**
-`avatarItem` already has `spriteFolhas` for the four-direction sheets, so the shape exists. The
-preview composes by `background-position`, which is also how it stays crisp under
-`image-rendering: pixelated`.
+**Sprites are delivered as spritesheets, and they split in two — which the first draft missed.**
+One sheet per category is nine requests rather than ~100, but a category sheet carrying all four
+directions is roughly **4× larger than the picker needs**: `cabelo` alone is 30 items × 4
+directions, and the picker only ever draws one direction. So:
+
+- a **picker sheet** per category, one direction — what the grid of choices needs, loaded up front;
+- **preview sheets**, four directions, for the composition — loaded for the chosen items only.
+
+`avatarItem` already carries `sprite` and `spriteFolhas` separately, so the data shape supports
+this without a change. The preview composes by `background-position`, which is also how it stays
+crisp under `image-rendering: pixelated`.
 
 **The recorded budget (CLR-004)**, and the method rather than a number: build, serve, and measure
 `/criar-conta` with `scripts/lcp-budget.sh`'s **exact throttling profile** — the script already
@@ -145,6 +160,12 @@ Signed-out, a click opens the invitation and **the count does not move** (FR-025
 server action writes the `curtida` and the count follows the server's answer — never an
 optimistic update that sticks, which is what SC-002-style tests catch elsewhere and what FR-026
 forbids here.
+
+### Verification is deferred, and the deferral is a value rather than a comment
+
+Phase 1 ships `verify: false`. What stops an unverified account being a publishing surface is
+feature 002's `canPublishField` — staff-only, lab-scoped — which is already merged and checked,
+not something this feature adds. The exposure is a moderation queue a stranger can add noise to.
 
 ### Deletion uses the counter mechanism that exists
 
@@ -171,7 +192,11 @@ export const Users: CollectionConfig = {
   slug: 'users',
   // Was bare `true`, which meant Payload's defaults were in force and nobody had chosen them.
   auth: {
-    verify: true,                 // CLR-006 — false today
+    // PHASE 1: no verification (CLR-006). Not a default left alone — a decision, and the one
+    // Payload can actually express: `verify: true` refuses login outright for an unverified
+    // account (login.js), so the "may like, may not publish" middle state does not exist here.
+    // Kept in step with EMAIL_VERIFICATION_REQUIRED by a test, so the two cannot drift.
+    verify: EMAIL_VERIFICATION_REQUIRED,   // false in phase 1
     maxLoginAttempts: 5,          // Payload's default, adopted deliberately (FR-015)
     lockTime: 600_000,            // 10 minutes
     tokenExpiration: 7_200,       // 2 hours (FR-018)
@@ -321,29 +346,42 @@ export async function deleteAccount(req: PayloadRequest, profileId: string) {
   }
   await nullAuthorLinks(db, profileId)          // artigo, aula, modelo3d — now nullable
   await db.delete({ collection: 'perfilMaker', id: profileId })
-  await deleteUserIfLastProfile(db, profileId)  // the global row goes only with the last profile
+  // ORDER MATTERS, and it is stated because the review asked what happens under concurrency:
+  // count the person's REMAINING profiles inside this transaction, and delete the global `users`
+  // row only when that count reaches zero. Two labs deleting the same person at once then
+  // serialise on the row — one sees a remaining profile and stops, the other sees none and
+  // deletes. Counting outside the transaction is how both see "one left" and neither deletes.
+  await deleteUserIfLastProfile(db, profileId)
 }
 ```
 
 **Why this shape:** one login may hold profiles in two labs (002's CLR-002), so deleting a
 profile must not delete an account still in use elsewhere.
 
-### Sketch 8: Unverified accounts cannot publish
+### Sketch 8: The verification phase is one constant
 
-**File:** `apps/web/lib/tenancy/access.ts` (modify)
-**Intent:** enforced in access, not in the UI.
+**File:** `apps/web/lib/accounts/settings.ts` (new)
+**Intent:** the phase is a value a reviewer can find, and the config cannot drift from it.
 
 ```ts
-/** CLR-006: an unverified account may sign in, browse and like — not publish. Composed with
- *  the scoped access so it returns a CONSTRAINT, never a boolean (000's rule). */
-export const verifiedOnly = (base: Access): Access => (args) =>
-  args.req.user?._verified === true ? base(args) : false
-// `create` on projeto/artigo/aula/modelo3d only. `read` is untouched: an unverified account
-// browses like anyone else, which is what makes the invitation flow pay off (FR-025).
+/**
+ * Phase 1 (feature 004): NO e-mail verification. See spec § CLR-006.
+ *
+ * A constant, not `process.env`, and deliberately: an environment variable lets production and
+ * development disagree about a security property with the wrong value invisible until someone
+ * looks — the shape Principle 2 rejects for `TENANCY_MODE`. Verification is a phase of the
+ * product, identical everywhere, so changing it is a commit somebody reviews.
+ *
+ * Flipping this to `true` is NOT sufficient on its own: Payload refuses login for an unverified
+ * account (research.md § "verify is all-or-nothing at login"), so phase 2 must first decide
+ * whether that is the rule it wants.
+ */
+export const EMAIL_VERIFICATION_REQUIRED = false
 ```
 
-**Why this shape:** `false` on `create` is a refusal, not a filter — a create has no query to
-constrain, so this is the one place a boolean is right.
+**Why this shape:** one value, one docblock, one test holding it against `Users.auth.verify`
+(SC-014). The alternative — an access rule gating `create` on `_verified` — cannot be written at
+all, because that field does not exist when `verify` is false.
 
 ### Sketch 9: The `same-tenant` mutation layer
 
@@ -383,21 +421,28 @@ test title, which is why `EXPECT` alone would call a broken run a proof.
 |---|---|---|
 | The tombstone migration touches three shipped collections | A bad migration breaks published content | Additive only — dropping NOT NULL rejects no row; generated with `./scripts/migrate-create.sh`, and `migration-drift.sh` is already a required check |
 | The builder is the largest island and has no per-PR gate | A regression ships unnoticed | CLR-004's recorded budget, with byte counts, so a later change is compared rather than argued about |
-| `verify: true` locks out accounts created before it | Existing seed users cannot log in | The seed marks its users verified; asserted in the seed test |
+| **Phase 2** flips `verify` and locks out every account created in phase 1 | Nobody can log in, including the team | Not a phase-1 risk — recorded here because phase 2 will inherit it. Payload sets `_verified` only on accounts created while `verify` is true, so flipping it strands every existing user; phase 2 must backfill `_verified` in the same migration that flips the constant |
 | Deletion runs across several collections | A partial delete leaves orphans or wrong counts | One transaction, and `syncCounter` recomputes from source rows rather than decrementing |
-| `_verified` is Payload-internal | A rename in an upgrade silently disables the rule | A test that a NEW unverified user is refused `create`, driving the real access function — not reading the flag |
+| Phase 1 has no verified e-mail | The platform holds accounts it cannot contact; a typo'd address is unrecoverable by its owner | Priced in CLR-006 and bounded by 002's `canPublishField`: an unverified account can submit a draft, never publish. SC-014 pins the phase so it cannot drift unnoticed |
+| The phase constant and the Payload config drift apart | A security property is lost quietly | SC-014 reads both and fails when they disagree; `verify` is written **as** the constant, not beside it |
 | Two islands land at once, one large | FR-024's bound erodes by precedent | `ALLOWED_ISLANDS` entries state what each pays for; **the stale `SearchInput` entry is removed in the same change** |
 
 ## Quick Start
 
-1. **The registry and the collections first** — `skill`, `avatarItem`, `tomDePele`,
-   `tomDeCabelo`, declared with reasons and in an order `resetWorld` can walk backwards.
-2. **`Users` auth options**, and the seed marked verified, before anything depends on login.
-3. **`handle.ts`** with the unique index and the retry — tested against two concurrent creates,
+1. **`LikeButton` first.** The review asked whether it should be its own feature; the answer is
+   that it does not need to be, but it should not queue behind the avatar either. It closes a
+   **live P1 gap** — 003 shipped US7's count with an inert heart — needs none of the avatar work,
+   and is the smallest island. Signed-out first (the invitation, the count that does not move),
+   signed-in once accounts exist.
+2. **The registry and the collections** — `skill`, `avatarItem`, `tomDePele`, `tomDeCabelo`,
+   declared with reasons and in an order `resetWorld` can walk backwards.
+3. **`settings.ts` and the `Users` auth options together**, so `verify` is never written as a
+   literal beside the constant that is supposed to govern it.
+4. **`handle.ts`** with the unique index and the retry — tested against two concurrent creates,
    because a race that only happens under load is the one nobody reproduces.
-4. **The tombstone**: migration, then `CardProjetoAutor`, then the pages. In that order, so a
+5. **The tombstone**: migration, then `CardProjetoAutor`, then the pages. In that order, so a
    nullable column never exists without a component that can draw it.
-5. **`LikeButton`** — it closes 003's half-shipped US7 and is the smallest island.
-6. **The builder and its recorded budget**, measured with `lcp-budget.sh`'s own profile.
+6. **The builder and its recorded budget**, measured with `lcp-budget.sh`'s own profile, picker
+   sheets and preview sheets counted separately.
 7. **The `same-tenant` mutation layer**, watched failing, before the CI job is added.
 8. **`docs/lgpd.md`** — FR-030 asks for a record, and the record is a deliverable.

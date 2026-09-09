@@ -46,8 +46,41 @@ writing an auth system. Constitution Principle 1 makes adopting the framework's 
 and a plan that hand-rolls any of it owes a written justification.
 
 What Payload does **not** give and this feature must add: the two-step signup flow itself, the
-profile creation that follows it, the handle derivation, and the rule that an unverified account
-may like but not publish (CLR-006) — Payload's `verify` gates *login*, not per-collection access.
+profile creation that follows it, and the handle derivation.
+
+### `verify` is all-or-nothing at login, and there is no middle state
+
+Measured in 3.88.0, and it is the finding that sent the first plan back:
+
+```js
+// auth/getAuthFields.js — the field exists ONLY when verification is on
+if (authConfig.verify) { authFields.push(...verificationFields) }
+// auth/operations/login.js — and when it is on, login is refused outright
+if (collectionConfig.auth.verify && user._verified === false) throw new UnverifiedEmail({ t: req.t })
+```
+
+So Payload offers exactly two states:
+
+| `auth.verify` | `_verified` field | An unverified account can… |
+|---|---|---|
+| `false` | **does not exist** | everything — there is nothing to gate on |
+| `true` | exists | **not even log in** |
+
+The middle state the first draft of CLR-006 asked for — *sign in, browse and like, but not
+publish* — **is not expressible through `auth.verify`**. Reaching it would mean `verify: false`
+plus a verification field, token and e-mail of our own, gating `create` on it: re-implementing
+what the framework offers, because what the framework offers is a different rule.
+
+**Phase 2 must read this before choosing.** The choice is not "turn verification on"; it is
+"accept that verification blocks login, or build a second verification".
+
+### The review queue is what bounds an unverified account today
+
+Feature 002's `review.ts` and the `canPublish` field access make the transition to `publicado`
+staff-only — *"qualquer maker autenticado submete; só a equipe do lab publica"*. So an account
+nobody has verified can create a draft and submit it; it **cannot make anything public**. That
+is the mitigation phase 1 rests on, and it is a property of the merged code rather than a
+promise.
 
 ### `perfilMaker` exists and is thin
 
