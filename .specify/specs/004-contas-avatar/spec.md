@@ -104,7 +104,7 @@ performance and isolation gates measure.
   data go, and the content is handled by the rule CLR-003 fixes, rather than cascading silently
 - **Error**: deletion is requested twice — the second is a no-op that reports the first
 
-### US9: An unverified account is bounded [P2]
+### US9: An unverified account is bounded [P1]
 
 - **Given** an account whose e-mail has not been confirmed
 - **When** they attempt the actions an account unlocks
@@ -135,7 +135,7 @@ performance and isolation gates measure.
 | FR-007 | A sprite that fails to load degrades that slot only and never blocks account creation | P2 | US2 |
 | FR-008 | Step 2 collects name (≤60), date of birth, e-mail, password, UNESP link, schooling and course; the course field is a combobox | P1 | US1 |
 | FR-009 | Any e-mail is accepted — no institutional domain is required; the UNESP relationship lives in `vinculo_unesp` | P1 | US1 |
-| FR-010 | `@handle` is **derived** from the name as `@nomesobrenome` and is never typed; derivation and collision handling are fixed by CLR-002 | P1 | US1 |
+| FR-010 | `@handle` is **derived** from the name as `@nomesobrenome`, never typed, folded to ASCII lowercase with non-letters dropped; a collision appends the lowest free integer from `2`, and uniqueness is per organization (CLR-002). It is derived once, at profile creation, and does not follow a later rename | P1 | US1 |
 | FR-011 | `nome_avatar` is the same value as `nome`; it is not a second field the person fills | P1 | US1 |
 | FR-012 | The terms checkbox is in step 2, links to the terms in a new tab, and acceptance is stamped with the timestamp **and the version accepted** | P1 | US1, US8 |
 | FR-013 | Creating a profile assigns every **active** skill of the organization at level 0; no skill is chosen during signup | P1 | US1, US5 |
@@ -144,7 +144,7 @@ performance and isolation gates measure.
 | FR-016 | Login returns the visitor to the page they came from; a direct visit lands on Minha Conta | P2 | US3 |
 | FR-017 | Password reset issues a single-use, time-limited token and answers identically for registered and unregistered addresses | P1 | US4 |
 | FR-018 | Session lifetime, renewal and sign-out are stated policy, and sign-out invalidates server-side | P1 | US3 |
-| FR-019 | E-mail verification exists, and what an unverified account may do is enforced in access control | P2 | US9 |
+| FR-019 | E-mail verification exists. An unverified account may sign in, browse and like; it may **not** publish, and that boundary is enforced in the create access of the four publishable collections, never in the UI alone (CLR-006) | P1 | US9 |
 | FR-020 | Passwords are stored only as a hash, by Payload's own auth; no password or reset token is ever logged | P1 | US3, US4 |
 | FR-021 | Minha Conta shows the avatar, name, `@handle`, skills with level and pips, and the maker's own content | P1 | US5 |
 | FR-022 | Minha Conta **displays** skills and never awards them; XP, levels and missions are feature 005's | P1 | US5 |
@@ -156,8 +156,8 @@ performance and isolation gates measure.
 | FR-028 | Signed-in reads go through `getTenantScopedPayload(req)`; no page module imports `payload` or touches `req.payload` | P1 | US10 |
 | FR-029 | The isolation harness gains the **signed-in maker** vantage point for every page and write this feature adds, with a mutation proof | P1 | US10 |
 | FR-030 | What personal data is collected, on what basis, for how long, and how consent is withdrawn is recorded in the product docs, not only in code | P1 | US8 |
-| FR-031 | A person can export their own data and request deletion; deletion's effect on published content follows CLR-003 | P1 | US8 |
-| FR-032 | The avatar builder is a client island whose cost is declared; the signed-in pages join the LCP budget under CLR-004 | P1 | US2 |
+| FR-031 | A person can export their own data and request deletion. Deletion erases the personal data, keeps the published work with authorship shown as a tombstone, and removes their `curtida` rows with the counters recomputed in the same transaction (CLR-003) | P1 | US8 |
+| FR-032 | The avatar builder is a client island with a **recorded** budget — measured once and written down with its profile and sprite byte counts — while the per-PR LCP gate stays on the six public pages (CLR-004) | P1 | US2 |
 | FR-033 | An uploaded or generated avatar asset goes through the media collections and the upload limits feature 002 fixed; nothing writes a raw key | P1 | US6 |
 | FR-034 | No hexadecimal colour literal is introduced in a component; the skin and hair palettes are **data**, not tokens, and CLR-005 records the distinction | P1 | US2 |
 
@@ -174,8 +174,8 @@ performance and isolation gates measure.
 | SC-007 | A signed-in maker of organization A reads nothing of organization B on any page this feature adds | Isolation harness, signed-in vantage point |
 | SC-008 | The isolation harness for that vantage point is **watched failing** against a planted leak | `scripts/isolation-mutation.sh` gains the layer; the CI job proves it can fail |
 | SC-009 | `@handle` is unique within an organization, and homonyms get distinct handles | Test creating two profiles with the same name |
-| SC-010 | Deleting an account removes the personal data and leaves published content in the state CLR-003 fixes | Test asserting both halves |
-| SC-011 | LCP stays within budget on the signed-in pages the gate measures | `scripts/lcp-budget.sh`, extended per CLR-004 |
+| SC-010 | Deleting an account erases the personal data, leaves published content up under a tombstone, and removes the person's likes with counters recomputed | Test asserting all three, including a card rendering the tombstone |
+| SC-011 | The avatar builder's LCP is measured and recorded with its profile and byte counts; the six public pages stay within the enforced budget | A recorded measurement for the builder; `scripts/lcp-budget.sh` unchanged for the six |
 | SC-012 | The island count is still bounded and every island is declared | `islands.test.ts`, extended |
 | SC-013 | Terms acceptance stores a version, and a person who accepted v1 is distinguishable from one who accepted v2 | Test over the stamp |
 
@@ -193,32 +193,79 @@ co-branding question, and the day it is answered this becomes a migration rather
 surprise.
 **Impact**: FR-027, SC-006.
 
-### CLR-002: `@handle` derivation, normalisation and homonyms [NEEDS CLARIFICATION]
+### CLR-002: `@handle` derivation, normalisation and homonyms [data lifecycle] — decided 2026-09-09
 
-`onboarding.md` decides the **shape** — `@nomesobrenome`, derived from the name, never typed —
-and leaves normalisation and collisions marked *(proposta)*. Both are load-bearing: the handle
-is what cards display and what a person is known by, and two makers called Maria Silva will
-exist. The open questions are (a) how accents, spaces and case are folded, (b) what the second
-Maria Silva gets, and (c) whether uniqueness is per organization or global, given `perfilMaker`
-is scoped and one login may hold two profiles.
+**Decision**: fold the name to ASCII lowercase and drop everything that is not a letter — `Maria
+Silva` → `mariasilva`, `João D'Ávila` → `joaodavila`. On collision, append the **lowest free
+integer**: `@mariasilva2`, `@mariasilva3`. Uniqueness is **per organization**, matching
+`perfilMaker`'s scope.
 
-### CLR-003: What deletion does to published content [NEEDS CLARIFICATION]
+**Rationale**: the number appears only for the people who actually collide, so the many keep a
+clean handle and the few get a readable one. Per-organization uniqueness follows the collection
+it lives on rather than imposing a global constraint on a scoped table — and it means the same
+person joining a second lab keeps the same handle there, which a global namespace could not
+promise once someone else had taken it.
 
-LGPD gives a right to erasure; feature 002 gives published projects, articles and models an
-author and a review queue. Deleting the row is not an answer — it would either orphan or cascade
-content the lab published and other people rely on. The options are anonymising authorship while
-keeping the work, withdrawing the work with it, or asking at deletion time. This is a product and
-legal question, related to **ISS-002** (terms and privacy policy, pending UNESP legal review),
-and it must be answered before FR-031 can be built.
+**The cost, priced**: a name is not stable. Someone who changes their `nome` after signup does
+not automatically change handle — that would break every link and mention pointing at the old
+one. So the handle is derived **once, at profile creation**, and thereafter is its own value.
+A rename flow is out of scope here and is named as such rather than discovered later.
 
-### CLR-004: Whether the signed-in pages join the LCP budget [NEEDS CLARIFICATION]
+**Also decided**: `2` is the first suffix, not `1` — `@mariasilva` and `@mariasilva1` reading as
+different people is a trap the numbering should not set.
 
-`scripts/lcp-budget.sh` measures six public pages and the Home passes with **245 ms of margin**
-(003's `docs/lcp-measurements.md`). The avatar builder is unavoidably interactive and will be the
-largest island in the product — sprites for nine slots plus 30 palette entries. The gate cannot
-measure a signed-in page without a session, which is work; and the budget as written is about
-what a first-time visitor waits for. So: does the builder get a budget of its own, does the gate
-learn to sign in, or is it explicitly exempt with the reason recorded?
+**Impact**: FR-010, SC-009.
+
+### CLR-003: Deletion anonymises authorship and keeps the work [data lifecycle] — decided 2026-09-09
+
+**Decision**: deleting an account erases the personal data and **leaves the published content
+up**, with authorship replaced by a tombstone. The erasure obligation is over personal data, not
+over everything a person contributed.
+
+**Rationale**: a lab builds a public library out of these contributions, and other people's
+likes, downloads and class progress point at them. Withdrawing the work with the person would let
+one departure silently remove teaching material the lab depends on.
+
+**What it requires, named rather than discovered**:
+
+- `perfilMaker` becomes **nullable** on every content relationship that carries an author, and
+  every card, listing and detail page must render the tombstone rather than assuming a profile
+  is there. That is a change to feature 002's collections and to feature 003's six pages, so it
+  is not free and it is not local.
+- The tombstone is a **rendering** state, not a row: no placeholder profile is created, because a
+  placeholder is a profile someone could later attach data to.
+- `curtida` rows by the deleted person are removed and the counters recomputed in the same
+  transaction feature 002's `counters.ts` uses — a like is an act by a person, not a
+  contribution.
+
+**Still blocked on ISS-002**: the *wording* of what the person is told at deletion, and the
+retention period before the erasure completes, belong with the terms and the UNESP legal review.
+This clarification fixes the mechanism so FR-031 can be planned; it does not write the policy.
+
+**Impact**: FR-031, SC-010, and feature 002's author relationships.
+
+### CLR-004: The LCP gate stays public; the builder gets a recorded budget [performance] — decided 2026-09-09
+
+**Decision**: `scripts/lcp-budget.sh` keeps measuring the six public pages and does not learn to
+sign in. The avatar builder gets a **budget of its own**, measured once and recorded the way
+`docs/lcp-measurements.md` records the public one, and **not** enforced per pull request.
+
+**Rationale**: the 2.5s gate is about what a first-time visitor waits for before deciding whether
+this place is for them. A signed-in tool has a different bargain — the person has already
+committed. Teaching a nine-minute gate to authenticate would also make a flaky login able to fail
+the whole budget, which is how a gate stops being trusted.
+
+**The cost, priced**: the largest island in the product ships **without a per-PR gate**. A
+regression in the builder is caught by a measurement someone takes, not by CI. That is a real
+weakening, and it is the reason the budget must be *recorded* rather than merely intended — an
+unrecorded budget is not a budget.
+
+**What the recording must include**: the number, the profile it was measured on, and the sprite
+byte counts, so a later change can be compared against it rather than argued about. 003 learnt
+this the hard way: its hero's byte table is what made the 860 ms miss diagnosable in one reading.
+
+**Impact**: FR-032, SC-011. SC-011 is amended to name the builder's recorded budget rather than
+implying the gate covers it.
 
 ### CLR-005: Skin and hair palettes are data, not tokens [design] — decided
 
@@ -230,6 +277,26 @@ it would change the person's depiction of themselves. The fence's own exemption 
 this the way `tokens/` is exempted, and the rule stays "no literal in a component" rather than
 becoming "no literal anywhere".
 **Impact**: FR-034.
+
+### CLR-006: What an unverified account may do [security] — decided 2026-09-09
+
+**Decision**: an unverified account may **sign in, browse and like**. It may **not publish** —
+a project, model or article requires a confirmed e-mail address.
+
+**Rationale**: the split follows the promise. FR-025 invites a visitor to create an account
+*"para curtir"*, so an account that cannot like breaks the flow at the moment it was meant to pay
+off — the person clicks the heart, signs up, and is told to check their e-mail before the thing
+they came for works. Publishing is the other side: it is public, it enters feature 002's review
+queue, and it costs the lab's team real work to moderate, so it is worth a confirmed address.
+
+**Enforced in access control, not in the UI** (FR-019). A hidden button is a decoration; the
+create access on the four publishable collections is where this rule lives, so an unverified
+account cannot publish through the admin, the API or a form it reached another way.
+
+**The cost, priced**: unverified accounts can inflate like counts. The counter is a vanity metric
+rather than a permission, and feature 003's CHK066 already records that anonymous downloads are
+unbounded for the same reason — so this adds no new class of abuse, only more of one that is
+already accepted. Revisit if likes ever feed the XP economy feature 005 builds.
 
 ## Notes for planning
 
