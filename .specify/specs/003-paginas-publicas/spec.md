@@ -176,7 +176,7 @@ Feature 000 and 002 shipped these; this feature consumes them and must not weake
 |----|-------------|----------|----------|
 | FR-001 | The five placeholder routes from feature 001 render real pages; `PageStub` has no remaining importer among them | P1 | US1 |
 | FR-002 | Every page reads through `getPublicScopedPayload(host)`; no page module imports `payload` or touches `req.payload` | P1 | US1 |
-| FR-003 | Only `status = publicado` content is reachable publicly, including by direct slug | P1 | US1 |
+| FR-003 | Only content whose status is publicly visible is reachable publicly, including by direct slug. For the three-state review queue that is `publicado` alone; `evento` runs its own four states and `rascunho` is the only one hidden (CLR-011) | P1 | US1, US5 |
 | FR-004 | Projetos: hero, category tabs, search, 3/2/1-column grid of `CardProjeto` | P1 | US1, US2 |
 | FR-005 | Artigos: same listing shape, its own categories, cover with category chip and date | P1 | US1, US2 |
 | FR-006 | Aulas: light background, navy text, numbered two-column list, duration and `ASSISTIR` | P1 | US1, US4 |
@@ -192,8 +192,8 @@ Feature 000 and 002 shipped these; this feature consumes them and must not weake
 | FR-016 | Publish CTAs do not render for a visitor | P2 | US7 |
 | FR-017 | Every listing has a defined empty state with a clearing action | P2 | US2 |
 | FR-018 | Every listing has a defined error state with a retry action | P2 | US1 |
-| FR-019 | Loading states are card-shaped skeletons that preserve the grid, not a spinner | P3 | US1 |
-| FR-020 | Search is debounced at ~300ms and matches title, description and author | P2 | US2 |
+| FR-019 | Loading states are card-shaped skeletons that preserve the grid, not a spinner. **Not delivered in 003** — see CLR-013 | P3 | US1 |
+| FR-020 | Search matches title, description and author, and submits as a form — no debounce, because CLR-003 leaves the listings server-rendered with no client boundary to debounce in (CLR-012) | P2 | US2 |
 | FR-021 | Every page renders at 390 / 834 / 1440 with the shell behaviour feature 001 decided | P1 | US1 |
 | FR-022 | Touch targets are at least 44×44px on the compact breakpoints | P2 | US1 |
 | FR-023 | Keyboard focus is visible on every interactive target; cards are reachable by Tab and activated by Enter | P1 | US1 |
@@ -338,6 +338,54 @@ a silent edit to FR-015. FR-016's half of US7 (publish CTAs do not render) shipp
 unaffected.
 
 **Impact**: FR-015 (second clause), US7 (main path). FR-016 and US7's edge are unchanged.
+
+### CLR-011: "published only" is per collection, not one status [correctness] — decided 2026-09-09
+
+**Decision**: FR-003's predicate is *"the statuses this collection exposes publicly"*, not the
+literal `publicado`. For `projeto`, `artigo`, `aula` and `modelo3d` — the three-state review
+queue — that is `publicado` alone. `evento` runs `rascunho · publicado · cancelado · concluido`,
+and `rascunho` is the only one hidden.
+
+**Rationale**: FR-003 was written flat, and the flat reading shipped. Anonymous reads AND-ed
+`status = publicado` onto every publishable collection, so a cancelled event **vanished from the
+agenda** — the exact failure § Notes for planning had warned about, in a note no requirement
+carried. A visitor who saw the event yesterday would conclude it was still on, which is worse
+than an error. The code has been per-collection since run 5; this makes the requirement say what
+the code does, and says which direction is the dangerous one: `rascunho` was never public and
+must never become so.
+
+**Impact**: FR-003, FR-008. Asserted at the gate in `tests/tenancy/public-payload.test.ts`, both
+directions — the three admitted, and the one that must stay out.
+
+### CLR-012: search has no debounce, because there is nothing to debounce [correctness] — decided 2026-09-09
+
+**Decision**: FR-020 drops "debounced at ~300ms". The searched fields stand.
+
+**Rationale**: FR-020 and CLR-003 contradicted each other and neither noticed. CLR-003 chose
+numbered pagination and server-rendered listings precisely so the pages need no client boundary;
+`SearchInput` is consequently a plain GET form that submits, and a form has no keystroke to
+debounce. The 300ms was written before that decision and survived it. Amended rather than
+implemented: adding a client boundary to satisfy a number would spend FR-024's island budget and
+SC-006's LCP budget to debounce something that does not fire per keystroke.
+
+**Impact**: FR-020. No code change — this is the requirement catching up with the design.
+
+### CLR-013: skeletons are not delivered in 003 [scope] — decided 2026-09-09
+
+**Decision**: FR-019 is **not delivered**. It is P3, no task in `tasks.md` ever owned it, and
+there is no `loading.tsx` anywhere under `apps/web/app`.
+
+**Rationale**: recorded rather than quietly dropped, which is the whole point. The checklist pass
+found it after the fact (CHK019, CHK050); nothing else would have, because a requirement nobody
+turns into a task is invisible to a task-driven run. The cost is real and small: on a slow
+connection a visitor sees nothing between navigation and content, on six pages whose LCP is
+already measured at ≤2.3s on the 4G profile — which is why it was affordable to miss and why it
+is P3.
+
+**It needs a home.** The natural one is a follow-up to 003 rather than 004, since it belongs to
+these six pages; it is listed here so whoever schedules it is choosing to, not remembering to.
+
+**Impact**: FR-019. No code.
 
 ## Notes for planning
 
