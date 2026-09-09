@@ -560,7 +560,7 @@ can do this: it is GitHub branch-protection configuration, which lives outside t
 
 **Verified against the live protection API on 2026-09-08**, not against `ci.yml`:
 
-```
+```sh
 gh api repos/joaoariedi/fablab-unesp/branches/{main,dev}/protection \
   --jq '.required_status_checks.contexts'
 ```
@@ -585,7 +585,7 @@ hang a PR by never reporting.
 
 The additive endpoint, which does not require restating the existing list:
 
-```
+```sh
 for b in main dev; do
   gh api -X POST "repos/joaoariedi/fablab-unesp/branches/$b/protection/required_status_checks/contexts" \
     -f 'contexts[]=Colour tokens' \
