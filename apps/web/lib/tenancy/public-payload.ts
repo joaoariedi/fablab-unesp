@@ -11,7 +11,7 @@ import {
 } from './client'
 import { PublicReadDeniedError, PublicWriteDeniedError, TenantUnresolvedError } from './errors'
 import { resolveTenant, type HostLookup, type ResolvedOrganization } from './resolve'
-import { isScoped } from './scope-registry'
+import { isScoped, publicListReason } from './scope-registry'
 
 /**
  * The anonymous read path (FR-010, FR-015, SC-002).
@@ -211,6 +211,34 @@ export async function getPublicScopedPayload(
   const PUBLISHABLE = options.publishable ?? derivePublishable(payload.config.collections)
 
   /**
+   * The second and last way past the gate (FR-002): a collection an anonymous page
+   * **enumerates** rather than reaches by populating a published document — the filter
+   * vocabularies the listing tabs and selects are drawn from. They carry no `status` at all,
+   * so the question `PUBLISHABLE` answers has no answer for them and the gate could only
+   * refuse; the declaration is what says an anonymous visitor may list them anyway.
+   *
+   * **`isScoped` is AND-ed in, and it is not redundant.** A declaration says a visitor may
+   * enumerate the collection; it cannot manufacture the `tenant` column that confines the
+   * enumeration to this host. `buildTenantClient` applies no tenant constraint to a `global`
+   * collection, so admitting one here on the strength of its own sentence would serve every
+   * organization's rows — the exact shape of the leak this gate exists to close.
+   */
+  const isPubliclyListable = (collection: string): boolean =>
+    // Read from the REAL registry, always. An injectable registry was added here to make the
+    // admission observable before T004 declared a collection — and it was a caller-reachable
+    // deny→allow override on the anonymous security gate: `getPublicScopedPayloadForRSC` takes
+    // this options bag, so any page module could have passed
+    // `{ pendingInvites: { scope: 'scoped', publicList: 'x' } }` and served every invite row of
+    // the host tenant, e-mail addresses included — the exact collection this gate's docstring
+    // names as the measured 002 leak. It is not the `publishable` seam's equivalent: injecting
+    // `publishable` forces a `status` clause that Payload rejects on a statusless collection,
+    // so it cannot widen anything. This one widened by removing the filter entirely.
+    //
+    // T004 landed the real declarations, so the seam has no remaining purpose. The tests that
+    // needed it now assert against the shipped registry, which is a stronger check anyway.
+    isScoped(collection) && publicListReason(collection) !== undefined
+
+  /**
    * The allow-list gate. **Deny is the default**, and that direction is the entire point.
    *
    * The rejected first version filtered when it recognised the collection and served it
@@ -221,25 +249,80 @@ export async function getPublicScopedPayload(
    * caller cannot see the difference between "filtered" and "no filter was buildable", which
    * is what makes fail-open here silent rather than noisy.
    *
-   * Reference data with no `status` — the categories the listing tabs read — is deliberately
-   * NOT special-cased here. Those collections arrive in 002b, and which of them an anonymous
-   * visitor may read is a declaration each one should make, not something this function should
-   * infer from the absence of a field.
+   * Reference data with no `status` — the categories the listing tabs read — is admitted only
+   * by the `publicList` declaration above, never inferred from the absence of a field. That
+   * distinction is the whole guard: "has no status" describes half the registry, including
+   * `pendingInvites`, while "somebody wrote down why a visitor may list this" describes four
+   * collections and has an author.
    */
   const assertPubliclyReadable = (collection: string): void => {
     if (PUBLISHABLE.has(collection)) return
+    if (isPubliclyListable(collection)) return
     throw new PublicReadDeniedError(
       collection,
       isScoped(collection)
-        ? 'it declares no `status` field, so no published-only filter can be built for it'
-        : 'it is `global`, so it carries no tenant column to confine the read to this host',
+        ? 'it declares no `status` field, so no published-only filter can be built for it, and no `publicList` reason saying an anonymous visitor may list it unfiltered'
+        : 'it is `global`, so it carries no tenant column to confine the read to this host — a `publicList` reason cannot manufacture one',
     )
   }
 
   /* @isolation-mutation-point */
-  const publishedOnly = (collection: string): Where => {
-    assertPubliclyReadable(collection)
+  const publishedOnly = (): Where => {
     return { status: { equals: PUBLISHED_STATUS } } as Where
+  }
+
+  /**
+   * The statuses a collection shows anonymously BEYOND `publicado`.
+   *
+   * `projeto`, `artigo`, `aula` and `modelo3d` run the three-state review queue, where
+   * `publicado` is the whole of the public set. `evento` does not: `data-model.md` gives the
+   * agenda its own four states per `calendario.md`, and spec.md § Notes for planning says what
+   * that means here — *"'published only' is not the same predicate on the calendar as
+   * elsewhere. A cancelled event that was public must keep showing as cancelled rather than
+   * vanishing."*
+   *
+   * Both extra states were already public and have simply moved on. Filtering them out does not
+   * protect anything — it deletes the agenda's past and turns a cancellation into a silent
+   * disappearance, which is the one outcome a calendar must not produce: a visitor who saw the
+   * event yesterday concludes it is still on.
+   *
+   * **`rascunho` is not here and must never be.** It is the only status on this collection that
+   * was never public, so it is the only one this map could leak. A collection absent from the
+   * map keeps `publicado` alone, so the default stays the strict one and a new collection is
+   * confined until someone writes a line here saying otherwise.
+   */
+  const PUBLIC_STATUSES_BEYOND_PUBLISHED: Readonly<Record<string, readonly string[]>> = {
+    evento: ['cancelado', 'concluido'],
+  }
+
+  /**
+   * The status clause for one collection: `publicado`, plus whatever that collection declares.
+   *
+   * Delegates to {@link publishedOnly} for the ordinary case rather than inlining the same
+   * object, and that is deliberate: `scripts/isolation-mutation.sh public-path` rewrites that
+   * function's exact expression to prove the anonymous gate can fail, matching it by text. A
+   * rewrite of that line here would leave the mutation matching nothing and reporting success
+   * on a tree it never touched — the defect `isolation-mutation-layers.test.ts` exists for.
+   */
+  const publiclyVisible = (collection: string): Where => {
+    const beyond = PUBLIC_STATUSES_BEYOND_PUBLISHED[collection]
+    if (beyond === undefined) return publishedOnly()
+    return { status: { in: [PUBLISHED_STATUS, ...beyond] } } as Where
+  }
+
+  /**
+   * The clause every public read is confined by, and the one place the two admissions differ.
+   *
+   * A `publicList` collection gets **no status clause at all**, and that is not a shortcut:
+   * it has no such column, and Payload rejects the whole query rather than returning nothing
+   * ("The following path cannot be queried: status"), so a defensive filter here would take
+   * out the vocabulary the tabs are drawn from. `undefined` is safe precisely because it is
+   * unreachable without a declaration — `assertPubliclyReadable` runs first, and the tenant
+   * constraint is `buildTenantClient`'s either way.
+   */
+  const publicWhere = (collection: string): Where | undefined => {
+    assertPubliclyReadable(collection)
+    return PUBLISHABLE.has(collection) ? publiclyVisible(collection) : undefined
   }
 
   const base = buildTenantClient({
@@ -254,12 +337,12 @@ export async function getPublicScopedPayload(
     // `buildTenantClient` AND-s the caller's `where` with the tenant constraint and
     // documents that a caller cannot widen the scope by supplying its own. The public
     // client adds one more AND — and removes the writers.
-    // `async` is load-bearing, not stylistic: `publishedOnly` throws for a collection the
+    // `async` is load-bearing, not stylistic: `publicWhere` throws for a collection the
     // allow-list refuses, and a synchronous throw out of a promise-returning method is a
     // different thing for callers to catch than a rejection. Every other method here rejects,
     // so this one must too — `.catch()` on the returned promise has to see it.
     find: async (args) =>
-      base.find({ ...args, where: and(args.where, publishedOnly(args.collection)) }),
+      base.find({ ...args, where: and(args.where, publicWhere(args.collection)) }),
 
     // Issued as a constrained `find` for the same reason `findByID` is inside the builder:
     // an unpublished or foreign document must match zero rows rather than be fetched and
@@ -280,7 +363,7 @@ export async function getPublicScopedPayload(
         limit: 1,
         where: and(
           { id: { equals: args.id } } as Where,
-          isOwnOrganization ? undefined : publishedOnly(args.collection),
+          isOwnOrganization ? undefined : publicWhere(args.collection),
         ),
       })
       return docs[0] ?? null

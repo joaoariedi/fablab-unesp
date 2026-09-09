@@ -237,6 +237,82 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: bash scripts/migration-drift.sh
 
+  performance:
+    name: Performance budget
+    # FR-025 / SC-006, the criterion this feature exists to make true: LCP <= 2.5s per page on
+    # the named mid-range 4G profile. The roadmap says a miss reopens hybrid C, so the number
+    # has to be measured on every pull request rather than remembered from the day it was.
+    #
+    # This job OWNS ITS DATABASE, and that is the reason it is a job rather than a step in an
+    # existing one. `scripts/lcp-budget.sh` migrates, seeds, builds, starts and only then
+    # measures: tenancy resolves from the Host header, and the seeded CITe organization is what
+    # claims `localhost`. Strip those rows and every route 404s — at which point Lighthouse
+    # scores an error page at a magnificent LCP and the gate passes hardest exactly when the
+    # site is gone. The suite in `Tests` destroys those rows (measured; it has already cost this
+    # project a debugging round), so the measurement cannot share a Postgres with it.
+    #
+    # `ubuntu-latest` ships the Chrome the script drives headless; nothing else installs it.
+    runs-on: ubuntu-latest
+    # Six pages x three runs, behind a production build. Generous, but bounded: the default is
+    # six hours, and a wedged Lighthouse would hold a required check open for all of them.
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: fablab
+          POSTGRES_PASSWORD: fablab
+          POSTGRES_DB: fablab
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U fablab -d fablab"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The script owns migrate, seed, build, start and the readiness probe — they are steps of
+      # the gate, not preconditions someone remembers to arrange.
+      - run: bash scripts/lcp-budget.sh
+
+  performance-mutation:
+    name: Performance budget can fail
+    # SC-012, and the lesson `Isolation harness can fail` already paid for: a gate only ever
+    # observed green is evidence of nothing. `scripts/lcp-mutation.sh` plants a deliberately
+    # oversized hero, runs the real budget, and requires it to go red NAMING the URL and the
+    # measured value — a non-zero exit is refused on its own, because a missing seed, a failed
+    # build and a server that never answered all exit non-zero too.
+    #
+    # Same reasoning as above for the dedicated Postgres: this job runs the budget gate, so it
+    # seeds the same host domains and needs the same protection from the suite.
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: fablab
+          POSTGRES_PASSWORD: fablab
+          POSTGRES_DB: fablab
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U fablab -d fablab"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Plant an oversized hero and require the budget to notice
+        run: bash scripts/lcp-mutation.sh
+
   build:
     name: Build
     runs-on: ubuntu-latest

@@ -30,3 +30,16 @@ coverage/
 
 # Payload generated types (regenerated from the config)
 apps/web/payload-types.ts
+
+# The speckit plan-phase marker. Transient by design: `speckit.plan` creates it in pre-flight
+# and clears it after plan.md is written, and while it exists a PreToolUse hook blocks every
+# Write/Edit outside .specify/.
+#
+# It must never be committed. On 2026-09-07 a `git add -A` swept it into a commit, so it
+# survived the plan phase and silently blocked the NEXT workflow run — one task could not write
+# a single file and reported as failed, while agents using shell heredocs wrote normally, which
+# made the block look like a flaky task rather than a repo-wide switch. Two contributing causes,
+# both worth knowing: the helper's `plan-phase-end` does `rm -f` on a RELATIVE path and always
+# prints "cleared", so run from a subdirectory it removes nothing and still reports success; and
+# a tracked marker comes back on any checkout even when correctly deleted.
+.specify/.plan-in-progress

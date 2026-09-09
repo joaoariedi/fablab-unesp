@@ -16,6 +16,22 @@ export type Scope = 'scoped' | 'global'
 export type ScopeEntry = {
   scope: Scope
   why: string
+  /**
+   * Why an anonymous visitor may **LIST** this collection directly, with the tenant
+   * constraint and no status filter (FR-002).
+   *
+   * Required only for a collection a public page *enumerates* — the filter vocabularies a
+   * listing reads to draw its tabs and selects. A collection reached by **populating** a
+   * published document (a cover image, an author, a category on a card) needs nothing here
+   * and must not be given it: `depth: 1` already carries it in behind a document the
+   * published-only filter has already cleared.
+   *
+   * A reason string rather than `true`, for the same purpose `why` serves: the declaration
+   * has to be a sentence somebody wrote and somebody else can argue with. Deny stays the
+   * default — an undeclared collection is refused by the public client, which is the
+   * direction the feature-002 leak taught us to fail in.
+   */
+  publicList?: string
 }
 
 export const SCOPE_REGISTRY = {
@@ -38,6 +54,8 @@ export const SCOPE_REGISTRY = {
   categoriaProjeto: {
     scope: 'scoped',
     why: 'A second lab names its own vocabulary; a global set would impose CITe\'s (FR-002)',
+    publicList:
+      'The Projetos tabs enumerate this organization\'s categories before any project is read — projetos.md draws them in a fixed order, TODOS first, so the vocabulary is the page state and not a by-product of the rows shown (FR-004)',
   },
   // Declared BEFORE `projeto`, and the order is load-bearing twice over: `fixtures.ts`
   // seeds in registry order and a collection may only relate to one declared earlier, and
@@ -72,6 +90,8 @@ export const SCOPE_REGISTRY = {
   categoriaArtigo: {
     scope: 'scoped',
     why: 'A second lab names its own vocabulary; a global set would impose CITe\'s (FR-002)',
+    publicList:
+      'Same as categoriaProjeto, for the Artigos tabs — and the chip on a card can show PUBLICAÇÃO, a category the tab set omits (CLR-009), so the listing needs the whole vocabulary, not the categories its current page happens to use (FR-005)',
   },
   artigo: {
     scope: 'scoped',
@@ -80,6 +100,8 @@ export const SCOPE_REGISTRY = {
   categoriaModelo: {
     scope: 'scoped',
     why: 'Same as categoriaArtigo — vocabulary is the lab\'s, never the platform\'s (FR-002)',
+    publicList:
+      'Biblioteca 3D draws the teal sidebar CATEGORIAS list, which filters the models rather than being read off them — an empty page of results must still render every category so the visitor can leave it (FR-007)',
   },
   modelo3d: {
     scope: 'scoped',
@@ -100,6 +122,8 @@ export const SCOPE_REGISTRY = {
   maquina: {
     scope: 'scoped',
     why: 'A machine sits in one lab; sharing the row would share its booking and its downtime (FR-003)',
+    publicList:
+      'The Calendário machine filter is a select of every machine in the lab (calendario.md, "Todas as máquinas"), so it is enumerated for a month whose events name none of them (FR-008)',
   },
   evento: {
     scope: 'scoped',
@@ -168,3 +192,38 @@ export const globalCollections = (): RegisteredCollection[] =>
 
 /** Every slug the registry knows, in declaration order. */
 export const registeredCollections = (): RegisteredCollection[] => entries.map(([slug]) => slug)
+
+/**
+ * The registry the public-list accessors read.
+ *
+ * Injectable for the reason `public-payload.ts` injects `publishable`: until a collection
+ * actually declares `publicList`, a hand-built registry is the only vantage point from which
+ * these answers can be observed at all. Production never passes it.
+ */
+export type ScopeRegistryLike = Readonly<Record<string, ScopeEntry>>
+
+/**
+ * The reason this collection may be listed anonymously, or `undefined` when it declared none.
+ *
+ * `undefined` is the answer for an undeclared collection **and** for a slug the registry does
+ * not know, so the public client's gate cannot tell the two apart — both are a refusal.
+ *
+ * @example
+ *   if (publicListReason('categoriaProjeto')) return  // scoped + declared → tenant only
+ */
+export const publicListReason = (
+  slug: string,
+  registry: ScopeRegistryLike = SCOPE_REGISTRY,
+): string | undefined => registry[slug]?.publicList
+
+/**
+ * Every collection carrying a `publicList` declaration, in declaration order.
+ *
+ * Membership is "declared it at all", not "declared it with a usable reason" — an entry with
+ * an empty string must still be *seen* here, or the rot guard that requires a non-empty reason
+ * would iterate past exactly the case it exists to catch.
+ */
+export const publicListCollections = (registry: ScopeRegistryLike = SCOPE_REGISTRY): string[] =>
+  Object.entries(registry)
+    .filter(([, entry]) => entry.publicList !== undefined)
+    .map(([slug]) => slug)

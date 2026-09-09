@@ -14,6 +14,7 @@ import type { CSSProperties, ReactElement, ReactNode } from 'react'
  */
 import {
   Button,
+  CalendarDayPanel,
   Card,
   Chip,
   Footer,
@@ -22,11 +23,17 @@ import {
   IsoShape,
   LOGO_CHIP_COLOURS,
   LogoChip,
+  CardProjeto,
+  EmptyState,
+  ListingGrid,
   MenuSheet,
   MobileTabBar,
+  ModelViewer,
+  Pagination,
   PixelImage,
   profileHref,
   ProgressBar,
+  ProjectCarousel,
   SearchInput,
   SkillPips,
   Tabs,
@@ -250,6 +257,58 @@ function contentSpecimens(): ReactElement[] {
   ]
 }
 
+/** A light box, so the `light` specimens are looked at on the surface they were drawn for.
+ *  The gallery's own background is `--surface-page` (navy), where navy ink is invisible — a
+ *  specimen nobody can see reviews nothing, which is the failure the workbench exists to catch. */
+const LIGHT_SURFACE_STYLE: CSSProperties = {
+  background: 'var(--surface-light)',
+  padding: 'var(--space-4)',
+  width: '100%',
+}
+
+/**
+ * The pagination bar (T010 / FR-029, CLR-003).
+ *
+ * Three specimens, because the three things a reviewer has to look at never appear in the same
+ * bar. Only a long listing prints a `…` and both arrows. Only page 1 shows the bar with `‹`
+ * **absent** — the ends omit the step rather than disabling it, so the row is one target
+ * narrower there and that asymmetry is a design decision someone should see rather than read.
+ * And the light surface changes the current page in kind, not in value: underlined pink ink on
+ * navy becomes the mockup's *"chip rosa"* — a pink fill with navy ink — because pink small text
+ * on white is the pair FR-028 forbids and `contrast.test.ts` will not certify.
+ *
+ * The hrefs are the real listing URLs rather than `#`: the control's whole contract is that a
+ * page is a link, and a specimen wired to `#` would look identical while proving nothing.
+ */
+function paginationSpecimen(): ReactElement {
+  const pageHref = (base: string) => (n: number) => `${base}?pagina=${n}`
+  return (
+    <Specimen key="pagination" title="Pagination — long listing / first page / on a white content area">
+      <Pagination
+        page={60}
+        totalPages={124}
+        hrefFor={pageHref('/biblioteca-3d')}
+        label="Paginação — 124 páginas, no meio"
+      />
+      <Pagination
+        page={1}
+        totalPages={3}
+        hrefFor={pageHref('/projetos')}
+        label="Paginação — primeira página, sem ‹"
+      />
+      <div style={LIGHT_SURFACE_STYLE}>
+        <Pagination
+          page={60}
+          totalPages={124}
+          surface="light"
+          hrefFor={pageHref('/artigos')}
+          label="Paginação — sobre área clara"
+        />
+      </div>
+    </Specimen>
+  )
+}
+
 /** The meters and the field: components whose whole subject is a value at the ends of a range. */
 function meterSpecimens(): ReactElement[] {
   return [
@@ -266,6 +325,75 @@ function meterSpecimens(): ReactElement[] {
     <Specimen key="search" title="SearchInput — on navy, and on a white content area">
       <SearchInput label="Buscar projetos" placeholder="Buscar projetos..." />
       <SearchInput label="Buscar artigos" placeholder="Buscar artigos..." surface="light" />
+    </Specimen>,
+    <Specimen key="grid" title="ListingGrid + CardProjeto — 3/2/1 across the breakpoints">
+      <ListingGrid label="Projetos">
+        <CardProjeto
+          titulo="Luminária paramétrica"
+          descricao="Luminária decorativa impressa em 3D com design paramétrico e encaixes precisos."
+          categoria="Impressão 3D"
+          href="/projetos/luminaria-parametrica"
+          capa={null}
+          autor={{ nome: 'Maria Silva', handle: 'mariasilva', nivel: 7 }}
+          curtidas={32}
+        />
+        <CardProjeto
+          titulo="Cadeira encaixe"
+          descricao="Cadeira produzida em MDF cortado a laser, com design minimalista e modular."
+          categoria="Móveis"
+          href="/projetos/cadeira-encaixe"
+          capa={null}
+          autor={{ nome: 'João Pereira', handle: 'joaopereira', nivel: 6 }}
+          curtidas={28}
+        />
+      </ListingGrid>
+    </Specimen>,
+    <Specimen
+      key="carousel"
+      title="ProjectCarousel — the Home's ÚLTIMOS PROJETOS, one screenful per arrow"
+    >
+      <ProjectCarousel label="Últimos projetos">
+        <CardProjeto
+          titulo="Luminária paramétrica"
+          descricao="Luminária decorativa impressa em 3D com design paramétrico e encaixes precisos."
+          categoria="Impressão 3D"
+          href="/projetos/luminaria-parametrica"
+          capa={null}
+          autor={{ nome: 'Maria Silva', handle: 'mariasilva', nivel: 7 }}
+          curtidas={32}
+        />
+        <CardProjeto
+          titulo="Cadeira encaixe"
+          descricao="Cadeira produzida em MDF cortado a laser, com design minimalista e modular."
+          categoria="Móveis"
+          href="/projetos/cadeira-encaixe"
+          capa={null}
+          autor={{ nome: 'João Pereira', handle: 'joaopereira', nivel: 6 }}
+          curtidas={28}
+        />
+        <CardProjeto
+          titulo="Vaso serigrafado"
+          descricao="Vaso de cerâmica com padrão geométrico aplicado em serigrafia manual."
+          categoria="Serigrafia"
+          href="/projetos/vaso-serigrafado"
+          capa={null}
+          autor={{ nome: 'Ana Souza', handle: 'anasouza', nivel: 4 }}
+          curtidas={11}
+        />
+      </ProjectCarousel>
+    </Specimen>,
+    <Specimen key="empty" title="EmptyState — the two states a listing can end in">
+      <EmptyState
+        variant="vazio"
+        titulo="Nenhum projeto encontrado."
+        descricao="Tente outra categoria ou limpe a busca."
+        acao={{ label: 'Limpar filtros', href: '/projetos' }}
+      />
+      <EmptyState
+        variant="erro"
+        titulo="Não foi possível carregar os projetos."
+        acao={{ label: 'Tentar novamente', href: '/projetos' }}
+      />
     </Specimen>,
   ]
 }
@@ -295,6 +423,53 @@ function tabBarSpecimen(isSignedIn: boolean): ReactElement {
       </div>
     </Specimen>
   )
+}
+
+/**
+ * The two islands feature 003 added (T021, T023).
+ *
+ * Both are `'use client'`, and a workbench frame is a server render — so what a reviewer sees
+ * here is each island's **server-rendered first paint**, which is the state that matters most
+ * and the one that is otherwise never looked at: it is what a crawler indexes, what a visitor
+ * on a slow connection reads first, and what remains for good if the bundle never arrives.
+ *
+ * `ModelViewer` is shown on both branches of FR-014 because they are different components in
+ * practice: with a `src` it renders `<model-viewer>` (inert until the chunk loads), and with
+ * none it renders the poster as a plain image. CLR-002 puts it on detail pages only, so the
+ * gallery is where the two branches sit side by side at all.
+ */
+function islandSpecimens(): ReactElement[] {
+  return [
+    <Specimen key="viewer" title="ModelViewer — a model to load, and the thumbnail fallback">
+      <div style={{ width: '100%', maxWidth: '320px' }}>
+        <ModelViewer
+          src="/modelos/luminaria.glb"
+          poster="/modelos/luminaria-poster.png"
+          alt="Pré-visualização 3D da luminária paramétrica"
+        />
+      </div>
+      <div style={{ width: '100%', maxWidth: '320px' }}>
+        <ModelViewer
+          src={null}
+          poster="/modelos/cadeira-poster.png"
+          alt="Miniatura da cadeira de encaixe"
+        />
+      </div>
+    </Specimen>,
+    <Specimen key="daypanel" title="CalendarDayPanel — the drawer a ?dia= link opens">
+      <CalendarDayPanel titulo="SÁBADO, 22 DE AGOSTO" fecharHref="/calendario?mes=2026-08">
+        <Card
+          title="OFICINA DE IMPRESSÃO 3D"
+          category="OFICINA"
+          author={{ handle: 'fablabcite', level: 1 }}
+          likes={4}
+          outline="primary"
+        >
+          14h00 — Sala Maker
+        </Card>
+      </CalendarDayPanel>
+    </Specimen>,
+  ]
 }
 
 /** The shell. These are the specimens the three frame widths exist for. */
@@ -351,6 +526,8 @@ function specimenGallery(width: string): ReactElement {
       {identitySpecimens()}
       {contentSpecimens()}
       {meterSpecimens()}
+      {paginationSpecimen()}
+      {islandSpecimens()}
       {shellSpecimens()}
       {shapeSpecimens()}
     </main>

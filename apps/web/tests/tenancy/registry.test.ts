@@ -5,7 +5,10 @@ import {
   isPayloadInternal,
   isScoped,
   PAYLOAD_INTERNAL_COLLECTIONS,
+  publicListCollections,
+  publicListReason,
   registeredCollections,
+  type ScopeEntry,
   scopedCollections,
   SCOPE_REGISTRY,
 } from '../../lib/tenancy/scope-registry.js'
@@ -95,5 +98,96 @@ describe('scope registry', () => {
           `plugin-injected tenant field present=${hasTenantField}`,
       ).toBe(isScoped(collection.slug))
     }
+  })
+})
+
+/**
+ * The public-list declaration (FR-002, T001).
+ *
+ * `publicList` is the reason an anonymous visitor may **enumerate** a collection — the filter
+ * vocabularies a listing page reads directly. It is a sentence rather than a boolean for the
+ * same reason `why` is: a declaration nobody had to justify is one nobody has to defend.
+ *
+ * The registry seam is injected here for the reason `public-payload.ts` injects `publishable`:
+ * no shipped collection declares `publicList` yet (T004 is the task that declares the first
+ * four), so a hand-built registry is the only vantage point from which the accessor's answer
+ * can be observed at all. The last case pins the accessors to the **real** registry, so the
+ * fake can never drift into testing a private universe.
+ */
+describe('public-list declarations', () => {
+  const fake = {
+    categoriaFake: {
+      scope: 'scoped',
+      why: 'reference data',
+      publicList: 'the listing tabs enumerate every category of this organization',
+    },
+    /**
+     * Declared with an EMPTY reason, on purpose.
+     *
+     * `publicListCollections` filters on `!== undefined`, not on truthiness, and that
+     * distinction is the whole point: an empty reason is still a declaration, so T003's
+     * non-empty-reason guard has to be able to SEE it. Without this entry, mutating the filter
+     * to `Boolean(entry.publicList)` survived — and under that mutation the rot guard would
+     * iterate straight past the one case it exists to catch, passing vacuously.
+     */
+    vazioFake: { scope: 'scoped', why: 'declared with no reason at all', publicList: '' },
+    projetoFake: { scope: 'scoped', why: 'content, reached with a published-only filter' },
+    usuarioFake: { scope: 'global', why: 'platform-wide identity' },
+  } satisfies Record<string, ScopeEntry>
+
+  it('reads the reason a collection may be listed anonymously', () => {
+    expect(publicListReason('categoriaFake', fake)).toBe(
+      'the listing tabs enumerate every category of this organization',
+    )
+  })
+
+  it('answers undefined for a collection that declared nothing — deny is the default', () => {
+    // The direction that matters: an undeclared collection, and an unregistered slug, must
+    // both look exactly like a refusal to the caller. Anything else re-opens the 002 leak.
+    expect(publicListReason('projetoFake', fake)).toBeUndefined()
+    expect(publicListReason('usuarioFake', fake)).toBeUndefined()
+    expect(publicListReason('naoRegistrado', fake)).toBeUndefined()
+  })
+
+  it('enumerates exactly the collections that declared one', () => {
+    // `vazioFake` is included on purpose: membership is "declared it at all", never "declared
+    // it with a non-empty reason". T003's rot guard is what rejects an empty reason, and it can
+    // only do that if this accessor hands it the entry in the first place. Mutating the filter
+    // to `Boolean(entry.publicList)` drops `vazioFake` here and makes that guard vacuous.
+    expect(publicListCollections(fake)).toEqual(['categoriaFake', 'vazioFake'])
+    expect(
+      publicListReason('vazioFake', fake),
+      'an empty reason must read as the empty string, not as undefined — the difference is ' +
+        'exactly what separates "declared badly" from "not declared"',
+    ).toBe('')
+  })
+
+  it('answers for the shipped registry, not only for a fake one', () => {
+    for (const slug of registeredCollections()) {
+      expect(publicListReason(slug), `${slug}`).toBe((SCOPE_REGISTRY[slug] as ScopeEntry).publicList)
+    }
+    expect(publicListCollections()).toEqual(
+      registeredCollections().filter((slug) => publicListReason(slug) !== undefined),
+    )
+  })
+
+  it('declares exactly the four collections a page LISTS, and no more', () => {
+    // The assertion above restates the accessor against a direct read of the same field, so it
+    // proves the plumbing and not the decision. THIS is the decision, and it is the one with a
+    // security consequence: every entry here is a collection an anonymous visitor may enumerate
+    // in full, with no published-only filter.
+    //
+    // The four are the ones a page enumerates — the filter vocabularies and the machine select.
+    // Everything else the pages render is reached by POPULATING a published document, which the
+    // gate does not re-check, so it needs no declaration and must not be given one. Declaring
+    // `midiaImagem` here would make every draft's files enumerable; declaring `perfilMaker`
+    // would list the members of the lab. Neither is hypothetical — the 002 leak was exactly
+    // this shape, one collection at a time.
+    expect(publicListCollections()).toEqual([
+      'categoriaProjeto',
+      'categoriaArtigo',
+      'categoriaModelo',
+      'maquina',
+    ])
   })
 })

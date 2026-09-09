@@ -21,7 +21,27 @@ export type TenantScopedPayload = {
 }
 
 export type PaginatedResult<T> = { docs: T[]; totalDocs: number }
-export type FindArgs = { collection: string; where?: Where; limit?: number; depth?: number }
+/**
+ * `sort` and `page` are **optional and forwarded verbatim**, added for the public listing
+ * reader (`lib/public/listing.ts`, T008): FR-011 orders every listing most-recent-first and
+ * FR-029 paginates it at twelve per page, and neither is expressible with `limit` alone.
+ *
+ * Neither widens what a caller may see, which is the only question this type has to answer.
+ * `where` is the one field that decides *which rows*, and it is AND-ed with the tenant
+ * constraint below rather than replacing it; a sort key and a page offset re-order and slice
+ * a result set that has already been confined. A caller naming a column it may not read gets
+ * a query error, not another organization's row.
+ */
+export type FindArgs = {
+  collection: string
+  where?: Where
+  limit?: number
+  depth?: number
+  /** Payload's sort syntax: a field name, `-` prefixed for descending. */
+  sort?: string
+  /** 1-based, as Payload counts pages. */
+  page?: number
+}
 export type ByIDArgs = { collection: string; id: string | number; depth?: number }
 export type CreateArgs = { collection: string; data: Record<string, unknown>; depth?: number }
 export type UpdateArgs = ByIDArgs & { data: Record<string, unknown> }
@@ -68,6 +88,12 @@ export function buildTenantClient(opts: ClientOptions): TenantScopedPayload {
         collection: args.collection as never,
         depth: args.depth ?? 0,
         limit: args.limit,
+        // Spread rather than passed unconditionally: Payload reads `sort: undefined` and
+        // `page: undefined` as "no opinion" today, but an explicit undefined is a value some
+        // future version may validate, and this is the one method every read in the product
+        // goes through.
+        ...(args.sort !== undefined ? { sort: args.sort } : {}),
+        ...(args.page !== undefined ? { page: args.page } : {}),
         // The caller's `where` is merged with the tenant constraint, never replaced by it —
         // and the merge is an AND, so a caller cannot widen the scope by supplying its own.
         where: and(args.where, byTenant(args.collection)),

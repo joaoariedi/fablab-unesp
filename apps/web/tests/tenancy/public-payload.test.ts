@@ -123,6 +123,83 @@ describe('published-only (FR-010)', () => {
   })
 
   /**
+   * ── `evento` is not on the three-state queue, and the calendar depends on that ────────────
+   *
+   * spec.md § Notes for planning: *"`evento` uses a different status set (`rascunho ·
+   * publicado · cancelado · concluido`), so 'published only' is not the same predicate on the
+   * calendar as elsewhere. A cancelled event that was public must keep showing as cancelled
+   * rather than vanishing."*
+   *
+   * The calendar page's own tests could not see this. They drive the page through a fake client
+   * that returns whatever fixture array it is handed, so `{ status: 'cancelado' }` arrived at
+   * the renderer in a test and could never arrive in production — the gate that removes it sits
+   * one layer BELOW the page, and every one of those tests replaced that layer. The assertions
+   * here are on the gate itself, which is the only place the behaviour is decided.
+   */
+  it('shows a cancelled or concluded event, which was public and has only moved on', async () => {
+    const spy = vi.spyOn(world.payload, 'find').mockResolvedValue({
+      docs: [],
+      totalDocs: 0,
+    } as never)
+
+    const db = await getPublicScopedPayload(world.orgA.host, {
+      lookup: stubHostLookup(world.orgA.id),
+    })
+    await db.find({ collection: 'evento' })
+
+    const where = JSON.stringify(spy.mock.calls.at(-1)?.[0]?.where ?? {})
+    for (const status of ['publicado', 'cancelado', 'concluido']) {
+      expect(
+        where,
+        `an ${status} event is filtered out of the anonymous agenda. A cancellation that ` +
+          'vanishes is worse than one that is shown: a visitor who saw the event yesterday ' +
+          'concludes it is still on.',
+      ).toContain(status)
+    }
+    expect(where, 'the tenant constraint was dropped when the status set widened').toContain(
+      world.orgA.id,
+    )
+  })
+
+  it('still hides a draft event, the one status that was never public', () => {
+    // The direction that matters. `rascunho` is the only `evento` status this widening could
+    // leak, so it is asserted separately from the three above rather than inferred from them.
+    const spy = vi.spyOn(world.payload, 'find').mockResolvedValue({
+      docs: [],
+      totalDocs: 0,
+    } as never)
+
+    return (async () => {
+      const db = await getPublicScopedPayload(world.orgA.host, {
+        lookup: stubHostLookup(world.orgA.id),
+      })
+      await db.find({ collection: 'evento' })
+      expect(
+        JSON.stringify(spy.mock.calls.at(-1)?.[0]?.where ?? {}),
+        'a draft event is reachable anonymously',
+      ).not.toContain('rascunho')
+    })()
+  })
+
+  it('widens nothing for a collection that did not ask, keeping publicado exact', async () => {
+    // The default stays strict: a collection absent from the map gets `equals: publicado`, so
+    // a review-queue collection cannot inherit the calendar's exception by accident.
+    const spy = vi.spyOn(world.payload, 'find').mockResolvedValue({
+      docs: [],
+      totalDocs: 0,
+    } as never)
+
+    const db = await getPublicScopedPayload(world.orgA.host, {
+      lookup: stubHostLookup(world.orgA.id),
+    })
+    await db.find({ collection: 'projeto' })
+
+    expect(spy.mock.calls.at(-1)?.[0]?.where).toMatchObject({
+      and: expect.arrayContaining([{ status: { equals: 'publicado' } }]),
+    })
+  })
+
+  /**
    * This case used to assert the opposite — "leaves a collection without a status field
    * unfiltered" — and that is the defect, pinned as a requirement. Unfiltered on this client
    * does not mean "no status filter"; it means **no constraint the caller can see the absence
@@ -208,5 +285,112 @@ describe('no writers (FR-010)', () => {
     expect(db.create, 'the public client exposed create').toBeUndefined()
     expect(db.update, 'the public client exposed update').toBeUndefined()
     expect(db.delete, 'the public client exposed delete').toBeUndefined()
+  })
+})
+
+/**
+ * The public-list admission (T002, FR-002, SC-003).
+ *
+ * `publicList` is the second and last way past the allow-list: a collection an anonymous page
+ * **enumerates** rather than reads through a published document — the filter vocabularies the
+ * listing tabs and selects are drawn from. Its rows carry no `status` at all, so the question
+ * the publishable set answers ("which rows are published?") has no answer for them, and the
+ * old gate could only refuse.
+ *
+ * Two properties, and the second is the one that keeps this from being a hole:
+ *   - the tenant constraint still applies, so the widening is *what* may be listed and never
+ *     *whose* rows come back;
+ *   - **no status filter is added**, because these collections have no such column and
+ *     Payload rejects the query outright ("The following path cannot be queried: status")
+ *     rather than returning nothing — which would look like an empty vocabulary.
+ *
+ * **Asserted against the SHIPPED registry, not an injected one.** An earlier draft added a
+ * `registry` option to `PublicPayloadOptions` so this gate could be observed before T004
+ * declared a real collection. That option flowed straight through `getPublicScopedPayloadForRSC`
+ * to any page module, which made it a caller-reachable deny→allow override on the anonymous
+ * security gate: passing `{ pendingInvites: { scope: 'scoped', publicList: 'x' } }` would have
+ * served every invite row of the host tenant, e-mail addresses included — the exact collection
+ * this gate's docstring names as the measured 002 leak. It was NOT the equivalent of the
+ * `publishable` seam, which is self-limiting because it forces a `status` clause Payload rejects
+ * on a statusless collection. T004 landed the real declarations, so the seam was removed and
+ * these cases now read `categoriaProjeto`, which genuinely declares one.
+ */
+describe('public-list admission (FR-002, SC-003)', () => {
+  /** A really-declared collection (T004), so the admission is observed on the shipped rule. */
+  const DECLARED = 'categoriaProjeto'
+
+  const asPublicList = { publishable: new Set<string>() }
+
+  it('lists a declared collection with the tenant constraint and no status filter', async () => {
+    const spy = vi.spyOn(world.payload, 'find').mockResolvedValue({
+      docs: [],
+      totalDocs: 0,
+    } as never)
+
+    const db = await getPublicScopedPayload(world.orgA.host, {
+      ...asPublicList,
+      lookup: stubHostLookup(world.orgA.id),
+    })
+    await db.find({ collection: DECLARED })
+
+    const where = JSON.stringify(spy.mock.calls.at(-1)?.[0]?.where ?? {})
+    expect(where, 'the tenant constraint was dropped for a publicList collection').toContain(
+      world.orgA.id,
+    )
+    // A `status` clause here is not a harmless extra: the collection has no such column, so
+    // Payload refuses the whole query and the vocabulary the tabs are drawn from disappears.
+    expect(where, 'a status filter was built for a collection that has no status column')
+      .not.toContain('publicado')
+  })
+
+  it('applies the same admission to findByID, still without a status filter', async () => {
+    const spy = vi.spyOn(world.payload, 'find').mockResolvedValue({
+      docs: [],
+      totalDocs: 0,
+    } as never)
+
+    const db = await getPublicScopedPayload(world.orgA.host, {
+      ...asPublicList,
+      lookup: stubHostLookup(world.orgA.id),
+    })
+    await db.findByID({ collection: DECLARED, id: world.rows.categoriaProjeto!.A })
+
+    const where = JSON.stringify(spy.mock.calls.at(-1)?.[0]?.where ?? {})
+    expect(where, 'findByID lost the tenant constraint for a publicList collection').toContain(
+      world.orgA.id,
+    )
+    expect(where, 'findByID filtered a statusless collection on publicado').not.toContain(
+      'publicado',
+    )
+  })
+
+  it('refuses a scoped collection that declared nothing — deny is still the default', async () => {
+    // The direction the 002 leak taught us to fail in: admitting one collection must not
+    // admit the rest of the registry with it. `pendingInvites` is scoped, has no `status`
+    // and declares no `publicList`, and it is full of e-mail addresses.
+    const db = await getPublicScopedPayload(world.orgA.host, {
+      ...asPublicList,
+      lookup: stubHostLookup(world.orgA.id),
+    })
+
+    await expect(db.find({ collection: 'pendingInvites' })).rejects.toBeInstanceOf(
+      PublicReadDeniedError,
+    )
+  })
+
+  it('refuses a global collection even when it declares one', async () => {
+    // A declaration says an anonymous visitor may enumerate the collection; it cannot
+    // manufacture the tenant column that would confine the enumeration to this host.
+    // `buildTenantClient` applies no tenant constraint to a `global` collection, so admitting
+    // `users` here would serve every account on the platform.
+    const db = await getPublicScopedPayload(world.orgA.host, {
+      ...asPublicList,
+      lookup: stubHostLookup(world.orgA.id),
+    })
+
+    await expect(
+      db.find({ collection: 'users' }),
+      'a publicList declaration was allowed to stand in for a tenant column',
+    ).rejects.toBeInstanceOf(PublicReadDeniedError)
   })
 })
