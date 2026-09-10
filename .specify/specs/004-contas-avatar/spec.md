@@ -143,7 +143,7 @@ performance and isolation gates measure.
 | FR-012 | The terms checkbox is in step 2, links to the terms in a new tab, and acceptance is stamped with the timestamp **and the version accepted** | P1 | US1, US8 |
 | FR-013 | Creating a profile assigns every **active** skill of the organization at level 0; no skill is chosen during signup | P1 | US1, US5 |
 | FR-014 | Login is e-mail + password, and a failure returns one neutral message for every cause | P1 | US3 |
-| FR-015 | Login is rate-limited per account and per source, and the limit is enforced server-side | P1 | US3 |
+| FR-015 | Login is rate-limited **per account** — 5 attempts, then a 10-minute lock — enforced server-side by Payload's own `maxLoginAttempts`/`lockTime`. Per-source limiting is deliberately **not** in phase 1 (CLR-007) | P1 | US3 |
 | FR-016 | Login returns the visitor to the page they came from; a direct visit lands on Minha Conta | P2 | US3 |
 | FR-017 | Password reset issues a single-use, time-limited token and returns **the same response body and status** for registered and unregistered addresses. Timing is deliberately not equalised — SC-003 records why | P1 | US4 |
 | FR-018 | Session lifetime, renewal and sign-out are stated policy, and sign-out invalidates server-side | P1 | US3 |
@@ -159,8 +159,11 @@ performance and isolation gates measure.
 | FR-028 | Signed-in reads go through `getTenantScopedPayload(req)`; no page module imports `payload` or touches `req.payload` | P1 | US10 |
 | FR-029 | The isolation harness gains the **signed-in maker** vantage point for every page and write this feature adds, with a mutation proof | P1 | US10 |
 | FR-030 | What personal data is collected, on what basis, for how long, and how consent is withdrawn is recorded in the product docs, not only in code | P1 | US8 |
-| FR-031 | A person can export their own data and request deletion. Deletion erases the personal data, keeps the published work with authorship shown as a tombstone, and removes their `curtida` rows with the counters recomputed in the same transaction (CLR-003) | P1 | US8 |
+| FR-031 | A person can request deletion. It erases the personal data, keeps the published work with authorship shown as a tombstone, and removes their `curtida` rows with the counters recomputed in the same transaction (CLR-003). **Export is not in 004** — CLR-008 | P1 | US8 |
+| FR-031b | Deletion is confirmed on a screen that **names all three outcomes** — personal data erased, published work kept under a tombstone, likes removed — and proceeds only once the person types their own `@handle` | P1 | US8 |
 | FR-032 | The avatar builder is a client island with a **recorded** budget — measured once and written down with its profile and sprite byte counts — while the per-PR LCP gate stays on the six public pages (CLR-004) | P1 | US2 |
+| FR-032b | The signup flow and the builder render at 390 / 834 / 1440, every target is at least 44x44 on the compact breakpoints, and the focus ring is visible on every picker — **feature 003's FR-021/FR-022/FR-023 standard, applied here** (CLR-009) | P1 | US2 |
+| FR-032c | The builder is reachable and fully operable by keyboard: every slot, the rotation and the submit, with no control reachable only by pointer | P1 | US2 |
 | FR-033 | An uploaded or generated avatar asset goes through the media collections and the upload limits feature 002 fixed; nothing writes a raw key | P1 | US6 |
 | FR-034 | No hexadecimal colour literal is introduced in a component; the skin and hair palettes are **data**, not tokens, and CLR-005 records the distinction | P1 | US2 |
 
@@ -171,13 +174,15 @@ performance and isolation gates measure.
 | SC-001 | A visitor completes signup and is signed in, with the avatar they built persisted | End-to-end test driving both steps |
 | SC-002 | A wrong password and an unregistered e-mail produce byte-identical responses | Test asserting body and status are equal, as 003's 404 test does |
 | SC-003 | A reset token cannot be reused, an expired one is refused, and both addresses get the same body and status | Test over the token lifecycle. **Timing is deliberately not asserted**: the registered branch writes and sends mail while the unregistered one returns immediately, so a timing oracle exists. Equalising it costs a dummy delay; asserting it costs a flaky test. Recorded and accepted — revisit if abuse appears |
-| SC-004 | Login is rate-limited: N failures lock the account for the stated window | Test driving N+1 attempts |
+| SC-004 | Login is rate-limited per account: 5 failures lock it for 10 minutes | Test driving 6 attempts against the real lock |
 | SC-005 | No password, hash or reset token appears in any log line | Test scanning emitted logs during auth flows |
 | SC-006 | Every collection added is in `scope-registry.ts`; CI fails on one that is not | The existing registry test, extended |
 | SC-007 | A signed-in maker of organization A reads nothing of organization B on any page this feature adds | Isolation harness, signed-in vantage point |
 | SC-008 | The isolation harness for that vantage point is **watched failing** against a planted leak | `scripts/isolation-mutation.sh` gains the layer; the CI job proves it can fail |
 | SC-009 | `@handle` is unique within an organization, and homonyms get distinct handles | Test creating two profiles with the same name |
 | SC-010 | Deleting an account erases the personal data, leaves published content up under a tombstone, and removes the person's likes with counters recomputed | Test asserting all three, including a card rendering the tombstone |
+| SC-015 | The deletion screen names all three outcomes and refuses to proceed until the person's own `@handle` is typed | Test driving the wrong handle, the empty case, and the right one |
+| SC-016 | The signup flow and the builder pass the same breakpoint, target-size and focus-ring checks the six public pages do | `breakpoints-focus.test.ts` extended to these routes |
 | SC-011 | The avatar builder's LCP is measured and recorded with its profile and byte counts; the six public pages stay within the enforced budget | A recorded measurement for the builder; `scripts/lcp-budget.sh` unchanged for the six |
 | SC-012 | The island count is still bounded and every island is declared | `islands.test.ts`, extended |
 | SC-013 | Terms acceptance stores a version, and a person who accepted v1 is distinguishable from one who accepted v2 | Test over the stamp |
@@ -309,6 +314,15 @@ invisible until someone looked — the shape Principle 2 rejects for `TENANCY_MO
 is a **phase of the product**, identical in every environment, so changing it should be a commit
 somebody reviews. If it later needs to vary per deployment, that is a decision to take then.
 
+**A second exposure, accepted 2026-09-10 rather than left implied**: with no verification, no
+CAPTCHA and no signup rate limit, **a stranger can create accounts in bulk**. `canPublishField`
+keeps every one of them to drafts, so nothing reaches the public site — but drafts land in the
+team's **moderation queue**, and that is the thing an attacker would be wasting. Accepted because
+the lab is one physical space with a known community and no public launch, so the realistic
+attacker is nobody; verification closes it in phase 2 anyway. A CAPTCHA was considered and
+rejected: it adds a third-party service to a pinned stack and a tracking vendor in front of a
+form collecting student data under LGPD, to defend a queue two people read.
+
 **The cost, priced**: e-mail addresses are unconfirmed for the whole of phase 1. Password
 recovery still works — it sends to whatever was typed — but the platform holds accounts it may
 not be able to contact, and a typo'd address is unrecoverable by its owner. Phase 2's first task
@@ -317,6 +331,79 @@ the rule we want", recorded in `research.md` so it is not rediscovered.
 
 **Impact**: FR-019, US9, SC-014. FR-025's invitation now pays off immediately, which was the
 reason the middle state was wanted in the first place.
+
+### CLR-007: Login rate limiting is per account only in phase 1 [security] — decided 2026-09-10
+
+**Decision**: FR-015 is Payload's own `maxLoginAttempts: 5` / `lockTime: 600000`, per account.
+**Per-source limiting is not built.**
+
+**The gap, named rather than implied**: an attacker spraying one common password across many
+accounts never trips a per-account lock. That is the attack this decision does not stop.
+
+**Rationale**: the lock is real, free and already configured; a per-source limiter needs a shared
+store — in-memory dies on restart and is per-instance, Redis is a new service Principle 1 asks
+justification for — plus a decision about proxies, and a university network puts a whole cohort
+behind one address. With no public launch and a lab-sized community, the complexity is immediate
+and the attack is theoretical.
+
+**Revisit when**: the platform is public, or a second organization exists. **T016 tests the
+account lock and nothing more**, which is now the whole of FR-015 rather than half of it.
+
+**Impact**: FR-015, SC-004.
+
+### CLR-008: Data export leaves 004 [scope] — decided 2026-09-10
+
+**Decision**: FR-031 keeps **deletion**. The right of access — export — moves to its own
+follow-up.
+
+**Rationale**: FR-031 said a person *"can export their own data"* and stopped: no format, no
+delivery, no scope, and no task. Building that unspecified means guessing at a legal obligation,
+which is the worst way to discharge one. The open questions are real — is it the profile alone or
+every project, model and article they published; JSON or something a person can read; downloaded
+or e-mailed — and **ISS-002's privacy policy is what defines "their data"**, so specifying before
+that text exists would likely be specifying the wrong thing.
+
+**It is not dropped.** LGPD's access right stands whether or not this feature implements it; the
+follow-up is tracked and the obligation is recorded in `docs/lgpd.md` (T040) as outstanding.
+
+**Impact**: FR-031, and one row of the checklist (CHK029) which stays open by design.
+
+### CLR-009: The builder inherits feature 003's accessibility standard [design] — decided 2026-09-10
+
+**Decision**: the signup flow and the avatar builder are held to the **same** standard as the six
+public pages — 003's FR-021 (390/834/1440), FR-022 (44x44 on the compact breakpoints) and FR-023
+(a visible focus ring on every interactive target) — plus full keyboard operability.
+
+**Rationale**: nothing bound them. 003's requirements name its own pages, and this feature adds
+the densest interactive screen in the product — nine pickers, ~100 sprites, a live preview —
+with no requirement covering either axis. The tooling already exists: `breakpoints-focus.test.ts`
+resolves each page's cascade at the three widths and scores the focus ring **per painted region**,
+so this is reuse rather than new machinery.
+
+**Why not a lighter standard for a signed-in tool**: it would give the product two accessibility
+standards and put the weaker one on its hardest screen. **Why not defer it**: retrofitting is how
+003 shipped focus rings at 1.00:1 in three places — on the accent fill, on the teal band and in
+`EmptyState` — each found only when the gate learned to look.
+
+**Impact**: FR-032b, FR-032c, SC-016.
+
+### CLR-010: Deletion is confirmed by typing the handle [design] — decided 2026-09-10
+
+**Decision**: the deletion screen **names all three outcomes** — personal data erased, published
+work kept under a tombstone, likes removed and counters recomputed — and proceeds only once the
+person types their own `@handle`.
+
+**Rationale**: the surprising half is that their work **stays**. Someone who deletes expecting
+their projects to disappear has been misled by silence, and CLR-003 chose that behaviour
+deliberately, so the screen owes them the explanation. Typing the handle is the standard friction
+for an irreversible act and makes an accidental confirmation impossible.
+
+**Considered and not chosen**: a cooling-off period. It is safer against regret and against a
+hijacked session, but it puts the account in a fourth state every read path must understand, and
+LGPD's response window would have to accommodate the delay. Worth revisiting if account takeover
+ever becomes a real risk.
+
+**Impact**: FR-031b, SC-015.
 
 ## Notes for planning
 
