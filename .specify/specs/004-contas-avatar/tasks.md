@@ -185,10 +185,36 @@ assert the rule and the code has to ask the authority — the parser, not a list
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T018 | `foldToHandle` — ASCII lowercase, letters only. Pure and table-tested, accents included | FR-010, CLR-002 | `apps/web/lib/accounts/handle.ts` | T010 |
-| T019 | The **unique index on `(tenant, handle)`** and its migration | FR-010, SC-009 | `apps/web/migrations/` | T018 |
-| T020 | `createWithHandle`: insert, catch `23505` **for that index only**, increment from **2**, bounded at 25 | FR-010, CLR-002 | `apps/web/lib/accounts/handle.ts` | T019 |
-| T021 | **Two concurrent creates of the same name get two handles.** A race that only happens under load is the one nobody reproduces | SC-009 | `apps/web/tests/accounts/handle-race.test.ts` | T020 |
+| ✅ T018 | `foldToHandle` — ASCII lowercase, letters only. Pure and table-tested, accents included | FR-010, CLR-002 | `apps/web/lib/accounts/handle.ts` | T010 |
+| ✅ T019 | The **unique index on `(tenant, handle)`** and its migration | FR-010, SC-009 | `apps/web/migrations/` | T018 |
+| ✅ T020 | `createWithHandle`: insert, catch `23505` **for that index only**, increment from **2**, bounded at 25 | FR-010, CLR-002 | `apps/web/lib/accounts/handle.ts` | T019 |
+| ✅ T021 | **Two concurrent creates of the same name get two handles.** A race that only happens under load is the one nobody reproduces | SC-009 | `apps/web/tests/accounts/handle-race.test.ts` | T020 |
+
+### What phase 4 cost — nothing, and one lesson about my own plant
+
+All four tasks accepted on the first pass, no rejections. The run halted on a single typecheck
+error, and the fix is worth recording only because of what it would have hidden.
+
+**The blocker.** `handle-race.test.ts` declared `orgId: string | number` and wrote it into
+`orgs.organization`, which the generated types declare as `number | Organization`. Narrowed to
+`number` at the single assignment with a runtime check, rather than cast at the three use sites —
+a cast would also compile on the day the id really did become a string, and the suite would then
+create every racer in a lab that does not exist and prove nothing about a race.
+
+**T020 did the thing phase 3 failed to do, and found something while doing it.** The plan's sketch
+said "catch `23505` for that index only". Measured against the running stack, `@payloadcms/drizzle`'s
+`handleUpsertError` intercepts Postgres's refusal and rethrows a `ValidationError` in which **the
+code `23505` and the index name are both gone** — what survives is the table plus the column pair.
+So the detector matches on that, and keeps the raw `23505` + constraint check as a second door for
+a direct drizzle write or a Payload version that stops intercepting. Asking the authority instead
+of trusting the sketch is exactly what phase 3's two defects were the absence of.
+
+**And a warning about watching gates fail.** My first planted violation against the race test
+reported PASS — because the anchor string I substituted had the wrong indentation and *the mutation
+never applied*. A mutation that mutates nothing reports success on a tree it never touched; 003
+built `isolation-mutation-layers.test.ts` for precisely this. Re-run with the anchor asserted, both
+race tests failed with a message naming the real constraint. **Assert that the plant took before
+believing what the gate says about it** — this applies directly to T036.
 
 ## Phase 5: Signup, and the profile it creates
 

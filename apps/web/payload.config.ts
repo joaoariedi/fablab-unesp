@@ -32,6 +32,7 @@ import { PendingInvites } from './collections/PendingInvites'
 import { TenantCanaries } from './collections/TenantCanaries'
 import { isMaster, Users } from './collections/Users'
 import { readEnv } from './lib/env'
+import { perfilMakerHandleUnique } from './lib/tenancy/handle-unique-index'
 import { MAX_UPLOAD_CAP_BYTES } from './lib/uploads/limits'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -226,6 +227,13 @@ export default buildConfig({
     // straight to the database without producing a migration file, which is precisely how
     // dev and prod drift apart — the architecture document names this risk number one.
     push: env.NODE_ENV !== 'production',
+    // The one constraint Payload cannot express on a collection: `@handle` unique **per
+    // organization** (FR-010, SC-009). `unique: true` on the field would be unique across the
+    // whole table — the plugin narrows access, not indexes — and would refuse the second
+    // profile of anyone who joins a second lab (CLR-002). Declared here rather than only in a
+    // migration because `push` above is what builds every non-production database, and it
+    // drops an index it does not recognise.
+    afterSchemaInit: [perfilMakerHandleUnique],
   }),
 
   admin: {

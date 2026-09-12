@@ -6,6 +6,7 @@ import * as migration_20260907_035137_projeto_midia_relacionamentos from './2026
 import * as migration_20260907_063817_colecoes_002b from './20260907_063817_colecoes_002b';
 import * as migration_20260907_122242_evento_inscricao_obrigatoria from './20260907_122242_evento_inscricao_obrigatoria';
 import * as migration_20260912_025334_contas_avatar_004 from './20260912_025334_contas_avatar_004';
+import * as migration_20260912_062952_handle_unico_por_organizacao from './20260912_062952_handle_unico_por_organizacao';
 
 export const migrations = [
   {
@@ -46,6 +47,11 @@ export const migrations = [
   {
     up: migration_20260912_025334_contas_avatar_004.up,
     down: migration_20260912_025334_contas_avatar_004.down,
-    name: '20260912_025334_contas_avatar_004'
+    name: '20260912_025334_contas_avatar_004',
+  },
+  {
+    up: migration_20260912_062952_handle_unico_por_organizacao.up,
+    down: migration_20260912_062952_handle_unico_por_organizacao.down,
+    name: '20260912_062952_handle_unico_por_organizacao'
   },
 ];
