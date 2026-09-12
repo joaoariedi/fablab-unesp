@@ -5,6 +5,9 @@ import { fileURLToPath } from 'node:url'
 import type { CollectionConfig, Field } from 'payload'
 import { describe, expect, it } from 'vitest'
 
+import { AvatarItem } from '../collections/avatar/AvatarItem'
+import { TomDeCabelo } from '../collections/avatar/TomDeCabelo'
+import { TomDePele } from '../collections/avatar/TomDePele'
 import { Artigo } from '../collections/content/Artigo'
 import { Aula } from '../collections/content/Aula'
 import { CategoriaArtigo } from '../collections/content/CategoriaArtigo'
@@ -18,6 +21,8 @@ import { Modelo3d } from '../collections/content/Modelo3d'
 import { PerfilMaker } from '../collections/content/PerfilMaker'
 import { ProgressoAula } from '../collections/content/ProgressoAula'
 import { Projeto } from '../collections/content/Projeto'
+import { Skill } from '../collections/content/Skill'
+import { SCOPE_REGISTRY } from '../lib/tenancy/scope-registry'
 
 /**
  * The migration set must reproduce the schema the collections declare (T032, FR-001).
@@ -147,6 +152,26 @@ const MIGRATED_COLLECTIONS: CollectionConfig[] = [
 ]
 
 /**
+ * The four collections feature 004 declares, whose tables T010's migration must create.
+ *
+ * Listed rather than derived, for the reason the roster above is listed: a list taken from the
+ * resolved config passes vacuously for a collection nobody wired, and "declared in code,
+ * created by no migration" is precisely the drift this file exists to catch.
+ *
+ * In `SCOPE_REGISTRY` order, which is `payload.config.ts` order, which is the order
+ * `fixtures.ts` seeds in — `skill` last of the four because `perfilMaker.skills` points at it.
+ */
+const COLLECTIONS_004: CollectionConfig[] = [TomDePele, TomDeCabelo, AvatarItem, Skill]
+
+/** Every collection whose table must exist, old and new — the per-table checks iterate this. */
+const ALL_MIGRATED_COLLECTIONS: CollectionConfig[] = [...MIGRATED_COLLECTIONS, ...COLLECTIONS_004]
+
+/** `scoped` collections carry the plugin's tenant column; `global` ones must not (FR-027). */
+const isScoped = (collection: CollectionConfig): boolean =>
+  (SCOPE_REGISTRY as Record<string, { scope: string } | undefined>)[collection.slug]?.scope ===
+  'scoped'
+
+/**
  * The columns `table` still carries once every committed migration has run, in order.
  *
  * Presence cannot be answered by grepping the concatenated SQL: a column added by one
@@ -178,7 +203,7 @@ describe('committed migrations', () => {
     }
   })
 
-  for (const collection of MIGRATED_COLLECTIONS) {
+  for (const collection of ALL_MIGRATED_COLLECTIONS) {
     const table = snake(collection.slug)
 
     describe(`table "${table}"`, () => {
@@ -193,14 +218,38 @@ describe('committed migrations', () => {
         }
       })
 
-      it('carries the tenant column the multi-tenant plugin injects', () => {
-        // Scoped collections are unusable without it: every access constraint filters on it.
-        const body = createTableBody(committedSql(), table) ?? ''
-        expect(body).toContain('"tenant_id"')
-        expect(committedSql()).toContain(
-          `"${table}_tenant_id_organizations_id_fk" FOREIGN KEY ("tenant_id")`,
-        )
-      })
+      it(
+        isScoped(collection)
+          ? 'carries the tenant column the multi-tenant plugin injects'
+          : 'carries NO tenant column, because the registry declares it global',
+        () => {
+          const created = createTableBody(committedSql(), table)
+          // Asserted before either branch, because `?? ''` would otherwise let the `global`
+          // case pass on a table no migration creates — an absent column is not evidence of
+          // a correctly global table, it is evidence of no table at all.
+          expect(created, `"${table}" is created by no migration`).not.toBeNull()
+          const body = created ?? ''
+          if (isScoped(collection)) {
+            // Scoped collections are unusable without it: every access constraint filters on it.
+            expect(body).toContain('"tenant_id"')
+            expect(committedSql()).toContain(
+              `"${table}_tenant_id_organizations_id_fk" FOREIGN KEY ("tenant_id")`,
+            )
+            return
+          }
+          // The other direction, and it is not symmetry for its own sake (FR-027, CLR-001).
+          // `tomDePele`, `tomDeCabelo` and `avatarItem` are global because the art is the
+          // platform's; a tenant column here means the collection was listed in the plugin's
+          // map after all, and every row then belongs to whichever lab happened to seed it —
+          // so the second organization's signup would find the catalogue empty. A migration
+          // generated while the map was wrong bakes that in, and nothing else reads this file.
+          expect(
+            body,
+            `"${table}" is declared global in SCOPE_REGISTRY but its table carries a tenant ` +
+              'column, so the catalogue is per-lab in the database whatever the registry says',
+          ).not.toContain('"tenant_id"')
+        },
+      )
     })
   }
 
@@ -262,6 +311,81 @@ describe('committed migrations', () => {
     expect(body, 'curtida_rels is created by no migration — a like has nowhere to point').not.toBeNull()
     expect(body).toContain('"projeto_id"')
   })
+})
+
+/**
+ * The values a committed `CREATE TYPE … AS ENUM(…)` declares, or null when none creates it.
+ *
+ * `db-postgres` materialises a `select` field as a Postgres enum named `enum_<table>_<column>`,
+ * which is why `PerfilMaker.ts` records that changing `VINCULOS_UNESP` is a config edit **and**
+ * a migration: a value the type does not carry is refused by the database, several frames from
+ * the form that offered it.
+ */
+const enumValues = (typeName: string): string | null =>
+  new RegExp(`CREATE TYPE "public"\\."${typeName}" AS ENUM\\(([^)]*)\\)`).exec(
+    committedSql(),
+  )?.[1] ?? null
+
+type SelectField = NamedField & { options?: ({ value: string } | string)[] }
+type ArrayField = NamedField & { fields?: Field[] }
+
+const optionValues = (field: SelectField): string[] =>
+  (field.options ?? []).map((o) => (typeof o === 'string' ? o : o.value))
+
+const fieldsOfType = (collection: CollectionConfig, type: string): NamedField[] =>
+  namedFields(collection).filter((f) => f.type === type)
+
+/**
+ * Feature 004's schema, over the same derived-not-listed rule the file opens with (T010, FR-027).
+ *
+ * Every assertion here is a shape the generated migration gets wrong *silently*: an enum type
+ * whose values lag the config refuses a write with a database error naming no field, and an
+ * array field with no table loses the whole `SUAS SKILLS` panel while every column the profile
+ * declares is present and correct.
+ */
+describe('the schema feature 004 adds', () => {
+  for (const collection of [PerfilMaker, ...COLLECTIONS_004]) {
+    const table = snake(collection.slug)
+
+    for (const field of fieldsOfType(collection, 'select')) {
+      const typeName = `enum_${table}_${snake(field.name)}`
+
+      it(`declares "${typeName}" with every option "${collection.slug}.${field.name}" offers`, () => {
+        const declared = enumValues(typeName)
+        expect(
+          declared,
+          `no migration creates "${typeName}", so every write of ` +
+            `${collection.slug}.${field.name} is refused by the database`,
+        ).not.toBeNull()
+        for (const value of optionValues(field as SelectField)) {
+          expect(declared, `"${typeName}" is missing the option "${value}"`).toContain(`'${value}'`)
+        }
+      })
+    }
+
+    for (const field of fieldsOfType(collection, 'array')) {
+      const arrayTable = `${table}_${snake(field.name)}`
+
+      it(`gives "${collection.slug}.${field.name}" its own "${arrayTable}" table`, () => {
+        const body = createTableBody(committedSql(), arrayTable)
+        expect(
+          body,
+          `"${arrayTable}" is created by no migration — every row of ` +
+            `${collection.slug}.${field.name} has nowhere to live`,
+        ).not.toBeNull()
+        // `_order` and `_parent_id` are Payload's, not the field's: without them the rows
+        // belong to no document and come back in whatever order the planner chose.
+        expect(body).toContain('"_order"')
+        expect(body).toContain('"_parent_id"')
+        for (const column of expectedColumns({
+          ...collection,
+          fields: (field as ArrayField).fields ?? [],
+        })) {
+          expect(body, `"${arrayTable}" is missing column "${column}"`).toContain(`"${column}"`)
+        }
+      })
+    }
+  }
 })
 
 /**
@@ -327,8 +451,26 @@ describe('foreign keys whose ON DELETE must not be Payload\'s default', () => {
   // Derived from the collections rather than listed, so a relationship that becomes required
   // in 2027 brings its own assertion with it — a hand-kept list would stay green while the
   // migration it guards regenerates back to `set null`.
-  for (const collection of MIGRATED_COLLECTIONS) {
-    const table = snake(collection.slug)
+  // The same trap reaches an ARRAY's sub-table, where nothing was looking for it. An array
+  // gets its own `<table>_<name>`, and a `required` relationship inside it is NOT NULL there
+  // exactly as it would be on the parent — `perfil_maker_skills.skill_id` is the first, and
+  // Payload generated `ON DELETE set null` for it. Deactivating a skill is the documented
+  // product behaviour (`Skill.ts`), but `delete` is still the admin's escape hatch, and taking
+  // it would abort the transaction with 25P02 naming neither the skill nor the profile.
+  const migratedTables: [string, CollectionConfig][] = ALL_MIGRATED_COLLECTIONS.flatMap(
+    (collection) => [
+      [snake(collection.slug), collection] as [string, CollectionConfig],
+      ...fieldsOfType(collection, 'array').map(
+        (field) =>
+          [
+            `${snake(collection.slug)}_${snake(field.name)}`,
+            { ...collection, fields: (field as ArrayField).fields ?? [] },
+          ] as [string, CollectionConfig],
+      ),
+    ],
+  )
+
+  for (const [table, collection] of migratedTables) {
     for (const field of requiredRelationships(collection)) {
       const column = `${snake(field.name)}_id`
 

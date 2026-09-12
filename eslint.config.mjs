@@ -283,6 +283,20 @@ export default tseslint.config(
   // tenancy fence below already exempts apps/web/tests/** for that same reason — the
   // precedent existed and round 3 found the first draft of this rule not following it. A path
   // stays visible in review; a per-line eslint-disable does not.
+  //
+  // THE FOURTH EXEMPTION IS DATA, NOT A WEAKENING (T007b — FR-034, CLR-005). The seed writes 20
+  // skin tones and 10 hair colours as `hex` rows. They are not tokens: a token is a value a
+  // component resolves through `var(--color-…)` so an organization's theme can repaint it, and a
+  // skin tone is the one colour in this product that must NEVER be repainted — doing so would
+  // change a person's depiction of themselves. Moving them into `tokens/**` to satisfy the fence
+  // would file 30 un-themeable values under the directory that means "themeable"; widening the
+  // selectors would buy the seed's 30 rows at the price of every component in the app.
+  //
+  // So the carve-out is a path, like the other three, and it is the SEED's path only.
+  // `apps/web/collections/avatar/**` — the configuration that defines these catalogues — stays
+  // fenced, because a hex there is a default baked into the product rather than a curated row.
+  // `packages/ui/tests/colour-fence.test.ts` probes both halves: that the seed may write every
+  // forbidden spelling, and that the collections directory next to it still may not.
   // ---------------------------------------------------------------------------------------
   {
     files: [UI_SRC_MODULES, WEB_MODULES],
@@ -290,6 +304,7 @@ export default tseslint.config(
       'packages/ui/src/tokens/**', // the one place a colour is defined
       'apps/web/tests/**', //         fixtures must be able to write a hex (T016)
       'packages/ui/tests/**', //      ditto: the fence's own probes live here
+      'apps/web/seed/**', //          reference data, not tokens (CLR-005, FR-034)
     ],
     rules: {
       'no-restricted-syntax': ['error', ...COLOUR_SELECTORS],
@@ -335,9 +350,19 @@ export default tseslint.config(
       // Both lists, deliberately. This block is the last one to name `no-restricted-syntax`
       // for most of apps/web, and flat config REPLACES rule options rather than merging them
       // — so listing only the tenancy selectors here would delete the colour fence from every
-      // page and component in the app, silently. The colour block above still carries the
-      // paths this block exempts (lib/tenancy, seed, payload.config.ts), which is why those
-      // stay fenced for colour while being exempt for tenancy.
+      // page and component in the app, silently.
+      //
+      // The two exemption lists are NOT the same, and this is the map:
+      //   • `lib/tenancy/**` and `payload.config.ts` — exempt for tenancy, still fenced for
+      //     colour. They are the choke point and the config that wires it; neither has any
+      //     business writing a hex.
+      //   • `apps/web/seed/**` — exempt for BOTH (CLR-005). The 30 palette rows are reference
+      //     DATA: `#2E1A0F` is the value of a skin tone, not a token a component paints with.
+      //     The fence forbids literals in components, and the seed is not one.
+      // Restating that here because this comment previously claimed every path below stayed
+      // fenced for colour, which stopped being true the moment `seed` was exempted 45 lines
+      // up — and it is the sole explanation of why this block re-states `COLOUR_SELECTORS`,
+      // so a reader who believed it would "repair" a hole that is deliberate.
       'no-restricted-syntax': ['error', ...TENANCY_SELECTORS, ...COLOUR_SELECTORS],
     },
   },

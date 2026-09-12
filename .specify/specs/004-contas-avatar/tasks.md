@@ -83,13 +83,51 @@ Recorded here because the next phase will meet the same three shapes.
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T005 | `skill` — **scoped**, administrable per organization, declared in the registry with its reason **before** anything references it | FR-013, FR-027 | `apps/web/collections/content/Skill.ts` | — |
-| T006 | [P] `tomDePele` (20) and `tomDeCabelo` (10) — **global** reference data (CLR-001) | FR-003, FR-027 | `apps/web/collections/avatar/` | — |
-| T007 | `avatarItem` — **global**, nine categories at the counts `onboarding.md` fixes, `compativelBase` only on `roupaCima` | FR-003, FR-004 | `apps/web/collections/avatar/AvatarItem.ts` | T006 |
-| T007b | Record the palette exemption in the colour fence: the 30 `hex` rows are **data**, not tokens, and the fence forbids literals **in components** (CLR-005). Without this the fence either fails on the seed or is quietly widened | FR-034, CLR-005 | `packages/ui/src/tokens/`, `packages/ui/tests/colour-fence.test.ts` | T006 |
-| T008 | Registry declarations for all four, and the seed. **Run the whole `tests/tenancy/` directory** — preamble item 1 | FR-027, SC-006 | `apps/web/lib/tenancy/scope-registry.ts` | T005, T007 |
-| T009 | `perfilMaker` gains its fields. **Add, do not re-create** | FR-008, FR-013 | `apps/web/collections/content/PerfilMaker.ts` | T008 |
-| T010 | The migration for T005–T009, via `./scripts/migrate-create.sh` — preamble item 7 | FR-027 | `apps/web/migrations/` | T009 |
+| ✅ T005 | `skill` — **scoped**, administrable per organization, declared in the registry with its reason **before** anything references it | FR-013, FR-027 | `apps/web/collections/content/Skill.ts` | — |
+| ✅ T006 | [P] `tomDePele` (20) and `tomDeCabelo` (10) — **global** reference data (CLR-001) | FR-003, FR-027 | `apps/web/collections/avatar/` | — |
+| ✅ T007 | `avatarItem` — **global**, nine categories at the counts `onboarding.md` fixes, `compativelBase` only on `roupaCima` | FR-003, FR-004 | `apps/web/collections/avatar/AvatarItem.ts` | T006 |
+| ✅ T007b | Record the palette exemption in the colour fence: the 30 `hex` rows are **data**, not tokens, and the fence forbids literals **in components** (CLR-005). Without this the fence either fails on the seed or is quietly widened | FR-034, CLR-005 | `packages/ui/src/tokens/`, `packages/ui/tests/colour-fence.test.ts` | T006 |
+| ✅ T008 | Registry declarations for all four, and the seed. **Run the whole `tests/tenancy/` directory** — preamble item 1 | FR-027, SC-006 | `apps/web/lib/tenancy/scope-registry.ts` | T005, T007 |
+| ✅ T009 | `perfilMaker` gains its fields. **Add, do not re-create** | FR-008, FR-013 | `apps/web/collections/content/PerfilMaker.ts` | T008 |
+| ✅ T010 | The migration for T005–T009, via `./scripts/migrate-create.sh` — preamble item 7 | FR-027 | `apps/web/migrations/` | T009 |
+
+### What phase 2 cost, and the one plan-level hole it found
+
+The workflow run halted here with four rejections. **Three were right and one was an artefact** —
+worth separating, because the artefact is a known mechanism and will recur.
+
+1. **T008's rejection was false.** Its verifier reported the task's test file absent from disk and
+   the four other files byte-identical to HEAD. They were not: verifiers mutate real files and
+   restore from their own backups, they run concurrently, and the run pipelines across tasks — so
+   one verifier's restore reverted T008's write for the window another was reading in. Feature 002
+   hit this exact shape. **Diff the tree yourself before believing a rejection**; the whole
+   directory is 547/547 green and the registry order is correct.
+
+2. **T007 had the catalogue half-sized, with a green test on the right integer.** The constant read
+   `roupaCima: 10` as *rows*, leaving the f/m split to the seed. `onboarding.md` fixes ten
+   **pieces**, *"cada peça tem versão `F` … e `M`"* — ten options per base, twenty rows. Both
+   readings satisfy `=== 10`; one of them shows a person five shirts. `CATEGORIAS_AVATAR` now means
+   *options offered* for all nine slots and `LINHAS_AVATAR` derives the rows, so only one of the
+   two is ever special-cased.
+
+3. **T006 found the hole this plan actually had.** `read: () => true` on the global palettes did not
+   buy FR-003's visitor read at all — the anonymous path builds its client with
+   `overrideAccess: true`, so collection access is never consulted there. What it bought was
+   unauthenticated enumeration of `/api/<slug>`. And underneath that: **`getPublicScopedPayload`
+   refuses `global` collections by construction**, so T022's *"reads the catalogue through the
+   choke point"* was written against a gate that throws. Fixed as `PUBLIC_GLOBAL_CATALOGUE` — a
+   three-element allow-list in the choke point itself, AND-ed with `!isScoped`, with the argument
+   beside it: the guard exists to stop *serving every organization's rows*, and a product-wide
+   catalogue has none to serve. `tests/tenancy/public-catalogue.test.ts` was watched failing in
+   both directions — door closed, and door widened to admit `users`.
+
+4. **T007b's mechanism worked and its record contradicted itself** 45 lines below the change. The
+   comment still claimed the colour block carried every path the tenancy block exempts, which
+   stopped being true the moment `seed` was exempted — and it is the sole explanation of why that
+   block re-states `COLOUR_SELECTORS`, so a reader would have "repaired" a deliberate hole.
+
+**For phases 3-7:** the choke point now has one global door and it is deliberately narrow. T022
+reads the catalogue through it. Nothing else may be added to that list without the same argument.
 
 ## Phase 3: Auth, configured rather than built
 

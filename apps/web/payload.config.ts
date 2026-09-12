@@ -9,6 +9,9 @@ import type { CollectionConfig } from 'payload'
 import { buildConfig } from 'payload'
 import sharp from 'sharp'
 
+import { AvatarItem } from './collections/avatar/AvatarItem'
+import { TomDeCabelo } from './collections/avatar/TomDeCabelo'
+import { TomDePele } from './collections/avatar/TomDePele'
 import { Artigo } from './collections/content/Artigo'
 import { Aula } from './collections/content/Aula'
 import { CategoriaArtigo } from './collections/content/CategoriaArtigo'
@@ -22,6 +25,7 @@ import { Modelo3d } from './collections/content/Modelo3d'
 import { PerfilMaker } from './collections/content/PerfilMaker'
 import { ProgressoAula } from './collections/content/ProgressoAula'
 import { Projeto } from './collections/content/Projeto'
+import { Skill } from './collections/content/Skill'
 import { MEDIA_COLLECTIONS, MEDIA_SLUGS } from './collections/Media'
 import { Organizations } from './collections/Organizations'
 import { PendingInvites } from './collections/PendingInvites'
@@ -45,6 +49,14 @@ const collections = [
   PendingInvites,
   CategoriaProjeto,
   Projeto,
+  // The 004 four (T008). Placed exactly where SCOPE_REGISTRY declares them, because that
+  // file's order is what `fixtures.ts` seeds in and `resetWorld` deletes in reverse — two
+  // lists in the same order are what makes "did this one land?" answerable by reading them
+  // side by side. Only `skill` appears in the plugin map below; the other three are global.
+  TomDePele,
+  TomDeCabelo,
+  AvatarItem,
+  Skill,
   // The 002b eleven (T044). Order mirrors SCOPE_REGISTRY, which `fixtures.ts` seeds in and
   // `resetWorld` deletes in reverse — keeping the two lists in the same order is what makes a
   // "did this one land?" question answerable by reading them side by side.
@@ -231,6 +243,11 @@ export default buildConfig({
         pendingInvites: {},
         categoriaProjeto: {},
         projeto: {},
+        // The one scoped collection feature 004 adds (T008). Its three siblings —
+        // `tomDePele`, `tomDeCabelo` and `avatarItem` — are deliberately absent: they are
+        // global reference data (CLR-001), and listing one here would give it a tenant column
+        // it has no business carrying, then hide every row from the labs that did not seed it.
+        skill: {},
         // The 002b eleven (T044). Every one carries content, a roster or an interaction that
         // belongs to exactly one lab, so every one is listed: a collection reaching the config
         // but not this map would carry no tenant column at all, and `scopedAccess()` would then

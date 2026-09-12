@@ -407,10 +407,26 @@ describe('relationship pickers (FR-021)', () => {
   it('every picker in the product offers rows from a collection this matrix drives', async () => {
     const config = await configPromise
     const driven = new Set<string>(scopedCollections())
-    // The two global collections, and why a picker may point at them: `organizations` is
-    // master-only and `users` is one row per requester — both measured in
-    // `admin-visibility.test.ts`, which is where their coverage lives.
-    const globals = new Set(['organizations', 'users'])
+    // The global collections, named one at a time and each with the reason a picker may
+    // point at it. A hand-kept set rather than `globalCollections()` on purpose: deriving it
+    // would make every future global collection allowlist itself silently, and the whole
+    // value of this gate is that adding one stops somebody and makes them write the sentence
+    // below. `organizations` is master-only and `users` is one row per requester — both
+    // measured in `admin-visibility.test.ts`, which is where their coverage lives.
+    //
+    // The three feature-004 catalogues (T008) reach this list through
+    // `payload-locked-documents`, whose `document` field is polymorphic over every lockable
+    // collection. They are global reference data (CLR-001): they carry no `tenant` column at
+    // all, so there is no cross-tenant question for an isolation surface to ask of them —
+    // read is open to everyone as a boolean, because step 1 of `/criar-conta` is the avatar
+    // builder and it runs before the person exists, and writing is the master's alone.
+    const globals = new Set([
+      'organizations',
+      'users',
+      'tomDePele',
+      'tomDeCabelo',
+      'avatarItem',
+    ])
 
     for (const [collection, target] of await pickerTargets(config)) {
       expect(

@@ -5,6 +5,7 @@ import * as migration_20260906_200327_midia_uploads from './20260906_200327_midi
 import * as migration_20260907_035137_projeto_midia_relacionamentos from './20260907_035137_projeto_midia_relacionamentos';
 import * as migration_20260907_063817_colecoes_002b from './20260907_063817_colecoes_002b';
 import * as migration_20260907_122242_evento_inscricao_obrigatoria from './20260907_122242_evento_inscricao_obrigatoria';
+import * as migration_20260912_025334_contas_avatar_004 from './20260912_025334_contas_avatar_004';
 
 export const migrations = [
   {
@@ -30,16 +31,21 @@ export const migrations = [
   {
     up: migration_20260907_035137_projeto_midia_relacionamentos.up,
     down: migration_20260907_035137_projeto_midia_relacionamentos.down,
-    name: '20260907_035137_projeto_midia_relacionamentos'
+    name: '20260907_035137_projeto_midia_relacionamentos',
   },
   {
     up: migration_20260907_063817_colecoes_002b.up,
     down: migration_20260907_063817_colecoes_002b.down,
-    name: '20260907_063817_colecoes_002b'
+    name: '20260907_063817_colecoes_002b',
   },
   {
     up: migration_20260907_122242_evento_inscricao_obrigatoria.up,
     down: migration_20260907_122242_evento_inscricao_obrigatoria.down,
-    name: '20260907_122242_evento_inscricao_obrigatoria'
+    name: '20260907_122242_evento_inscricao_obrigatoria',
+  },
+  {
+    up: migration_20260912_025334_contas_avatar_004.up,
+    down: migration_20260912_025334_contas_avatar_004.down,
+    name: '20260912_025334_contas_avatar_004'
   },
 ];
