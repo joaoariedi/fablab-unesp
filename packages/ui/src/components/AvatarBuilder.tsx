@@ -436,15 +436,31 @@ interface PainelProps {
   readonly slot?: string
 }
 
-/** One panel: its heading and its row of options. `data-slot` carries the slot's identity into
- *  the markup so the page, the tests and `avatarConfig` all find it by the same name. */
+/**
+ * One panel: its heading and its row of options. `data-slot` carries the slot's identity into
+ * the markup so the page, the tests and `avatarConfig` all find it by the same name.
+ *
+ * The options are a **named group** (FR-032c). Someone who can see the screen reads the heading
+ * above the row and never wonders which panel a thumbnail belongs to; someone arriving by Tab
+ * hears `cabelo-5, button` on the thirtieth press, out of ~125 controls of identical shape, with
+ * nothing to separate OCULOS from CHAPEU. `role="group"` with the heading's own text as its name
+ * is what a reader announces on entering the row — the same promise `fieldset`/`legend` makes,
+ * on the element that already holds the options.
+ *
+ * `aria-label` rather than `aria-labelledby`: the name is the very string rendered into the
+ * heading one line above, so the two cannot drift, and no generated id is needed — this island
+ * is allowed one hook (SC-012), which rules out `useId`, and a hand-rolled id would collide the
+ * day two builders share a page.
+ */
 function painel({ titulo, children, slot }: PainelProps): ReactElement {
   return (
     <section key={slot ?? titulo} data-slot={slot} style={ESTILO.painel} className={CLASSE.painel}>
       <h3 style={ESTILO.titulo} className={CLASSE.titulo}>
         {titulo}
       </h3>
-      <ul className={CLASSE.opcoes}>{children}</ul>
+      <ul className={CLASSE.opcoes} role="group" aria-label={titulo}>
+        {children}
+      </ul>
     </section>
   )
 }

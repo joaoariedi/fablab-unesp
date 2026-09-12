@@ -706,3 +706,98 @@ describe('a sprite that fails to load costs that slot and nothing else (FR-007)'
     expect(avatarCompleto(config, SLOTS)).toBe(true)
   })
 })
+
+/**
+ * T035d / FR-032c, US2 — the builder operated with no pointer at all.
+ *
+ * The requirement is one sentence — *"reachable and fully operable by keyboard: every slot, the
+ * rotation and the submit, with no control reachable only by pointer"* — and it needs executed
+ * assertions rather than a review note because **every way of breaking it still looks right on
+ * screen**. A `div` with an `onClick` draws the same thumbnail, takes the same press from a
+ * mouse, and is simply not there for the Tab key. A `tabIndex={-1}` added to tidy a 125-stop tab
+ * order removes a whole slot from the keyboard. A picker wired to `onMouseDown` answers a
+ * trackpad and nothing else.
+ *
+ * So the audit walks the tree the component returns and holds every control that does something
+ * to what a keyboard needs: it is a native `button` (the browser turns Enter and Space into a
+ * click; nothing else does), it carries `type="button"` — the builder is mounted inside the
+ * signup form, where a bare button is a **submit**, and the submit FR-032c names is the page's
+ * `SALVAR E CONTINUAR`, never a haircut — and it is still in the tab order.
+ *
+ * The count is asserted first, because an audit that iterates an empty list passes. It is
+ * derived from the pickers the tree itself renders, plus the rotation — the one control that
+ * belongs to no panel and is therefore the one a loop over the panels silently skips.
+ *
+ * The focus **ring** is deliberately not re-asserted here: FR-032b owns it, and T035c's
+ * `breakpoints-focus.test.ts` scores it against the painted background at the three widths,
+ * which is a far stronger instrument than matching a selector in this file.
+ */
+
+/** Events a pointer fires and a keyboard never does. A control wired to one of these instead of
+ *  `onClick` is precisely what FR-032c forbids: reachable by pointer alone. */
+const EVENTOS_DE_PONTEIRO = ['onMouseDown', 'onMouseUp', 'onMouseEnter', 'onMouseOver',
+  'onDoubleClick', 'onPointerDown', 'onPointerUp', 'onTouchStart', 'onDragStart'] as const
+
+/** Everything in the tree that does something when it is pressed. */
+const controlesDe = (tree: AnyElement): AnyElement[] =>
+  elementsOf(tree).filter((element) => typeof element.props.onClick === 'function')
+
+/** How a control names itself in a failure message, so a report points at one thumbnail. */
+const identidade = (element: AnyElement): string =>
+  String(element.props['data-item'] ?? element.props['data-rotacao'] ?? element.key)
+
+/** The text a reader would announce out of a subtree. */
+function textoDe(node: ReactNode): string {
+  if (typeof node === 'string') return node
+  if (Array.isArray(node)) return node.map((child) => textoDe(child as ReactNode)).join('')
+  if (!isValidElement(node)) return ''
+  return textoDe((node as AnyElement).props.children)
+}
+
+/** An element's accessible name by either route, so the audit does not dictate which one the
+ *  markup takes — `aria-label` and `aria-labelledby` are the same promise to a reader. */
+const nomeAcessivel = (tree: AnyElement, el?: AnyElement): string =>
+  typeof el?.props['aria-label'] === 'string'
+    ? String(el.props['aria-label'])
+    : textoDe(elementsOf(tree).find((o) => o.props.id === el?.props['aria-labelledby']))
+
+describe('operable with no pointer at all (FR-032c)', () => {
+  it('gives every control to Enter and Space, and leaves it in the tab order', () => {
+    const { tree } = mount()
+    const controles = controlesDe(tree)
+    // Every attribute that marks a picker: their union is every control but the rotation.
+    const atributos = ['data-item', 'data-base', 'data-tom-pele', 'data-tom-cabelo']
+    const pickers = atributos.reduce((n, atr) => n + valoresDe(tree, atr).length, 0)
+    // The rotation and every picker — the controls FR-032c enumerates, none of them skipped.
+    expect(controles).toHaveLength(pickers + 1)
+    for (const controle of controles) {
+      expect(controle.type, `${identidade(controle)} is not a native button`).toBe('button')
+      expect(controle.props.type, `${identidade(controle)} submits the form`).toBe('button')
+      expect(controle.props.tabIndex ?? 0, `${identidade(controle)} left the tab order`).toBe(0)
+      expect(controle.props['aria-hidden'], `${identidade(controle)} is hidden`).toBeUndefined()
+    }
+  })
+
+  it('answers no event a keyboard cannot fire', () => {
+    const ofensores = elementsOf(mount({ inicial: CONFIG_ESCOLHIDA }).tree).flatMap((el) =>
+      EVENTOS_DE_PONTEIRO.filter((e) => el.props[e] !== undefined).map((e) => identidade(el) + e))
+    expect(ofensores, 'a control answers the pointer and not the keyboard').toEqual([])
+  })
+
+  it('tells the keyboard which panel it has arrived in', () => {
+    const { tree } = mount()
+    const secoes = elementsOf(tree).filter((element) => element.type === 'section')
+    // Nine slots, the base and the two palettes: every panel, or the loop below proves nothing
+    // about the one that went missing.
+    expect(secoes).toHaveLength(SLOTS_ORDEM.length + 3)
+    for (const secao of secoes) {
+      const [cabecalho, lista] = ['h3', 'ul'].map((t) => elementsOf(secao).find((e) => e.type === t))
+      const titulo = textoDe(cabecalho)
+      // Someone who can see reads the heading above the row. Someone arriving on the thirtieth
+      // Tab press hears `cabelo-5, button` and nothing else — ~125 controls of identical shape,
+      // with no way to tell OCULOS from CHAPEU — unless the row announces itself as that panel.
+      expect(lista?.props.role, `the ${titulo} options are not a group`).toBe('group')
+      expect(nomeAcessivel(tree, lista), `the ${titulo} group is unnamed`).toBe(titulo)
+    }
+  })
+})

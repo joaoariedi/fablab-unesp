@@ -390,6 +390,14 @@ const ALLOWED_ISLANDS: Record<string, string> = {
   'apps/web/app/(frontend)/criar-conta/PassoDoAvatar.tsx':
     'holds the avatar the builder emits and shuts SALVAR E CONTINUAR until every required ' +
     'panel is answered — a gate over state that exists only after a press (FR-005, FR-002)',
+  // 004 T035. The editor's seat, and it is NOT the one above: step 1 hands its draft forward in
+  // a query, while this screen POSTs the live configuration to a server action that writes the
+  // profile — so the hidden field has to be re-serialised on every press, which only a component
+  // holding the state can do. The page could not: it is a server component that reads the
+  // catalogue (FR-028) and has never seen a choice.
+  'apps/web/app/(frontend)/minha-conta/avatar/EditorDoAvatar.tsx':
+    'holds the avatar being edited and posts it to the save action, with the submit shut while ' +
+    'a required panel is unanswered — state that exists only after a press (FR-023, FR-024)',
   'packages/ui/src/components/ProjectCarousel.tsx':
     "the Home's ÚLTIMOS PROJETOS carousel, decided 2026-08-23 — it scrolls under a control",
   'packages/ui/src/components/CalendarDayPanel.tsx':

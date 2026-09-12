@@ -362,16 +362,58 @@ to the client that cannot delete either row. Opened is not used. The assertion n
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T034 | Minha Conta: avatar, name, `@handle`, skills with pips, own content. **Displays, never awards** | FR-021, FR-022, US5 | `apps/web/app/(frontend)/minha-conta/page.tsx` | T027 |
-| T035 | Avatar editing after signup, and `avatarRender` regenerated only when the configuration changes | FR-023, FR-024, US6 | `apps/web/app/(frontend)/minha-conta/avatar/page.tsx` | T034 |
-| T035b | The avatar asset goes through `midiaImagem` and feature 002's upload limits — never a raw key, never a second path. `avatarRender` is a relationship, as decision D3 requires of every file in the product | FR-033, US6 | `apps/web/tests/accounts/avatar-asset.test.ts` | T035 |
-| T035c | The signup flow and the builder at 390 / 834 / 1440, 44x44 targets and a focus ring on every picker — **003's own gate extended to these routes**, not a second standard (CLR-009) | FR-032b, SC-016 | `apps/web/tests/public/breakpoints-focus.test.ts` | T024 |
-| T035d | The builder is fully operable by keyboard: every slot, the rotation, the submit. No control reachable only by pointer | FR-032c, US2 | `packages/ui/tests/avatar-builder.test.ts` | T024 |
-| T036 | The `same-tenant` mutation layer, **watched failing** against a planted violation before the CI job exists — preamble item 4 | FR-029, SC-008 | `scripts/isolation-mutation.sh` | T027 |
-| T037 | The CI matrix leg, only after T036 has been observed red | SC-008 | `.github/workflows/ci.yml` | T036 |
-| T038 | The signed-in isolation vantage point across every page this feature adds, **and** the choke-point rule: no page module imports `payload` or touches `req.payload` (000's import boundary, extended to this feature's pages) | FR-028, FR-029, SC-007, US10 | `apps/web/tests/tenancy/signed-in.test.ts` | T034 |
-| T039 | The builder's **recorded** budget: LCP on `/criar-conta` at `lcp-budget.sh`'s own profile, picker and preview sheet bytes counted separately | FR-032, SC-011, CLR-004 | `docs/avatar-budget.md` | T024 |
-| T040 | `docs/lgpd.md` — fields, legal basis, retention, withdrawal, and what deletion does | FR-030, US8 | `docs/lgpd.md` | T032 |
+| ✅ T034 | Minha Conta: avatar, name, `@handle`, skills with pips, own content. **Displays, never awards** | FR-021, FR-022, US5 | `apps/web/app/(frontend)/minha-conta/page.tsx` | T027 |
+| ✅ T035 | Avatar editing after signup, and `avatarRender` regenerated only when the configuration changes | FR-023, FR-024, US6 | `apps/web/app/(frontend)/minha-conta/avatar/page.tsx` | T034 |
+| ✅ T035b | The avatar asset goes through `midiaImagem` and feature 002's upload limits — never a raw key, never a second path. `avatarRender` is a relationship, as decision D3 requires of every file in the product | FR-033, US6 | `apps/web/tests/accounts/avatar-asset.test.ts` | T035 |
+| ✅ T035c | The signup flow and the builder at 390 / 834 / 1440, 44x44 targets and a focus ring on every picker — **003's own gate extended to these routes**, not a second standard (CLR-009) | FR-032b, SC-016 | `apps/web/tests/public/breakpoints-focus.test.ts` | T024 |
+| ✅ T035d | The builder is fully operable by keyboard: every slot, the rotation, the submit. No control reachable only by pointer | FR-032c, US2 | `packages/ui/tests/avatar-builder.test.ts` | T024 |
+| ✅ T036 | The `same-tenant` mutation layer, **watched failing** against a planted violation before the CI job exists — preamble item 4 | FR-029, SC-008 | `scripts/isolation-mutation.sh` | T027 |
+| ✅ T037 | The CI matrix leg, only after T036 has been observed red | SC-008 | `.github/workflows/ci.yml` | T036 |
+| ✅ T038 | The signed-in isolation vantage point across every page this feature adds, **and** the choke-point rule: no page module imports `payload` or touches `req.payload` (000's import boundary, extended to this feature's pages) | FR-028, FR-029, SC-007, US10 | `apps/web/tests/tenancy/signed-in.test.ts` | T034 |
+| ✅ T039 | The builder's **recorded** budget: LCP on `/criar-conta` at `lcp-budget.sh`'s own profile, picker and preview sheet bytes counted separately | FR-032, SC-011, CLR-004 | `docs/avatar-budget.md` | T024 |
+| ✅ T040 | `docs/lgpd.md` — fields, legal basis, retention, withdrawal, and what deletion does | FR-030, US8 | `docs/lgpd.md` | T032 |
+
+### What phase 7 cost — the fifth orphan, and four gates that asserted their own shape
+
+Six rejections, and none of them was wrong.
+
+1. **`/minha-conta/avatar` was an orphan.** The editor screen shipped, its island was seated, its
+   own suite was green — and nothing in the product pointed at it. Not Minha Conta, not the shell
+   nav, not a redirect. It was reachable by typing the URL. **Fifth** finished-but-unreachable
+   thing in this feature, and the reason none of the existing suites could see it is structural:
+   a page test walks the tree *its own* page returns, and an unreferenced route leaves no trace
+   in anybody's. US6 says where the door is — *"on Minha Conta … open the avatar editor"* — so
+   the assertion now lives on the page that owes it, by route rather than by label.
+
+2. **The CI change left the tree red**, and the task that made it did not notice. Adding the
+   `same-tenant` matrix leg created a gate that runs, reports red, and can be merged past —
+   which is precisely what `required-checks.test.ts` exists to refuse. It is now the sixteenth
+   required context on both branches, recorded in `.github/required-checks.json` and re-verified
+   against the live API.
+
+3. **FR-024's generation half was dropped, not deferred.** `avatarRender` is written as `null`,
+   the guarding assertion only checked the *key* was present — which a composed id satisfies
+   exactly as `null` does — and no later task created a compositor. The decision is now CLR-011
+   and T042 ⛔: **there is no sprite art in this repository**, so a compositor written today would
+   be green against an empty catalogue and would never have composed a real avatar. Blocked on
+   input, not effort. `avatar-render-deferred.test.ts` holds the boundary so the null cannot pass
+   for done, and fails if the *reason* stops being recorded.
+
+4. **Three gates asserted their own shape rather than the requirement**, each proven by a mutant
+   that survived:
+   - the asset test fed `RENDER.id` in and asserted `RENDER.id` came out, so writing the
+     caller's value verbatim passed. Driven with the string a form actually submits, it fails.
+   - the budget record's "two separate rows" check used two `find`s and asked only that neither
+     was `undefined` — one row worded *"Picker and preview … combined"* matched both. It now
+     requires two **distinct** rows, which is what FR-032 asks for.
+   - the LGPD doc's field check searched the **whole document**, so four fields could lose their
+     entire table row — field, purpose and legal basis — while their name survived in prose. And
+     the legal-basis check tested for a column *header*, so every basis cell could be blanked.
+     Both are per-field and in-table now.
+
+5. **The breakpoint gate's page list was hard-coded**, so the builder's second mount was never
+   measured — and it still carried the sub-44px control the same task had fixed on the signup
+   routes. Adding the route turned it red immediately, which is the shape of a gate worth having.
 
 ## Outstanding, and not executable by a run
 
@@ -379,6 +421,20 @@ to the client that cannot delete either row. Opened is not used. The assertion n
 > 003's run 6: a task no agent can perform is refused on every attempt, the phase gate reads that
 > as a failed phase, and the run halts there for good. It survived an earlier run only because
 > that run's implementer happened to word its refusal as a success.
+
+### T042 ⛔ — the avatar render compositor (ISS-003, CLR-011)
+
+FR-024's *"composed PNG generated server-side for cards and ranking"*. **Blocked on input, not
+on effort**: there is no sprite art in this repository — `avatarItem.sprite` and `spriteFolhas`
+point at `midiaImagem` documents nobody has uploaded, which is why `docs/avatar-budget.md`
+records both sheets at 0 B. `sharp` is already a dependency.
+
+Built now, the compositor would be green against an empty catalogue and would never have
+composed a real avatar. What 004 ships instead is the storage half CLR-011 describes: the
+relationship, the `midiaImagem` path, and the clear-on-change. `avatar-render-deferred.test.ts`
+holds that boundary so the null cannot pass for done.
+
+**Unblocked by**: the sprite sheets, from whoever draws them.
 
 ### T041 ⛔ — the terms and privacy text (ISS-002)
 

@@ -464,6 +464,14 @@ const ESTILO: Record<string, CSSProperties> = {
   // Trailing underscore, as the listings write it: `pagina` also names a query parameter in this
   // codebase, and two meanings for one word is how the wrong one gets used.
   pagina_: {
+    // The surface ROLES, re-declared for this region rather than a colour merely painted over
+    // it — step 1's page records the same reasoning. Without them every component inside follows
+    // `:root`'s navy treatment on a white page, and the focus ring stays the accent, which scores
+    // 2.05:1 here: invisible on exactly the controls a keyboard visitor is aiming for. Navy is
+    // 16.63:1 and is the ink this form already writes in (FR-032b, SC-016).
+    '--surface-page': 'var(--surface-inverted)',
+    '--surface-card': 'var(--surface-light)',
+    '--focus-ring-color': 'var(--text-on-light)',
     display: 'flex',
     justifyContent: 'center',
     // The mockup's light background — the card is "praticamente o mesmo tom do fundo" and what
@@ -471,7 +479,7 @@ const ESTILO: Record<string, CSSProperties> = {
     background: 'var(--surface-inverted)',
     color: 'var(--text-on-light)',
     padding: 'var(--space-8) var(--space-5) var(--space-10)',
-  },
+  } as CSSProperties,
   card: {
     // The `:root` ring is the accent, which scores ~2:1 on a light surface — invisible on exactly
     // the controls a keyboard visitor is aiming for. Navy is the ink this card already writes in.
@@ -538,6 +546,10 @@ const ESTILO: Record<string, CSSProperties> = {
     border: '2px solid var(--color-navy)',
     borderRadius: 'var(--radius-sm)',
     padding: 'var(--space-3) var(--space-4)',
+    // FR-032b: every field is a touch target before it is a field. Declared, not inferred from
+    // the padding — a browser sizes a `date` and a `select` by its own rules, and this is the
+    // only number the page controls.
+    minHeight: '44px',
   },
   aceite: {
     display: 'flex',
@@ -545,6 +557,10 @@ const ESTILO: Record<string, CSSProperties> = {
     gap: 'var(--space-3)',
     fontFamily: 'var(--font-body)',
     fontSize: 'var(--text-sm)',
+    // The LABEL is the target: a press anywhere on this row toggles the box inside it, which is
+    // why FR-032b's 44px is declared here rather than on a 24px square that would then have to
+    // be drawn twice the size of every checkbox in the product.
+    minHeight: '44px',
   },
   caixa: {
     // 24px of box, so the target reaches the 44x44 the focus/breakpoint gate measures once the
@@ -567,7 +583,10 @@ const ESTILO: Record<string, CSSProperties> = {
     fontFamily: 'var(--font-display)',
     fontSize: 'var(--text-base)',
     textDecoration: 'none',
-    display: 'inline-block',
+    // FR-032b, as step 1's own VOLTAR declares it: 44px with the label centred in it.
+    minHeight: '44px',
+    display: 'inline-flex',
+    alignItems: 'center',
   } as CSSProperties,
   rodape: { fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', margin: 'var(--space-6) 0 0' },
   link: { color: 'var(--color-azul)' },

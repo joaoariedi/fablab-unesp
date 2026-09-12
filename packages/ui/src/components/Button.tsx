@@ -71,6 +71,11 @@ export const PRIMARY_BUTTON_STYLE = {
   border: 'none',
   borderRadius: 'var(--radius-md)',
   padding: 'var(--space-3) var(--space-6)',
+  // FR-032b / 003's FR-022: at least 44px on the compact breakpoints, DECLARED rather than left
+  // to the padding — 12px either side of a 16px line box is 43.2px, under the bar by less than a
+  // pixel and invisible to anyone reading this file. Unconditional, because a target that is only
+  // large below 834 is a rule nobody can check on the device in their hand.
+  minHeight: '44px',
   // Buttons do not inherit the page font in any browser; without this the one element the
   // design leans on hardest falls back to the UA font.
   fontFamily: 'var(--font-body)',

@@ -494,7 +494,12 @@ const ESTILO: Record<string, CSSProperties> = {
     fontFamily: 'var(--font-display)',
     fontSize: 'var(--text-base)',
     textDecoration: 'none',
-    display: 'inline-block',
+    // FR-032b: 44px declared, and `inline-flex` with the label centred so the extra height is
+    // padding around the words rather than a gap under them. `inline-block` would honour the
+    // minimum and leave the text at the top of the box.
+    minHeight: '44px',
+    display: 'inline-flex',
+    alignItems: 'center',
   } as CSSProperties,
   nota: {
     margin: 0,

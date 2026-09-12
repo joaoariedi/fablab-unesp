@@ -29,12 +29,17 @@ import { describe, expect, it } from 'vitest'
  * Asserting "no importer anywhere" would therefore be asserting something this feature never
  * claimed — a gate holding a wrong claim is worse than no gate.
  *
- * **004 T013 filled `/login`**, so the inventory below lost a row. That is the shape this gate
- * was built for and not a weakening of it: it still names an exact set, so a placeholder coming
- * back on any public page — or a new route shipped as one — still fails. `/minha-conta` is the
- * last stub standing, and the vacuity probe at the bottom moved onto it for the same reason it
- * pointed at `/login` before: the detector needs one importer it is known to catch, or the
- * inventory rule above can go green on a scan that reads nothing.
+ * **004 T013 filled `/login` and 004 T034 filled `/minha-conta`**, so the inventory below is now
+ * empty. That is the shape this gate was built for and not a weakening of it: an exact set with
+ * nothing in it is the strictest this rule has ever been, and a placeholder coming back on any
+ * page — or a new route shipped as one — still fails.
+ *
+ * **The vacuity probe had to change with it.** It used to read the one route still holding the
+ * stub, which is no longer a thing that exists; deleting the probe would leave the inventory
+ * rule free to go green on a scan that reads nothing, which is the failure it was added to
+ * prevent. So it now exercises {@link importsPageStub} against sources it constructs — both
+ * spellings that must be caught, and a page that merely mentions the word in prose, which must
+ * not be. The detector is proven by what it answers, rather than by a stub nobody wants back.
  *
  * So the shape here is an *inventory*, not a ban: the set of files that reach for the stub
  * must be exactly the account routes still waiting for their feature. A stub reintroduced on
@@ -60,9 +65,12 @@ const ROUTES_FEATURE_003_FILLED = [
   'calendario',
 ] as const
 
-/** The routes whose placeholder is still correct — Minha Conta has not shipped (004 T018);
- *  `/login` left this list when 004 T013 replaced its stub with the real form. */
-const ROUTES_STILL_AWAITING_THEIR_FEATURE = ['minha-conta/page.tsx']
+/** The routes whose placeholder is still correct — **none**. `/login` left this list when 004
+ *  T013 replaced its stub with the real form, and `/minha-conta` when 004 T034 replaced its own
+ *  with the avatar, the skills panel and the maker's own content. Kept as a named constant
+ *  rather than inlined as `[]`: the next feature that stubs a route ahead of itself declares it
+ *  here, which is the conversation this inventory exists to force. */
+const ROUTES_STILL_AWAITING_THEIR_FEATURE: readonly string[] = []
 
 /**
  * True when a module reaches for the placeholder — by identifier or by module specifier.
@@ -122,10 +130,10 @@ describe('the placeholder is retired from the pages feature 003 owns (FR-001, SC
   it('accounts for every remaining importer in the frontend tree, not just the five', () => {
     expect(
       modulesImportingPageStub(),
-      'the placeholder survives only where its feature has not shipped: `/minha-conta` is ' +
-        'the last of the account routes still waiting for one (`/login` shipped in 004 ' +
-        'T013). Any other module here is either a public page that regressed, or a new ' +
-        'route that shipped as a stub.',
+      'the placeholder survives only where its feature has not shipped, and no route is ' +
+        'waiting any more (`/login` shipped in 004 T013, `/minha-conta` in 004 T034). Any ' +
+        'module listed here is either a page that regressed, or a new route that shipped as ' +
+        'a stub.',
     ).toEqual(ROUTES_STILL_AWAITING_THEIR_FEATURE)
   })
 
@@ -138,10 +146,22 @@ describe('the placeholder is retired from the pages feature 003 owns (FR-001, SC
       'the five routes must be inside what the scan reads, or the inventory rule ' +
         'above is asserting nothing about them',
     ).toEqual(expect.arrayContaining(ROUTES_FEATURE_003_FILLED.map((r) => `${r}/page.tsx`)))
+    // No route holds the stub any more, so the detector is proven against sources built here —
+    // both evadable spellings it must catch, and the false positive it must not raise.
     expect(
-      importsPageStub(readFileSync(join(FRONTEND_DIR, 'minha-conta/page.tsx'), 'utf8')),
-      'the detector no longer recognises the one importer that is supposed to be there, ' +
-        'so a placeholder coming back on a public page would read as clean',
+      importsPageStub("import { PageStub } from '../../../lib/page-stub'"),
+      'the detector no longer recognises an import of the placeholder, so a stub coming back ' +
+        'on any page would read as clean',
     ).toBe(true)
+    expect(
+      importsPageStub("import * as stub from '../../lib/page-stub'"),
+      'the detector misses a namespace import, which carries no `PageStub` identifier — the ' +
+        'reason it checks the module specifier as well',
+    ).toBe(true)
+    expect(
+      importsPageStub('export default function Page() { return <p>Página real</p> }'),
+      'the detector fires on a page that never mentions the placeholder, which would make the ' +
+        'inventory above unsatisfiable rather than strict',
+    ).toBe(false)
   })
 })

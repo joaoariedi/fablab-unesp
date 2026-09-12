@@ -432,3 +432,28 @@ ever becomes a real risk.
   does not add any.
 - `docs/backlog.md` ISS-002 and `onboarding.md` questions 7 (initial XP) and 8 (SSO) are open and
   **out of scope here** — 7 is feature 005's, 8 is not v1.
+
+### CLR-011: FR-024's *generation* half leaves 004 [scope] — decided 2026-09-12
+
+**Decision**: 004 ships `avatar_render` as the **relationship** FR-033 and decision D3 require,
+written through `midiaImagem` like every other file in the product, and **does not compose the
+PNG**. The column is null until the art exists and a composition step fills it. Cards and
+ranking read the live configuration through `AvatarPreview`, which is what they do today.
+
+**Rationale**: found by T035's verification, which was right that the write of `avatarRender:
+null` dropped FR-024's *"composed PNG generated server-side"* rather than deferring it — T035b
+routes an asset, it does not produce one, and no later task created it either.
+
+What settles it is not effort but input: **there is no sprite art in this repository.**
+`avatarItem.sprite` and `spriteFolhas` are `relationship` columns pointing at `midiaImagem`
+documents nobody has uploaded, and `docs/avatar-budget.md` records both sheets at **0 B** for
+exactly that reason. `sharp` is a dependency and the compositor is a day's work; it would have
+nothing to read. Writing one now would mean a generator that is green against an empty
+catalogue and has never composed a real avatar — the shape of gate this feature has refused
+five times.
+
+**Impact**: FR-024 is amended — its *storage* half is in 004 (the relationship, the upload path,
+the clearing on change) and its *generation* half moves out, blocked on **ISS-003: the avatar
+sprite art**. FR-023, FR-033 and SC-016 are unaffected. `tests/accounts/avatar-asset.test.ts`
+pins the relationship; the deferral itself is pinned by `avatar-render-deferred.test.ts`, so the
+null cannot quietly become "done".
