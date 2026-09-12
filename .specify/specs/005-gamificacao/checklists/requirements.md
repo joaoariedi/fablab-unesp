@@ -43,3 +43,7 @@ rejections — is `/speckit.checklist`, after the plan.
 | CHK033 | FR-033: the level-1 stand-in is gone from all four pages | [completeness] | [ ] |
 | CHK034 | FR-034: `projeto.autor` nullable from the start | [feasibility] | [ ] |
 | CHK035 | FR-035: an isolation layer for the ledger, watched red | [testability] | [ ] |
+| CHK036 | FR-036: the mission photo is a `midiaImagem` relationship, and missions enter the upload trust boundary | [completeness] | [ ] |
+| CHK037 | FR-037: `/ranking` ships here, so 006's link has a destination | [consistency] | [ ] |
+| CHK038 | FR-038: the v1 trust posture is recorded as bounded-and-auditable, never as prevented | [clarity] | [ ] |
+

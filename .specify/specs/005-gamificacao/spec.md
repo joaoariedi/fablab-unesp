@@ -180,6 +180,7 @@ exists"*. It lands here — see CLR-002.
 | FR-022 | The XP credits **on approval**, once, through the same idempotency key as every other action | P1 | US3 |
 | FR-023 | A maker may hold only one open submission per mission | P2 | US3 |
 | FR-024 | A mission's progress shown to a maker is **their own**; a signed-out visitor sees the mission with no personal percentage and an invitation to sign in | P2 | US3 |
+| FR-036 | A submission carries **one photo**, as a `midiaImagem` relationship — never a text key, never a second upload route (CLR-006). Missions therefore sit on the upload trust boundary, and constitution Principle 5's security review applies to them | P1 | US3 |
 
 ### Anti-farm and trust
 
@@ -188,6 +189,7 @@ exists"*. It lands here — see CLR-002.
 | FR-025 | Idempotency is per content: a class credits once **ever**, however many times it is rewatched; a publication credits once per content, across unpublish/republish cycles | P1 | US2 |
 | FR-026 | There is no daily cap in v1 — the decision of 2026-08-24, recorded so its absence is deliberate | P2 | US2 |
 | FR-027 | A completion claim for a class with no progress row belonging to the requesting maker is refused | P1 | US2 |
+| FR-038 | Beyond FR-027, a class completion is **trusted** in v1 — no elapsed-time floor, no checkpoints (CLR-008). The ledger is the audit trail: every credit carries who, what and when, and is append-only, so farming is bounded and visible rather than prevented | P2 | US2 |
 
 ### Multi-tenancy
 
@@ -205,6 +207,7 @@ exists"*. It lands here — see CLR-002.
 | FR-032 | Minha Conta's SUAS SKILLS panel shows real levels — ten pips, empty at level 0 | P2 | US9 |
 | FR-033 | The author strip on cards and detail pages shows the maker's **real** level, replacing the level-1 stand-in four pages document | P2 | US10 |
 | FR-034 | `projeto` gains its `autor` relationship, nullable from the start so it never needs 004's tombstone migration (CLR-002) | P2 | US10 |
+| FR-037 | A `/ranking` page ships **here**, showing this organization's makers by XP with the declared tie-break — the destination of the `VER RANKING COMPLETO` link 006's Home card will carry (CLR-007) | P2 | US6 |
 | FR-035 | The isolation harness gains a vantage point for the ledger: a maker of A gets zero rows on every XP surface of B, demonstrated failing before passing | P1 | US7 |
 
 ## Success Criteria
@@ -227,36 +230,14 @@ exists"*. It lands here — see CLR-002.
 | SC-014 | The lab level of an empty lab reads 0, not blank or `NaN` | a test on a lab with no ledger entries |
 | SC-015 | No public page gains a client boundary — the island count is unchanged | `islands.test.ts` |
 | SC-016 | The six public pages stay inside the LCP budget | `scripts/lcp-budget.sh` |
+| SC-017 | A mission submission stores a `midiaImagem` id, never a key, a URL or a filename | a test feeding each of those four shapes and asserting the write is refused |
+| SC-018 | `/ranking` answers for a signed-in maker and never lists another organization's makers | an integration test, plus the isolation layer of SC-010 |
+| SC-019 | Every XP credit is reconstructible from the ledger alone — who, what, when | a test that rebuilds one maker's history from entries only |
 
 ## Clarifications
 
-Three questions this spec cannot answer from the sources. Everything else was decided and is
-recorded below.
-
-### [NEEDS CLARIFICATION 1] — the mission proof attachment
-
-`gamification.md` § Missões decides that completion is *"validada pela equipe na fila de
-revisão"* and leaves the attachment **(proposta)**: *"o anexo de comprovação (foto/arquivo)
-segue (proposta) de formato"*. What does a maker submit — a photo through `midiaImagem`, any
-file through `midiaDocumento`, a free-text note, or nothing but a claim the team checks in
-person? This decides whether missions touch the upload trust boundary at all.
-
-### [NEEDS CLARIFICATION 2] — who owns `/ranking`
-
-`home.md` § RANKING MAKERS draws a footer link `VER RANKING COMPLETO`, and **no page spec
-exists for its destination**. `sdd-strategy.md` gives 005 *"ranking"* and gives 006 the
-logged-in Home. Does the full ranking page ship here with the mechanics, or with the Home that
-links to it? A link to a 404 is the half-shipped state 003's CLR-010 cost a feature to close.
-
-### [NEEDS CLARIFICATION 3] — how much a completion claim must prove
-
-FR-027 refuses a claim with no progress row, and idempotency bounds the gain at 1 XP per class
-forever. What it does **not** stop is a maker POSTing progress to 100% without the video having
-played: the ceiling is the size of the catalogue, reached in minutes. Is that acceptable for
-v1 — the honest-community assumption, with the ledger making it auditable — or does a class
-completion need server-side evidence (checkpoints, elapsed time against `duracaoMin`)?
-
----
+Every question this spec opened is now decided. Three were put to the PO on 2026-09-12 and are
+recorded as CLR-006, CLR-007 and CLR-008; the other five were decided while writing it.
 
 ### CLR-001: The ledger is the source of truth and every aggregate is a projection [architecture] — decided 2026-09-12
 
@@ -332,3 +313,56 @@ the source. This is recorded because *"5 XP per level"* with a cap of 10 invites
 50 XP is level 10, and 0 XP is not level 1.
 
 **Impact**: FR-007, SC-006, SC-014.
+
+### CLR-006: A mission's proof is a photo, through `midiaImagem` [design] — decided 2026-09-12
+
+**Decision**: a maker completing a mission attaches **one photo**, stored as a `midiaImagem`
+relationship like every other image in the product. Not a free-text note, and not nothing.
+
+**Rationale**: `gamification.md` § Missões names *"o anexo de comprovação (foto/arquivo)"* and
+leaves only the format open, so a photo is the reading closest to the source. It also reuses a
+path that already exists and is already tested: 002's presigned PUT, its post-upload
+verification and its size limits, and decision D3's rule that **media is a relationship, never a
+text key**. A second upload route for one collection would be the thing that route exists to
+prevent.
+
+**What it costs, stated rather than discovered**: missions now touch the **upload trust
+boundary**, so constitution Principle 5's mandatory security review applies to them. A mission
+submission carries user-controlled content, and the reviewer opening the queue is looking at a
+file a stranger uploaded.
+
+**Impact**: FR-020, FR-021, FR-036, US3.
+
+### CLR-007: `/ranking` ships here, with the mechanics [scope] — decided 2026-09-12
+
+**Decision**: the full ranking page is **005's**. Feature 006's Home card shows the top five and
+links to it.
+
+**Rationale**: 005 computes the ranking, so the page reads data that exists the moment it does —
+and the alternative is a footer link to a 404 for however long 006 takes. That is precisely the
+half-shipped state 003's CLR-010 cost a whole feature to close: a control that renders and
+answers with nothing. Shipping the destination with the computation makes 006's card a link to
+something that works.
+
+**Impact**: FR-037, FR-013, US6, and the boundary CLR-004 draws with 006.
+
+### CLR-008: A class completion is trusted in v1, and the ledger is the audit trail [security] — decided 2026-09-12
+
+**Decision**: v1 accepts the client's claim that a class was watched to the end. No elapsed-time
+floor, no server-side checkpoints. FR-027's rule stands — a claim needs a progress row belonging
+to the requesting maker — and idempotency caps the gain at 1 XP per class, forever.
+
+**Rationale**: the honest-community assumption, consistent with the posture already decided on
+2026-08-24 (*"sem limite diário no v1"*). The gain is bounded by the catalogue, every credit is
+a ledger row carrying who, what and when, and the ledger is append-only — so a maker who claimed
+forty classes in four minutes is **visible after the fact**, by inspection, without any
+instrumentation being built first.
+
+**What this deliberately does not claim**: that farming is prevented. It is not. It is bounded
+and auditable, which is a different and weaker property, and the decision is revisitable once
+the game is running — the two options costed were an elapsed-time floor against `duracaoMin`
+(cheap, beatable by waiting) and real progress checkpoints (strong, needs player integration and
+changes `progressoAula`'s write path).
+
+**Impact**: FR-026, FR-027, FR-038.
+
