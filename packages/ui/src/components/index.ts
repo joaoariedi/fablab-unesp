@@ -10,6 +10,10 @@
  * Add one line per component, alphabetically. Types are re-exported beside their component so
  * a consumer needs one import, and `verbatimModuleSyntax` requires the `export type` spelling.
  */
+export { AVATAR_BUILDER_CSS, AvatarBuilder, avatarCompleto, BASES_AVATAR, escolhasFaltando, SLOTS_OPCIONAIS } from './AvatarBuilder'
+export type { AvatarBuilderProps, AvatarConfig, BaseAvatar, ItemAvatar, SlotAvatar, TomAvatar } from './AvatarBuilder'
+export { AvatarPreview, DIRECOES_AVATAR, proximaDirecao } from './AvatarPreview'
+export type { AvatarCamada, AvatarPreviewProps, DirecaoAvatar } from './AvatarPreview'
 export { Button, PRIMARY_BUTTON_STYLE } from './Button'
 export type { ButtonProps } from './Button'
 export { CalendarDayPanel } from './CalendarDayPanel'

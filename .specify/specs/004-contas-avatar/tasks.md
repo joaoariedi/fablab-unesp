@@ -220,16 +220,65 @@ believing what the gate says about it** — this applies directly to T036.
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T022 | Step 1 — the builder's page shell, server-rendered, reading the catalogue through the choke point | FR-001, FR-003, US2 | `apps/web/app/(frontend)/criar-conta/page.tsx` | T007, T011 |
-| T023 | `AvatarPreview` — **server-renderable** composition in `camadaZ` order, shared by the builder and the cards | FR-006, US2 | `packages/ui/src/components/AvatarPreview.tsx` | T022 |
-| T024 | `AvatarBuilder` island. Picker sheets (one direction) up front, preview sheets (four) for chosen items. **Remove the stale `SearchInput` entry from `ALLOWED_ISLANDS` in this change** | FR-003, FR-032, SC-012 | `packages/ui/src/components/AvatarBuilder.tsx` | T023 |
+| ✅ T022 | Step 1 — the builder's page shell, server-rendered, reading the catalogue through the choke point | FR-001, FR-003, US2 | `apps/web/app/(frontend)/criar-conta/page.tsx` | T007, T011 |
+| ✅ T023 | `AvatarPreview` — **server-renderable** composition in `camadaZ` order, shared by the builder and the cards | FR-006, US2 | `packages/ui/src/components/AvatarPreview.tsx` | T022 |
+| ✅ T024 | `AvatarBuilder` island. Picker sheets (one direction) up front, preview sheets (four) for chosen items. **Remove the stale `SearchInput` entry from `ALLOWED_ISLANDS` in this change** | FR-003, FR-032, SC-012 | `packages/ui/src/components/AvatarBuilder.tsx` | T023 |
 | T024b | The builder's completeness rules: `oculos`/`chapeu` optional, every other slot required before step 1 finishes, and a sprite that fails to load degrades **that slot only** — never blocking account creation | FR-005, FR-007, US2 | `packages/ui/tests/avatar-builder.test.ts` | T024 |
-| T025 | Its three consumers again — barrel, workbench, islands list. Preamble item 5 | SC-012 | `packages/ui/src/components/index.ts` | T024 |
-| T026 | Step 2 — personal data, the terms checkbox with **version**, `VOLTAR` that keeps the avatar | FR-008, FR-012, US1 | `apps/web/app/(frontend)/criar-conta/dados/page.tsx` | T022 |
-| T026b | Both `VOLTAR`s — step 1 to the Home, step 2 back with the avatar intact — and **any e-mail accepted**: a negative test that no institutional-domain check exists, because that is the rule someone adds back as a "fix" | FR-002, FR-009, US1 | `apps/web/tests/accounts/signup-navigation.test.ts` | T026 |
-| T027 | `completeSignup`: account, profile, skills at level 0, consent stamp — one transaction | FR-011, FR-013, US1 | `apps/web/lib/accounts/signup.ts` | T020, T026 |
-| T028b | **The signed-in half of the heart**: a server action writing `curtida`, the count following the server's answer, and a failed write restoring it — never an optimistic update that sticks. T001 shipped only the visitor's branch | FR-026, US7 | `apps/web/lib/accounts/curtir.ts` | T027 |
-| T028 | Signup end to end, including that step 2's `VOLTAR` loses no avatar work | US1, SC-001 | `apps/web/tests/accounts/signup.test.ts` | T027 |
+| T024c | **Mount the builder on `/criar-conta` and make the gate a gate.** `avatarCompleto`/`escolhasFaltando` shipped with **zero callers**, the page never mounts `AvatarBuilder` at all, and `SALVAR E CONTINUAR` is an unconditional anchor — so a visitor finishes step 1 with an empty avatar, which is what FR-005 forbids. The island owns the state, so it must own the control: the page mounts it, the continue link is driven by `avatarCompleto(config, SLOTS)`, and `escolhasFaltando` names which panel is unanswered. Test in `apps/web/tests/public/criar-conta-page.test.ts` that step 1 cannot be finished from the opening state | FR-005, FR-007, US2 | `apps/web/app/(frontend)/criar-conta/page.tsx` | T024b |
+| ✅ T025 | Its three consumers again — barrel, workbench, islands list. Preamble item 5 | SC-012 | `packages/ui/src/components/index.ts` | T024 |
+| ✅ T026 | Step 2 — personal data, the terms checkbox with **version**, `VOLTAR` that keeps the avatar | FR-008, FR-012, US1 | `apps/web/app/(frontend)/criar-conta/dados/page.tsx` | T022 |
+| ✅ T026b | Both `VOLTAR`s — step 1 to the Home, step 2 back with the avatar intact — and **any e-mail accepted**: a negative test that no institutional-domain check exists, because that is the rule someone adds back as a "fix" | FR-002, FR-009, US1 | `apps/web/tests/accounts/signup-navigation.test.ts` | T026 |
+| ✅ T027 | `completeSignup`: account, profile, skills at level 0, consent stamp — one transaction | FR-011, FR-013, US1 | `apps/web/lib/accounts/signup.ts` | T020, T026 |
+| ✅ T028b | **The signed-in half of the heart**: a server action writing `curtida`, the count following the server's answer, and a failed write restoring it — never an optimistic update that sticks. T001 shipped only the visitor's branch | FR-026, US7 | `apps/web/lib/accounts/curtir.ts` | T027 |
+| ✅ T028 | Signup end to end, including that step 2's `VOLTAR` loses no avatar work | US1, SC-001 | `apps/web/tests/accounts/signup.test.ts` | T027 |
+
+### What phase 5 cost — signup did not work, and no task owned the reason
+
+Five rejections, **every one of them a real defect**, and together they said one thing: the pieces
+were all built and tested, and the feature did not exist. Four are fixed here; the fifth is now a
+task, because the run's own evidence was that nothing would otherwise build it.
+
+1. **Nothing in the product called `completeSignup`.** Step 2's form carried `method="post"` with
+   no `action`. The end-to-end suite substituted a direct `completeSignup(...)` call for the
+   submission the product did not have, and was green. **No task in this file owned the wiring** —
+   T026 ships the page, T027 the lib, T028 the test — so accepting T028 would have closed US1 with
+   signup impossible in a browser. The action now exists, with
+   `tests/accounts/criar-conta-action.test.ts` owning the claim that a form with no `action` is
+   inert. Third occurrence of *a module with tests and no caller is not a feature*.
+
+2. **`completeSignup` could not perform a single one of its writes.** Measured, not reasoned: it
+   threw `Forbidden` at the first one. `users.create` is `masterOnly()`, and `skill.read` and
+   `perfilMaker.create` are `scopedAccess()`, which returns **`false`** for a user with no
+   memberships — and `completeSignup` never wrote one, so the account it created was refused its
+   own profile and its own catalogue. Opening `Users.ts` would not have fixed it.
+
+   This is phase 2's finding again, one layer up: **signup is an anonymous write, and the tenancy
+   design had no path for one.** Fixed the way the catalogue door was — a named, narrow,
+   host-resolved client, `getSignupScopedPayload` in `lib/tenancy/signup-payload.ts`, built on the
+   already-fenced `getSystemScopedPayload`. No collection's access control changed. Three
+   operations, allow-listed by collection, no `update`, no `delete`, role fixed at `maker`, and
+   `criarConta` writes the membership **with** the account — which is what makes US1's *"a
+   perfilMaker exists in this organization"* true of the person and not just of the row.
+
+3. **The consent checkbox did not gate anything.** `SignupInput` had no `aceiteTermos`; it checked
+   `aceiteTermosVersao`, which step 2 posts as a **hidden** field on every submit. An account was
+   created with a stamped LGPD acceptance from a form where the box was never ticked, and the
+   end-to-end test — which submitted no checkbox state at all — was green on exactly that. Note
+   the trap in the fix: an unticked checkbox is **absent** from `FormData`, so
+   `String(dados.get(...))` yields `'null'`, which is truthy.
+
+4. **The builder offered twenty tops.** `painelDeSlot` rendered rows, and `roupaCima` stores each
+   garment twice — an `f` sprite and an `m` sprite. Every top appeared twice, indistinguishably;
+   `compativelBase` was not even in the page's `ItemDoc`. The test could not see it — the fixture
+   held **one** `roupaCima` row — and its count assertion compared against *rows returned*, so the
+   correct behaviour would have **failed** it. This is the `LINHAS_AVATAR` vs `CATEGORIAS_AVATAR`
+   distinction phase 2 established, gotten backwards one file away from where it was written down.
+
+5. **The one workbench specimen that shows the selected state showed nothing selected.**
+   `BUILDER_CONFIG_CARREGADA` named `cabelo-rosa`, an id no swatch carries. The new guard requires
+   a loaded specimen's `pele`/`cabeloTom` to resolve against the palettes it was handed.
+
+Every gate above was watched failing against the code that actually shipped.
 
 ## Phase 6: The tombstone, and deletion
 

@@ -428,6 +428,82 @@ describe('T037 / FR-016, US7 — the component workbench', () => {
       ).toBeGreaterThan(0)
     })
 
+
+    /**
+     * T025 / SC-012 — the builder, in the two states `inicial` splits it into.
+     *
+     * `AvatarBuilder` is the largest island in the product and it opens on two different
+     * screens. Signup step 1 mounts it with nothing chosen (`CONFIG_PADRAO`: base F, no pele,
+     * no cabeloTom, no item), where the base selector is the only control showing a selection
+     * and every thumbnail is unmarked. FR-023's editor mounts the same island with the maker's
+     * current configuration, where a swatch and one thumbnail per slot carry the selected
+     * outline. Those are two different paints of the same component — the whole of what the
+     * `--escolhida` modifier class exists to express — so a workbench holding one specimen
+     * reviews whichever of the two the author happened to write and never looks at the other.
+     *
+     * The catalogue assertion is the vacuity guard: `slots`/`itens` are the component's entire
+     * input, and a specimen handed empty arrays renders a preview and nine empty panels. It
+     * satisfies §3's "the component reaches the frame" while showing a reviewer no picker at
+     * all, which is the same shape as a green gate over an empty library.
+     */
+    it('shows the builder empty and loaded, the two screens step 1 and FR-023 split', async () => {
+      const builders = propsFor(await frame(), 'AvatarBuilder')
+      expect(
+        builders.length,
+        'no AvatarBuilder specimen. It is the island with the largest bundle in the product ' +
+          '(FR-032, CLR-004) and nine pickers nobody has looked at on a 390px frame.',
+      ).toBeGreaterThan(0)
+
+      const carregado = (props: Record<string, unknown>): boolean => {
+        const inicial = props.inicial as { itens?: Record<string, string> } | undefined
+        return Object.keys(inicial?.itens ?? {}).length > 0
+      }
+      expect(
+        new Set(builders.map(carregado)),
+        'the workbench shows the builder in one state only. Empty is signup step 1, where no ' +
+          'thumbnail is marked; loaded is FR-023 reopening the editor on an avatar that ' +
+          'already exists, where the selected outline is what a reviewer is there to check.',
+      ).toEqual(new Set([true, false]))
+
+      for (const props of builders) {
+        expect(
+          (props.slots as unknown[] | undefined)?.length ?? 0,
+          'a builder specimen with no slots draws no picker: nine empty panels beside a ' +
+            'preview, green against §3 and worth nothing to a reviewer.',
+        ).toBeGreaterThan(0)
+        expect(
+          (props.itens as unknown[] | undefined)?.length ?? 0,
+          'a builder specimen with an empty catalogue offers nothing to choose.',
+        ).toBeGreaterThan(0)
+
+        // The vacuity guard the first version of this case did not have, and the defect it
+        // missed: `BUILDER_CONFIG_CARREGADA` named `cabelo-rosa`, an id no swatch in
+        // `BUILDER_CABELOS` carries, so the hair palette in the LOADED specimen rendered with no
+        // `--escolhida` outline on anything. That is precisely what the loaded specimen exists to
+        // show, and a reviewer would have read the selected-outline as broken. The old check
+        // classified loaded-vs-empty by `Object.keys(inicial.itens).length > 0`, which cannot see
+        // a dangling `pele`/`cabeloTom` id — the same reasoning as the two guards above, applied
+        // to the two props they skipped.
+        const inicial = props.inicial as
+          | { pele?: string; cabeloTom?: string }
+          | undefined
+        for (const [campo, paleta] of [
+          ['pele', props.peles],
+          ['cabeloTom', props.cabelos],
+        ] as const) {
+          const escolhido = inicial?.[campo]
+          if (escolhido === undefined) continue
+          const ids = (paleta as { id?: string }[] | undefined)?.map((tom) => tom.id) ?? []
+          expect(
+            ids,
+            `the specimen selects ${campo}="${escolhido}", which no swatch it was handed ` +
+              `carries (${ids.join(', ') || 'none'}). That palette renders with nothing marked ` +
+              'as chosen — the one state this specimen is here to demonstrate.',
+          ).toContain(escolhido)
+        }
+      }
+    })
+
     it('shows the pagination bar on both surfaces, and long enough to print its gap', async () => {
       // Two states that are invisible in a short navy bar. `surface` changes the current page
       // in KIND — underlined pink ink on navy, a pink fill with navy ink on white (FR-028

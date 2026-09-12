@@ -13,10 +13,14 @@ import type { CSSProperties, ReactElement, ReactNode } from 'react'
  * evidence rather than a gallery.
  */
 import {
+  AvatarBuilder,
+  type AvatarConfig,
   Button,
   CalendarDayPanel,
   Card,
   Chip,
+  AvatarPreview,
+  DIRECOES_AVATAR,
   Footer,
   HeaderNav,
   ISO_SHAPE_NAMES,
@@ -31,6 +35,7 @@ import {
   MobileTabBar,
   ModelViewer,
   Pagination,
+  PALETTE,
   PixelImage,
   profileHref,
   ProgressBar,
@@ -254,6 +259,26 @@ function contentSpecimens(): ReactElement[] {
     <Specimen key="pixel" title="PixelImage — 16 px sprite at 1× and 4×">
       <PixelImage src={SPRITE_SRC} baseWidth={16} targetWidth={16} alt="Sprite a 1x" />
       <PixelImage src={SPRITE_SRC} baseWidth={16} targetWidth={64} alt="Sprite a 4x" />
+    </Specimen>,
+    <Specimen key="avatar" title="AvatarPreview — as quatro direções, em ordem de camadaZ">
+      {/* The avatar sheets arrive with the catalogue's art, so the only bitmap this repo ships
+          stands in for one: the 16x16 sprite is read as a sheet of four 4x16 frames, which is a
+          real demonstration of the frame selection rather than four copies of one picture. The
+          two layers are stacked out of order on purpose — `camadaZ` 20 is listed first. */}
+      {DIRECOES_AVATAR.map((direcao) => (
+        <AvatarPreview
+          key={direcao}
+          direcao={direcao}
+          larguraBase={4}
+          alturaBase={16}
+          larguraAlvo={16}
+          alt={`Avatar de ariedi, virado para ${direcao}`}
+          camadas={[
+            { slot: 'chapeu', camadaZ: 20, spriteFolhas: SPRITE_SRC },
+            { slot: 'corpo', camadaZ: 10, spriteFolhas: SPRITE_SRC },
+          ]}
+        />
+      ))}
     </Specimen>,
   ]
 }
@@ -498,6 +523,108 @@ function islandSpecimens(): ReactElement[] {
   ]
 }
 
+/**
+ * T025 / FR-003, FR-032, SC-012 — the builder, in the two states it opens in.
+ *
+ * Its own function rather than a fourth entry in {@link islandSpecimens}: the catalogue is five
+ * literals wide and inlining it would take that function past the length limit, which is the
+ * same reason `paginationSpecimen` stands alone.
+ *
+ * **Two specimens, because `inicial` is two screens.** Signup step 1 mounts the builder with
+ * nothing chosen — the base selector is the only control showing a selection and every
+ * thumbnail is unmarked — and FR-023's editor mounts the same island on an avatar that already
+ * exists, where a swatch and one thumbnail per slot wear the `--escolhida` outline. A gallery
+ * with one of them reviews whichever the author happened to write.
+ *
+ * The catalogue is three slots rather than the product's nine, and that is deliberate: the
+ * workbench reviews the *paint* — the picker grid, the 44px targets, the selected outline, the
+ * rotation control — and ninety-three thumbnails of the same 16px sprite would review it no
+ * better while making the 390px frame unreadable. The real nine come from the collection, and
+ * `/criar-conta` is where that breadth is looked at.
+ *
+ * No `onChange`, for the reason `islandSpecimens` records for `onCurtir`: this page is a server
+ * component and a function is not serialisable across that boundary. The first paint is what the
+ * gallery is for.
+ */
+const BUILDER_SLOTS = [
+  { slot: 'cabelo', titulo: 'CABELO' },
+  { slot: 'roupaCima', titulo: 'PARTE DE CIMA' },
+  { slot: 'chapeu', titulo: 'CHAPÉU' },
+]
+
+const BUILDER_ITENS = [
+  { id: 'cabelo-curto', nome: 'Curto', slot: 'cabelo', camadaZ: 30, sprite: SPRITE_SRC },
+  { id: 'cabelo-longo', nome: 'Longo', slot: 'cabelo', camadaZ: 30, sprite: SPRITE_SRC },
+  { id: 'camiseta-f', nome: 'Camiseta', slot: 'roupaCima', camadaZ: 20, sprite: SPRITE_SRC, base: 'f' as const },
+  { id: 'camiseta-m', nome: 'Camiseta', slot: 'roupaCima', camadaZ: 20, sprite: SPRITE_SRC, base: 'm' as const },
+  // No `sprite` at all — FR-007's degraded slot, which the gallery is the only place to see.
+  { id: 'bone', nome: 'Boné', slot: 'chapeu', camadaZ: 40 },
+]
+
+/**
+ * The two palettes, painted from {@link PALETTE} rather than from skin-and-hair values.
+ *
+ * CLR-005 makes a real tom de pele **data** — a row in `tomDePele`, exempt from the colour fence
+ * because `apps/web/seed/**` is — and this page is not the seed: a hex literal written here is
+ * the literal-in-a-component the fence exists to stop, and widening it for a gallery would buy
+ * two swatches at the price of every page in the app. What the workbench reviews about a
+ * palette is the swatch grid — its targets, its focus ring, the outline on the selected one —
+ * and that is answered by any two distinguishable colours. The thirty real ones are seeded, and
+ * `/criar-conta` is where they are looked at.
+ */
+const BUILDER_PELES = [
+  { id: 'pele-01', nome: 'Tom claro', hex: PALETTE.claro },
+  { id: 'pele-02', nome: 'Tom escuro', hex: PALETTE.laranja },
+]
+
+const BUILDER_CABELOS = [
+  { id: 'cabelo-preto', nome: 'Preto', hex: PALETTE.navy },
+  { id: 'cabelo-amarelo', nome: 'Amarelo', hex: PALETTE.amarelo },
+]
+
+/** What FR-023 reopens the editor on: a base, both palettes and a chosen piece per slot. */
+const BUILDER_CONFIG_CARREGADA: AvatarConfig = {
+  base: 'm',
+  pele: 'pele-02',
+  // `cabelo-amarelo`, and it must resolve against BUILDER_CABELOS above. It read
+  // `cabelo-rosa` — an id no swatch carries — so the hair palette in the one specimen that
+  // exists to show the selected state rendered with NO outline on any swatch, which is
+  // exactly what a reviewer opens this gallery to check. The one deliberately degraded entry
+  // here (`bone`, no sprite) carries an FR-007 comment; this carried none, so it was an
+  // oversight rather than a case.
+  cabeloTom: 'cabelo-amarelo',
+  itens: { cabelo: 'cabelo-longo', roupaCima: 'camiseta-m', chapeu: 'bone' },
+  direcao: 'esquerda',
+}
+
+function avatarBuilderSpecimen(): ReactElement {
+  return (
+    <Specimen key="builder" title="AvatarBuilder — o passo 1 vazio, e o editor já preenchido">
+      <AvatarBuilder
+        slots={BUILDER_SLOTS}
+        itens={BUILDER_ITENS}
+        peles={BUILDER_PELES}
+        cabelos={BUILDER_CABELOS}
+        larguraBase={4}
+        alturaBase={16}
+        larguraAlvo={64}
+        alt="Avatar em construção, nada escolhido ainda"
+      />
+      <AvatarBuilder
+        slots={BUILDER_SLOTS}
+        itens={BUILDER_ITENS}
+        peles={BUILDER_PELES}
+        cabelos={BUILDER_CABELOS}
+        larguraBase={4}
+        alturaBase={16}
+        larguraAlvo={64}
+        alt="Avatar de ariedi, aberto para edição"
+        inicial={BUILDER_CONFIG_CARREGADA}
+      />
+    </Specimen>
+  )
+}
+
 /** The shell. These are the specimens the three frame widths exist for. */
 function shellSpecimens(): ReactElement[] {
   return [
@@ -554,6 +681,7 @@ function specimenGallery(width: string): ReactElement {
       {meterSpecimens()}
       {paginationSpecimen()}
       {islandSpecimens()}
+      {avatarBuilderSpecimen()}
       {shellSpecimens()}
       {shapeSpecimens()}
     </main>
