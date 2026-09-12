@@ -104,7 +104,7 @@ describe('modelo3d is declared (T039, FR-001)', () => {
 })
 
 describe('modelo3d carries the fields biblioteca-3d.md defines (T039, FR-001)', () => {
-  it('requires titulo, slug, descricaoCurta, thumbnail, arquivosModelo, categoria and autor', () => {
+  it('requires titulo, slug, descricaoCurta, thumbnail, arquivosModelo, categoria', () => {
     for (const name of [
       'titulo',
       'slug',
@@ -112,7 +112,6 @@ describe('modelo3d carries the fields biblioteca-3d.md defines (T039, FR-001)', 
       'thumbnail',
       'arquivosModelo',
       'categoria',
-      'autor',
     ]) {
       const field = fieldNamed(name)
       expect(field, `modelo3d declares no ${name} (biblioteca-3d.md)`).toBeDefined()
@@ -120,6 +119,32 @@ describe('modelo3d carries the fields biblioteca-3d.md defines (T039, FR-001)', 
         true,
       )
     }
+  })
+
+  /**
+   * `autor` is deliberately NOT in the list above — CLR-003, and it is a change of state the
+   * schema must be able to hold, not a relaxation of editorial policy.
+   *
+   * FR-031 keeps a deleted person's published work and takes their name off it, so `autor` has
+   * to be able to hold nothing. `required: true` blocked that in two places at once: `push`
+   * rebuilds every non-production database from the field config, so it silently restored the
+   * NOT NULL the migration had dropped; and `sameTenant` — which REPLACES Payload's default
+   * validator — re-implements the `required` floor itself, so `{ autor: null }` was refused by
+   * the application even where the column allowed it.
+   *
+   * The editorial rule still holds where it belongs: the admin and the review queue want an
+   * author before anything is published. This asserts only that the *column* can express the
+   * one state that has no author by design.
+   */
+  it('leaves autor optional, because an erased author is a state the row must hold (CLR-003)', () => {
+    const autor = fieldNamed('autor')
+    expect(autor, 'the collection declares no autor at all').toBeDefined()
+    expect(
+      autor?.required,
+      'autor is required again. `push` will restore the NOT NULL from this flag and ' +
+        '`sameTenant` will refuse the null, so `deleteAccount` fails mid-transaction and the ' +
+        'whole erasure rolls back — a person who asked to be forgotten stays.',
+    ).toBeFalsy()
   })
 
   it('caps descricaoCurta at the two card lines it has to fit in', () => {

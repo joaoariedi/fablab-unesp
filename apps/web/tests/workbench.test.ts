@@ -394,6 +394,116 @@ describe('T037 / FR-016, US7 — the component workbench', () => {
       ).toEqual(new Set([true, false]))
     })
 
+    /**
+     * T002 / FR-025, SC-012 — the heart, in both of the screens it is.
+     *
+     * `isSignedIn` is not a flag that tints a control: it selects between an account
+     * invitation whose press must leave the number where it was (FR-025) and a like whose
+     * number follows the server's answer (FR-026). The prop also DEFAULTS to the visitor's
+     * branch, so a workbench holding one specimen reviews the branch a page renders when it
+     * forgets to pass anything — and never looks at the one a signed-in maker sees.
+     */
+    it('shows the heart signed out and signed in, the two screens FR-025 and FR-026 split', async () => {
+      const hearts = propsFor(await frame(), 'LikeButton')
+      expect(
+        hearts.length,
+        'no LikeButton specimen. The heart is the island feature 004 opens with, and the ' +
+          'workbench is where its first paint is looked at.',
+      ).toBeGreaterThan(0)
+
+      expect(
+        new Set(hearts.map((props) => props.isSignedIn === true)),
+        'the workbench shows the heart in one session state only. The two states are two ' +
+          'different screens — the invitation panel with its microcopy, and the like control ' +
+          'with its pressed state — so US7\u2019s "every component is visible in its states" is ' +
+          'satisfied in wording only by a single specimen.',
+      ).toEqual(new Set([true, false]))
+
+      const visitante = hearts.find((props) => props.isSignedIn !== true)
+      expect(
+        Number(visitante?.curtidas),
+        'the visitor specimen stands at 0 curtidas. FR-025 is "the count they saw does not ' +
+          'change", and a reviewer cannot watch a zero fail to move: the specimen has to ' +
+          'carry a number worth keeping still.',
+      ).toBeGreaterThan(0)
+    })
+
+
+    /**
+     * T025 / SC-012 — the builder, in the two states `inicial` splits it into.
+     *
+     * `AvatarBuilder` is the largest island in the product and it opens on two different
+     * screens. Signup step 1 mounts it with nothing chosen (`CONFIG_PADRAO`: base F, no pele,
+     * no cabeloTom, no item), where the base selector is the only control showing a selection
+     * and every thumbnail is unmarked. FR-023's editor mounts the same island with the maker's
+     * current configuration, where a swatch and one thumbnail per slot carry the selected
+     * outline. Those are two different paints of the same component — the whole of what the
+     * `--escolhida` modifier class exists to express — so a workbench holding one specimen
+     * reviews whichever of the two the author happened to write and never looks at the other.
+     *
+     * The catalogue assertion is the vacuity guard: `slots`/`itens` are the component's entire
+     * input, and a specimen handed empty arrays renders a preview and nine empty panels. It
+     * satisfies §3's "the component reaches the frame" while showing a reviewer no picker at
+     * all, which is the same shape as a green gate over an empty library.
+     */
+    it('shows the builder empty and loaded, the two screens step 1 and FR-023 split', async () => {
+      const builders = propsFor(await frame(), 'AvatarBuilder')
+      expect(
+        builders.length,
+        'no AvatarBuilder specimen. It is the island with the largest bundle in the product ' +
+          '(FR-032, CLR-004) and nine pickers nobody has looked at on a 390px frame.',
+      ).toBeGreaterThan(0)
+
+      const carregado = (props: Record<string, unknown>): boolean => {
+        const inicial = props.inicial as { itens?: Record<string, string> } | undefined
+        return Object.keys(inicial?.itens ?? {}).length > 0
+      }
+      expect(
+        new Set(builders.map(carregado)),
+        'the workbench shows the builder in one state only. Empty is signup step 1, where no ' +
+          'thumbnail is marked; loaded is FR-023 reopening the editor on an avatar that ' +
+          'already exists, where the selected outline is what a reviewer is there to check.',
+      ).toEqual(new Set([true, false]))
+
+      for (const props of builders) {
+        expect(
+          (props.slots as unknown[] | undefined)?.length ?? 0,
+          'a builder specimen with no slots draws no picker: nine empty panels beside a ' +
+            'preview, green against §3 and worth nothing to a reviewer.',
+        ).toBeGreaterThan(0)
+        expect(
+          (props.itens as unknown[] | undefined)?.length ?? 0,
+          'a builder specimen with an empty catalogue offers nothing to choose.',
+        ).toBeGreaterThan(0)
+
+        // The vacuity guard the first version of this case did not have, and the defect it
+        // missed: `BUILDER_CONFIG_CARREGADA` named `cabelo-rosa`, an id no swatch in
+        // `BUILDER_CABELOS` carries, so the hair palette in the LOADED specimen rendered with no
+        // `--escolhida` outline on anything. That is precisely what the loaded specimen exists to
+        // show, and a reviewer would have read the selected-outline as broken. The old check
+        // classified loaded-vs-empty by `Object.keys(inicial.itens).length > 0`, which cannot see
+        // a dangling `pele`/`cabeloTom` id — the same reasoning as the two guards above, applied
+        // to the two props they skipped.
+        const inicial = props.inicial as
+          | { pele?: string; cabeloTom?: string }
+          | undefined
+        for (const [campo, paleta] of [
+          ['pele', props.peles],
+          ['cabeloTom', props.cabelos],
+        ] as const) {
+          const escolhido = inicial?.[campo]
+          if (escolhido === undefined) continue
+          const ids = (paleta as { id?: string }[] | undefined)?.map((tom) => tom.id) ?? []
+          expect(
+            ids,
+            `the specimen selects ${campo}="${escolhido}", which no swatch it was handed ` +
+              `carries (${ids.join(', ') || 'none'}). That palette renders with nothing marked ` +
+              'as chosen — the one state this specimen is here to demonstrate.',
+          ).toContain(escolhido)
+        }
+      }
+    })
+
     it('shows the pagination bar on both surfaces, and long enough to print its gap', async () => {
       // Two states that are invisible in a short navy bar. `surface` changes the current page
       // in KIND — underlined pink ink on navy, a pink fill with navy ink on white (FR-028

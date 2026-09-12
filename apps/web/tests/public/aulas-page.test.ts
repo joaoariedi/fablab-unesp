@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import type { ReactElement, ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { EmptyState, Pagination, SearchInput } from '@fablab/ui'
+import { EmptyState, LikeButton, Pagination, SearchInput } from '@fablab/ui'
 
 import type { FindArgs } from '../../lib/tenancy/client'
 import { TenantUnresolvedError } from '../../lib/tenancy/errors'
@@ -437,8 +437,37 @@ describe('§3 — the numbered two-column list (FR-006, FR-021)', () => {
     expect(card).toContain('@mariasilva')
     // "ícone de relógio outline + duração: 25 min" — FR-006 names the duration explicitly.
     expect(card).toContain('25 min')
-    // FR-015: the count is shown to everyone. The clicking half is an island and not this page.
-    expect(card).toContain('42')
+  })
+
+  /**
+   * The count moved inside a component boundary, so a tree walk stopped being able to read it —
+   * the same step `biblioteca-3d-page.test.ts` § 5 recorded when that listing got its island.
+   * The requirement did not move: FR-015 still shows the number to everyone. What changed is
+   * where the proof lives, and the honest form of it is the island's own prop, not a string
+   * this walk can no longer reach.
+   */
+  it('hands the count to `LikeButton`, in this page\'s light surface (FR-025, US7, FR-028)', async () => {
+    const hearts = findAll(cardsDe((await render()).tree)[0] ?? null, LikeButton)
+
+    expect(
+      hearts,
+      'the card draws a heart and did not supply the island. US7 applies to this listing ' +
+        'exactly as it does to the Projetos grid: a visitor who presses it must get the ' +
+        'invitation, which only the island can give them.',
+    ).toHaveLength(1)
+    // The SERVER's count, from this document — not a number the component invented.
+    expect(hearts[0]?.props.curtidas).toBe(42)
+    // `surface` is not decoration here: this is a white page, and the island's default ink is
+    // the accent, which § 2 measures as forbidden on it. The default would be silently wrong.
+    expect(
+      hearts[0]?.props.surface,
+      'a heart on the white page wearing the accent is the pink-on-white FR-028 forbids — and ' +
+        'the source scan in the sibling suite cannot see it, because the ink is a class rule',
+    ).toBe('light')
+    // The visitor's branch only; the write is T028b's, and `onCurtir` is a function, which is
+    // not serialisable across the server/client boundary.
+    expect(hearts[0]?.props.isSignedIn).toBeUndefined()
+    expect(hearts[0]?.props.onCurtir).toBeUndefined()
   })
 })
 
@@ -484,14 +513,41 @@ describe('§5 — ASSISTIR, without an account (FR-013, US4)', () => {
     expect(assistir?.props['aria-label']).toContain('Primeiros passos impressão 3D')
   })
 
+  /**
+   * Scoped to *"in order to watch"*, which is what US4 says — and the scoping became load-bearing
+   * the day the heart became a control.
+   *
+   * `LikeButton`'s accessible name is `"<n> curtidas. Crie sua conta para curtir e evoluir como
+   * maker"`, so the words are on this page from the first byte. They are FR-025's, they are
+   * attached to the heart, and they are about **liking** — nothing on the path to the video says
+   * them. An earlier form of this assertion read the whole markup and would now fail on a page
+   * that is correct, which would have made "narrow the gate" the obvious fix and quietly removed
+   * the only check that ASSISTIR stays free.
+   *
+   * So the heart's own opening tag is cut out, and everything else is held to the original bar.
+   * The cut is asserted to have found something: a strip that matched nothing would leave the
+   * scan stricter, not weaker, but it would also mean this page no longer draws a heart at all.
+   */
   it('invites nobody to create an account in order to watch', async () => {
     const { tree } = await render({}, { docs: aulas(3), totalDocs: 3 })
     const markup = renderToStaticMarkup(tree as never).toLowerCase()
 
+    const CORACAO = /<button[^>]*class="fl-like[^"]*"[^>]*>/g
+    expect(
+      markup.match(CORACAO) ?? [],
+      'no heart on the page, so this strip removes nothing and the scan below no longer says ' +
+        'anything about the invitation US7 requires',
+    ).toHaveLength(3)
+    const semOCoracao = markup.replace(CORACAO, '<button>')
+
     for (const convite of ['criar conta', 'crie sua conta', 'entrar para assistir', 'fazer login'])
-      expect(markup, `the listing asks a visitor to ${convite} — US4 says it must not`).not.toContain(
-        convite,
-      )
+      expect(
+        semOCoracao,
+        `the listing asks a visitor to ${convite} somewhere other than on the heart — US4 says ` +
+          'watching needs no account',
+      ).not.toContain(convite)
+    // The invitation is closed on the server, so its "JÁ TENHO CONTA" link is not in this
+    // markup either. A login link that reached the page up front would be the modal US4 forbids.
     expect(markup).not.toContain('href="/login"')
   })
 

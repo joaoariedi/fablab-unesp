@@ -7,6 +7,24 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { contrastRatio } from '../../../../packages/ui/src/tokens/contrast'
 import type { FindArgs } from '../../lib/tenancy/client'
+import {
+  allCss,
+  attributeCss,
+  caixaDe,
+  changedBetween,
+  declarations,
+  ehLinkEmTexto,
+  emVigor,
+  focusCoverage,
+  inlineCss,
+  INTERACTIVE_TAGS,
+  interactiveTargets,
+  resolveColour,
+  resolvedAt,
+  rulesOf,
+  stripComments,
+  textoDe,
+} from './css-cascade'
 
 /**
  * T028 / FR-021, FR-023, SC-009, SC-010 — the six public pages at the three design targets,
@@ -61,11 +79,6 @@ const DESIGN_TARGETS = [390, 834, 1440] as const
  *  4.5:1 the contrast gate applies to body text. */
 const NON_TEXT_MINIMUM = 3
 
-/** Tags that put an element in the keyboard tab order on their own. `<a>` only with an `href`;
- *  an anchor without one is not focusable, and requiring a ring for it would demand CSS for an
- *  element no keyboard visitor can ever reach. */
-const INTERACTIVE_TAGS = ['a', 'button', 'input', 'select', 'textarea', 'summary'] as const
-
 class FakePublicClient {
   readonly calls: FindArgs[] = []
   readonly tenantId = 'org-fake'
@@ -90,12 +103,20 @@ const mocks = vi.hoisted(() => {
     notFound: vi.fn((): never => {
       throw NOT_FOUND
     }),
+    // Step 2 imports `redirect` at module scope for its server action. A factory that omitted it
+    // would fail the IMPORT, not an assertion — the page would never render and § 5 would score
+    // nothing at all. Like `notFound`, the real one throws.
+    redirect: vi.fn((): never => {
+      throw new Error('NEXT_REDIRECT')
+    }),
     getPublicScopedPayloadForRSC: vi.fn(),
+    getTenantScopedPayloadForRSC: vi.fn(),
+    currentUser: vi.fn(),
     listPublic: vi.fn(),
   }
 })
 
-vi.mock('next/navigation', () => ({ notFound: mocks.notFound }))
+vi.mock('next/navigation', () => ({ notFound: mocks.notFound, redirect: mocks.redirect }))
 
 vi.mock('../../lib/tenancy/public-payload', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../lib/tenancy/public-payload')>()),
@@ -107,12 +128,29 @@ vi.mock('../../lib/public/listing', async (importOriginal) => ({
   listPublic: mocks.listPublic,
 }))
 
+// The avatar editor is signed-in, so it reads through the request-scoped client and the session
+// rather than the anonymous one. Mocked at the same seams the other two signup routes are.
+vi.mock('../../lib/tenancy', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/tenancy')>()),
+  getTenantScopedPayloadForRSC: mocks.getTenantScopedPayloadForRSC,
+}))
+
+vi.mock('../../lib/tenancy/session', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/tenancy/session')>()),
+  currentUser: mocks.currentUser,
+}))
+
 const { default: HomePage } = await import('../../app/(frontend)/page')
 const { default: ProjetosPage } = await import('../../app/(frontend)/projetos/page')
 const { default: ArtigosPage } = await import('../../app/(frontend)/artigos/page')
 const { default: AulasPage } = await import('../../app/(frontend)/aulas/page')
 const { default: BibliotecaPage } = await import('../../app/(frontend)/biblioteca-3d/page')
 const { default: CalendarioPage } = await import('../../app/(frontend)/calendario/page')
+// The two routes CLR-009 brings under this gate: step 1 with the builder mounted on it, and
+// step 2's form.
+const { default: CriarContaPage } = await import('../../app/(frontend)/criar-conta/page')
+const { default: DadosPage } = await import('../../app/(frontend)/criar-conta/dados/page')
+const { default: AvatarPage } = await import('../../app/(frontend)/minha-conta/avatar/page')
 
 const CATEGORIA = { id: 1, nome: 'Impressão 3D', slug: 'impressao-3d', ordem: 1 }
 const AUTOR = { id: 9, nome: 'Maria Silva', handle: 'mariasilva', nivel: 7 }
@@ -173,7 +211,53 @@ interface PublicPage {
 
 const query = { searchParams: Promise.resolve({}) }
 
-const PAGES: readonly PublicPage[] = [
+/**
+ * The catalogue step 1 draws its ninety-odd pickers from, and a draft that fills every required
+ * slot.
+ *
+ * Both halves earn their place. Without rows in all three collections the builder renders empty
+ * panels and the 44x44 case scores two buttons instead of the panel of them FR-032b is about —
+ * the vacuity the listings' own `DOC` fixture exists to avoid. Without a COMPLETE draft
+ * `SALVAR E CONTINUAR` renders `tabindex="-1"` (the FR-005 gate), and § 3's tab-order case would
+ * read a deliberately shut control as a target out of the tab order.
+ */
+const TONS_DE_PELE = [
+  { id: 1, nome: 'Pele Amanhecer', hex: '#F7D9C4', ordem: 1 },
+  { id: 2, nome: 'Pele Jatobá', hex: '#6B3F2A', ordem: 2 },
+]
+const TONS_DE_CABELO = [{ id: 11, nome: 'Cabelo Grafite', hex: '#1C1C1C', ordem: 1 }]
+const ITENS_DO_AVATAR = [
+  { id: 21, categoria: 'cabelo', nome: 'Moicano curto', camadaZ: 40 },
+  { id: 22, categoria: 'olhos', nome: 'Olhos amendoados', camadaZ: 50 },
+  { id: 23, categoria: 'nariz', nome: 'Nariz arredondado', camadaZ: 50 },
+  { id: 24, categoria: 'boca', nome: 'Sorriso', camadaZ: 50 },
+  { id: 25, categoria: 'roupaCima', nome: 'Moletom', compativelBase: 'f', camadaZ: 30 },
+  { id: 26, categoria: 'roupaBaixo', nome: 'Calça cargo', camadaZ: 20 },
+  { id: 27, categoria: 'sapatos', nome: 'Tênis', camadaZ: 10 },
+  { id: 28, categoria: 'chapeu', nome: 'Bucket navy', camadaZ: 70 },
+]
+
+/** Every required slot answered, so step 1's submit is the enabled control a person would press. */
+const RASCUNHO = JSON.stringify({
+  base: 'f',
+  pele: '1',
+  cabeloTom: '11',
+  itens: {
+    cabelo: '21',
+    olhos: '22',
+    nariz: '23',
+    boca: '24',
+    roupaCima: '25',
+    roupaBaixo: '26',
+    sapatos: '27',
+  },
+  direcao: 'frente',
+})
+
+const rascunhoQuery = { searchParams: Promise.resolve({ avatar: RASCUNHO }) }
+
+/** The six of feature 003 — the pages § 3's region-by-region ring case is modelled on. */
+const PUBLICAS: readonly PublicPage[] = [
   { path: '/', surface: 'navy', render: async () => (await HomePage()) as ReactNode },
   {
     path: '/projetos',
@@ -202,41 +286,40 @@ const PAGES: readonly PublicPage[] = [
   },
 ]
 
-/** Comments may contain anything, including a width or an `outline: none` written as prose. */
-const stripComments = (css: string): string => css.replace(/\/\*[\s\S]*?\*\//g, '')
-
-/** Every `--token: value` declaration in a stylesheet or a style attribute, last write winning,
- *  as the cascade does for a flat file. */
-function declarations(css: string): Map<string, string> {
-  const found = new Map<string, string>()
-  for (const match of stripComments(css).matchAll(/(--[a-z0-9-]+)\s*:\s*([^;}"]+)/g)) {
-    found.set(match[1]!, match[2]!.trim())
-  }
-  return found
-}
-
 /**
- * A colour value with its `var()` chain resolved to whatever it finally names.
+ * The signup flow (T035c / FR-032b, SC-016).
  *
- * `--focus-ring-color: var(--color-primary)` → `var(--color-rosa-raw)` → `#EE9DC4`. Chains are
- * how the token layer expresses "the per-organization accent" (CLR-001), and a check that
- * stopped at the first `var()` could not score any of them.
+ * CLR-009: *"the signup flow and the avatar builder are held to the **same** standard as the six
+ * public pages"*, and the standard is these assertions — so the two routes join `PAGES` and are
+ * scored by every case § 1 to § 4 already run, rather than by a second gate written beside them.
+ * What they add is § 5: the 44x44 axis (003's FR-022), which no shared case held before, because
+ * the six pages each assert it in their own suite on one control at a time.
  */
-function resolveColour(value: string, props: Map<string, string>): string {
-  let current = value.trim()
-  const seen = new Set<string>()
-  for (;;) {
-    const reference = /var\(\s*(--[a-z0-9-]+)/.exec(current)
-    if (!reference) return current
-    const name = reference[1]!
-    // A cycle would otherwise spin here forever; report the name so the loop is findable.
-    expect(seen.has(name), `custom property cycle at ${name}`).toBe(false)
-    seen.add(name)
-    const next = props.get(name)
-    expect(next, `${name} is referenced but never declared`).toBeDefined()
-    current = next!
-  }
-}
+const CADASTRO: readonly PublicPage[] = [
+  {
+    path: '/criar-conta',
+    // `onboarding.md`: *"fundo geral claro … com texto navy"*. Both steps paint light, which is
+    // why the ring on them cannot be the accent `:root` hands out.
+    surface: 'light',
+    render: async () => (await CriarContaPage(rascunhoQuery as never)) as ReactNode,
+  },
+  {
+    path: '/criar-conta/dados',
+    surface: 'light',
+    render: async () => (await DadosPage(rascunhoQuery as never)) as ReactNode,
+  },
+  {
+    // FR-023 mounts **the same builder** here, after signup. It was left out of this gate's
+    // list, and the list is hard-coded — so the builder's second mount went unmeasured while
+    // the first was measured twice. CLR-009 says "the signup flow **and the builder**", and the
+    // builder is wherever it is mounted, not wherever the first task happened to mount it.
+    path: '/minha-conta/avatar',
+    surface: 'light',
+    render: async () => (await AvatarPage()) as ReactNode,
+  },
+]
+
+const PAGES: readonly PublicPage[] = [...PUBLICAS, ...CADASTRO]
 
 /** The stylesheet the layout imports, as the browser assembles it: the entry plus every file it
  *  `@import`s, in cascade order. */
@@ -251,49 +334,6 @@ function packageStylesheet(): { readonly imports: string[]; readonly css: string
 
 const PACKAGE = packageStylesheet()
 
-/** The `<style>` blocks a rendered page carries — its own rules and every component's. */
-const inlineCss = (markup: string): string =>
-  [...markup.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]!).join('\n')
-
-interface Target {
-  readonly tag: string
-  readonly classes: readonly string[]
-  readonly html: string
-}
-
-/** Every element in the markup a keyboard visitor can Tab to. */
-function interactiveTargets(markup: string): Target[] {
-  const pattern = new RegExp(`<(?:${INTERACTIVE_TAGS.join('|')})\\b[^>]*>|<[a-z]+[^>]*tabindex="0"[^>]*>`, 'g')
-  return (markup.match(pattern) ?? [])
-    .map((html) => ({
-      tag: /^<([a-z]+)/.exec(html)![1]!,
-      classes: (/class="([^"]*)"/.exec(html)?.[1] ?? '').split(/\s+/).filter(Boolean),
-      html,
-    }))
-    // An anchor with no href is not in the tab order, so it needs no ring.
-    .filter((target) => target.tag !== 'a' || target.html.includes(' href="'))
-}
-
-/** What the `:focus-visible` rules in a stylesheet select: tag names and class names.
- *
- *  `:where(a[href], button, …):focus-visible` is one rule listing many shapes, so the arguments
- *  of a leading `:where()`/`:is()` are expanded rather than split on as top-level commas —
- *  splitting the raw selector would hand back `:where(a[href]` and lose the pseudo-class. */
-function focusCoverage(css: string): { tags: Set<string>; classes: Set<string> } {
-  const tags = new Set<string>()
-  const classes = new Set<string>()
-  for (const [, selector] of stripComments(css).matchAll(/([^{}]*:focus-visible[^{}]*)\{/g)) {
-    const grouped = /:(?:where|is)\(([^)]*)\)/.exec(selector!)
-    for (const part of (grouped ? grouped[1]! : selector!).split(',')) {
-      const tag = /(?:^|\s|>)([a-z]+)(?=[.:[\s]|$)/.exec(part.trim())
-      if (tag) tags.add(tag[1]!)
-      for (const [, name] of part.matchAll(/\.([A-Za-z0-9_-]+)/g)) classes.add(name!)
-      if (/\[tabindex="0"\]/.test(part)) tags.add('[tabindex="0"]')
-    }
-  }
-  return { tags, classes }
-}
-
 /** Renders one page as the server emits it, with a full listing behind it. */
 async function markupOf(page: PublicPage): Promise<string> {
   const client = new FakePublicClient({
@@ -303,9 +343,28 @@ async function markupOf(page: PublicPage): Promise<string> {
     evento: [DOC],
     local: [DOC.local],
     maquina: [DOC.maquina],
+    // Step 1's three catalogue collections, read through the same anonymous choke point the
+    // listings use — one client serves every route this suite renders.
+    tomDePele: TONS_DE_PELE,
+    tomDeCabelo: TONS_DE_CABELO,
+    avatarItem: ITENS_DO_AVATAR,
   })
   mocks.getPublicScopedPayloadForRSC.mockResolvedValue(client)
   mocks.listPublic.mockResolvedValue({ docs: [DOC], page: 1, totalPages: 3, totalDocs: 30 })
+
+  // The signed-in seam, for `/minha-conta/avatar`. It redirects a visitor with no session or no
+  // profile, and a redirect renders no markup at all — so without these the route would
+  // contribute an empty string and every target and ring assertion would pass over nothing.
+  mocks.currentUser.mockResolvedValue({ id: 7 })
+  mocks.getTenantScopedPayloadForRSC.mockResolvedValue({
+    tenantId: 'org-fake',
+    find: async () => ({
+      docs: [{ id: 42, handle: 'mariasilva', nome: 'Maria Silva', avatarConfig: null }],
+      totalDocs: 1,
+    }),
+    findByID: async () => null,
+  })
+
   return renderToStaticMarkup((await page.render()) as never)
 }
 
@@ -317,110 +376,8 @@ const RENDERED = new Map<string, string>(
 const markupFor = (page: PublicPage): string => RENDERED.get(page.path)!
 
 const cases = PAGES.map((page) => [page.path, page] as const)
-
-/**
- * A cascade resolver, ported from `packages/ui/tests/shell.test.ts`.
- *
- * SC-010's validation method names that file: *"breakpoint tests per page, **as feature 001 did
- * for the shell**"*, and what feature 001 did was RESOLVE the cascade at each width and assert
- * the outcome. Its docblock rejects the weaker form in as many words:
- *
- *   *"`expect(css).toContain('@media (min-width: 834px)')` is the obvious assertion and it
- *   proves almost nothing: it stays green when the block is empty, when it sets
- *   `display: none` on the bar it was supposed to reveal, or when a later base rule overrides
- *   it."*
- *
- * The first version of § 1 was exactly that form — it counted queries and checked their widths
- * and never evaluated a page at any width. Ported rather than imported because the two suites
- * live in different packages and the purity boundary forbids the edge; it is 40 lines, and the
- * alternative was to keep asserting the thing feature 001 already recorded as worthless.
- */
-interface Block { readonly prelude: string; readonly body: string }
-interface StyleRule {
-  readonly minWidth: number
-  readonly selectors: readonly string[]
-  readonly declarations: Map<string, string>
-}
-
-function topLevelBlocks(css: string): Block[] {
-  const blocks: Block[] = []
-  let depth = 0
-  let preludeStart = 0
-  let bodyStart = 0
-  for (let index = 0; index < css.length; index += 1) {
-    const character = css[index]
-    if (character === '{') {
-      depth += 1
-      if (depth === 1) bodyStart = index + 1
-    } else if (character === '}') {
-      depth -= 1
-      if (depth !== 0) continue
-      blocks.push({
-        prelude: css.slice(preludeStart, bodyStart - 1).trim(),
-        body: css.slice(bodyStart, index),
-      })
-      preludeStart = index + 1
-    }
-  }
-  expect(depth, 'unbalanced braces in the stylesheet').toBe(0)
-  return blocks
-}
-
-function declarationsOf(body: string): Map<string, string> {
-  const found = new Map<string, string>()
-  for (const part of body.split(';')) {
-    const colon = part.indexOf(':')
-    if (colon === -1) continue
-    found.set(part.slice(0, colon).trim(), part.slice(colon + 1).trim())
-  }
-  return found
-}
-
-const minWidthOf = (prelude: string): number | null => {
-  const match = /^@media\s*\(\s*min-width:\s*(\d+)px\s*\)$/.exec(prelude.trim())
-  return match === null ? null : Number(match[1])
-}
-
-function rulesOf(css: string, minWidth = 0): StyleRule[] {
-  const rules: StyleRule[] = []
-  for (const block of topLevelBlocks(stripComments(css))) {
-    if (block.prelude.startsWith('@media')) {
-      // A non-`min-width` query resolves at no target here; § 1's own max-width case is what
-      // rejects one outright, rather than this silently treating it as always-on.
-      rules.push(...rulesOf(block.body, minWidthOf(block.prelude) ?? Number.POSITIVE_INFINITY))
-      continue
-    }
-    if (block.prelude.startsWith('@')) continue
-    rules.push({
-      minWidth,
-      selectors: block.prelude.split(',').map((one) => one.trim()),
-      declarations: declarationsOf(block.body),
-    })
-  }
-  return rules
-}
-
-/** Every declaration in force at `width`, as `selector{property}` → value. Last write wins,
- *  which is the cascade for rules of equal specificity — which these are: all single classes. */
-function resolvedAt(css: string, width: number): Map<string, string> {
-  const resolved = new Map<string, string>()
-  for (const rule of rulesOf(css)) {
-    if (rule.minWidth > width) continue
-    for (const selector of rule.selectors) {
-      for (const [property, value] of rule.declarations) {
-        resolved.set(`${selector}{${property}}`, value)
-      }
-    }
-  }
-  return resolved
-}
-
-/** What actually changed between two widths — the properties, so a failure names them. */
-function changedBetween(css: string, from: number, to: number): string[] {
-  const before = resolvedAt(css, from)
-  const after = resolvedAt(css, to)
-  return [...after].filter(([key, value]) => before.get(key) !== value).map(([key]) => key)
-}
+const casosPublicos = PUBLICAS.map((page) => [page.path, page] as const)
+const casosDeCadastro = CADASTRO.map((page) => [page.path, page] as const)
 
 describe('§1 the six public pages are drawn at the three design targets (FR-021, SC-010)', () => {
   it.each(cases)('%s ships CSS of its own', (_path, page) => {
@@ -528,6 +485,12 @@ describe('§1 the six public pages are drawn at the three design targets (FR-021
       '/aulas: 1440',
       '/biblioteca-3d: 834, 1440',
       '/calendario: 1440',
+      '/criar-conta: 834',
+      '/criar-conta/dados: 834',
+      // The builder's second mount (FR-023). It switches at 834 like step 1 does, because it
+      // renders the same island — which is the point of holding both to one gate rather than
+      // letting the editor grow a standard of its own.
+      '/minha-conta/avatar: 834',
     ])
   })
 })
@@ -581,25 +544,6 @@ describe('§2 the delivery chain that puts the focus ring on every page (SC-009)
     expect(stripComments(everything)).not.toMatch(/outline:\s*(none|0)\b/)
   })
 })
-
-/**
- * Every `style="…"` attribute in the markup, joined — the medium the pages actually write in.
- *
- * `inlineCss` above reads `<style>` blocks only, and none of the six pages puts its layout or
- * its outlines there: all six express them as `ESTILO: Record<string, CSSProperties>` objects
- * that React renders into `style` attributes. Measured on this tree, and it is the defect this
- * section exists for — adding `outline: 'none'` to `ESTILO.titulo` in
- * `biblioteca-3d/page.tsx`, the object applied to every card-title link on that listing, left
- * all 47 cases GREEN. An inline declaration beats the zero-specificity `:where(…)` rule in the
- * real cascade, so the ring was genuinely destroyed on the page's most numerous target, by
- * exactly the edit § 2's comment calls "the single most common way FR-023 is lost".
- */
-const attributeCss = (markup: string): string =>
-  [...markup.matchAll(/\sstyle="([^"]*)"/g)].map((m) => m[1]!.replaceAll('&quot;', '"')).join(';\n')
-
-/** Both media at once. Anything asking "what does this page declare" must read both, because
- *  the pages use one and the components use the other. */
-const allCss = (markup: string): string => [inlineCss(markup), attributeCss(markup)].join('\n')
 
 describe('§4 nothing switches the ring back off (FR-023, SC-009)', () => {
   it.each(cases)('%s declares no outline:none anywhere it renders', (_path, page) => {
@@ -679,7 +623,22 @@ describe('§3 every interactive target on every page shows the ring (FR-023, SC-
     }
   })
 
-  it.each(cases)('%s draws a ring that clears 3:1 on every surface it lands on', (_path, page) => {
+  it.each(casosPublicos)('%s draws a ring that clears 3:1 on every surface it lands on', (_path, page) => {
+    // ── Why the signup routes are scored by § 5 instead, and not by this case ─────────────
+    //
+    // This case models a page as its painted REGIONS, which is right for six pages whose fills
+    // are the designer's bands and cards. Step 1's fills are not: `painelDeTons` paints one
+    // `background` per catalogue row — *"the colour is the row's own hex — data from the
+    // database (CLR-005)"* — so every skin tone and hair colour reads here as a region hosting
+    // a ring. Measured, not feared: the routes failed this case at
+    // `region painting #1C1C1C: ring #191C37 on #1C1C1C scores 1.02:1` — a 20px swatch inside
+    // a 44px button, which hosts no ring at all and never will.
+    //
+    // § 5 scores the same threshold against the surface each CONTROL is drawn on, which is the
+    // question WCAG 1.4.11 asks. Same rule, same 3:1, different unit — CLR-009's *"not a second
+    // standard"* is about the standard, and a model that reports a false failure on 1/3 of the
+    // pickers is not the same standard applied, it is a different one.
+    //
     // ── Why this scores pairs and not one flattened pair ──────────────────────────────────
     //
     // The first version built ONE map of every custom property in the document and scored the
@@ -755,5 +714,158 @@ describe('§3 every interactive target on every page shows the ring (FR-023, SC-
       expect(ratio, `${pair.where}: ring ${ring} on ${surface} scores ${ratio.toFixed(2)}:1`)
         .toBeGreaterThanOrEqual(NON_TEXT_MINIMUM)
     }
+  })
+})
+
+/**
+ * T035c / FR-032b, SC-016, CLR-009 — the third axis of 003's standard, on the signup flow.
+ *
+ * The two routes are already in `PAGES`, so §§ 1–4 hold them to FR-021 (the three targets) and
+ * FR-023 (a ring that nothing switches off, selecting every target) exactly as they hold the six.
+ * This section adds what those cases never carried: **FR-022's 44x44**, which the six pages each
+ * assert in their own suite on one control at a time (`aulas-page.test.ts`: *"meets the 44px
+ * touch target on the compact breakpoints"*), and which therefore had no shared gate at all — on
+ * the screen CLR-009 calls *"the densest interactive screen in the product"*, one control is not
+ * a sample.
+ *
+ * ── How a box is measured with no DOM ───────────────────────────────────────────────────────
+ *
+ * The same way §§ 1–4 measure everything else: by resolving the cascade over what the route
+ * ships. For each target the class and tag rules that apply at 390 and at 834 are collected, the
+ * element's own `style` attribute is laid over them (it wins, as it does in a browser), and the
+ * `min-height` / `height` / `min-width` / `width` it finally declares are resolved through the
+ * token chain — `var(--space-6)` → `24px` — and compared against 44.
+ *
+ * So this gate reads a **declared** minimum, not a painted box, and that is deliberate: a control
+ * whose height is left to its padding and its line box is one whose conformance depends on a font
+ * the test cannot measure and a browser it cannot run. `PRIMARY_BUTTON_STYLE` is the case that
+ * settles it — 12px of padding either side of a 16px line box is 43.2px, under the bar by less
+ * than a pixel, and invisible to anybody reading the source.
+ *
+ * ── The three exceptions, each with its reason ──────────────────────────────────────────────
+ *
+ * 1. **A link inside a sentence is not scored.** WCAG 2.5.8 exempts a target *"in a sentence or
+ *    block of text"*, and both steps have one — `Fazer login`, and the terms link inside the
+ *    consent label. They are anchors that declare no `display`, so they are inline by definition;
+ *    a 44px box on them would break the line they sit in.
+ * 2. **A control inside its own `<label>` is scored on the larger of the two boxes**, because
+ *    clicking the label activates the control: the consent checkbox's target is the row, not the
+ *    24px square inside it. The fix may therefore land on either — which is what the checkbox's
+ *    own comment in `dados/page.tsx` already assumed, and what nothing was checking.
+ * 3. **The inline axis is required only where no text fills it** — the rotation's `⟳` is the one
+ *    control on either route that qualifies. For anything carrying words the inline size is the
+ *    text's, and this suite cannot measure text; demanding a `min-width` there would be asserting
+ *    a number nobody can justify. A checkbox counts the words of the label that activates it, by
+ *    exception 2: the row is the target, and a row of prose is wider than 44px in every layout
+ *    either step has.
+ */
+
+/** FR-032b, and 003's FR-022 before it: *"at least 44×44px on the compact breakpoints"*. */
+const ALVO_MINIMO = 44
+
+/** The compact breakpoints the requirement names — 1440 is excluded by the requirement itself,
+ *  though every box here is declared unconditionally and so holds at all three. */
+const COMPACTOS = [390, 834] as const
+
+describe("§5 the signup flow and the builder meet 003's own 44x44 (FR-032b, SC-016, CLR-009)", () => {
+  it.each(casosDeCadastro)('%s declares the light surface it actually paints', (_path, page) => {
+    // The ring case below scores every control that paints no fill of its own against the PAGE's
+    // surface and the PAGE's ring, so a route that paints light while declaring `:root`'s navy is
+    // one where both numbers are fiction. `onboarding.md` draws both steps on *"fundo geral
+    // claro"*: the roles have to be re-declared for the region, not merely painted over.
+    const markup = markupFor(page)
+    const props = declarations([PACKAGE.css, allCss(markup)].join('\n'))
+    const estilo =
+      [...markup.matchAll(/\sstyle="([^"]*)"/g)]
+        .map((achado) => achado[1]!)
+        .find((um) => um.includes('--surface-page')) ?? ''
+
+    expect(
+      estilo,
+      `${page.path} re-declares no --surface-page. It paints a light page over the navy the ` +
+        'token layer hands out, so every component inside it — EmptyState, Button, the retry — ' +
+        'follows the surface role into the wrong treatment, and the focus ring stays the accent ' +
+        'that scores 2.05:1 on white.',
+    ).not.toBe('')
+
+    const pintado = resolveColour(/(?:^|;)\s*background\s*:\s*([^;]+)/.exec(estilo)?.[1] ?? '', props)
+    const papel = resolveColour(/--surface-page\s*:\s*([^;]+)/.exec(estilo)![1]!, props)
+    expect(papel, `${page.path} declares a surface role it does not paint`).toBe(pintado)
+  })
+
+  it.each(casosDeCadastro)('%s rings every control in a colour that clears 3:1', (_path, page) => {
+    // Per CONTROL, not per painted region — see § 3's note on why the catalogue swatches make the
+    // region model wrong here. A control that paints its own fill is scored on it; one that does
+    // not is scored on the page surface, with the page's own ring. An intermediate region (step
+    // 2's card) is deliberately NOT modelled: with no DOM there is no ancestry to walk, so the
+    // rule this enforces is that the page-level declaration must be correct on its own.
+    const markup = markupFor(page)
+    const css = [PACKAGE.css, allCss(markup)].join('\n')
+    const props = declarations(css)
+    const root = declarations(PACKAGE.css)
+    const estiloDaPagina =
+      [...markup.matchAll(/\sstyle="([^"]*)"/g)]
+        .map((achado) => achado[1]!)
+        .find((um) => um.includes('--surface-page')) ?? ''
+    const daPagina = (propriedade: string): string =>
+      new RegExp(`${propriedade}\\s*:\\s*([^;"]+)`).exec(estiloDaPagina)?.[1]?.trim() ??
+      root.get(propriedade) ??
+      ''
+
+    const superficieDaPagina = resolveColour(daPagina('--surface-page'), props)
+    const anelDaPagina = daPagina('--focus-ring-color')
+    const alvos = interactiveTargets(markup)
+    expect(alvos.length, `${page.path} rendered nothing to ring`).toBeGreaterThan(8)
+
+    for (const alvo of alvos) {
+      const declarado = emVigor(alvo, css, COMPACTOS[0])
+      const anel = resolveColour(declarado.get('--focus-ring-color') ?? anelDaPagina, props)
+      const proprio = resolveColour(declarado.get('background') ?? '', props)
+      // `transparent`, a gradient, a catalogue hex on a child — none of them is a fill this
+      // control is drawn on, so the surface underneath it is the page's.
+      const fundo = /^#[0-9a-fA-F]{6}$/.test(proprio) ? proprio : superficieDaPagina
+      if (!/^#[0-9a-fA-F]{6}$/.test(anel) || !/^#[0-9a-fA-F]{6}$/.test(fundo)) continue
+      const ratio = contrastRatio(anel, fundo)
+      expect(
+        ratio,
+        `${page.path}: the ring ${anel} on ${alvo.html.slice(0, 90)} (fill ${fundo}) scores ` +
+          `${ratio.toFixed(2)}:1`,
+      ).toBeGreaterThanOrEqual(NON_TEXT_MINIMUM)
+    }
+  })
+
+  it.each(casosDeCadastro)('%s gives every target at least 44x44 (FR-032b)', (_path, page) => {
+    const markup = markupFor(page)
+    const css = [PACKAGE.css, allCss(markup)].join('\n')
+    const props = declarations(css)
+    const pequenos: string[] = []
+    let medidos = 0
+
+    for (const alvo of interactiveTargets(markup)) {
+      if (ehLinkEmTexto(alvo, css, COMPACTOS[0])) continue
+      medidos += 1
+      // No words to fill the inline axis: the rotation's `⟳`, or a checkbox with no label around
+      // it. A checkbox that HAS one counts the label's words, because the label is the target.
+      const semTexto = textoDe(alvo, markup).length <= 1
+      for (const largura of COMPACTOS) {
+        const caixa = caixaDe(alvo, markup, css, props, largura)
+        const falhou = caixa.altura < ALVO_MINIMO || (semTexto && caixa.largura < ALVO_MINIMO)
+        if (!falhou) continue
+        pequenos.push(
+          `@${String(largura)} ${alvo.html.slice(0, 90)} declares ` +
+            `${String(caixa.largura)}x${String(caixa.altura)}`,
+        )
+      }
+    }
+
+    expect(medidos, `${page.path} measured no target at all`).toBeGreaterThan(8)
+    expect(
+      pequenos,
+      `${page.path} carries ${pequenos.length} target(s) under ${String(ALVO_MINIMO)}px. ` +
+        "FR-032b holds this flow to 003's own FR-022, and a box left to its padding and its line " +
+        'height is not one this suite — or a reviewer — can check: the canonical primary comes ' +
+        'to 43.2px that way. Declare the minimum on the control, or on the label that activates ' +
+        'it.',
+    ).toEqual([])
   })
 })

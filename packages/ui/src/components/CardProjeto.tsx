@@ -60,22 +60,41 @@ const CLASS = {
   oculto: 'fl-card-projeto__oculto',
 } as const
 
-/** The author strip, as the card footer prints it. */
-export interface CardProjetoAutor {
-  /**
-   * The pixel avatar, passed in rather than built here — `PixelImage` owns the integer scale
-   * clamp (SC-008), and a card drawing its own `<img>` would be a second place a fractional
-   * scale could enter. Optional: an author may have no avatar yet.
-   */
-  readonly avatar?: ReactNode
-  /** The person's name, up to 60 characters (projetos.md, round 4 — it is the name that shows,
-   *  not the mockups' `MAKER_X`). */
-  readonly nome: string
-  /** `nomesobrenome`, with or without the leading `@` — `formatHandle` is idempotent. */
-  readonly handle: string
-  /** 1–10; the mockups' `NÍVEL 7` is illustrative and the real ceiling is 10 (gamification.md). */
-  readonly nivel: number
-}
+/**
+ * The author strip, as the card footer prints it: a maker, or the state left behind when one
+ * deletes their account (T030 / FR-031).
+ *
+ * A **union**, not a profile with optional fields. CLR-003 keeps the published work up with
+ * *"authorship replaced by a tombstone"*, and records that the tombstone is a **rendering**
+ * state — *"no placeholder profile is created, because a placeholder is a profile someone could
+ * later attach data to"*. Optional fields would let a page keep reading `autor.nome` and paint
+ * `undefined`; the union makes the compiler ask every consumer which state it is holding, which
+ * is the difference between a tombstone and a crash on `autor.nome` (plan § Sketch 6).
+ *
+ * The removed member carries nothing else on purpose: `{ removido: true, nome: 'Maker removido' }`
+ * is rejected, so the erased personal data cannot come back as a literal a page invented.
+ */
+export type CardProjetoAutor =
+  | {
+      /** Absent or `false` on a live profile — the discriminant, readable on both members so a
+       *  consumer can narrow without knowing which one it has. */
+      readonly removido?: false
+      /**
+       * The pixel avatar, passed in rather than built here — `PixelImage` owns the integer scale
+       * clamp (SC-008), and a card drawing its own `<img>` would be a second place a fractional
+       * scale could enter. Optional: an author may have no avatar yet.
+       */
+      readonly avatar?: ReactNode
+      /** The person's name, up to 60 characters (projetos.md, round 4 — it is the name that
+       *  shows, not the mockups' `MAKER_X`). */
+      readonly nome: string
+      /** `nomesobrenome`, with or without the leading `@` — `formatHandle` is idempotent. */
+      readonly handle: string
+      /** 1–10; the mockups' `NÍVEL 7` is illustrative and the real ceiling is 10
+       *  (gamification.md). */
+      readonly nivel: number
+    }
+  | { readonly removido: true }
 
 export interface CardProjetoProps {
   readonly titulo: string
@@ -264,18 +283,56 @@ function contadorCurtidas(curtidas: number): ReactElement {
   )
 }
 
+/**
+ * The tombstone, worded once (FR-031, CLR-003).
+ *
+ * Here rather than at each call site: `plan.md` § *The tombstone splits in two* requires that
+ * "no page invents a placeholder object and no two pages word it differently", and four pages
+ * pass an author. A page that could supply the string could supply a different one.
+ *
+ * **Exported for T031.** Four of the pages that credit an author — the Aulas and Biblioteca 3D
+ * listings and the two detail pages — draw their own byline rather than a `CardProjeto`, so
+ * they cannot reach the wording through the card. Exporting it is what keeps "worded once"
+ * true of those four as well; a page importing this constant cannot disagree with the card,
+ * and a page that hard-coded the string would (`tombstone.test.ts` § 3 scans for exactly that).
+ *
+ * @example
+ * <span>{AUTOR_REMOVIDO}</span>  // a byline whose profile was deleted
+ */
+export const AUTOR_REMOVIDO = 'Maker removido'
+
+/**
+ * The author strip: the maker, or the tombstone deletion leaves behind.
+ *
+ * The removed branch prints the wording and **nothing else** — no handle, no level, no avatar.
+ * Those are the personal data CLR-003 just promised to erase, so rendering a placeholder for
+ * them would undo the erasure at the last surface a visitor actually reads.
+ */
+function autorStrip(autor: CardProjetoAutor): ReactElement {
+  if (autor.removido === true) {
+    return (
+      <span className={CLASS.autor}>
+        <span>{AUTOR_REMOVIDO}</span>
+      </span>
+    )
+  }
+  return (
+    <span className={CLASS.autor}>
+      {autor.avatar}
+      <span>{autor.nome}</span>
+      <span>{formatHandle(autor.handle)}</span>
+      <span className={CLASS.nivel}>{`Nível ${autor.nivel}`}</span>
+    </span>
+  )
+}
+
 function rodape(autor: CardProjetoAutor, curtidas: number, titulo: string, href: string, curtir?: ReactNode): ReactElement {
   return (
     <footer className={CLASS.rodape}>
       {/* Not a link yet, on purpose: the author block leads to the maker's public profile (PO,
           2026-08-24), and that page is specified with features 004/005. An anchor to a route
           this feature does not create is a 404 the mockup did not ask for. */}
-      <span className={CLASS.autor}>
-        {autor.avatar}
-        <span>{autor.nome}</span>
-        <span>{formatHandle(autor.handle)}</span>
-        <span className={CLASS.nivel}>{`Nível ${autor.nivel}`}</span>
-      </span>
+      {autorStrip(autor)}
       <span className={CLASS.acoes}>
         {curtir ?? contadorCurtidas(curtidas)}
         <a className={CLASS.seta} href={href} aria-label={`Ver projeto: ${titulo}`}>

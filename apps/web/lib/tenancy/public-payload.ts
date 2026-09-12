@@ -223,6 +223,59 @@ export async function getPublicScopedPayload(
    * collection, so admitting one here on the strength of its own sentence would serve every
    * organization's rows — the exact shape of the leak this gate exists to close.
    */
+  /**
+   * The global collections an anonymous visitor may LIST — the avatar catalogue, and nothing
+   * else, ever.
+   *
+   * ── Why a global collection needs its own door at all ───────────────────────────────────────
+   *
+   * `isPubliclyListable` AND-s in `isScoped`, and the docstring above gives the reason: a
+   * `publicList` sentence cannot manufacture the `tenant` column that confines an enumeration
+   * to this host. That argument is right, and it makes step 1 of `/criar-conta` unreachable.
+   * The avatar catalogue is `global` by CLR-001, the builder is shown to somebody who has no
+   * account yet (FR-003), and `assertPubliclyReadable` therefore threw for it — so the page
+   * plan.md sketches had no gate that answers. Found by this feature's own verification round,
+   * not by the plan.
+   *
+   * ── Why these three are safe where `users` and `organizations` are not ──────────────────────
+   *
+   * The leak the `isScoped` guard prevents is *serving every organization's rows*. These tables
+   * have no organization's rows to serve. They are product-shipped reference data — 20 skin
+   * tones, 10 hair colours, the nine item slots — identical for every lab, which is precisely
+   * why CLR-001 made them global instead of letting each lab name its own. "Unconstrained by
+   * tenant" and "leaks across tenants" are the same sentence for `users`; for a table where
+   * every row belongs to the product rather than to anyone, they are not.
+   *
+   * The rows carry `nome`, `hex`, `ordem`, `sprite` — no personal data, nothing a competitor
+   * learns, nothing that differs by lab. A visitor sees the identical catalogue whichever host
+   * they arrive on, because there is only one.
+   *
+   * ── Why a module constant and not a registry declaration ────────────────────────────────────
+   *
+   * `publicList` is a per-collection sentence anyone adding a collection can write. This is a
+   * three-element allow-list in the choke point itself, so widening it is a diff in *this* file,
+   * next to the reasoning, where it is reviewed as a change to the anonymous security surface.
+   * It is deliberately NOT reachable through `options` — the docstring below records that an
+   * injectable registry here was itself a caller-reachable deny→allow override, and this is the
+   * same shape of hole with a friendlier name.
+   */
+  const PUBLIC_GLOBAL_CATALOGUE: ReadonlySet<string> = new Set([
+    'tomDePele',
+    'tomDeCabelo',
+    'avatarItem',
+  ])
+
+  /**
+   * A global catalogue the builder may list: in the allow-list above **and** actually `global`.
+   *
+   * The second half is not decoration. If one of these slugs were ever redeclared `scoped`, this
+   * door would admit it while skipping the published-only filter `PUBLISHABLE` would have built
+   * — a scoped collection served unfiltered, which is the 002 leak shape exactly. Then the entry
+   * belongs in `publicList`, where a scoped collection's public read is supposed to be declared.
+   */
+  const isPublicGlobalCatalogue = (collection: string): boolean =>
+    PUBLIC_GLOBAL_CATALOGUE.has(collection) && !isScoped(collection)
+
   const isPubliclyListable = (collection: string): boolean =>
     // Read from the REAL registry, always. An injectable registry was added here to make the
     // admission observable before T004 declared a collection — and it was a caller-reachable
@@ -258,6 +311,7 @@ export async function getPublicScopedPayload(
   const assertPubliclyReadable = (collection: string): void => {
     if (PUBLISHABLE.has(collection)) return
     if (isPubliclyListable(collection)) return
+    if (isPublicGlobalCatalogue(collection)) return
     throw new PublicReadDeniedError(
       collection,
       isScoped(collection)

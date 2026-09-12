@@ -67,9 +67,37 @@ const EXEMPT = {
   'packages/ui/src/tokens': join(REPO_ROOT, 'packages', 'ui', 'src', 'tokens', PROBE_DIR),
   'packages/ui/tests': join(REPO_ROOT, 'packages', 'ui', 'tests', PROBE_DIR),
   'apps/web/tests': join(REPO_ROOT, 'apps', 'web', 'tests', PROBE_DIR),
+
+  // T007b / FR-034, CLR-005 — the avatar palettes. The 20 skin tones and 10 hair colours the
+  // seed writes are DATA: a person's depiction of themselves, which no organization's theme is
+  // allowed to repaint. They are not tokens either — `tokens/` publishes custom properties a
+  // component resolves, and nothing resolves a skin tone — so moving them there to satisfy the
+  // fence would put 30 un-themeable rows in the one directory whose whole meaning is "themeable".
+  //
+  // The entry is here rather than absent because the alternative is not "the fence holds": it is
+  // T008's 30 `hex` rows failing `pnpm lint` on arrival, and the repair under deadline being a
+  // widened selector or a blanket disable. Recording it as a path keeps FR-002's rule intact —
+  // "no literal in a component", not "no literal anywhere" — and keeps the carve-out in review.
+  'apps/web/seed': join(REPO_ROOT, 'apps', 'web', 'seed', PROBE_DIR),
 } as const
 
-const ALL_PROBE_DIRS = [...Object.values(FENCED), ...Object.values(EXEMPT)]
+/**
+ * T007b / FR-034, CLR-005 — where the palette exemption must STOP.
+ *
+ * `apps/web/collections/avatar/` is the configuration that defines the two catalogues; the rows
+ * themselves are written by the seed. A hex typed here is a default baked into the admin UI, not
+ * a curated row, and it is the shape an exemption phrased as "the avatar palettes" — rather than
+ * as the seed's path — would swallow without anyone noticing. That is the quiet widening the task
+ * names, so it gets a probe of its own rather than trust.
+ */
+const PALETTE_NEIGHBOUR_DIR = join(REPO_ROOT, 'apps', 'web', 'collections', 'avatar', PROBE_DIR)
+
+const ALL_PROBE_DIRS = [
+  ...Object.values(FENCED),
+  ...Object.values(EXEMPT),
+  PALETTE_NEIGHBOUR_DIR,
+]
+
 
 interface Probe {
   /** File stem; also the test-case label. */
@@ -285,6 +313,22 @@ const TENANCY_PROBE: Probe = {
   body: 'export function handler(req) {\n  return req.payload\n}',
 }
 
+/**
+ * The other half of CLR-005's exemption: the seed may write a hex, and the collection
+ * directory beside it may not.
+ *
+ * `apps/web/seed/**` is exempt because the 30 palette rows are reference DATA — `#2E1A0F` is
+ * the value of a skin tone, not a token a component paints with. An exemption written one path
+ * too wide would take `apps/web/collections/avatar/**` with it, where a `defaultValue` hex is
+ * exactly the literal the fence exists to refuse. This probe is what makes the boundary between
+ * the two an assertion rather than a comment.
+ */
+const PALETTE_NEIGHBOUR_PROBE: Probe = {
+  name: 'hex-in-the-avatar-collection-config',
+  ext: 'ts',
+  body: "export const defaultTone = '#EE703E'",
+}
+
 function probeFileName(probe: Probe): string {
   return `${probe.name}.${probe.ext}`
 }
@@ -372,6 +416,7 @@ beforeAll(() => {
     writeProbes(dir, [...ALL_FENCED_FORBIDDEN, ...ALLOWED])
   }
   writeProbes(FENCED['apps/web'], [TENANCY_PROBE])
+  writeProbes(PALETTE_NEIGHBOUR_DIR, [PALETTE_NEIGHBOUR_PROBE])
   for (const dir of Object.values(EXEMPT)) {
     writeProbes(dir, FORBIDDEN)
   }
@@ -424,6 +469,33 @@ describe('the exemptions are directories, and they hold (round 3)', () => {
   })
 })
 
+describe('the palette exemption is recorded, and it is narrow (T007b / FR-034, CLR-005)', () => {
+  it('still rejects a hex in the avatar collection config', () => {
+    const messages = fenceMessagesFor(PALETTE_NEIGHBOUR_DIR, PALETTE_NEIGHBOUR_PROBE)
+    expect(
+      messages.length,
+      'the exemption buys the SEED the right to write 30 rows, not the avatar collections the ' +
+        'right to bake a colour into a field default. An exemption that covers the directory ' +
+        'next door is the widening CLR-005 declined to make; eslint reported: ' +
+        JSON.stringify(messagesFor(PALETTE_NEIGHBOUR_DIR, PALETTE_NEIGHBOUR_PROBE)),
+    ).toBeGreaterThan(0)
+  })
+
+  it('names the clarification that bought the seed exemption, on the line that grants it', () => {
+    // A path in `ignores` with no reason beside it is indistinguishable from a fence someone
+    // quietly widened to make their own lint run green — which is the failure this task exists
+    // to prevent, and the one no probe above can see. The tenancy fence exempts the same
+    // directory one screen below for an unrelated reason, so the citation has to be ON the
+    // colour block's line rather than merely somewhere in the file.
+    const config = readFileSync(join(REPO_ROOT, 'eslint.config.mjs'), 'utf8')
+    expect(
+      config,
+      "the colour fence's apps/web/seed exemption must carry CLR-005 on its own line: the " +
+        'clarification is what makes 30 hex rows data rather than a hole in FR-002',
+    ).toMatch(/'apps\/web\/seed\/\*\*',[^\n]*CLR-005/)
+  })
+})
+
 describe('adding the colour selectors did not delete the tenancy selectors', () => {
   it('still rejects req.payload in apps/web', () => {
     const messages = fenceMessagesFor(FENCED['apps/web'], TENANCY_PROBE)
@@ -454,7 +526,7 @@ describe('the probes are evidence, not noise', () => {
     // Guards the it.each blocks against passing vacuously if a list is emptied by a refactor.
     expect(FORBIDDEN.filter((probe) => probe.body.includes(BACKTICK)).length).toBeGreaterThan(2)
     expect(FENCED_CASES.length).toBe(ALL_FENCED_FORBIDDEN.length * 2)
-    expect(EXEMPT_CASES.length).toBe(FORBIDDEN.length * 3)
+    expect(EXEMPT_CASES.length).toBe(FORBIDDEN.length * 4)
   })
 
   it('probes every extension the config claims a module can carry', () => {

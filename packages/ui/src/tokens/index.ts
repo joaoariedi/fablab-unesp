@@ -27,8 +27,22 @@
  *
  * ── The file is `tokens/`, which is the only place a hex may be written ─────────────────────
  *
- * The colour fence (T007 / T007b) exempts exactly this directory. Every hex below therefore has
- * its one legitimate home here; a component reaches for `var(--color-…)` instead.
+ * The colour fence (T007 / T007b) exempts this directory. Every hex below therefore has its one
+ * legitimate home here; a component reaches for `var(--color-…)` instead.
+ *
+ * ── What is NOT a token, and so does not belong here (004 T007b — FR-034, CLR-005) ──────────
+ *
+ * The avatar's 20 skin tones and 10 hair colours are `hex` rows the seed writes, and the colour
+ * fence exempts `apps/web/seed/**` for them. They are deliberately not filed here, and the
+ * distinction is the one this file's whole purpose rests on: a token is a value a component
+ * resolves through `var(--color-…)` **so that an organization's theme can repaint it**. A skin
+ * tone is the one colour in the product that must never be repainted — repainting it would change
+ * a person's depiction of themselves — so it is reference data with a colour in it, not a token.
+ *
+ * Adding them to `PALETTE` would break three things at once: `token-data.test.ts` would demand 30
+ * custom properties `palette.css` must not define, `colourProperty` would mint names nothing
+ * resolves, and `DOCUMENTED_PAIRS` would invite contrast pairs for colours no text is ever set
+ * against. FR-002 stays "no literal in a **component**" rather than "no literal anywhere".
  */
 
 /**

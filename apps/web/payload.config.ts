@@ -6,9 +6,12 @@ import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { multiTenantPlugin } from '@payloadcms/plugin-multi-tenant'
 import { s3Storage } from '@payloadcms/storage-s3'
 import type { CollectionConfig } from 'payload'
-import { buildConfig } from 'payload'
+import { buildConfig, defaultLoggerOptions } from 'payload'
 import sharp from 'sharp'
 
+import { AvatarItem } from './collections/avatar/AvatarItem'
+import { TomDeCabelo } from './collections/avatar/TomDeCabelo'
+import { TomDePele } from './collections/avatar/TomDePele'
 import { Artigo } from './collections/content/Artigo'
 import { Aula } from './collections/content/Aula'
 import { CategoriaArtigo } from './collections/content/CategoriaArtigo'
@@ -22,12 +25,14 @@ import { Modelo3d } from './collections/content/Modelo3d'
 import { PerfilMaker } from './collections/content/PerfilMaker'
 import { ProgressoAula } from './collections/content/ProgressoAula'
 import { Projeto } from './collections/content/Projeto'
+import { Skill } from './collections/content/Skill'
 import { MEDIA_COLLECTIONS, MEDIA_SLUGS } from './collections/Media'
 import { Organizations } from './collections/Organizations'
 import { PendingInvites } from './collections/PendingInvites'
 import { TenantCanaries } from './collections/TenantCanaries'
 import { isMaster, Users } from './collections/Users'
 import { readEnv } from './lib/env'
+import { perfilMakerHandleUnique } from './lib/tenancy/handle-unique-index'
 import { MAX_UPLOAD_CAP_BYTES } from './lib/uploads/limits'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -37,6 +42,61 @@ const dirname = path.dirname(fileURLToPath(import.meta.url))
 // for the build and drift jobs, which it needs for migrations anyway.
 const env = readEnv()
 
+/**
+ * Field names that must never appear in a log line (T017 / FR-020, SC-005).
+ *
+ * `password` is what the visitor typed *once Payload has it*; `hash` and `salt` are how Payload
+ * stores it; `token` covers both the session JWT and anything else that opens an account without
+ * one; and `resetPasswordToken` is a single-use credential that FR-017 hands out by e-mail — a
+ * copy of it in a log file is a copy of the account.
+ *
+ * **`senha` is here because this codebase speaks Portuguese and the first list did not.** It is
+ * the login form's field name, it is what `dados.get('senha')` carries, and `Credenciais` in
+ * `lib/tenancy/session.ts` — the only typed object in this repository that holds a password in
+ * clear — names it that for the whole journey, right up to the one line that maps it to
+ * Payload's `password`. An English-only list covered every name Payload uses and none of the
+ * names *we* use, which is precisely backwards: the accident this layer exists for is a whole
+ * object handed to the logger by a call site that did not think about it, and in this tree the
+ * likeliest such object is a `Credenciais`. Verified by logging one through the real config
+ * before the entry was added: it printed the password verbatim.
+ *
+ * `_verificationToken` is listed against FR-019's second phase. It is inert while
+ * `EMAIL_VERIFICATION_REQUIRED` is false — Payload does not even create the field — but it
+ * becomes a live account-opening secret the day that flips, and a redaction list is worth
+ * nothing if it is updated in the same commit as the feature that needs it.
+ *
+ * The rule is *not to log them*, and today nothing does — `tests/accounts/no-secrets-logged.test.ts`
+ * drives the auth flows and scans everything the process writes. This is the layer under
+ * that rule: a whole row or a whole error handed to `payload.logger` by a future call site prints
+ * a censor instead of the credential, without that call site having had to know.
+ */
+const CAMPOS_NUNCA_LOGADOS = [
+  'hash',
+  'password',
+  'resetPasswordToken',
+  'salt',
+  'senha',
+  'token',
+  '_verificationToken',
+] as const
+
+/**
+ * The same names as pino redaction paths.
+ *
+ * pino redacts **a value at a key path**, and its wildcard matches exactly one level — so each
+ * name is listed at the depths a log line realistically carries it: bare (`logger.info({ hash })`),
+ * one deep (`{ user: { hash } }`), and on down to four, which covers a row nested inside a
+ * context inside an error. Deeper than that is not covered, and neither is a secret interpolated
+ * into the *message string*: redaction is the second layer, never a licence to log the credential.
+ */
+const CAMINHOS_REDIGIDOS = CAMPOS_NUNCA_LOGADOS.flatMap((campo) => [
+  campo,
+  `*.${campo}`,
+  `*.*.${campo}`,
+  `*.*.*.${campo}`,
+  `*.*.*.*.${campo}`,
+])
+
 /** Every collection the app registers, in one place so the storage map is derived from it. */
 const collections = [
   Organizations,
@@ -45,6 +105,14 @@ const collections = [
   PendingInvites,
   CategoriaProjeto,
   Projeto,
+  // The 004 four (T008). Placed exactly where SCOPE_REGISTRY declares them, because that
+  // file's order is what `fixtures.ts` seeds in and `resetWorld` deletes in reverse — two
+  // lists in the same order are what makes "did this one land?" answerable by reading them
+  // side by side. Only `skill` appears in the plugin map below; the other three are global.
+  TomDePele,
+  TomDeCabelo,
+  AvatarItem,
+  Skill,
   // The 002b eleven (T044). Order mirrors SCOPE_REGISTRY, which `fixtures.ts` seeds in and
   // `resetWorld` deletes in reverse — keeping the two lists in the same order is what makes a
   // "did this one land?" question answerable by reading them side by side.
@@ -141,6 +209,17 @@ export function s3StorageOptions(
 export default buildConfig({
   secret: env.PAYLOAD_SECRET,
 
+  // FR-020: the credential fields are censored on the way out, whatever put them there.
+  //
+  // `destination` is Payload's **own** default — `defaultLoggerOptions` is the `pino-pretty`
+  // stream `getLogger()` would have used — so this adds redaction and changes nothing else.
+  // Omitting it would silently swap the pretty printer for raw JSON on stdout, which is a change
+  // to every log line in the product made while nobody was looking at log formatting.
+  logger: {
+    options: { redact: { censor: '[REDACTED]', paths: CAMINHOS_REDIGIDOS } },
+    destination: defaultLoggerOptions,
+  },
+
   db: postgresAdapter({
     pool: { connectionString: env.DATABASE_URI },
     migrationDir: path.resolve(dirname, 'migrations'),
@@ -148,6 +227,13 @@ export default buildConfig({
     // straight to the database without producing a migration file, which is precisely how
     // dev and prod drift apart — the architecture document names this risk number one.
     push: env.NODE_ENV !== 'production',
+    // The one constraint Payload cannot express on a collection: `@handle` unique **per
+    // organization** (FR-010, SC-009). `unique: true` on the field would be unique across the
+    // whole table — the plugin narrows access, not indexes — and would refuse the second
+    // profile of anyone who joins a second lab (CLR-002). Declared here rather than only in a
+    // migration because `push` above is what builds every non-production database, and it
+    // drops an index it does not recognise.
+    afterSchemaInit: [perfilMakerHandleUnique],
   }),
 
   admin: {
@@ -231,6 +317,11 @@ export default buildConfig({
         pendingInvites: {},
         categoriaProjeto: {},
         projeto: {},
+        // The one scoped collection feature 004 adds (T008). Its three siblings —
+        // `tomDePele`, `tomDeCabelo` and `avatarItem` — are deliberately absent: they are
+        // global reference data (CLR-001), and listing one here would give it a tenant column
+        // it has no business carrying, then hide every row from the labs that did not seed it.
+        skill: {},
         // The 002b eleven (T044). Every one carries content, a roster or an interaction that
         // belongs to exactly one lab, so every one is listed: a collection reaching the config
         // but not this map would carry no tenant column at all, and `scopedAccess()` would then

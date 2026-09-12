@@ -6,7 +6,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import type { ReactElement, ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { EmptyState, Pagination, SearchInput } from '@fablab/ui'
+import { EmptyState, LikeButton, Pagination, SearchInput } from '@fablab/ui'
 
 import { ALL_CATEGORIES } from '../../lib/public/params'
 import type { FindArgs } from '../../lib/tenancy/client'
@@ -575,7 +575,16 @@ describe('§5 — the numbered cards (FR-007, FR-021, US3)', () => {
   })
 
   it('shows the like count to everyone, as text (FR-015)', async () => {
-    expect(textOf(cardsDe((await render()).tree)[0] ?? null)).toContain('42')
+    // Read from the EMITTED MARKUP rather than by walking the tree, because T003 put the count
+    // inside `LikeButton` (§9): `textOf` walks `props.children` and stops at any component
+    // boundary, so it stopped being able to see a number that is still there. The requirement
+    // is unchanged and this instrument holds it harder — it proves the count reaches the HTML
+    // the server sends, which is what "shown to everyone" means for a visitor with no
+    // JavaScript at all.
+    const markup = renderToStaticMarkup((cardsDe((await render()).tree)[0] ?? null) as never)
+
+    expect(markup).toContain('42')
+    expect(markup).toContain('♥')
   })
 
   it('links the card to its detail page', async () => {
@@ -746,5 +755,55 @@ describe('§8 — the error state (FR-018, US1)', () => {
       mocks.NOT_FOUND,
     )
     expect(mocks.notFound).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('§9 — the heart is the island, and the count is the server\'s (FR-025, US7)', () => {
+  const cardsDe = (tree: ReactNode): AnyElement[] => {
+    const lista = findAll(tree, 'ul').find((node) =>
+      String(node.props['aria-label'] ?? '').toLowerCase().includes('modelos'),
+    )
+    return lista === undefined ? [] : findAll(lista, 'li')
+  }
+
+  it('draws the count with `LikeButton` rather than the static span the card shipped with', async () => {
+    const card = cardsDe((await render()).tree)[0]
+
+    const hearts = findAll(card ?? null, LikeButton)
+    expect(
+      hearts,
+      'the card still prints its own ♥ and number. This listing draws a heart, so US7 applies ' +
+        'to it exactly as it does to the Projetos grid: a visitor who clicks must get the ' +
+        'invitation, which only the island can give them.',
+    ).toHaveLength(1)
+    // The count is the SERVER's, from this document.
+    expect(hearts[0]?.props.curtidas).toBe(42)
+  })
+
+  it('supplies the visitor\'s branch only — the signed-in half is T028b, not this page', async () => {
+    const props = findAll(cardsDe((await render()).tree)[0] ?? null, LikeButton)[0]?.props
+
+    // Asserted before the two below, which an absent island would otherwise satisfy by reading
+    // `undefined` off nothing — the shape of a test that stays green after the island is taken
+    // away again.
+    expect(props, 'the card rendered no island at all').toBeDefined()
+    // `onCurtir` is a plain function across the server/client boundary: not serialisable, and
+    // Next refuses it at render rather than at review.
+    expect(props?.isSignedIn).not.toBe(true)
+    expect(props?.onCurtir).toBeUndefined()
+  })
+
+  it('gives every card its own heart with its own count', async () => {
+    const tres = [42, 5, 77].map((curtidas, n) => ({
+      ...MODELO,
+      id: n + 1,
+      slug: `modelo-${n + 1}`,
+      curtidas,
+    }))
+    const cards = cardsDe((await render({}, { docs: tres, totalDocs: 3 })).tree)
+
+    // Each from its OWN document: reading `docs[0].curtidas` for every card would satisfy the
+    // first assertion in this section and print one number on ten different models.
+    expect(cards.map((card) => findAll(card, LikeButton)[0]?.props.curtidas)).toEqual([42, 5, 77])
   })
 })

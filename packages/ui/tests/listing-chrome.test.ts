@@ -288,7 +288,11 @@ describe('CardProjeto — the card the mockups draw (FR-004)', () => {
   it('never doubles an `@` a CMS field already carries', () => {
     // The same idempotence `Card.formatHandle` exists for: `@@mariasilva` is the kind of defect
     // that ships because it reads as a data problem in review.
-    const card = CardProjeto(cardProps({ autor: { ...cardProps().autor, handle: '@mariasilva' } }))
+    // Written out rather than spread over `cardProps().autor`: T030 made `CardProjetoAutor` a
+    // union, and spreading it produces `{ removido: true, handle }` as one arm — a removed
+    // author wearing a handle, which is the literal the union exists to reject (CLR-003).
+    const autor = { nome: 'Maria Silva', handle: '@mariasilva', nivel: 7 } as const
+    const card = CardProjeto(cardProps({ autor }))
     expect(textOf(card)).toContain('@mariasilva')
     expect(textOf(card)).not.toContain('@@')
   })

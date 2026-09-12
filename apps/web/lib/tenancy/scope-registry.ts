@@ -79,6 +79,33 @@ export const SCOPE_REGISTRY = {
     scope: 'scoped',
     why: 'Content belongs to the lab that made it; every content collection is scoped (FR-005)',
   },
+  // The 004 four (T008). The three cosmetic catalogues are **global** and `skill` is the
+  // exception, which CLR-001 is the record of: `avatarItem`, `tomDePele` and `tomDeCabelo` are
+  // one designer's art shipped with the product, identical for every lab, so scoping them
+  // would mean seeding ~100 rows per organization for a catalogue nobody varies. The cost is
+  // priced rather than overlooked — a second lab cannot supply its own cosmetics in v1, and
+  // CLR-001 names that as feature 007's co-branding question.
+  //
+  // `skill` sits HERE, ahead of `perfilMaker`, and the position is load-bearing for the same
+  // reason the block below records: T009 gives `perfilMaker` a `skills` array pointing at this
+  // collection, `fixtures.ts` seeds in this order and `resetWorld` deletes in reverse, so the
+  // referrer must be declared after the row it points at.
+  tomDePele: {
+    scope: 'global',
+    why: 'Twenty swatches of the platform\'s own art, identical in every lab; a skin tone is the one colour nobody themes (CLR-001, FR-003)',
+  },
+  tomDeCabelo: {
+    scope: 'global',
+    why: 'Same as tomDePele — ten swatches shipped with the product, not a vocabulary a lab names (CLR-001, FR-003)',
+  },
+  avatarItem: {
+    scope: 'global',
+    why: 'The cosmetic catalogue is one designer\'s sprites, identical for every lab; scoping it would seed ~100 rows per organization of art nobody varies (CLR-001, FR-003)',
+  },
+  skill: {
+    scope: 'scoped',
+    why: 'The catalogue is administrable per organization (PO, 2026-08-24): CITe\'s five are a seed, not the platform\'s vocabulary, and a global table would impose them on the second lab (FR-013)',
+  },
   // The 002b eleven (T044). Declaration order still obeys the two rules above: `fixtures.ts`
   // seeds in this order and `resetWorld` deletes in reverse, so each collection follows every
   // collection it relates to. `perfilMaker` therefore leads — `artigo`, `aula`, `modelo3d` and

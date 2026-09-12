@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation'
 import { RichText } from '@payloadcms/richtext-lexical/react'
 import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical'
 
-import { Chip, formatHandle } from '@fablab/ui'
+import { AUTOR_REMOVIDO, Chip, formatHandle } from '@fablab/ui'
 
 import { TenantUnresolvedError } from '../../../../lib/tenancy/errors'
 // Deep import, exactly as `layout.tsx` and the listings do it and for the same reason: the
@@ -126,11 +126,26 @@ async function lerArtigo(slug: string): Promise<ArtigoDoc | null> {
   return docs[0] ?? null
 }
 
-/** The author line: the person the article credits, or nothing when the profile did not
- *  arrive. Not a link — the public maker profile is a future spec (004/005), and an anchor to
- *  a route this feature does not create is a 404 the mockup did not ask for. */
+/**
+ * The author line: the person the article credits, the tombstone when they deleted their
+ * account, or nothing when the profile did not arrive. Not a link — the public maker profile is
+ * a future spec (004/005), and an anchor to a route this feature does not create is a 404 the
+ * mockup did not ask for.
+ *
+ * The **removed** case is the one T029 created: `autor` is nullable since that migration, and
+ * the only thing that empties it is a deletion, so an absent relationship is a person who
+ * exercised FR-031 rather than a row that was never filled in. CLR-003 keeps their work up
+ * *"with authorship replaced by a tombstone"* — returning `null` here, as this did before,
+ * keeps the work up with **no** authorship at all, which reads as content the lab published.
+ *
+ * A **bare id** stays `null`: that is a populate failure over a living maker, and printing the
+ * tombstone for it would announce a deletion nobody performed. The wording comes from
+ * `@fablab/ui` so these four hand-drawn bylines and `CardProjeto` cannot drift apart (CHK066).
+ */
 function autoria(artigo: ArtigoDoc): ReactNode {
-  const perfil = asDoc<PerfilDoc>(artigo.autor)
+  const autor = artigo.autor
+  if (autor === null || autor === undefined) return <span style={ESTILO.autor}>{AUTOR_REMOVIDO}</span>
+  const perfil = asDoc<PerfilDoc>(autor)
   if (!perfil?.nome) return null
   return (
     <span style={ESTILO.autor}>

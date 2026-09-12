@@ -11,3 +11,29 @@
 # now that same shared value, so the finding cannot recur — but the string stays in this commit
 # forever, and a scan of the branch's history still reaches it.
 f288aac04bf25d761a4d742381d7a6b478bd07aa:apps/web/tests/content/review.test.ts:generic-api-key:49
+
+# ── 25da0c9, signed-in.test.ts:315 ────────────────────────────────────────────────────────────
+# The same finding as above, by the same mechanism, in a fixture written a week later: a password
+# for a user this test creates and this test alone ever logs in as. `signed-in-vantage-123` was
+# flagged by `generic-api-key` on ENTROPY (3.56) — the sibling fixtures all contain the repeated
+# token `password`, which scores lower, and none of them has ever been flagged.
+#
+# The literal is now `fixture-password-123`, the shared value the earlier adjudication settled
+# on, so the finding cannot recur. This entry exists only because the string is in that commit
+# forever and a scan of the branch's history still reaches it — a fingerprint, not a path rule.
+25da0c9047e0168683342d65a1fc78f18818e03c:apps/web/tests/tenancy/signed-in.test.ts:generic-api-key:315
+
+# ── deda296, verification-phase.test.ts:52 and no-secrets-logged.test.ts:57 ───────────────────
+# The same entropy finding again, twice, in the phase-3 auth commit.
+#
+#   * `verification-phase.test.ts` held a fixture password of its own; it is `fixture-password-123`
+#     now, like every other fixture in the tree.
+#   * `no-secrets-logged.test.ts` quoted a log line IN A DOCBLOCK to show what the unredacted
+#     output looked like before the fix. The quote is worth keeping and the literal is not — what
+#     the line proves is that the value appeared in clear, not which value it was — so it reads
+#     `"<SEGREDO, em claro>"` now.
+#
+# Both entries are for the string as it survives in deda296, which no edit can reach.
+deda2964e7ddfb8ad25d97cbb07d3b69e6520a3c:apps/web/tests/accounts/verification-phase.test.ts:generic-api-key:52
+deda2964e7ddfb8ad25d97cbb07d3b69e6520a3c:apps/web/tests/accounts/no-secrets-logged.test.ts:generic-api-key:57
+

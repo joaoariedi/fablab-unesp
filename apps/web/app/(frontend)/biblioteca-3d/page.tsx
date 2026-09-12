@@ -2,7 +2,7 @@ import type { CSSProperties, ReactElement, ReactNode } from 'react'
 
 import { notFound } from 'next/navigation'
 
-import { EmptyState, formatHandle, Pagination, SearchInput } from '@fablab/ui'
+import { AUTOR_REMOVIDO, EmptyState, formatHandle, LikeButton, Pagination, SearchInput } from '@fablab/ui'
 
 import { listPublic } from '../../../lib/public/listing'
 import {
@@ -334,10 +334,23 @@ function acaoDe(modelo: Modelo3dDoc, detalhe: string): ReactNode {
   )
 }
 
-/** The author strip: the person's name and `@nomesobrenome` (round 4, 2026-08-24). No level —
- *  `perfilMaker` carries none, and a number nobody earned on a public page is worse than its
- *  absence. `formatHandle` prints the `@`, in the one place that decides how. */
+/**
+ * The author strip: the person's name and `@nomesobrenome` (round 4, 2026-08-24). No level —
+ * `perfilMaker` carries none, and a number nobody earned on a public page is worse than its
+ * absence. `formatHandle` prints the `@`, in the one place that decides how.
+ *
+ * The **removed** case is the one T029 created: `autor` is nullable since that migration, and
+ * the only thing that empties it is a deletion, so an absent relationship is a person who
+ * exercised FR-031 rather than a row that was never filled in. CLR-003 keeps their work up
+ * *"with authorship replaced by a tombstone"* — returning `null` here, as this did before,
+ * keeps the work up with **no** authorship at all, which reads as content the lab published.
+ *
+ * A **bare id** stays `null`: that is a populate failure over a living maker, and printing the
+ * tombstone for it would announce a deletion nobody performed. The wording comes from
+ * `@fablab/ui` so these four hand-drawn bylines and `CardProjeto` cannot drift apart (CHK066).
+ */
 function autoriaDe(autor: Modelo3dDoc['autor']): ReactNode {
+  if (autor === null || autor === undefined) return <span style={ESTILO.autor}>{AUTOR_REMOVIDO}</span>
   const perfil = asDoc<PerfilDoc>(autor)
   if (perfil === null) return null
   return (
@@ -382,15 +395,19 @@ function cardDe(modelo: Modelo3dDoc, posicao: number): ReactElement {
       </span>
       <span style={ESTILO.acoes}>
         {acaoDe(modelo, detalhe)}
-        {/* FR-015: the count is shown to everyone, as text. The clicking half is `LikeButton`,
-            one of the six islands — a card that rendered it would ship twelve client boundaries
-            on this page alone, which is the failure FR-024 exists to prevent. */}
-        <span style={ESTILO.curtidas}>
-          <span aria-hidden={true} style={ESTILO.coracao}>
-            ♥
-          </span>
-          <span>{modelo.curtidas ?? 0}</span>
-        </span>
+        {/* The count, and now the press that answers it (T003, FR-025, US7). Feature 003 drew
+            it as text and deferred the click, on the argument recorded here that a card
+            rendering the island would ship a client boundary per row. 004 pays that cost
+            deliberately and for the whole listing: a heart a visitor can click and get nothing
+            back from is the half of US7 that was deferred, and the invitation cannot come from
+            markup. The island is the small one FR-024's bound was argued against — two hooks,
+            no data of its own (`ALLOWED_ISLANDS` carries the entry and the argument), and the
+            page around it stays a server component.
+
+            `isSignedIn` is deliberately not passed: it defaults to the visitor, the only branch
+            phase 1 has. The write is T028b's `lib/accounts/curtir.ts`, and `onCurtir` is a
+            function — not serialisable across this boundary, and Next refuses it at render. */}
+        <LikeButton curtidas={modelo.curtidas ?? 0} surface="light" />
       </span>
     </li>
   )

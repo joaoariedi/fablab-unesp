@@ -3,7 +3,7 @@ import type { CSSProperties, ReactElement, ReactNode } from 'react'
 import { notFound } from 'next/navigation'
 
 import type { CardProjetoAutor } from '@fablab/ui'
-import { CardProjeto, EmptyState, ListingGrid, Pagination, SearchInput, Tabs } from '@fablab/ui'
+import { CardProjeto, EmptyState, LikeButton, ListingGrid, Pagination, SearchInput, Tabs } from '@fablab/ui'
 
 import { listPublic } from '../../../lib/public/listing'
 import {
@@ -244,8 +244,27 @@ function categoriaNome(categoria: ArtigoDoc['categoria']): string {
   return asDoc<CategoriaDoc>(categoria)?.nome ?? ''
 }
 
-/** The person the article credits, or the lab when the profile did not arrive. */
+/**
+ * The person the article credits, the tombstone when they deleted their account, or the lab
+ * when a living profile simply did not arrive populated (T031 / FR-031, CLR-003).
+ *
+ * The three cases are told apart by what `autor` IS, not by what it lacks:
+ *
+ *   - **absent** (`null`/`undefined`) — since T029 dropped `NOT NULL`, the only thing that
+ *     empties this column is a deletion, so this is a person who exercised FR-031. Their work
+ *     stays up under `{ removido: true }`, which is the union's whole point: the card cannot
+ *     print a name that no longer exists because there is no field here to put one in.
+ *   - **a bare id** — `depth` did not populate, and the maker is alive. {@link AUTORIA_PENDENTE}
+ *     still applies; a tombstone here would announce a deletion that never happened, for every
+ *     article on the page at once.
+ *   - **populated** — the maker.
+ *
+ * The order matters. Reading `perfil?.nome` first, as this did before, collapses the first two
+ * cases into the lab byline — and crediting the organization for a deleted maker's article is
+ * not a missing credit but a wrong one.
+ */
 function autorDe(autor: ArtigoDoc['autor']): CardProjetoAutor {
+  if (autor === null || autor === undefined) return { removido: true }
   const perfil = asDoc<PerfilDoc>(autor)
   if (!perfil?.nome) return AUTORIA_PENDENTE
   return { nome: perfil.nome, handle: perfil.handle ?? '', nivel: NIVEL_PENDENTE }
@@ -300,6 +319,16 @@ function cardDe(artigo: ArtigoDoc, posicao: number): ReactElement {
       capa={capa(artigo, posicao)}
       autor={autorDe(artigo.autor)}
       curtidas={artigo.curtidas ?? 0}
+      // The island in the slot the card already offers (T003, FR-025, US7): a visitor's press
+      // opens the account invitation and the number stays exactly where the server put it.
+      // `curtidas` above is still passed — it is the card's own static count, the markup this
+      // page falls back to the day the slot is not supplied, and `CardProjeto` requires it.
+      //
+      // Nothing else is passed on purpose. `isSignedIn` defaults to the visitor, which is the
+      // only branch phase 1 has: the write lives in T028b's `lib/accounts/curtir.ts`, and
+      // `onCurtir` is a function — handing one from a server component to a client one is not
+      // serialisable and Next refuses it at render.
+      curtir={<LikeButton curtidas={artigo.curtidas ?? 0} />}
     />
   )
 }

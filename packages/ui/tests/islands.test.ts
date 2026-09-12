@@ -367,10 +367,37 @@ const ALLOWED_ISLANDS: Record<string, string> = {
     'feature 001 — the compact-breakpoint nav, opened and closed by a press',
   'packages/ui/src/components/ModelViewer.tsx':
     'WebGL and camera controls; the detail page only, never a listing card (FR-014, CLR-002)',
-  'packages/ui/src/components/SearchInput.tsx':
-    'debounced typing at ~300ms — a form post would reload the page on every keystroke (FR-020)',
+  // Seeded by feature 003 as a pre-authorisation, and now claimed: 003 § CLR-010 moved the
+  // invitation behind the heart to feature 004, where it is FR-025. The entry records both
+  // branches because both are why the bundle is paid for — the panel a visitor's press opens,
+  // and the pressed state a signed-in maker's like leaves behind (FR-026).
   'packages/ui/src/components/LikeButton.tsx':
-    'the count and the account invitation a click opens for a logged-out visitor (FR-015)',
+    "the account invitation a visitor's press opens over a count that must not move (003 " +
+    "FR-015, closed as 004 FR-025), and the signed-in like whose state follows the server " +
+    '(FR-026)',
+  // 004 T024. The largest island in the product, and the one whose cost is RECORDED rather
+  // than enforced (FR-032, CLR-004) — which is why the seat names what the bundle buys: the
+  // nine slot pickers, the two palettes and the base are selection state, and the rotation is
+  // the fourth thing a press changes.
+  'packages/ui/src/components/AvatarBuilder.tsx':
+    'the avatar a person builds by pressing: one item per slot, skin and hair colour, base ' +
+    'F/M, and the direction the preview is turned to (FR-003, FR-032)',
+  // 004 T024c. The seat the audit demands for the seam between the builder and the page: the
+  // configuration `AvatarBuilder` emits lives in `useState` here, and FR-005's gate is read off
+  // it on every press. It could not be the page — that is a server component which reads the
+  // catalogue (FR-024) and has never seen a choice — and it could not be `AvatarBuilder`, which
+  // deliberately owns no submit so that it need not know about step 2.
+  'apps/web/app/(frontend)/criar-conta/PassoDoAvatar.tsx':
+    'holds the avatar the builder emits and shuts SALVAR E CONTINUAR until every required ' +
+    'panel is answered — a gate over state that exists only after a press (FR-005, FR-002)',
+  // 004 T035. The editor's seat, and it is NOT the one above: step 1 hands its draft forward in
+  // a query, while this screen POSTs the live configuration to a server action that writes the
+  // profile — so the hidden field has to be re-serialised on every press, which only a component
+  // holding the state can do. The page could not: it is a server component that reads the
+  // catalogue (FR-028) and has never seen a choice.
+  'apps/web/app/(frontend)/minha-conta/avatar/EditorDoAvatar.tsx':
+    'holds the avatar being edited and posts it to the save action, with the submit shut while ' +
+    'a required panel is unanswered — state that exists only after a press (FR-023, FR-024)',
   'packages/ui/src/components/ProjectCarousel.tsx':
     "the Home's ÚLTIMOS PROJETOS carousel, decided 2026-08-23 — it scrolls under a control",
   'packages/ui/src/components/CalendarDayPanel.tsx':
@@ -415,18 +442,20 @@ describe('the island set is bounded by a list somebody decided on (FR-024, SC-01
   })
 
   /**
-   * Not `toEqual(Object.keys(ALLOWED_ISLANDS).sort())`, and that is a measured decision rather
-   * than a softening. At T009 the tree holds ONE of the six: `ModelViewer`, `LikeButton`,
-   * `ProjectCarousel` and `CalendarDayPanel` are created in phases 3–7, and `SearchInput.tsx`
-   * exists today as a server component that becomes an island when FR-020's debounce lands.
-   * Equality would therefore be red on day one over four files nobody has written yet — the
-   * exact red-for-the-wrong-reason this task's note about `MenuSheet.tsx` warns against, and it
-   * would be silenced by shrinking the list, which is the opposite of seeding it.
+   * Not `toEqual(Object.keys(ALLOWED_ISLANDS).sort())`, and that was a measured decision rather
+   * than a softening. At T009 the tree held ONE of the six: `ModelViewer`, `LikeButton`,
+   * `ProjectCarousel` and `CalendarDayPanel` were created in phases 3–7, and `SearchInput.tsx`
+   * existed as a server component that the list assumed would become an island when FR-020's
+   * debounce landed. Equality would therefore have been red on day one over four files nobody
+   * had written yet — the exact red-for-the-wrong-reason this file's note about `MenuSheet.tsx`
+   * warns against, and it would have been silenced by shrinking the list, which is the opposite
+   * of seeding it.
    *
    * What is NOT relaxed is the direction SC-012 names: an unlisted addition fails, above. This
-   * case keeps the other direction honest in the way it can be checked now — a seat on the list
-   * must name the interactivity, so the list cannot decay into a row of bare paths that admits
-   * anything.
+   * case keeps the list from decaying into a row of bare paths that admits anything — a seat
+   * must name the interactivity it is paying for. The **other** half of the equality, that a
+   * seat names a file that is an island today, is the case below: it could not be asserted at
+   * T009 and can be now.
    */
   it('gives every seat on the list a stated reason, not a bare path', () => {
     const thin = Object.entries(ALLOWED_ISLANDS)
@@ -439,9 +468,45 @@ describe('the island set is bounded by a list somebody decided on (FR-024, SC-01
     ).toEqual([])
   })
 
+  /**
+   * T024 / SC-012 — the seats that are no longer islands, which is the half T009 could not ask.
+   *
+   * A **pre-authorisation** is an entry written before its file exists: 003 seeded `LikeButton`
+   * that way and 004 claimed it. The cost of allowing them is that the list cannot be compared
+   * for equality, and a seat therefore survives its own justification — `SearchInput.tsx` sat
+   * here from T009 on the prediction that FR-020's debounce would make it an island, and that
+   * prediction did not come true. The file is a server component today, so its entry authorises
+   * a client bundle for markup the server emits, and every assertion above is green over it:
+   * the reason is long, the path is well-formed, and the file is not scanned at all because it
+   * carries no directive.
+   *
+   * That is a bounded list that no longer bounds. This closes it from the other side — a seat
+   * must name a file that is an island **now** — and the one thing it costs is the
+   * pre-authorisation: an entry for a file that does not exist yet is red until the island
+   * lands. That is the trade 004 chose deliberately, because a stale seat is invisible while a
+   * red one is a line in a diff.
+   */
+  it('names no seat that is not an island today — a prediction that failed is a seat removed', () => {
+    const naArvore = new Set(islands.map((island) => island.file))
+    const obsoletas = Object.keys(ALLOWED_ISLANDS).filter((file) => !naArvore.has(file))
+    expect(
+      obsoletas,
+      'these paths hold a seat on the island list and are not islands: either the file is a ' +
+        'server component (its entry authorises a bundle nothing ships) or it no longer exists ' +
+        '(its entry authorises nothing at all). Delete the entry — the list is only a bound ' +
+        'while every seat on it is occupied.',
+    ).toEqual([])
+  })
+
   it('lists .tsx components under a workspace source tree, so a key can be opened', () => {
+    // Parentheses are part of the shape, not a loosening of it: a Next App Router **route
+    // group** is a directory literally named `(frontend)`, so an island colocated with the page
+    // it serves has them in its repo-relative path. The pattern was written when every island
+    // lived in `packages/ui`; the first one under `apps/web/app` (004 T024c) is the file that
+    // found the gap. What it still refuses is what the message below names — an absolute path
+    // or a bare filename, neither of which the scanner could ever report.
     const malformed = Object.keys(ALLOWED_ISLANDS).filter(
-      (file) => !/^(?:apps|packages)\/[\w.-]+\/(?:src|app|lib)\/[\w./-]+\.tsx$/.test(file),
+      (file) => !/^(?:apps|packages)\/[\w.-]+\/(?:src|app|lib)\/[\w./()-]+\.tsx$/.test(file),
     )
     expect(
       malformed,

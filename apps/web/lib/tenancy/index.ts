@@ -77,4 +77,21 @@ export {
   type SeedFn,
 } from './seed-on-create'
 
+// The signup door. Exported like `invite` and for the same reason: the orchestration lives
+// outside this directory (`lib/accounts/signup.ts`) and must not import anything fenced, so the
+// narrow client is offered here while `system-payload` — which it is built on — stays behind the
+// import fence. It is deliberately NOT a general client: three operations, one host-resolved
+// tenant, no `update` and no `delete`. See the module docblock for why each bound is there.
+export { getSignupScopedPayload, type SignupScopedPayload, type ContaCriada } from './signup-payload'
+
+// The erasure door. Same reasoning as the signup door above, and the same fence: the
+// orchestration lives in `lib/accounts/deletion.ts` and must not import `system-payload`.
+// Bounded by OWNERSHIP rather than by host — every maker of a lab shares a host, so the proof
+// that unseals it is "this profile is yours", checked before anything is handed back.
+export {
+  getErasureScopedPayload,
+  ErasureNotOwnedError,
+  type ErasureScopedPayload,
+} from './erasure-payload'
+
 export { CrossTenantError, TenantUnresolvedError } from './errors'

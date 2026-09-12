@@ -1,7 +1,7 @@
 {
   "$comment": "The live branch-protection answer, recorded (T030, SC-012). Regenerate with scripts/required-checks.sh --write; never hand-edit. tasks.md § Outstanding is checked against it by apps/web/tests/required-checks.test.ts.",
   "repo": "joaoariedi/fablab-unesp",
-  "measuredAt": "2026-09-09",
+  "measuredAt": "2026-09-12",
   "branches": {
     "main": [
       "Build",
@@ -10,6 +10,7 @@
       "Isolation harness can fail (access-composition)",
       "Isolation harness can fail (choke-point)",
       "Isolation harness can fail (public-path)",
+      "Isolation harness can fail (same-tenant)",
       "Link integrity",
       "Lint",
       "Markdown lint",
@@ -27,6 +28,7 @@
       "Isolation harness can fail (access-composition)",
       "Isolation harness can fail (choke-point)",
       "Isolation harness can fail (public-path)",
+      "Isolation harness can fail (same-tenant)",
       "Link integrity",
       "Lint",
       "Markdown lint",

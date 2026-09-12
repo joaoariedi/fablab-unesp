@@ -175,10 +175,14 @@ jobs:
     # message, never by exit code alone, since a database that failed to start also exits
     # non-zero.
     #
-    # One job per LAYER, because isolation has three independent ones on the signed-in path
-    # and mutating any single one leaves the harness green — plus `public-path`, the
+    # One job per LAYER, because isolation has three independent ones on the signed-in READ
+    # path and mutating any single one leaves the harness green — plus `public-path`, the
     # anonymous read (T013), which shares none of the three and fails through a different
-    # harness. See scripts/isolation-mutation.sh for the measurement.
+    # harness, and `same-tenant` (T036, SC-008), the WRITE side: none of the read layers
+    # inspects the contents of a relationship value, so a row in A pointing at a row in B is
+    # refused only by `lib/tenancy/same-tenant-validator.ts`, proven through
+    # tests/tenancy/relationships.test.ts. See scripts/isolation-mutation.sh for the
+    # measurement.
     #
     # The matrix is the gate set: a layer the script accepts but this list omits is a gate
     # that shrank without the diff saying so, which SC-012 forbids and
@@ -187,7 +191,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        layer: [access-composition, choke-point, public-path]
+        layer: [access-composition, choke-point, public-path, same-tenant]
     services:
       postgres:
         image: postgres:16-alpine

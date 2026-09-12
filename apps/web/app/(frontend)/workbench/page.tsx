@@ -13,14 +13,19 @@ import type { CSSProperties, ReactElement, ReactNode } from 'react'
  * evidence rather than a gallery.
  */
 import {
+  AvatarBuilder,
+  type AvatarConfig,
   Button,
   CalendarDayPanel,
   Card,
   Chip,
+  AvatarPreview,
+  DIRECOES_AVATAR,
   Footer,
   HeaderNav,
   ISO_SHAPE_NAMES,
   IsoShape,
+  LikeButton,
   LOGO_CHIP_COLOURS,
   LogoChip,
   CardProjeto,
@@ -30,6 +35,7 @@ import {
   MobileTabBar,
   ModelViewer,
   Pagination,
+  PALETTE,
   PixelImage,
   profileHref,
   ProgressBar,
@@ -254,6 +260,26 @@ function contentSpecimens(): ReactElement[] {
       <PixelImage src={SPRITE_SRC} baseWidth={16} targetWidth={16} alt="Sprite a 1x" />
       <PixelImage src={SPRITE_SRC} baseWidth={16} targetWidth={64} alt="Sprite a 4x" />
     </Specimen>,
+    <Specimen key="avatar" title="AvatarPreview — as quatro direções, em ordem de camadaZ">
+      {/* The avatar sheets arrive with the catalogue's art, so the only bitmap this repo ships
+          stands in for one: the 16x16 sprite is read as a sheet of four 4x16 frames, which is a
+          real demonstration of the frame selection rather than four copies of one picture. The
+          two layers are stacked out of order on purpose — `camadaZ` 20 is listed first. */}
+      {DIRECOES_AVATAR.map((direcao) => (
+        <AvatarPreview
+          key={direcao}
+          direcao={direcao}
+          larguraBase={4}
+          alturaBase={16}
+          larguraAlvo={16}
+          alt={`Avatar de ariedi, virado para ${direcao}`}
+          camadas={[
+            { slot: 'chapeu', camadaZ: 20, spriteFolhas: SPRITE_SRC },
+            { slot: 'corpo', camadaZ: 10, spriteFolhas: SPRITE_SRC },
+          ]}
+        />
+      ))}
+    </Specimen>,
   ]
 }
 
@@ -426,7 +452,7 @@ function tabBarSpecimen(isSignedIn: boolean): ReactElement {
 }
 
 /**
- * The two islands feature 003 added (T021, T023).
+ * The islands: the two feature 003 added (T021, T023), and the heart feature 004 opens with.
  *
  * Both are `'use client'`, and a workbench frame is a server render — so what a reviewer sees
  * here is each island's **server-rendered first paint**, which is the state that matters most
@@ -437,6 +463,19 @@ function tabBarSpecimen(isSignedIn: boolean): ReactElement {
  * practice: with a `src` it renders `<model-viewer>` (inert until the chunk loads), and with
  * none it renders the poster as a plain image. CLR-002 puts it on detail pages only, so the
  * gallery is where the two branches sit side by side at all.
+ *
+ * `LikeButton` gets the same treatment for the same reason, and one more: `isSignedIn`
+ * DEFAULTS to the visitor, so a gallery with one specimen would review the branch a page
+ * renders when it forgets to pass anything and never look at the other. The two are not one
+ * control in two tints — signed out, a press opens the account invitation and the number
+ * stays put (FR-025); signed in, the press is a like and the number follows the server
+ * (FR-026). The signed-in pair also differs by `curtido`, which is the pressed state and the
+ * verb in the label, so both sit here rather than one arbitrary half.
+ *
+ * No `onCurtir` on any specimen, deliberately: the workbench page is a server component, and
+ * a plain function handed across that boundary is not serialisable — Next refuses it at
+ * render rather than at review. What the gallery is for is the first paint, which is exactly
+ * what the props below produce.
  */
 function islandSpecimens(): ReactElement[] {
   return [
@@ -456,6 +495,18 @@ function islandSpecimens(): ReactElement[] {
         />
       </div>
     </Specimen>,
+    <Specimen key="like" title="LikeButton — o convite do visitante, e a curtida de quem entrou">
+      <LikeButton curtidas={32} />
+      <LikeButton curtidas={32} isSignedIn={true} />
+      <LikeButton curtidas={33} curtido={true} isSignedIn={true} />
+      {/* The light surface, on a white patch — because that is the only place its defect is
+          visible. The accent ink the three above wear measures about 1.8:1 on #FFFFFF, and a
+          light specimen reviewed on this navy gallery would look correct precisely when it is
+          not. `/aulas` and `/biblioteca-3d` are the two pages that pass `surface="light"`. */}
+      <span style={{ background: 'var(--surface-inverted)', padding: 'var(--space-2)' }}>
+        <LikeButton curtidas={32} surface="light" />
+      </span>
+    </Specimen>,
     <Specimen key="daypanel" title="CalendarDayPanel — the drawer a ?dia= link opens">
       <CalendarDayPanel titulo="SÁBADO, 22 DE AGOSTO" fecharHref="/calendario?mes=2026-08">
         <Card
@@ -470,6 +521,108 @@ function islandSpecimens(): ReactElement[] {
       </CalendarDayPanel>
     </Specimen>,
   ]
+}
+
+/**
+ * T025 / FR-003, FR-032, SC-012 — the builder, in the two states it opens in.
+ *
+ * Its own function rather than a fourth entry in {@link islandSpecimens}: the catalogue is five
+ * literals wide and inlining it would take that function past the length limit, which is the
+ * same reason `paginationSpecimen` stands alone.
+ *
+ * **Two specimens, because `inicial` is two screens.** Signup step 1 mounts the builder with
+ * nothing chosen — the base selector is the only control showing a selection and every
+ * thumbnail is unmarked — and FR-023's editor mounts the same island on an avatar that already
+ * exists, where a swatch and one thumbnail per slot wear the `--escolhida` outline. A gallery
+ * with one of them reviews whichever the author happened to write.
+ *
+ * The catalogue is three slots rather than the product's nine, and that is deliberate: the
+ * workbench reviews the *paint* — the picker grid, the 44px targets, the selected outline, the
+ * rotation control — and ninety-three thumbnails of the same 16px sprite would review it no
+ * better while making the 390px frame unreadable. The real nine come from the collection, and
+ * `/criar-conta` is where that breadth is looked at.
+ *
+ * No `onChange`, for the reason `islandSpecimens` records for `onCurtir`: this page is a server
+ * component and a function is not serialisable across that boundary. The first paint is what the
+ * gallery is for.
+ */
+const BUILDER_SLOTS = [
+  { slot: 'cabelo', titulo: 'CABELO' },
+  { slot: 'roupaCima', titulo: 'PARTE DE CIMA' },
+  { slot: 'chapeu', titulo: 'CHAPÉU' },
+]
+
+const BUILDER_ITENS = [
+  { id: 'cabelo-curto', nome: 'Curto', slot: 'cabelo', camadaZ: 30, sprite: SPRITE_SRC },
+  { id: 'cabelo-longo', nome: 'Longo', slot: 'cabelo', camadaZ: 30, sprite: SPRITE_SRC },
+  { id: 'camiseta-f', nome: 'Camiseta', slot: 'roupaCima', camadaZ: 20, sprite: SPRITE_SRC, base: 'f' as const },
+  { id: 'camiseta-m', nome: 'Camiseta', slot: 'roupaCima', camadaZ: 20, sprite: SPRITE_SRC, base: 'm' as const },
+  // No `sprite` at all — FR-007's degraded slot, which the gallery is the only place to see.
+  { id: 'bone', nome: 'Boné', slot: 'chapeu', camadaZ: 40 },
+]
+
+/**
+ * The two palettes, painted from {@link PALETTE} rather than from skin-and-hair values.
+ *
+ * CLR-005 makes a real tom de pele **data** — a row in `tomDePele`, exempt from the colour fence
+ * because `apps/web/seed/**` is — and this page is not the seed: a hex literal written here is
+ * the literal-in-a-component the fence exists to stop, and widening it for a gallery would buy
+ * two swatches at the price of every page in the app. What the workbench reviews about a
+ * palette is the swatch grid — its targets, its focus ring, the outline on the selected one —
+ * and that is answered by any two distinguishable colours. The thirty real ones are seeded, and
+ * `/criar-conta` is where they are looked at.
+ */
+const BUILDER_PELES = [
+  { id: 'pele-01', nome: 'Tom claro', hex: PALETTE.claro },
+  { id: 'pele-02', nome: 'Tom escuro', hex: PALETTE.laranja },
+]
+
+const BUILDER_CABELOS = [
+  { id: 'cabelo-preto', nome: 'Preto', hex: PALETTE.navy },
+  { id: 'cabelo-amarelo', nome: 'Amarelo', hex: PALETTE.amarelo },
+]
+
+/** What FR-023 reopens the editor on: a base, both palettes and a chosen piece per slot. */
+const BUILDER_CONFIG_CARREGADA: AvatarConfig = {
+  base: 'm',
+  pele: 'pele-02',
+  // `cabelo-amarelo`, and it must resolve against BUILDER_CABELOS above. It read
+  // `cabelo-rosa` — an id no swatch carries — so the hair palette in the one specimen that
+  // exists to show the selected state rendered with NO outline on any swatch, which is
+  // exactly what a reviewer opens this gallery to check. The one deliberately degraded entry
+  // here (`bone`, no sprite) carries an FR-007 comment; this carried none, so it was an
+  // oversight rather than a case.
+  cabeloTom: 'cabelo-amarelo',
+  itens: { cabelo: 'cabelo-longo', roupaCima: 'camiseta-m', chapeu: 'bone' },
+  direcao: 'esquerda',
+}
+
+function avatarBuilderSpecimen(): ReactElement {
+  return (
+    <Specimen key="builder" title="AvatarBuilder — o passo 1 vazio, e o editor já preenchido">
+      <AvatarBuilder
+        slots={BUILDER_SLOTS}
+        itens={BUILDER_ITENS}
+        peles={BUILDER_PELES}
+        cabelos={BUILDER_CABELOS}
+        larguraBase={4}
+        alturaBase={16}
+        larguraAlvo={64}
+        alt="Avatar em construção, nada escolhido ainda"
+      />
+      <AvatarBuilder
+        slots={BUILDER_SLOTS}
+        itens={BUILDER_ITENS}
+        peles={BUILDER_PELES}
+        cabelos={BUILDER_CABELOS}
+        larguraBase={4}
+        alturaBase={16}
+        larguraAlvo={64}
+        alt="Avatar de ariedi, aberto para edição"
+        inicial={BUILDER_CONFIG_CARREGADA}
+      />
+    </Specimen>
+  )
 }
 
 /** The shell. These are the specimens the three frame widths exist for. */
@@ -528,6 +681,7 @@ function specimenGallery(width: string): ReactElement {
       {meterSpecimens()}
       {paginationSpecimen()}
       {islandSpecimens()}
+      {avatarBuilderSpecimen()}
       {shellSpecimens()}
       {shapeSpecimens()}
     </main>

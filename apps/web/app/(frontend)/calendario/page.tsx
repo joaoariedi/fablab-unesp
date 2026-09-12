@@ -2,7 +2,14 @@ import type { ReactElement, ReactNode } from 'react'
 
 import { notFound } from 'next/navigation'
 
-import { CalendarDayPanel, EmptyState, formatHandle, Pagination, SearchInput } from '@fablab/ui'
+import {
+  CalendarDayPanel,
+  EmptyState,
+  formatHandle,
+  LikeButton,
+  Pagination,
+  SearchInput,
+} from '@fablab/ui'
 
 import { PAGE_SIZE } from '../../../lib/public/listing'
 import { LISTING_PARAM_KEYS, type RawListingParams } from '../../../lib/public/params'
@@ -231,9 +238,16 @@ function cardEvento(evento: EventoDoc, agora: number): ReactElement {
           {metadadosDe(evento).map((item) => (
             <span key={item}>{item}</span>
           ))}
-          {/* FR-015: the count is shown to everyone, as text. The clicking half is `LikeButton`,
-              and a card that rendered it would ship an island per row. */}
-          <span>{`♥ ${String(evento.curtidas ?? 0)}`}</span>
+          {/* The count, and now the press that answers it (T003, FR-025, US7) — US7 says *"on
+              any card that shows a heart"*, and this card shows one.
+
+              `cardEvento` is rendered in two places: the list view, which is server markup, and
+              inside `CalendarDayPanel`, which is already an island. Passing a client element as
+              a server-built child of a client component is the supported shape — the panel
+              receives it in its serialised children and never imports it — so the drawer and
+              the list keep showing the same card, which is the whole reason this function is
+              shared. */}
+          <LikeButton curtidas={evento.curtidas ?? 0} />
         </span>
       </span>
     </li>

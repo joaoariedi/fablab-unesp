@@ -149,6 +149,18 @@ const SEED_DATA: Record<string, (ctx: SeedContext) => Record<string, unknown>> =
     curtidas: 0,
     status: 'rascunho',
   }),
+  // The one scoped collection feature 004 adds (T008), in registry order — ahead of
+  // `perfilMaker`, which T009 gives a `skills` array pointing here. `ativa` is written
+  // explicitly rather than left to its `defaultValue`: the column is `required: true`, which
+  // on a checkbox means "must carry a boolean", and a fixture that relied on the default
+  // would stop exercising that guarantee the day somebody removed it.
+  skill: ({ marker }) => ({
+    nome: `Skill ${marker}`,
+    // Not `unique` on the collection, so both organizations may hold the same slug; the
+    // marker is what makes a failure message name WHICH organization's row leaked.
+    slug: `skill-${marker.toLowerCase()}`,
+    ativa: true,
+  }),
   // The 002b eleven (T044), in registry order. Every relationship below points at a row
   // seeded into the SAME organization, because `sameTenant` refuses anything else — which is
   // also why the order these appear in is the order they are declared in the registry.
@@ -225,8 +237,18 @@ const SEED_DATA: Record<string, (ctx: SeedContext) => Record<string, unknown>> =
   }),
 }
 
-/** Minimal valid data for a scoped collection, so the matrix grows without editing this. */
-function seedDataFor(
+/**
+ * Minimal valid data for a scoped collection, so the matrix grows without editing this.
+ *
+ * **Exported so the gap can be caught before `beforeAll` swallows it.** The throw below is
+ * the right behaviour inside `buildWorld`, but a throw in `beforeAll` aborts the file and
+ * reports its tests as *skipped* rather than failed — 160 tests went quiet that way in 002.
+ * `avatar-registry.test.ts` calls this directly, with no database, so a scoped collection
+ * added without seed data fails one assertion loudly instead of silencing a suite.
+ *
+ * @example seedDataFor('skill', 'A', userId, {}) // { nome: 'Skill A', slug: 'skill-a', … }
+ */
+export function seedDataFor(
   collection: string,
   marker: string,
   userId: string | number,
