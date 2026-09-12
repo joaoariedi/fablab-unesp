@@ -223,14 +223,29 @@ believing what the gate says about it** — this applies directly to T036.
 | ✅ T022 | Step 1 — the builder's page shell, server-rendered, reading the catalogue through the choke point | FR-001, FR-003, US2 | `apps/web/app/(frontend)/criar-conta/page.tsx` | T007, T011 |
 | ✅ T023 | `AvatarPreview` — **server-renderable** composition in `camadaZ` order, shared by the builder and the cards | FR-006, US2 | `packages/ui/src/components/AvatarPreview.tsx` | T022 |
 | ✅ T024 | `AvatarBuilder` island. Picker sheets (one direction) up front, preview sheets (four) for chosen items. **Remove the stale `SearchInput` entry from `ALLOWED_ISLANDS` in this change** | FR-003, FR-032, SC-012 | `packages/ui/src/components/AvatarBuilder.tsx` | T023 |
-| T024b | The builder's completeness rules: `oculos`/`chapeu` optional, every other slot required before step 1 finishes, and a sprite that fails to load degrades **that slot only** — never blocking account creation | FR-005, FR-007, US2 | `packages/ui/tests/avatar-builder.test.ts` | T024 |
-| T024c | **Mount the builder on `/criar-conta` and make the gate a gate.** `avatarCompleto`/`escolhasFaltando` shipped with **zero callers**, the page never mounts `AvatarBuilder` at all, and `SALVAR E CONTINUAR` is an unconditional anchor — so a visitor finishes step 1 with an empty avatar, which is what FR-005 forbids. The island owns the state, so it must own the control: the page mounts it, the continue link is driven by `avatarCompleto(config, SLOTS)`, and `escolhasFaltando` names which panel is unanswered. Test in `apps/web/tests/public/criar-conta-page.test.ts` that step 1 cannot be finished from the opening state | FR-005, FR-007, US2 | `apps/web/app/(frontend)/criar-conta/page.tsx` | T024b |
+| ✅ T024b | The builder's completeness rules: `oculos`/`chapeu` optional, every other slot required before step 1 finishes, and a sprite that fails to load degrades **that slot only** — never blocking account creation | FR-005, FR-007, US2 | `packages/ui/tests/avatar-builder.test.ts` | T024 |
+| ✅ T024c | **Mount the builder on `/criar-conta` and make the gate a gate.** `avatarCompleto`/`escolhasFaltando` shipped with **zero callers**, the page never mounts `AvatarBuilder` at all, and `SALVAR E CONTINUAR` is an unconditional anchor — so a visitor finishes step 1 with an empty avatar, which is what FR-005 forbids. The island owns the state, so it must own the control: the page mounts it, the continue link is driven by `avatarCompleto(config, SLOTS)`, and `escolhasFaltando` names which panel is unanswered. Test in `apps/web/tests/public/criar-conta-page.test.ts` that step 1 cannot be finished from the opening state | FR-005, FR-007, US2 | `apps/web/app/(frontend)/criar-conta/page.tsx` | T024b |
 | ✅ T025 | Its three consumers again — barrel, workbench, islands list. Preamble item 5 | SC-012 | `packages/ui/src/components/index.ts` | T024 |
 | ✅ T026 | Step 2 — personal data, the terms checkbox with **version**, `VOLTAR` that keeps the avatar | FR-008, FR-012, US1 | `apps/web/app/(frontend)/criar-conta/dados/page.tsx` | T022 |
 | ✅ T026b | Both `VOLTAR`s — step 1 to the Home, step 2 back with the avatar intact — and **any e-mail accepted**: a negative test that no institutional-domain check exists, because that is the rule someone adds back as a "fix" | FR-002, FR-009, US1 | `apps/web/tests/accounts/signup-navigation.test.ts` | T026 |
 | ✅ T027 | `completeSignup`: account, profile, skills at level 0, consent stamp — one transaction | FR-011, FR-013, US1 | `apps/web/lib/accounts/signup.ts` | T020, T026 |
 | ✅ T028b | **The signed-in half of the heart**: a server action writing `curtida`, the count following the server's answer, and a failed write restoring it — never an optimistic update that sticks. T001 shipped only the visitor's branch | FR-026, US7 | `apps/web/lib/accounts/curtir.ts` | T027 |
 | ✅ T028 | Signup end to end, including that step 2's `VOLTAR` loses no avatar work | US1, SC-001 | `apps/web/tests/accounts/signup.test.ts` | T027 |
+
+### A note on T024b, and on what a rejection can mean
+
+T024b was rejected by a run that found **nothing wrong with it**. The implementer reported,
+correctly and at length, that both halves already existed at HEAD and 37/37 were passing, so no
+RED was obtainable and it would not claim a TDD cycle it had not run.
+
+That is the orchestration failure this project has paid for before — *a task whose work already
+exists cannot produce a red, and the run reports failure for that reason alone*. It is recorded
+here because the honest answer looked identical to a defect in the summary line: **halted, one
+rejected**. The difference is only visible in the reason. Read it before believing a halt.
+
+T024b is accepted on that evidence. T024c — the gate's first real caller — is accepted on its
+own, and was watched failing: with `avatarCompleto(config, slots)` forced to `true`, the continue
+control loses its `inert` and the "which panel is missing" message disappears.
 
 ### What phase 5 cost — signup did not work, and no task owned the reason
 

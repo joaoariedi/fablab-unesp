@@ -2,10 +2,9 @@ import type { CSSProperties, ReactElement } from 'react'
 
 import { notFound } from 'next/navigation'
 
-import { EmptyState, PRIMARY_BUTTON_STYLE } from '@fablab/ui'
+import { EmptyState, type ItemAvatar, type SlotAvatar, type TomAvatar } from '@fablab/ui'
 
 import {
-  CATEGORIA_COM_BASE,
   CATEGORIAS_AVATAR,
   LINHAS_AVATAR,
   type CategoriaAvatar,
@@ -23,6 +22,9 @@ import { getPublicScopedPayloadForRSC } from '../../../lib/tenancy/public-payloa
 // quietly starting to carry nothing (`dados/page.tsx` says so where it declares them). Only the
 // destination stays local — FR-002 gives the two `VOLTAR`s different ones on purpose.
 import { PARAM_AVATAR, rascunhoDoAvatar } from './dados/page'
+// The island this page mounts (T024c). It holds the configuration `AvatarBuilder` emits, which
+// is the only place the gate FR-005 asks for can read it from.
+import { CLASSE_DO_PASSO, PassoDoAvatar } from './PassoDoAvatar'
 
 /**
  * T022 / FR-001, FR-002, FR-003, US2 — step 1 of `/criar-conta`: the avatar builder's shell.
@@ -38,9 +40,11 @@ import { PARAM_AVATAR, rascunhoDoAvatar } from './dados/page'
  *
  * It is the **shell**: the frame, and the one thing only a server component can do — read the
  * catalogue. Selection state, the composed preview and the four-direction rotation belong to
- * the island (`AvatarBuilder`, T024) over a server-renderable `AvatarPreview` (T023), which is
- * why the panels below are plain lists and the preview is an empty frame rather than a picture
- * of nothing. The page therefore ships **no JavaScript of its own** (FR-024).
+ * the island (`AvatarBuilder`, T024) over a server-renderable `AvatarPreview` (T023), and since
+ * T024c the page *mounts* it — through `PassoDoAvatar`, which holds the configuration the builder
+ * emits and gates `SALVAR E CONTINUAR` on it (FR-005). This file still carries **no `use client`
+ * of its own** (FR-024): it reads the catalogue, hands it over as data, and renders the heading,
+ * `VOLTAR` and the failure path around it.
  *
  * ── Why the read is the whole point ─────────────────────────────────────────────────────────
  *
@@ -64,27 +68,17 @@ export const metadata = { title: 'CRIE SEU AVATAR — Fab Lab CITe Bauru' }
 /** This step's own path. The retry below is built from it, so the route moves in one edit. */
 export const CRIAR_CONTA_PATH = '/criar-conta'
 
-/** Step 2 — personal data, the terms checkbox and the submit (T026). */
-export const PASSO_2_PATH = `${CRIAR_CONTA_PATH}/dados`
-
 /**
- * On to step 2, carrying the draft this step was handed (FR-002).
+ * Step 2 — personal data, the terms checkbox and the submit (T026).
  *
- * The mirror of `dados/page.tsx`'s `hrefDoVoltar`, and the other half of what "the avatar is
- * intact" means: step 2's `VOLTAR` brings the configuration back here, and without this it dies
- * on arrival — the visitor returns to the form having lost everything they built, which is a
- * worse failure than never going back at all because nothing on screen says so.
- *
- * `encodeURIComponent`, never concatenation: a configuration contains `&`, `#` and `=`, and a
- * hand-built query truncates at the first of them — half an avatar looks far more like a success
- * than like a bug.
- *
- * @example hrefDoPasso2('{"a":1&2}') // '/criar-conta/dados?avatar=%7B%22a%22%3A1%262%7D'
+ * **Handed to the island as a string** rather than turned into an href here (T024c). The draft
+ * that travels forward is the avatar the person just built, and that value exists only in the
+ * client, so the link has to be assembled where the configuration is — and a server component may
+ * hand a client one data, never a function. What does not change is the rule it is used under:
+ * `encodeURIComponent`, never concatenation, because a configuration contains `&`, `#` and `=`
+ * and a hand-built query truncates at the first of them.
  */
-export function hrefDoPasso2(rascunho: string | null): string {
-  if (rascunho === null) return PASSO_2_PATH
-  return `${PASSO_2_PATH}?${PARAM_AVATAR}=${encodeURIComponent(rascunho)}`
-}
+export const PASSO_2_PATH = `${CRIAR_CONTA_PATH}/dados`
 
 /**
  * Where `VOLTAR` goes from **this** step (FR-002).
@@ -101,19 +95,31 @@ const TOTAL_DE_PASSOS = 2
 /** One palette row — `tomDePele` and `tomDeCabelo` are the same three columns (palette.ts).
  *  Structural rather than imported from `payload-types.ts`, which is gitignored: a page that
  *  imported a generated type would compile locally and fail CI. */
-type TomDoc = { readonly nome?: string; readonly hex?: string }
+type TomDoc = { readonly id?: string | number; readonly nome?: string; readonly hex?: string }
 
-/** One cosmetic item. `sprite`/`spriteFolhas` are deliberately absent: the picker sheets and
- *  the preview sheets arrive with T023/T024, and a `depth` raised for nobody is a populate
- *  nobody reads. */
+/**
+ * One cosmetic item.
+ *
+ * `sprite`/`spriteFolhas` are still deliberately absent: they are `relationship` columns, so
+ * reading them means raising `depth` and populating `midiaImagem` for ~93 rows. The builder
+ * draws a row with no picker art as its name alone — FR-007's *"that slot only"* — so the
+ * catalogue is operable before the art is wired, and the populate lands with the sprites rather
+ * than ahead of them.
+ */
 type ItemDoc = {
+  /** Payload's id. A number on Postgres, and the configuration stores strings — see
+   *  {@link itensDoBuilder}, where the two are reconciled once. */
+  readonly id?: string | number
   readonly nome?: string
   readonly categoria?: string
+  /** `avatarItem.camadaZ`: the composition order `AvatarPreview` stacks the chosen pieces in. */
+  readonly camadaZ?: number
   /**
    * `'f'` or `'m'` on `roupaCima` and absent everywhere else (FR-004).
    *
    * Read, not ignored: this column is the difference between the ten tops `onboarding.md`
-   * fixes and the twenty rows that store them. See {@link opcoesDoSlot}.
+   * fixes and the twenty rows that store them. It is handed to the builder as `base`, which
+   * filters on it — see {@link itensDoBuilder}.
    */
   readonly compativelBase?: string | null
 }
@@ -248,153 +254,118 @@ function cabecalho(): ReactElement {
 }
 
 /**
- * The left rail: the preview frame, then the two buttons (`onboarding.md` § *Trilho esquerdo*).
+ * The catalogue rows as the builder's own shapes.
  *
- * The frame is **empty and `aria-hidden`**, not a placeholder picture and not a labelled image:
- * the composition is T023's and the rotation T024's, and announcing *"pré-visualização do
- * avatar"* over an empty box describes something that is not there yet. The base selector and
- * the `NOME DO AVATAR` field are the same deferral — the first is selection state, the second is
- * the person's name and belongs to step 2's form, which carries it (round 3, 2026-08-23).
+ * Two vocabularies meet here and neither is made to win: `avatarItem` calls the slot `categoria`
+ * and the base column `compativelBase`, while `@fablab/ui` — which FR-018 forbids from importing
+ * anything in this app — calls them `slot` and `base`. The translation is one function, so a
+ * rename on either side is a compile error in one place rather than a panel that silently stops
+ * filtering.
  *
- * Both buttons are **anchors wearing a button's identity**, for the reason the Home's CTA
- * records: a `<button>` navigates nowhere without a handler, and a handler here would make the
- * shell an island to do what an `href` does for free.
+ * `String(id)`: Payload ids are numbers on Postgres and a configuration stores strings, and a
+ * `23` that never equals `'23'` is a chosen item that draws as unchosen for ever.
  */
-function trilho(rascunho: string | null): ReactElement {
-  return (
-    <div style={ESTILO.trilho}>
-      <div style={ESTILO.preview} aria-hidden="true" />
-      <div style={ESTILO.acoes}>
-        {/* `VOLTAR` never carries the draft, and `SALVAR E CONTINUAR` always does: the first
-            leaves signup for the Home, so there is nothing for an avatar to be intact *for*. */}
-        <a href={HOME_PATH} style={ESTILO.voltar}>
-          VOLTAR
-        </a>
-        <a href={hrefDoPasso2(rascunho)} style={ESTILO.continuar}>
-          SALVAR E CONTINUAR →
-        </a>
-      </div>
-    </div>
-  )
+function itensDoBuilder(itens: readonly ItemDoc[]): ItemAvatar[] {
+  return itens.map((item) => ({
+    id: String(item.id ?? ''),
+    nome: item.nome ?? '',
+    slot: item.categoria ?? '',
+    camadaZ: item.camadaZ ?? 0,
+    // Only the two values FR-004 allows travel as `base`; anything else is a row with no base,
+    // which is the reading that keeps the other eight panels full rather than emptying them.
+    base: item.compativelBase === 'f' || item.compativelBase === 'm' ? item.compativelBase : undefined,
+  }))
 }
 
-/** One swatch: the colour the row carries, and the name beside it.
+/** One palette row, likewise. `hex` is **data, not a token** (CLR-005) — a skin tone is the one
+ *  colour nobody themes, because repainting it would change a person's depiction of themselves. */
+function tonsDoBuilder(tons: readonly TomDoc[]): TomAvatar[] {
+  return tons.map((tom) => ({ id: String(tom.id ?? ''), nome: tom.nome ?? '', hex: tom.hex ?? '' }))
+}
+
+/** The nine pickers with the headings a visitor reads — this page's vocabulary, handed over
+ *  rather than copied into the package FR-018 keeps free of it. */
+const SLOTS_DO_BUILDER: readonly SlotAvatar[] = SLOTS.map((slot) => ({
+  slot,
+  titulo: TITULO_DO_SLOT[slot],
+}))
+
+/**
+ * One avatar frame, in source pixels.
  *
- *  The `hex` is **data, not a token** (CLR-005) — a skin tone is the one colour in the product
- *  nobody themes, because repainting it would change a person's depiction of themselves. It
- *  arrives from the database, so no literal is written here and the colour fence is untouched. */
-function swatch(tom: TomDoc, indice: number): ReactElement {
-  return (
-    <li key={tom.nome ?? indice} style={ESTILO.opcao}>
-      <span aria-hidden="true" style={{ ...ESTILO.swatch, background: tom.hex }} />
-      {tom.nome ?? ''}
-    </li>
-  )
-}
+ * `AvatarPreview` takes no default and says why: *"a hard-coded size passes every avatar authored
+ * at it and quietly halves anything else"*. The catalogue carries no dimension column, so the
+ * size the art is authored at is declared once, here, at the proportions that component's own
+ * example documents — a body sprite is taller than it is wide.
+ */
+const LARGURA_DO_QUADRO = 32
+const ALTURA_DO_QUADRO = 48
 
-/** A row of swatches under its heading — `TONS DE CABELO` above the panels, `TONS DE PELE`
- *  inside them. */
-function painelDeTons(titulo: string, tons: readonly TomDoc[]): ReactElement {
+/** The width the preview would like. A whole multiple of the frame, because anything else is a
+ *  blurred pixel grid — `clampScale` rounds it down to one anyway. */
+const LARGURA_DO_PREVIEW = LARGURA_DO_QUADRO * 6
+
+/**
+ * The builder, mounted over the catalogue this page read (T024c, FR-005).
+ *
+ * Everything crossing this call is **data**: nine slot names with their headings, the rows, the
+ * frame size, and the two strings that spell step 2. The configuration and the gate over
+ * `SALVAR E CONTINUAR` are the island's, because both exist only after a press — which is the
+ * whole reason FR-005 could not be enforced from this file, and why the rule shipped at T024b
+ * with no caller until the mount existed to give it one.
+ */
+function construtor(catalogo: Catalogo, rascunho: string | null): ReactElement {
   return (
-    <section style={ESTILO.painel}>
-      <h2 style={ESTILO.painelTitulo}>{titulo}</h2>
-      <ul style={ESTILO.opcoes}>{tons.map(swatch)}</ul>
-    </section>
+    <PassoDoAvatar
+      slots={SLOTS_DO_BUILDER}
+      itens={itensDoBuilder(catalogo.itens)}
+      peles={tonsDoBuilder(catalogo.peles)}
+      cabelos={tonsDoBuilder(catalogo.cabelos)}
+      larguraBase={LARGURA_DO_QUADRO}
+      alturaBase={ALTURA_DO_QUADRO}
+      larguraAlvo={LARGURA_DO_PREVIEW}
+      alt="Seu avatar, como está sendo montado"
+      rascunho={rascunho}
+      passo2Path={PASSO_2_PATH}
+      paramAvatar={PARAM_AVATAR}
+      voltar={voltar()}
+    />
   )
 }
 
 /**
- * One slot's panel.
+ * `VOLTAR` — and from **this** step it leaves the flow for the Home (FR-002).
  *
- * `data-slot` carries the slot's identity into the markup, so the island mounting over this
- * shell — and the tests reading it — find the nine panels by the same name the catalogue,
- * `avatarConfig` and FR-005 use, rather than by a heading that is editorial copy.
+ * Rendered here and handed to the island rather than rebuilt inside it, so the copy, the
+ * destination and the secondary treatment have ONE definition across both paths: the built page,
+ * and the one where the catalogue read failed and the island never mounts at all.
  *
- * A slot with no rows says so instead of rendering an empty list: FR-007's rule is that a
- * missing sprite degrades **that slot only** and never blocks an account being created, and a
- * silently absent panel is the version of that failure nobody can see.
+ * An anchor wearing a button's identity, for the reason the Home's CTA records: a `<button>`
+ * navigates nowhere without a handler, and a handler here would make the shell an island.
  */
-/**
- * The base the builder opens on — `F`, the one `design/criar-conta-passo-1.png` shows selected.
- *
- * A constant here and state in `AvatarBuilder` (T024): this shell is server-rendered and the
- * selector's state is the island's, but the shell still has to pick which of the two sets of
- * tops it prints, and printing both is what this constant exists to prevent.
- */
-const BASE_PADRAO = 'f'
-
-/**
- * The options a slot OFFERS, which is not the rows it stores.
- *
- * `roupaCima` is the one slot that varies by base: `onboarding.md` § *Card `ROUPAS`* fixes a
- * *"catálogo de **10**"* and then *"cada peça tem versão `F` (com peitos) e `M`"*, so ten
- * garments live as twenty rows. Rendering the rows put **twenty tops** in the picker — every
- * garment twice, and indistinguishably, because `compativelBase` was not even in `ItemDoc`.
- *
- * The test could not see it: the fixture held a single `roupaCima` row, so no `f`/`m` pair was
- * ever rendered, and the count assertion compared the `<li>` count against *rows returned* —
- * encoding the wrong rule so firmly that the correct behaviour would have failed it.
- *
- * Every other slot is *"produzido em versão única de sprite"*, so a row IS an option there and
- * filtering on a column those rows leave null would empty the panel.
- */
-function opcoesDoSlot(
-  categoria: CategoriaAvatar,
-  itens: readonly ItemDoc[],
-  base: string,
-): readonly ItemDoc[] {
-  const doSlot = itens.filter((item) => item.categoria === categoria)
-  if (categoria !== CATEGORIA_COM_BASE) return doSlot
-  return doSlot.filter((item) => item.compativelBase === base)
-}
-
-function painelDeSlot(categoria: CategoriaAvatar, itens: readonly ItemDoc[]): ReactElement {
-  const doSlot = opcoesDoSlot(categoria, itens, BASE_PADRAO)
+function voltar(): ReactElement {
   return (
-    <section key={categoria} data-slot={categoria} style={ESTILO.painel}>
-      <h2 style={ESTILO.painelTitulo}>{TITULO_DO_SLOT[categoria]}</h2>
-      {doSlot.length === 0 ? (
-        <p style={ESTILO.vazio}>Nenhuma opção disponível.</p>
-      ) : (
-        <ul style={ESTILO.opcoes}>
-          {doSlot.map((item, indice) => (
-            <li key={item.nome ?? indice} style={ESTILO.opcao}>
-              {item.nome ?? ''}
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
+    <a href={HOME_PATH} style={ESTILO.voltar}>
+      VOLTAR
+    </a>
   )
 }
 
-/**
- * Every panel, in one container.
- *
- * *"todos os painéis ficam visíveis simultaneamente dentro de um único cartão-contêiner"* — the
- * round-3 mockup dropped the `CORPO/CABELO/ROSTO/ROUPAS/ACESSÓRIOS` tabs, so there is nothing
- * here to hide behind a tab and no state to decide which one is open.
- */
-function paineis(catalogo: Catalogo): ReactElement {
-  return (
-    <>
-      {painelDeTons('TONS DE CABELO', catalogo.cabelos)}
-      {painelDeTons('TONS DE PELE', catalogo.peles)}
-      {SLOTS.map((categoria) => painelDeSlot(categoria, catalogo.itens))}
-    </>
-  )
-}
-
-/** The read failed: report it in place, with a retry that reloads this same step. */
+/** The read failed: report it in place, with a retry that reloads this same step — and `VOLTAR`
+ *  still on screen, because the island that normally carries it never mounts here and a visitor
+ *  who meets an outage must have something to press other than the browser's back button. */
 function falhaDeLeitura(): ReactElement {
   return (
-    <EmptyState
-      surface="light"
-      variant="erro"
-      titulo="Não foi possível carregar o catálogo do avatar."
-      descricao="Recarregue a página para tentar de novo."
-      acao={{ label: 'Tentar novamente', href: CRIAR_CONTA_PATH }}
-    />
+    <div style={ESTILO.falha}>
+      <EmptyState
+        surface="light"
+        variant="erro"
+        titulo="Não foi possível carregar o catálogo do avatar."
+        descricao="Recarregue a página para tentar de novo."
+        acao={{ label: 'Tentar novamente', href: CRIAR_CONTA_PATH }}
+      />
+      {voltar()}
+    </div>
   )
 }
 
@@ -422,12 +393,7 @@ export default async function Page(props: CriarContaPageProps = {}): Promise<Rea
   return (
     <main style={ESTILO.pagina_}>
       {cabecalho()}
-      <div className={CLASSE.colunas} style={ESTILO.colunas}>
-        {trilho(rascunho)}
-        <div style={ESTILO.container}>
-          {catalogo === null ? falhaDeLeitura() : paineis(catalogo)}
-        </div>
-      </div>
+      {catalogo === null ? falhaDeLeitura() : construtor(catalogo, rascunho)}
       <p style={ESTILO.nota}>As opções podem ser combinadas livremente. Solte sua criatividade!</p>
       <style href="fablab-criar-conta" precedence="default">
         {CRIAR_CONTA_CSS}
@@ -436,16 +402,17 @@ export default async function Page(props: CriarContaPageProps = {}): Promise<Rea
   )
 }
 
-/** The class names, in one place: the markup and {@link CRIAR_CONTA_CSS} must agree, and a typo
- *  in either is a breakpoint that switches nothing. */
-const CLASSE = { colunas: 'fl-criar-conta__colunas' } as const
-
 /** Only what a style object cannot express — React has no media query. The rail sits above the
- *  panels on a narrow screen and beside them from the tablet breakpoint up, which is the
- *  mockup's two-column desktop arrangement without a second layout to maintain. */
+ *  panels on a narrow screen and beside them from the tablet breakpoint up, which is the mockup's
+ *  two-column desktop arrangement without a second layout to maintain.
+ *
+ *  The grid it applies to is `AvatarBuilder`'s own root, which ships as a single column: the two
+ *  columns are this page's layout decision, not the component's, so the rule is written here and
+ *  reaches the element the island mounts first — the actions row follows it. The class comes from
+ *  {@link CLASSE_DO_PASSO} rather than a literal, so the markup and this stylesheet cannot drift. */
 const CRIAR_CONTA_CSS = `
 @media (min-width: 834px) {
-  .${CLASSE.colunas} { grid-template-columns: minmax(240px, 1fr) 3fr; }
+  .${CLASSE_DO_PASSO} > :first-child { grid-template-columns: minmax(240px, 1fr) 3fr; }
 }
 `
 
@@ -513,17 +480,8 @@ const ESTILO: Record<string, CSSProperties> = {
     textTransform: 'uppercase',
   },
   subtitulo: { margin: 0, fontFamily: 'var(--font-body)', fontSize: 'var(--text-base)' },
-  colunas: { display: 'grid', gap: 'var(--space-6)', alignItems: 'start' },
-  trilho: { display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' },
-  preview: {
-    // The frame the composed avatar lands in (T023). It holds its own height so the layout does
-    // not jump when the preview arrives, and draws nothing until it does.
-    minHeight: 'var(--space-12)',
-    border: '2px solid var(--text-on-light)',
-    borderRadius: 'var(--radius-md)',
-    boxShadow: 'var(--shadow-hard)',
-  },
-  acoes: { display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)' },
+  /** The failure path's own stack: the empty state, then the way out under it. */
+  falha: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 'var(--space-5)' },
   voltar: {
     // The secondary of `onboarding.md` § *Trilho esquerdo*: navy fill, light text. It is not
     // `Button`: that component is the canonical primary and has no variant, because the
@@ -538,49 +496,6 @@ const ESTILO: Record<string, CSSProperties> = {
     textDecoration: 'none',
     display: 'inline-block',
   } as CSSProperties,
-  continuar: {
-    // The canonical primary, spread rather than restated: the CTA follows a change to the
-    // button and no colour can be typed into this file (FR-027).
-    ...PRIMARY_BUTTON_STYLE,
-    display: 'inline-block',
-    textDecoration: 'none',
-    fontFamily: 'var(--font-display)',
-    textTransform: 'uppercase',
-  },
-  container: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 'var(--space-5)',
-    border: '2px solid var(--text-on-light)',
-    borderRadius: 'var(--radius-md)',
-    padding: 'var(--space-5)',
-  },
-  painel: { display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' },
-  painelTitulo: {
-    margin: 0,
-    fontFamily: 'var(--font-display)',
-    fontSize: 'var(--text-sm)',
-    letterSpacing: '0.06em',
-  },
-  opcoes: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: 'var(--space-3)',
-    listStyle: 'none',
-    margin: 0,
-    padding: 0,
-    fontFamily: 'var(--font-body)',
-    fontSize: 'var(--text-sm)',
-  },
-  opcao: { display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)' },
-  swatch: {
-    display: 'inline-block',
-    width: 'var(--space-5)',
-    height: 'var(--space-5)',
-    border: '2px solid var(--text-on-light)',
-    borderRadius: 'var(--radius-sm)',
-  },
-  vazio: { margin: 0, fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)' },
   nota: {
     margin: 0,
     fontFamily: 'var(--font-body)',

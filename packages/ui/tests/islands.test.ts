@@ -382,6 +382,14 @@ const ALLOWED_ISLANDS: Record<string, string> = {
   'packages/ui/src/components/AvatarBuilder.tsx':
     'the avatar a person builds by pressing: one item per slot, skin and hair colour, base ' +
     'F/M, and the direction the preview is turned to (FR-003, FR-032)',
+  // 004 T024c. The seat the audit demands for the seam between the builder and the page: the
+  // configuration `AvatarBuilder` emits lives in `useState` here, and FR-005's gate is read off
+  // it on every press. It could not be the page — that is a server component which reads the
+  // catalogue (FR-024) and has never seen a choice — and it could not be `AvatarBuilder`, which
+  // deliberately owns no submit so that it need not know about step 2.
+  'apps/web/app/(frontend)/criar-conta/PassoDoAvatar.tsx':
+    'holds the avatar the builder emits and shuts SALVAR E CONTINUAR until every required ' +
+    'panel is answered — a gate over state that exists only after a press (FR-005, FR-002)',
   'packages/ui/src/components/ProjectCarousel.tsx':
     "the Home's ÚLTIMOS PROJETOS carousel, decided 2026-08-23 — it scrolls under a control",
   'packages/ui/src/components/CalendarDayPanel.tsx':
@@ -483,8 +491,14 @@ describe('the island set is bounded by a list somebody decided on (FR-024, SC-01
   })
 
   it('lists .tsx components under a workspace source tree, so a key can be opened', () => {
+    // Parentheses are part of the shape, not a loosening of it: a Next App Router **route
+    // group** is a directory literally named `(frontend)`, so an island colocated with the page
+    // it serves has them in its repo-relative path. The pattern was written when every island
+    // lived in `packages/ui`; the first one under `apps/web/app` (004 T024c) is the file that
+    // found the gap. What it still refuses is what the message below names — an absolute path
+    // or a bare filename, neither of which the scanner could ever report.
     const malformed = Object.keys(ALLOWED_ISLANDS).filter(
-      (file) => !/^(?:apps|packages)\/[\w.-]+\/(?:src|app|lib)\/[\w./-]+\.tsx$/.test(file),
+      (file) => !/^(?:apps|packages)\/[\w.-]+\/(?:src|app|lib)\/[\w./()-]+\.tsx$/.test(file),
     )
     expect(
       malformed,

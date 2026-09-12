@@ -241,8 +241,20 @@ describe('§4 — the left rail`s two buttons (FR-002)', () => {
 })
 
 describe('§5 — every option on the page came from the read, at the size it offers (FR-003)', () => {
+  /**
+   * The base card the builder draws: `F` and `M` (`BASES_AVATAR`), the one panel whose two
+   * options are a product decision rather than a catalogue row.
+   *
+   * Counted rather than subtracted out, and it is NOT a relaxation: before T024c the page drew
+   * the catalogue as static text and had no base selector at all, so the total moved by exactly
+   * these two the moment `AvatarBuilder` was mounted. The assertion below keeps its whole point —
+   * a `roupaCima` printing rows instead of garments still lands at 14 here, not 12.
+   */
+  const OPCOES_DA_BASE = 2
+
   /** `roupaCima` renders one entry per GARMENT for the opening base, not one per row. */
   const OPCOES_ESPERADAS =
+    OPCOES_DA_BASE +
     TONS_DE_PELE.length +
     TONS_DE_CABELO.length +
     ITENS.filter((i) => i.categoria !== 'roupaCima').length +
@@ -325,5 +337,145 @@ describe('§7 — no island (FR-024)', () => {
     // itself (T024, declared in `ALLOWED_ISLANDS`); a second one smuggled in here would erode
     // FR-024's bound without ever being declared.
     expect(fonte).not.toMatch(/^\s*['"]use client['"]/m)
+  })
+})
+
+/**
+ * T024c / FR-005, FR-007, US2 — the gate, and the builder it is a gate over.
+ *
+ * Three defects, one task. `avatarCompleto`/`escolhasFaltando` landed at T024b with **zero
+ * callers**; the page never mounted `AvatarBuilder` at all, so the nine panels were server-
+ * rendered lists nobody could press; and `SALVAR E CONTINUAR` was an **unconditional anchor**.
+ * Together that is a visitor finishing step 1 with an empty avatar — the exact thing FR-005
+ * forbids, and the reason the rule being *written* was never the same thing as it being *applied*.
+ *
+ * The state lives in the island, so the control has to: the page mounts the builder, hands it the
+ * catalogue it read, and the island holds the configuration and decides whether the way forward
+ * is open. These cases read that decision off the rendered markup, in both directions — shut from
+ * the opening state, open from a draft that answers every required panel.
+ */
+
+/** The page as HTML, with a query on it — the returning visitor of FR-002, and the only way to
+ *  reach the builder with an avatar already in it from a `node` test with no DOM to press in. */
+const renderCom = async (query: Record<string, string | string[] | undefined>): Promise<string> =>
+  renderToStaticMarkup((await CriarContaPage({ searchParams: Promise.resolve(query) })) as never)
+
+/** The opening tag carrying `marcador`, e.g. `data-continuar` — so an attribute on it can be
+ *  read rather than searched for loosely anywhere in the page. */
+const aberturaCom = (markup: string, marcador: string): string | undefined =>
+  new RegExp(`<[a-z]+[^>]*\\b${marcador}\\b[^>]*>`).exec(markup)?.[0]
+
+/** The anchor that finishes step 1, as its opening tag. */
+const tagDoContinuar = (markup: string): string | undefined =>
+  /<a\b[^>]*>\s*SALVAR E CONTINUAR/.exec(markup)?.[0].replace(/>[\s\S]*$/, '>')
+
+/** The slots FR-005 requires, in the order `escolhasFaltando` reports them: the two palettes
+ *  first — they are the panels stacked above the pickers — then the seven required slots.
+ *  `oculos` and `chapeu` are absent on purpose: they are the two optional ones. */
+const OBRIGATORIOS = [
+  'cabeloTom',
+  'pele',
+  'cabelo',
+  'olhos',
+  'nariz',
+  'boca',
+  'roupaCima',
+  'roupaBaixo',
+  'sapatos',
+]
+
+/** An avatar with every required panel answered and **neither accessory** — the half of FR-005
+ *  that a gate demanding all nine slots would fail. The ids are the fixture's own rows where the
+ *  catalogue has one; completeness is a question about the configuration alone (FR-007), so the
+ *  three slots the fixture carries no row for are answered with ids the panels never offered. */
+const AVATAR_COMPLETO = JSON.stringify({
+  base: 'f',
+  pele: '1',
+  cabeloTom: '11',
+  itens: {
+    cabelo: '21',
+    olhos: '22',
+    nariz: 'nariz-1',
+    boca: 'boca-1',
+    roupaCima: '23',
+    roupaBaixo: 'roupa-baixo-1',
+    sapatos: 'sapatos-1',
+  },
+  direcao: 'frente',
+})
+
+describe('§8 — step 1 cannot be finished with an empty avatar (FR-005, US2)', () => {
+  it('mounts the builder, so the panels are controls rather than a list to read', async () => {
+    const markup = await render()
+
+    // The three presses only the island answers: an item, the base, and the rotation. Before
+    // T024c the page drew `<li>` text for the first, nothing at all for the other two, and the
+    // largest island in the product shipped to exactly one consumer — the workbench.
+    expect(
+      markup,
+      'the page renders the catalogue as static text: there is no `data-item` control on it, ' +
+        'so nothing a visitor presses can change the avatar and the gate below has nothing to ' +
+        'gate. `AvatarBuilder` is not mounted.',
+    ).toMatch(/data-item="/)
+    expect(markup).toMatch(/data-base="f"/)
+    expect(markup).toMatch(/data-rotacao="proxima"/)
+  })
+
+  it('shuts the way forward from the opening state, where nothing is chosen', async () => {
+    const markup = await render()
+
+    const envoltorio = aberturaCom(markup, 'data-continuar')
+    expect(
+      envoltorio,
+      'nothing in the markup marks the continue control, so there is no gate to read — ' +
+        '`SALVAR E CONTINUAR` is the unconditional anchor FR-005 forbids.',
+    ).toBeDefined()
+    // `inert` and not a class: the visitor who opens step 1 and presses the only button on the
+    // screen must not reach step 2, and a styled-to-look-disabled anchor still navigates — by
+    // click, by Enter, and by the middle button that opens it in a tab nobody styled.
+    expect(
+      envoltorio,
+      `the continue control is live from the opening state: "${envoltorio ?? ''}"`,
+    ).toMatch(/\binert\b/)
+    expect(tagDoContinuar(markup)).toMatch(/aria-disabled="true"/)
+  })
+
+  it('names the panels that are still unanswered, and never the optional ones', async () => {
+    const markup = await render()
+
+    const faltando = /data-faltando="([^"]*)"/.exec(await render())?.[1]
+    expect(
+      faltando,
+      'the gate says "not yet" and nothing more. `escolhasFaltando` exists precisely so the ' +
+        'person is told WHICH panel to go back to — a disabled button with no reason is a dead ' +
+        'end on a screen with eleven panels on it.',
+    ).toBeDefined()
+    expect(faltando?.split(' ')).toEqual(OBRIGATORIOS)
+    // FR-005's other half: `oculos` and `chapeu` are jewellery. A gate that demanded them would
+    // be read as "the builder is broken" rather than as a rule, and nobody would find the cause.
+    expect(faltando).not.toContain('oculos')
+    expect(faltando).not.toContain('chapeu')
+    // And the message a person reads names panels, not database keys.
+    expect(markup).toContain('TONS DE CABELO')
+    expect(markup).toMatch(/Ainda falta escolher/)
+  })
+
+  it('opens once every required panel is answered, accessories or not', async () => {
+    const markup = await renderCom({ avatar: AVATAR_COMPLETO })
+
+    const envoltorio = aberturaCom(markup, 'data-continuar')
+    expect(envoltorio, 'the continue control is not on the page at all').toBeDefined()
+    expect(
+      envoltorio,
+      'the returning visitor of FR-002 arrives with a finished avatar and is still locked out ' +
+        'of step 2 — a gate that never opens is not a gate, it is a wall.',
+    ).not.toMatch(/\binert\b/)
+    expect(tagDoContinuar(markup)).not.toMatch(/aria-disabled="true"/)
+    expect(markup).not.toMatch(/data-faltando/)
+
+    // …and it still carries the draft it was handed, byte for byte (FR-002).
+    expect(linksIn(markup)['SALVAR E CONTINUAR →']).toBe(
+      `/criar-conta/dados?avatar=${encodeURIComponent(AVATAR_COMPLETO)}`,
+    )
   })
 })
