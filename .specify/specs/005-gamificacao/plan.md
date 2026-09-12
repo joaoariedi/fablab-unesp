@@ -29,9 +29,18 @@ declared. `afterChange` sees `doc` already stamped.
 
 ### D2 — `CounterDerivation` gains a `sum` kind, rather than a sibling module
 
-XP totals are expressed in `counters.ts`'s own vocabulary, so **the whole-database reconciliation
-gate that already exists picks them up for free** — which is most of FR-011, and CLR-001's
-argument for why a second mechanism would be a second thing to get wrong.
+XP totals are expressed in `counters.ts`'s own vocabulary, so the whole-database reconciliation
+gate reconciles them **in the same sweep** as the like and download counters — CLR-001's argument
+for why a second mechanism would be a second thing to get wrong.
+
+**It is not free, and the review corrected the first draft of this line.** `counters.test.ts`
+does **not** discover counter fields; it declares
+`satisfies Record<DerivedField, DerivedSource>` keyed by `CounterField`, and says why in its own
+docblock: *"a fifth member added to `CounterField` fails **typecheck** here until someone states
+how it reconciles. A hand-kept list would simply not mention it, and the gate would go on
+reporting 'all counters in sync' while ignoring one."* So adding the XP fields **breaks the
+build** until their reconciliation is written by hand. That is a stronger guarantee than
+discovery and it is real work: FR-011 budgets it rather than inheriting it.
 
 **What it costs, stated rather than discovered:** `count` reads `totalDocs` off a `find` and
 touches no rows; `sum` must read them. For a lab's ledger that is fine now and is not fine
@@ -52,9 +61,19 @@ action.
 ### D4 — Levels are stored projections, and reactivation recomputes only who earned
 
 FR-016 restores every maker's level in a reactivated skill. The recompute is bounded by *"makers
-with at least one ledger entry in this skill"*, which is a query the ledger answers directly, and
-it runs in the skill's own `afterChange` transaction. A lab with no entries in that skill pays
-nothing.
+with at least one ledger entry in this skill"*, which is a query the ledger answers directly — so
+a lab with no entries in that skill pays nothing.
+
+**It does NOT run inside the skill's own transaction**, and the first draft of this decision said
+it did. The review priced that: one sum per earner while holding the skill row's lock is a long
+transaction on a large lab, and a lock that every other writer waits on. The flag flips and
+commits; the repair runs after it, in pages.
+
+That is safe for a reason specific to this design — **the ledger is untouched by either step**.
+The flag is a display rule and the levels are a projection, so a repair interrupted halfway is
+*resumable*, not wrong: re-running it produces the same numbers. FR-016 asks that levels be
+restored, not that they be restored atomically with the flag, and the reconciliation gate is what
+notices a repair that never finished.
 
 The alternative — a purely read-time projection — was rejected: the ranking sorts by XP total,
 and sorting by a value no column holds means reading every maker on every read.
@@ -69,6 +88,34 @@ D3 of 002 requires of every file in the product.
 never a key, URL or filename; that the image belongs to the same organization (`sameTenant`);
 that a maker cannot attach another maker's media; and that the review queue renders a
 stranger's upload to a team member.
+
+### D7 — The `xp-ledger` isolation layer mutates `creditXp`'s CHOICE OF CLIENT
+
+The review asked which expression the new layer rewrites, and the first draft named none — which
+is how 003 shipped a layer whose pattern stopped matching, mutated nothing, and reported success
+on a tree it never touched.
+
+**The expression**, in `apps/web/lib/content/xp.ts`:
+
+```ts
+/* @isolation-mutation-point */
+const store = await (deps.getStore ?? getTenantScopedPayload)(input.req)
+```
+
+**Why this one, and why it is not a duplicate of an existing layer.** The four layers today
+mutate the *machinery*: `choke-point` and `access-composition` rewrite the filter inside
+`client.ts` and `access.ts`, `public-path` the anonymous read, `same-tenant` the relationship
+validator. None of them touches a **caller's choice of client** — because until now no caller
+had a choice worth making. `creditXp` does: it is the first module that resolves a **global**
+identity (`progressoAula.usuario`) to a **scoped** profile and then writes a total to it, so
+reaching for a broader client is a mistake available here and nowhere else. Swapping
+`getTenantScopedPayload` for the system client compiles, passes typecheck, and credits XP at the
+wrong lab.
+
+- `HARNESS` — `tests/tenancy/xp-isolation.test.ts` (new)
+- `EXPECT` — `credits only the profile of the organization the action belongs to`
+- `EVIDENCE` — `credited [0-9]+ row\(s\) in another organization` — a message that can only be
+  printed by the assertion that counts them, never by a setup failure
 
 ### D6 — No fourth tenancy door
 
@@ -102,7 +149,8 @@ during implementation is **a finding to report with the measurement**, not a doo
 | `apps/web/app/(frontend)/minha-conta/page.tsx` | modify | SUAS SKILLS reads real levels |
 | `apps/web/app/(frontend)/{page,projetos/page,artigos/page,aulas/page}.tsx` | modify | delete the placeholders, read the real author and level |
 | `apps/web/migrations/` | create | one additive migration |
-| `scripts/isolation-mutation.sh` | modify | the `xp-ledger` layer |
+| `apps/web/tests/tenancy/xp-isolation.test.ts` | create | the `xp-ledger` layer's HARNESS (D7) |
+| `scripts/isolation-mutation.sh` | modify | the `xp-ledger` layer, mutating `creditXp`'s choice of client (D7) |
 | `.github/workflows/ci.yml` | modify | the matrix leg — **after** the layer is watched red |
 
 ## Data Model
@@ -122,6 +170,23 @@ it first, which is correct: entries are the leaves.
 FR-006), `refTipo` + `refId` (which content), `quantidade`, `criadoEm`, and
 `chaveIdempotencia` — a generated text column carrying `(tenant, perfil, acao, refTipo, refId)`
 under a **unique index**.
+
+**`refTipo` and `refId` are SCALARS — a `select` and a `number` — and deliberately not a
+polymorphic relationship.** This is the one shape decision that would quietly cost the
+constitution its own clause, and the tree already measured it. `Curtida.ts` records the finding:
+
+> Payload expresses compound uniqueness as `indexes: [{ fields, unique: true }]`, over *columns
+> of the row* — and `conteudo` is polymorphic, so Postgres stores it in the **relationships join
+> table** and there is no such column pair to constrain.
+
+`curtida` paid for it: *"until then a double POST writes two rows"*. A polymorphic `ref` here
+would put FR-003's unique index somewhere Postgres cannot constrain it, and idempotency —
+Principle 3, verbatim — would become an application-code check instead of a database guarantee.
+
+The generated `chaveIdempotencia` is what makes the index buildable at all: **one text column of
+the row**, so a single-column unique index covers a tuple that includes a polymorphic reference.
+`refTipo`/`refId` stay as scalars beside it for querying and for the admin; the index is on the
+text column.
 
 **`perfilMaker`** gains `xpTotal` and `nivel` at the top level. Both `defaultValue: 0`, both
 **without `max`** — the cap is a rule, enforced where XP is awarded, and a column constraint
@@ -349,6 +414,7 @@ The read is ordinary scoped reading — D6's reason there is no fourth door.
 | `push` rebuilds every non-production schema from the field config | A `required: true` re-imposes a NOT NULL a migration dropped — 004 measured this exactly | `projeto.autor` is created **nullable**; `tests/tenancy/autor-nulavel.test.ts` already reads `information_schema` after a boot and will cover it |
 | A `beforeAll` throw reports 'skipped', not failed | 160 tests including an isolation gate once went quiet this way | Any task touching fixtures or the registry runs the **whole** `tests/tenancy/` directory |
 | A fixture that leaves rows behind fails `counters.test.ts` | It reconciles the whole database, so the failure lands in somebody else's file — measured in 004 phase 6 | Every new fixture gets an `afterAll`; the XP projections join that same gate deliberately |
+| D4's reactivation loop is unbounded **inside a write transaction** | Reactivating a skill runs one sum per earner while holding the skill row's lock. N profiles × a ledger scan each; on a large lab that is a long transaction and a lock others wait on | **Bounded before it ships**: the recompute reads earners in pages and commits the skill's own write first, so the projection repair runs after it rather than inside it. FR-016 asks that levels be *restored*, not that they be restored atomically with the flag — and the ledger is untouched either way, so a repair interrupted halfway is resumable rather than wrong. The reconciliation gate is what catches a repair that never finished |
 | `sum` reads rows where `count` reads `totalDocs` | Fine for a lab's ledger now; not forever | Recorded in D2 with the cross-check oracle. Revisit with a real aggregate when a lab's entry count makes it measurable — and measure before changing it |
 | `@payloadcms/drizzle` swallows `23505` and the index name | A duplicate-detection `catch` written against the raw code never fires | Sketch 2 — recognise the `ValidationError` by table plus column pair, as 004's `handle.ts` does, and keep the raw check as a second door |
 | The ranking sorts by a stored projection | A drifted `xpTotal` silently reorders the ranking | FR-011's reconciliation, which is the gate that already exists |
