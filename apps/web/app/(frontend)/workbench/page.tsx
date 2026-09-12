@@ -21,6 +21,7 @@ import {
   HeaderNav,
   ISO_SHAPE_NAMES,
   IsoShape,
+  LikeButton,
   LOGO_CHIP_COLOURS,
   LogoChip,
   CardProjeto,
@@ -426,7 +427,7 @@ function tabBarSpecimen(isSignedIn: boolean): ReactElement {
 }
 
 /**
- * The two islands feature 003 added (T021, T023).
+ * The islands: the two feature 003 added (T021, T023), and the heart feature 004 opens with.
  *
  * Both are `'use client'`, and a workbench frame is a server render — so what a reviewer sees
  * here is each island's **server-rendered first paint**, which is the state that matters most
@@ -437,6 +438,19 @@ function tabBarSpecimen(isSignedIn: boolean): ReactElement {
  * practice: with a `src` it renders `<model-viewer>` (inert until the chunk loads), and with
  * none it renders the poster as a plain image. CLR-002 puts it on detail pages only, so the
  * gallery is where the two branches sit side by side at all.
+ *
+ * `LikeButton` gets the same treatment for the same reason, and one more: `isSignedIn`
+ * DEFAULTS to the visitor, so a gallery with one specimen would review the branch a page
+ * renders when it forgets to pass anything and never look at the other. The two are not one
+ * control in two tints — signed out, a press opens the account invitation and the number
+ * stays put (FR-025); signed in, the press is a like and the number follows the server
+ * (FR-026). The signed-in pair also differs by `curtido`, which is the pressed state and the
+ * verb in the label, so both sit here rather than one arbitrary half.
+ *
+ * No `onCurtir` on any specimen, deliberately: the workbench page is a server component, and
+ * a plain function handed across that boundary is not serialisable — Next refuses it at
+ * render rather than at review. What the gallery is for is the first paint, which is exactly
+ * what the props below produce.
  */
 function islandSpecimens(): ReactElement[] {
   return [
@@ -455,6 +469,18 @@ function islandSpecimens(): ReactElement[] {
           alt="Miniatura da cadeira de encaixe"
         />
       </div>
+    </Specimen>,
+    <Specimen key="like" title="LikeButton — o convite do visitante, e a curtida de quem entrou">
+      <LikeButton curtidas={32} />
+      <LikeButton curtidas={32} isSignedIn={true} />
+      <LikeButton curtidas={33} curtido={true} isSignedIn={true} />
+      {/* The light surface, on a white patch — because that is the only place its defect is
+          visible. The accent ink the three above wear measures about 1.8:1 on #FFFFFF, and a
+          light specimen reviewed on this navy gallery would look correct precisely when it is
+          not. `/aulas` and `/biblioteca-3d` are the two pages that pass `surface="light"`. */}
+      <span style={{ background: 'var(--surface-inverted)', padding: 'var(--space-2)' }}>
+        <LikeButton curtidas={32} surface="light" />
+      </span>
     </Specimen>,
     <Specimen key="daypanel" title="CalendarDayPanel — the drawer a ?dia= link opens">
       <CalendarDayPanel titulo="SÁBADO, 22 DE AGOSTO" fecharHref="/calendario?mes=2026-08">

@@ -22,6 +22,8 @@ export { ACTIVE_FILTER_CHIP_STYLE, Chip, FILTER_CHIP_STYLE, STATUS_CHIP_STYLE } 
 export type { ChipProps, ChipVariant } from './Chip'
 export { EMPTY_STATE_CSS, EmptyState } from './EmptyState'
 export type { EmptyStateAcao, EmptyStateProps, EmptyStateSurface, EmptyStateVariant } from './EmptyState'
+export { CONVITE_MICROCOPY, CRIAR_CONTA_HREF, LikeButton } from './LikeButton'
+export type { EstadoCurtida, LikeButtonProps, LikeButtonSurface } from './LikeButton'
 export { DEFAULT_LOGO_CHIP_COLOUR, LOGO_CHIP_COLOURS, LogoChip, logoChipStyle } from './LogoChip'
 export type { LogoChipColour, LogoChipProps } from './LogoChip'
 export { LISTING_GRID_COLUMNS, LISTING_GRID_CSS, ListingGrid } from './ListingGrid'

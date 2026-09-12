@@ -49,10 +49,35 @@ They are not general advice; each one cost a round.
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T001 | `LikeButton`, signed-out branch: the invitation with the fixed microcopy, and **the count that must not move**. Island — `ALLOWED_ISLANDS` already argues for it | FR-025, US7 | `packages/ui/src/components/LikeButton.tsx` | — |
-| T002 | Its three consumers in one change: barrel, workbench specimen (both branches), `islands.test.ts` | FR-025, SC-012 | `packages/ui/src/components/index.ts`, `apps/web/app/(frontend)/workbench/page.tsx` | T001 |
-| T003 | Supply it as `curtir` on every listing that shows a heart. `CardProjeto` needs no change — it already takes the slot | FR-025, US7 | `apps/web/app/(frontend)/{projetos,artigos,biblioteca-3d}/page.tsx` | T002 |
-| T004 | Prove the visitor's count does not move, and that a page with no island still renders the static count | FR-025, SC-012 | `apps/web/tests/public/like-button.test.ts` | T003 |
+| ✅ T001 | `LikeButton`, signed-out branch: the invitation with the fixed microcopy, and **the count that must not move**. Island — `ALLOWED_ISLANDS` already argues for it | FR-025, US7 | `packages/ui/src/components/LikeButton.tsx` | — |
+| ✅ T002 | Its three consumers in one change: barrel, workbench specimen (both branches), `islands.test.ts` | FR-025, SC-012 | `packages/ui/src/components/index.ts`, `apps/web/app/(frontend)/workbench/page.tsx` | T001 |
+| ✅ T003 | Supply it as `curtir` on **every** listing that shows a heart — all six of `lcp-budget.sh` § PAGES, not the three this row first named. `CardProjeto` needs no change; it already takes the slot | FR-025, US7 | `apps/web/app/(frontend)/{,projetos/,artigos/,aulas/,biblioteca-3d/,calendario/}page.tsx` | T002 |
+| ✅ T004 | Prove the visitor's count does not move, that **no listing was left behind**, and that a card given no island still renders the static count | FR-025, SC-012 | `apps/web/tests/public/like-button.test.ts` | T003 |
+
+### What phase 1 cost that the rows above did not predict
+
+Recorded here because the next phase will meet the same three shapes.
+
+1. **T003's file list was wrong and the task text was right.** The row named three pages; the
+   requirement says *"every listing that shows a heart"*, and six do. The first pass rewired the
+   three that were listed, and `/`, `/aulas` and `/calendario` kept a hand-written ♥ that
+   answered a press with nothing — the same half-shipped control 003 § CLR-010 moved into this
+   feature, relocated rather than closed. Every one of those pages was internally consistent, so
+   no per-page suite could have caught it. `like-button.test.ts` § 3 is now an **enumeration**
+   over `lcp-budget.sh` § PAGES, and a seventh listing means a seventh row in it.
+2. **T004's first draft wrote the gap in as correct.** It asserted the Home and Aulas carry *no*
+   island, citing each page's own 003-era comment as the authority — a gate that would have gone
+   red on the fix and green on the omission. The fallback claim it was reaching for ("a card with
+   no island still prints its count") is a property of `CardProjeto`, and now lives there.
+3. **Moving a count into a component repainted it.** The island's ink was the accent, which is
+   right on the navy card and about **1.8:1** on the white of `/aulas` and `/biblioteca-3d` —
+   where FR-028 forbids it and `biblioteca-3d.md` had already decided navy in round 2. Hence
+   `LikeButton`'s `surface` prop, and it is keyed **inline rather than with a `--light` class**:
+   `aulas-page.test.ts` § 2 scans rendered CSS and is deliberately cascade-blind, so the only way
+   to keep that gate strict is to emit no accent declaration to a light page at all.
+4. **Backticks in the CSS template literal, twice, in one session** — preamble item 8, which this
+   file already carried. Both times the symptom was `Expected ";" but found <word>` from esbuild,
+   not a CSS error.
 
 ## Phase 2: The collections, in an order `resetWorld` can walk backwards
 

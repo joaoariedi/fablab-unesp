@@ -394,6 +394,40 @@ describe('T037 / FR-016, US7 — the component workbench', () => {
       ).toEqual(new Set([true, false]))
     })
 
+    /**
+     * T002 / FR-025, SC-012 — the heart, in both of the screens it is.
+     *
+     * `isSignedIn` is not a flag that tints a control: it selects between an account
+     * invitation whose press must leave the number where it was (FR-025) and a like whose
+     * number follows the server's answer (FR-026). The prop also DEFAULTS to the visitor's
+     * branch, so a workbench holding one specimen reviews the branch a page renders when it
+     * forgets to pass anything — and never looks at the one a signed-in maker sees.
+     */
+    it('shows the heart signed out and signed in, the two screens FR-025 and FR-026 split', async () => {
+      const hearts = propsFor(await frame(), 'LikeButton')
+      expect(
+        hearts.length,
+        'no LikeButton specimen. The heart is the island feature 004 opens with, and the ' +
+          'workbench is where its first paint is looked at.',
+      ).toBeGreaterThan(0)
+
+      expect(
+        new Set(hearts.map((props) => props.isSignedIn === true)),
+        'the workbench shows the heart in one session state only. The two states are two ' +
+          'different screens — the invitation panel with its microcopy, and the like control ' +
+          'with its pressed state — so US7\u2019s "every component is visible in its states" is ' +
+          'satisfied in wording only by a single specimen.',
+      ).toEqual(new Set([true, false]))
+
+      const visitante = hearts.find((props) => props.isSignedIn !== true)
+      expect(
+        Number(visitante?.curtidas),
+        'the visitor specimen stands at 0 curtidas. FR-025 is "the count they saw does not ' +
+          'change", and a reviewer cannot watch a zero fail to move: the specimen has to ' +
+          'carry a number worth keeping still.',
+      ).toBeGreaterThan(0)
+    })
+
     it('shows the pagination bar on both surfaces, and long enough to print its gap', async () => {
       // Two states that are invisible in a short navy bar. `surface` changes the current page
       // in KIND — underlined pink ink on navy, a pink fill with navy ink on white (FR-028

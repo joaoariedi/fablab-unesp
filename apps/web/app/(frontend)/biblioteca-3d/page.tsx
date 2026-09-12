@@ -2,7 +2,7 @@ import type { CSSProperties, ReactElement, ReactNode } from 'react'
 
 import { notFound } from 'next/navigation'
 
-import { EmptyState, formatHandle, Pagination, SearchInput } from '@fablab/ui'
+import { EmptyState, formatHandle, LikeButton, Pagination, SearchInput } from '@fablab/ui'
 
 import { listPublic } from '../../../lib/public/listing'
 import {
@@ -382,15 +382,19 @@ function cardDe(modelo: Modelo3dDoc, posicao: number): ReactElement {
       </span>
       <span style={ESTILO.acoes}>
         {acaoDe(modelo, detalhe)}
-        {/* FR-015: the count is shown to everyone, as text. The clicking half is `LikeButton`,
-            one of the six islands — a card that rendered it would ship twelve client boundaries
-            on this page alone, which is the failure FR-024 exists to prevent. */}
-        <span style={ESTILO.curtidas}>
-          <span aria-hidden={true} style={ESTILO.coracao}>
-            ♥
-          </span>
-          <span>{modelo.curtidas ?? 0}</span>
-        </span>
+        {/* The count, and now the press that answers it (T003, FR-025, US7). Feature 003 drew
+            it as text and deferred the click, on the argument recorded here that a card
+            rendering the island would ship a client boundary per row. 004 pays that cost
+            deliberately and for the whole listing: a heart a visitor can click and get nothing
+            back from is the half of US7 that was deferred, and the invitation cannot come from
+            markup. The island is the small one FR-024's bound was argued against — two hooks,
+            no data of its own (`ALLOWED_ISLANDS` carries the entry and the argument), and the
+            page around it stays a server component.
+
+            `isSignedIn` is deliberately not passed: it defaults to the visitor, the only branch
+            phase 1 has. The write is T028b's `lib/accounts/curtir.ts`, and `onCurtir` is a
+            function — not serialisable across this boundary, and Next refuses it at render. */}
+        <LikeButton curtidas={modelo.curtidas ?? 0} surface="light" />
       </span>
     </li>
   )

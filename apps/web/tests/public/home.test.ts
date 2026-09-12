@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-import type { ReactElement, ReactNode } from 'react'
+import { isValidElement, type ReactElement, type ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
@@ -320,7 +320,20 @@ describe('§4 — the footer, and the island budget', () => {
     ).toEqual([])
   })
 
-  it('is a server component that mounts exactly one island (FR-024, SC-012)', async () => {
+  /**
+   * The budget, restated after feature 004 added the second island.
+   *
+   * 003 wrote this as *"exactly one"*, and the one was `ProjectCarousel`. 004's US7 scopes the
+   * heart to *"any card that shows a heart"*, and these cards show one — so the Home now mounts
+   * a `LikeButton` per card as well. That is a deliberate, measured change and not a drift: the
+   * carousel holds three cards, the island is two hooks with no data of its own, and `/` is the
+   * first page `scripts/lcp-budget.sh` measures, so the cost has a gate that answers in numbers.
+   *
+   * The bound itself is unchanged and is still the point: the two islands are named, every
+   * other island is still refused, and the page is still a server component. An island that
+   * arrives without a row here is the failure FR-024 exists to prevent.
+   */
+  it('is a server component that mounts only the islands it names (FR-024, SC-012)', async () => {
     const source = readFileSync(PAGE_SOURCE, 'utf8')
 
     expect(
@@ -328,12 +341,24 @@ describe('§4 — the footer, and the island budget', () => {
       "a 'use client' on the Home turns the hero — the LCP element — into markup that cannot " +
         'be painted until a bundle arrives (FR-024).',
     ).toBe(false)
-    for (const outra of ['LikeButton', 'ModelViewer', 'SearchInput', 'CalendarDayPanel']) {
+    for (const outra of ['ModelViewer', 'SearchInput', 'CalendarDayPanel']) {
       expect(source, `the Home imports the ${outra} island, which Home v1 has no use for`).not.toContain(
         outra,
       )
     }
-    expect(findAll(await render(), ProjectCarousel)).toHaveLength(1)
+
+    const tree = await render()
+    expect(findAll(tree, ProjectCarousel)).toHaveLength(1)
+    // One per card, in the slot `CardProjeto` already offers — so the island count follows the
+    // number of cards and not a hand-written number that would rot the day the carousel grows.
+    const cartoes = findAll(tree, CardProjeto)
+    expect(cartoes.length, 'the carousel rendered no cards, so the count below proves nothing')
+      .toBeGreaterThan(0)
+    expect(
+      cartoes.filter((card) => isValidElement(card.props.curtir)),
+      'a card on the Home draws a heart with no island behind it — a press that answers with ' +
+        'nothing, which is the half-shipped control 003 § CLR-010 moved into feature 004',
+    ).toHaveLength(cartoes.length)
   })
 
   it('never reaches Payload directly (FR-002, SC-003)', () => {

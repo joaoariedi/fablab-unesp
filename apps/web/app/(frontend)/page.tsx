@@ -63,6 +63,7 @@ import { notFound } from 'next/navigation'
 import {
   CardProjeto,
   EmptyState,
+  LikeButton,
   LOGIN_HREF,
   PIXEL_IMAGE_STYLE,
   PRIMARY_BUTTON_STYLE,
@@ -437,6 +438,16 @@ function cardDe(projeto: ProjetoDoc, posicao: number): ReactElement {
       }
       autor={AUTORIA_PENDENTE}
       curtidas={projeto.curtidas ?? 0}
+      // The island, on the Home's carousel too (T003, FR-025, US7). US7 says *"on any card
+      // that shows a heart"*, and these cards show one: a heart that answers a press on
+      // /projetos and does nothing here is the half-shipped state CLR-010 moved to 004, just
+      // relocated rather than closed. `curtidas` above is still passed — it is the static
+      // count the card falls back to, and `CardProjeto` requires it.
+      //
+      // The LCP cost is deliberate and measured, not assumed: this is the page SC-006 budgets
+      // and `scripts/lcp-budget.sh` runs `/` first. Three cards, three boundaries, one shared
+      // chunk — and if that ever stops fitting the budget, the gate says so in numbers.
+      curtir={<LikeButton curtidas={projeto.curtidas ?? 0} />}
     />
   )
 }

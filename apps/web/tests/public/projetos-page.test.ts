@@ -2,10 +2,10 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-import type { ReactElement, ReactNode } from 'react'
+import { isValidElement, type ReactElement, type ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { CardProjeto, EmptyState, ListingGrid, Pagination, SearchInput, Tabs } from '@fablab/ui'
+import { CardProjeto, EmptyState, LikeButton, ListingGrid, Pagination, SearchInput, Tabs } from '@fablab/ui'
 
 import { ALL_CATEGORIES } from '../../lib/public/params'
 import type { FindArgs } from '../../lib/tenancy/client'
@@ -576,5 +576,53 @@ describe('§8 — the error state (FR-018, US1)', () => {
       mocks.NOT_FOUND,
     )
     expect(mocks.notFound).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('§9 — the heart is the island, and the count is the server\'s (FR-025, US7)', () => {
+  it('hands `CardProjeto` a `LikeButton` in its `curtir` slot, carrying the count the reader returned', async () => {
+    const card = findAll((await render()).tree, CardProjeto)[0]
+
+    const curtir = card?.props.curtir as unknown
+    expect(
+      isValidElement(curtir),
+      'the card was left with its static count. `CardProjeto` already takes `curtir` (T001, ' +
+        'plan § Sketch 5: "no card changes; a page supplies the island"), and a listing that ' +
+        'supplies nothing is a heart a visitor can click and get nothing back from — the half ' +
+        'of US7 feature 003 deferred to here.',
+    ).toBe(true)
+    // Identity, not a look-alike: the page imports the same module instance this file does, so
+    // `=== LikeButton` is what proves the island itself was supplied rather than some other
+    // element that happens to print a number.
+    expect((curtir as AnyElement).type).toBe(LikeButton)
+    // The count is the SERVER's, from this document — not a constant and not a recount.
+    expect((curtir as AnyElement).props.curtidas).toBe(32)
+  })
+
+  it('supplies the visitor\'s branch only — the signed-in half is T028b, not this page', async () => {
+    const card = findAll((await render()).tree, CardProjeto)[0]
+    const props = (card?.props.curtir as AnyElement).props
+
+    // `isSignedIn` defaults to the visitor deliberately (LikeButton's docblock). A page that
+    // asserted `true` here would offer a like control to someone with no account to record it
+    // against, and `onCurtir` — a plain function across the server/client boundary — is not
+    // serialisable and would fail at render rather than at review.
+    expect(props.isSignedIn).not.toBe(true)
+    expect(props.onCurtir).toBeUndefined()
+  })
+
+  it('gives every card its own heart with its own count', async () => {
+    const tres = [32, 7, 108].map((curtidas, n) => ({
+      ...PROJETO,
+      id: n + 1,
+      slug: `projeto-${n + 1}`,
+      curtidas,
+    }))
+    const cards = findAll((await render({}, { docs: tres, totalDocs: 3 })).tree, CardProjeto)
+
+    // One island per card, each from its OWN document: a page that read `docs[0].curtidas` for
+    // every card would satisfy the first assertion in this section and put the same number on
+    // twelve different projects.
+    expect(cards.map((card) => (card.props.curtir as AnyElement).props.curtidas)).toEqual([32, 7, 108])
   })
 })

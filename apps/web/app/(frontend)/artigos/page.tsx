@@ -3,7 +3,7 @@ import type { CSSProperties, ReactElement, ReactNode } from 'react'
 import { notFound } from 'next/navigation'
 
 import type { CardProjetoAutor } from '@fablab/ui'
-import { CardProjeto, EmptyState, ListingGrid, Pagination, SearchInput, Tabs } from '@fablab/ui'
+import { CardProjeto, EmptyState, LikeButton, ListingGrid, Pagination, SearchInput, Tabs } from '@fablab/ui'
 
 import { listPublic } from '../../../lib/public/listing'
 import {
@@ -300,6 +300,16 @@ function cardDe(artigo: ArtigoDoc, posicao: number): ReactElement {
       capa={capa(artigo, posicao)}
       autor={autorDe(artigo.autor)}
       curtidas={artigo.curtidas ?? 0}
+      // The island in the slot the card already offers (T003, FR-025, US7): a visitor's press
+      // opens the account invitation and the number stays exactly where the server put it.
+      // `curtidas` above is still passed — it is the card's own static count, the markup this
+      // page falls back to the day the slot is not supplied, and `CardProjeto` requires it.
+      //
+      // Nothing else is passed on purpose. `isSignedIn` defaults to the visitor, which is the
+      // only branch phase 1 has: the write lives in T028b's `lib/accounts/curtir.ts`, and
+      // `onCurtir` is a function — handing one from a server component to a client one is not
+      // serialisable and Next refuses it at render.
+      curtir={<LikeButton curtidas={artigo.curtidas ?? 0} />}
     />
   )
 }

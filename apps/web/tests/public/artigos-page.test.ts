@@ -2,10 +2,10 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-import type { ReactElement, ReactNode } from 'react'
+import { isValidElement, type ReactElement, type ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { CardProjeto, EmptyState, ListingGrid, Pagination, SearchInput, Tabs } from '@fablab/ui'
+import { CardProjeto, EmptyState, LikeButton, ListingGrid, Pagination, SearchInput, Tabs } from '@fablab/ui'
 
 import { ALL_CATEGORIES } from '../../lib/public/params'
 import type { FindArgs } from '../../lib/tenancy/client'
@@ -607,5 +607,46 @@ describe('§8 — the empty and error states (FR-017, FR-018, US1, US2)', () => 
     // "this site is broken" — and never a page rendered from a guessed tenant.
     await expect(ArtigosPage({ searchParams: Promise.resolve({}) })).rejects.toThrow(mocks.NOT_FOUND)
     expect(mocks.notFound).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('§9 — the heart is the island, and the count is the server\'s (FR-025, US7)', () => {
+  it('hands `CardProjeto` a `LikeButton` in its `curtir` slot, carrying the count the reader returned', async () => {
+    const card = findAll((await render()).tree, CardProjeto)[0]
+
+    const curtir = card?.props.curtir as unknown
+    expect(
+      isValidElement(curtir),
+      'the card was left with its static count. `CardProjeto` already takes `curtir` (T001, ' +
+        'plan § Sketch 5: "no card changes; a page supplies the island"), and this listing ' +
+        'draws the same heart the Projetos grid does — US7 says every card that shows one ' +
+        'answers a visitor\'s click with the invitation.',
+    ).toBe(true)
+    // Identity, not a look-alike: the page imports the same module instance this file does.
+    expect((curtir as AnyElement).type).toBe(LikeButton)
+    expect((curtir as AnyElement).props.curtidas).toBe(24)
+  })
+
+  it('supplies the visitor\'s branch only — the signed-in half is T028b, not this page', async () => {
+    const props = ((findAll((await render()).tree, CardProjeto)[0]?.props.curtir) as AnyElement).props
+
+    // `onCurtir` is a plain function across the server/client boundary: not serialisable, and
+    // Next refuses it at render rather than at review.
+    expect(props.isSignedIn).not.toBe(true)
+    expect(props.onCurtir).toBeUndefined()
+  })
+
+  it('gives every card its own heart with its own count', async () => {
+    const tres = [24, 3, 91].map((curtidas, n) => ({
+      ...ARTIGO,
+      id: n + 1,
+      slug: `artigo-${n + 1}`,
+      curtidas,
+    }))
+    const cards = findAll((await render({}, { docs: tres, totalDocs: 3 })).tree, CardProjeto)
+
+    // Each from its OWN document: reading `docs[0].curtidas` for every card would satisfy the
+    // first assertion in this section and print one number on twelve different articles.
+    expect(cards.map((card) => (card.props.curtir as AnyElement).props.curtidas)).toEqual([24, 3, 91])
   })
 })

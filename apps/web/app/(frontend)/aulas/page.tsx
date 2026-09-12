@@ -2,7 +2,7 @@ import type { CSSProperties, ReactElement, ReactNode } from 'react'
 
 import { notFound } from 'next/navigation'
 
-import { EmptyState, formatHandle, Pagination, SearchInput } from '@fablab/ui'
+import { EmptyState, formatHandle, LikeButton, Pagination, SearchInput } from '@fablab/ui'
 
 import { listPublic, PAGE_SIZE } from '../../../lib/public/listing'
 import {
@@ -226,12 +226,16 @@ function cardDe(aula: AulaDoc, posicao: number, pagina: number): ReactElement {
           {/* "ícone de relógio outline + duração: 25 min". One string, not two spans: a screen
               reader reading "25" and "min" as separate items is not a duration. */}
           <span>{`${String(aula.duracaoMin ?? 0)} min`}</span>
-          {/* FR-015: the count is shown to everyone, as text. The clicking half is `LikeButton`,
-              one of the six islands — a card that rendered it would ship twelve client
-              boundaries on this page alone, which is the failure FR-024 exists to prevent. */}
-          <span>
-            <span aria-hidden={true}>♥</span> {aula.curtidas ?? 0}
-          </span>
+          {/* The count, and now the press that answers it (T003, FR-025, US7). 003 drew this as
+              text and deferred the click, arguing here that twelve client boundaries on one
+              page was the cost FR-024 existed to prevent. 004 pays it deliberately: US7 says
+              *"on any card that shows a heart"*, and a heart that opens the invitation on
+              /projetos while staying inert here is the same half-shipped control CLR-010 moved
+              — with the seam now running between two listings instead of between two features.
+              One shared chunk, two hooks, no data of its own; the page stays a server
+              component, and `scripts/lcp-budget.sh` measures this page and will say if it
+              stops fitting. */}
+          <LikeButton curtidas={aula.curtidas ?? 0} surface="light" />
         </span>
       </span>
       <span style={ESTILO.acoes}>{assistirDe(aula)}</span>

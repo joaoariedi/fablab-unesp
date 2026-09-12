@@ -369,8 +369,14 @@ const ALLOWED_ISLANDS: Record<string, string> = {
     'WebGL and camera controls; the detail page only, never a listing card (FR-014, CLR-002)',
   'packages/ui/src/components/SearchInput.tsx':
     'debounced typing at ~300ms — a form post would reload the page on every keystroke (FR-020)',
+  // Seeded by feature 003 as a pre-authorisation, and now claimed: 003 § CLR-010 moved the
+  // invitation behind the heart to feature 004, where it is FR-025. The entry records both
+  // branches because both are why the bundle is paid for — the panel a visitor's press opens,
+  // and the pressed state a signed-in maker's like leaves behind (FR-026).
   'packages/ui/src/components/LikeButton.tsx':
-    'the count and the account invitation a click opens for a logged-out visitor (FR-015)',
+    "the account invitation a visitor's press opens over a count that must not move (003 " +
+    "FR-015, closed as 004 FR-025), and the signed-in like whose state follows the server " +
+    '(FR-026)',
   'packages/ui/src/components/ProjectCarousel.tsx':
     "the Home's ÚLTIMOS PROJETOS carousel, decided 2026-08-23 — it scrolls under a control",
   'packages/ui/src/components/CalendarDayPanel.tsx':
