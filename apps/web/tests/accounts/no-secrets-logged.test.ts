@@ -54,9 +54,14 @@ import config from '../../payload.config'
  * §2 was red on the untouched tree — every one of its secret searches — because Payload's
  * default logger has no `redact` at all: the first run printed
  *
- *     INFO: marcador-raso  password: "t017-valor-secreto-que-nao-pode-vazar"  hash: "…"
+ *     INFO: marcador-raso  password: "<SEGREDO, em claro>"  hash: "<SEGREDO, em claro>"
  *
- * verbatim to fd 1. It went green with `logger.options.redact` in `payload.config.ts`, and
+ * verbatim to fd 1 — the planted value, unredacted, where a log reader would see it. (The
+ * literal is written as a placeholder above on purpose: quoted in full it is a high-entropy
+ * string in a committed file, and `gitleaks` flags it as a credential. What the line proves is
+ * that the value appeared IN CLEAR, not which value it was.)
+ *
+ * It went green with `logger.options.redact` in `payload.config.ts`, and
  * `deve continuar registrando` is the half that stops the cheap fix: silencing the logger
  * censors nothing, it only destroys the evidence, and that assertion fails when it is tried.
  *

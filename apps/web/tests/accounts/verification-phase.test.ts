@@ -49,7 +49,7 @@ import { EMAIL_VERIFICATION_REQUIRED } from '../../lib/accounts/settings.js'
  */
 
 const EMAIL = 't012-unverified@example.com'
-const PASSWORD = 'verification-phase-123'
+const PASSWORD = 'fixture-password-123'
 
 /**
  * Only the id is named. `payload.create` returns the generated `User`, and `payload-types.ts`
