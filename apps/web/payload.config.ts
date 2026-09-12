@@ -6,7 +6,7 @@ import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { multiTenantPlugin } from '@payloadcms/plugin-multi-tenant'
 import { s3Storage } from '@payloadcms/storage-s3'
 import type { CollectionConfig } from 'payload'
-import { buildConfig } from 'payload'
+import { buildConfig, defaultLoggerOptions } from 'payload'
 import sharp from 'sharp'
 
 import { AvatarItem } from './collections/avatar/AvatarItem'
@@ -40,6 +40,61 @@ const dirname = path.dirname(fileURLToPath(import.meta.url))
 // This runs at config load, which includes `next build` — CI must provide the environment
 // for the build and drift jobs, which it needs for migrations anyway.
 const env = readEnv()
+
+/**
+ * Field names that must never appear in a log line (T017 / FR-020, SC-005).
+ *
+ * `password` is what the visitor typed *once Payload has it*; `hash` and `salt` are how Payload
+ * stores it; `token` covers both the session JWT and anything else that opens an account without
+ * one; and `resetPasswordToken` is a single-use credential that FR-017 hands out by e-mail — a
+ * copy of it in a log file is a copy of the account.
+ *
+ * **`senha` is here because this codebase speaks Portuguese and the first list did not.** It is
+ * the login form's field name, it is what `dados.get('senha')` carries, and `Credenciais` in
+ * `lib/tenancy/session.ts` — the only typed object in this repository that holds a password in
+ * clear — names it that for the whole journey, right up to the one line that maps it to
+ * Payload's `password`. An English-only list covered every name Payload uses and none of the
+ * names *we* use, which is precisely backwards: the accident this layer exists for is a whole
+ * object handed to the logger by a call site that did not think about it, and in this tree the
+ * likeliest such object is a `Credenciais`. Verified by logging one through the real config
+ * before the entry was added: it printed the password verbatim.
+ *
+ * `_verificationToken` is listed against FR-019's second phase. It is inert while
+ * `EMAIL_VERIFICATION_REQUIRED` is false — Payload does not even create the field — but it
+ * becomes a live account-opening secret the day that flips, and a redaction list is worth
+ * nothing if it is updated in the same commit as the feature that needs it.
+ *
+ * The rule is *not to log them*, and today nothing does — `tests/accounts/no-secrets-logged.test.ts`
+ * drives the auth flows and scans everything the process writes. This is the layer under
+ * that rule: a whole row or a whole error handed to `payload.logger` by a future call site prints
+ * a censor instead of the credential, without that call site having had to know.
+ */
+const CAMPOS_NUNCA_LOGADOS = [
+  'hash',
+  'password',
+  'resetPasswordToken',
+  'salt',
+  'senha',
+  'token',
+  '_verificationToken',
+] as const
+
+/**
+ * The same names as pino redaction paths.
+ *
+ * pino redacts **a value at a key path**, and its wildcard matches exactly one level — so each
+ * name is listed at the depths a log line realistically carries it: bare (`logger.info({ hash })`),
+ * one deep (`{ user: { hash } }`), and on down to four, which covers a row nested inside a
+ * context inside an error. Deeper than that is not covered, and neither is a secret interpolated
+ * into the *message string*: redaction is the second layer, never a licence to log the credential.
+ */
+const CAMINHOS_REDIGIDOS = CAMPOS_NUNCA_LOGADOS.flatMap((campo) => [
+  campo,
+  `*.${campo}`,
+  `*.*.${campo}`,
+  `*.*.*.${campo}`,
+  `*.*.*.*.${campo}`,
+])
 
 /** Every collection the app registers, in one place so the storage map is derived from it. */
 const collections = [
@@ -152,6 +207,17 @@ export function s3StorageOptions(
 
 export default buildConfig({
   secret: env.PAYLOAD_SECRET,
+
+  // FR-020: the credential fields are censored on the way out, whatever put them there.
+  //
+  // `destination` is Payload's **own** default — `defaultLoggerOptions` is the `pino-pretty`
+  // stream `getLogger()` would have used — so this adds redaction and changes nothing else.
+  // Omitting it would silently swap the pretty printer for raw JSON on stdout, which is a change
+  // to every log line in the product made while nobody was looking at log formatting.
+  logger: {
+    options: { redact: { censor: '[REDACTED]', paths: CAMINHOS_REDIGIDOS } },
+    destination: defaultLoggerOptions,
+  },
 
   db: postgresAdapter({
     pool: { connectionString: env.DATABASE_URI },

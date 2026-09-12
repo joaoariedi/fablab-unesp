@@ -133,15 +133,53 @@ reads the catalogue through it. Nothing else may be added to that list without t
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T011 | `settings.ts` and the `Users` auth options **in one task**, so `verify` is written *as* the constant and never as a literal beside it | FR-019, CLR-006 | `apps/web/lib/accounts/settings.ts`, `apps/web/collections/Users.ts` | — |
-| T012 | Assert the two agree, and that an account is usable immediately with no verification | SC-014, US9 | `apps/web/tests/accounts/verification-phase.test.ts` | T011 |
-| T013 | Login page replacing 001's stub; neutral failure for both causes, return-to-origin, signed-in redirect | FR-014, FR-016, US3 | `apps/web/app/(frontend)/login/page.tsx` | T011 |
-| T013b | Sign-out **invalidates server-side**, not just clears a cookie, and the session lifetime is asserted rather than inherited | FR-018, US3 | `apps/web/tests/accounts/session.test.ts` | T013 |
-| T014 | Prove the neutral failure is **the same body and status** for wrong password and unknown address | FR-014, SC-002 | `apps/web/tests/accounts/login.test.ts` | T013 |
-| T015 | Password reset end to end: single-use, expiry, identical body and status. **Timing is deliberately not asserted** — SC-003 says why | FR-017, SC-003, US4 | `apps/web/tests/accounts/reset.test.ts` | T013 |
-| T016 | Rate limiting proved by driving N+1 attempts against the real lock | FR-015, SC-004 | `apps/web/tests/accounts/rate-limit.test.ts` | T013 |
-| T016b | Record CLR-007's gap where it will be read: FR-015 is per account, and password spraying across many accounts is **not** stopped. A comment beside the `maxLoginAttempts` config, not only in the spec | FR-015, CLR-007 | `apps/web/collections/Users.ts` | T016 |
-| T017 | No password, hash or reset token in any emitted log line | FR-020, SC-005 | `apps/web/tests/accounts/no-secrets-logged.test.ts` | T013 |
+| ✅ T011 | `settings.ts` and the `Users` auth options **in one task**, so `verify` is written *as* the constant and never as a literal beside it | FR-019, CLR-006 | `apps/web/lib/accounts/settings.ts`, `apps/web/collections/Users.ts` | — |
+| ✅ T012 | Assert the two agree, and that an account is usable immediately with no verification | SC-014, US9 | `apps/web/tests/accounts/verification-phase.test.ts` | T011 |
+| ✅ T013 | Login page replacing 001's stub; neutral failure for both causes, return-to-origin, signed-in redirect | FR-014, FR-016, US3 | `apps/web/app/(frontend)/login/page.tsx` | T011 |
+| ✅ T013b | Sign-out **invalidates server-side**, not just clears a cookie, and the session lifetime is asserted rather than inherited | FR-018, US3 | `apps/web/tests/accounts/session.test.ts` | T013 |
+| ✅ T014 | Prove the neutral failure is **the same body and status** for wrong password and unknown address | FR-014, SC-002 | `apps/web/tests/accounts/login.test.ts` | T013 |
+| ✅ T015 | Password reset end to end: single-use, expiry, identical body and status. **Timing is deliberately not asserted** — SC-003 says why | FR-017, SC-003, US4 | `apps/web/tests/accounts/reset.test.ts` | T013 |
+| ✅ T016 | Rate limiting proved by driving N+1 attempts against the real lock | FR-015, SC-004 | `apps/web/tests/accounts/rate-limit.test.ts` | T013 |
+| ✅ T016b | Record CLR-007's gap where it will be read: FR-015 is per account, and password spraying across many accounts is **not** stopped. A comment beside the `maxLoginAttempts` config, not only in the spec | FR-015, CLR-007 | `apps/web/collections/Users.ts` | T016 |
+| ✅ T017 | No password, hash or reset token in any emitted log line | FR-020, SC-005 | `apps/web/tests/accounts/no-secrets-logged.test.ts` | T013 |
+
+### What phase 3 cost — two live security defects, both found by the verifiers
+
+Six of nine accepted first time. Of the three rejections, **two were real and both were
+exploitable**; one was the same false-rejection artefact phase 2 saw.
+
+1. **T013 shipped an open redirect.** `caminhoInterno` enumerated the spellings its test listed —
+   no `//`, no backslash, no CR, no LF — and the WHATWG URL parser strips **TAB** exactly as it
+   strips CR and LF. So `/login?de=/%09/evil.example/x` passed the render-time check, survived the
+   hidden field, passed the re-validation that exists to make that round trip safe, and reached
+   `redirect()`, where Next resolves with `new URL(location, base)` and navigates off-site. A maker
+   signing in through an attacker's link lands on the attacker's page — the exact phishing
+   amplifier the function's own comment says it prevents.
+
+   Fixed by **asking the parser instead of enumerating spellings**: resolve against a sentinel
+   origin, require the result to still be on it, and return the parser's normalised path so what
+   is redirected to is character-for-character what was validated. The test now asserts the
+   *rule* — whatever survives resolves back onto this host — and was watched failing against the
+   guard that shipped.
+
+2. **T017's redaction list was English-only, and this codebase speaks Portuguese.**
+   `CAMPOS_NUNCA_LOGADOS` covered every name *Payload* uses and none of the names *we* use — and
+   `Credenciais` in `lib/tenancy/session.ts` is the only typed object in the repository that holds
+   a password in clear. It is called `senha` for the whole journey, up to the single line mapping
+   it to Payload's `password`. Logging one through the real config printed the password verbatim.
+   `senha` added, plus `_verificationToken` against FR-019's second phase, and §2 now logs a
+   `Credenciais` both bare and nested.
+
+3. **T014's rejection was false** — the same mechanism as phase 2's T008. Its verifier reported
+   `tests/accounts/login.test.ts` absent; it is on disk, and the whole `tests/accounts/` directory
+   is 92/92. The run also left two `zz-vfy-mutant*.test.ts` scratch copies of `rate-limit.test.ts`
+   behind, now deleted — a halted run leaves unadjudicated work on disk, so check `git status`
+   against the task list and not only the report.
+
+**The lesson both real findings share:** a guard written against the cases in its test passes that
+test and fails the requirement. Phase 1 met this as a page nobody enumerated; here it was a
+character blocklist and a field-name list. When the requirement is "no X ever", the test has to
+assert the rule and the code has to ask the authority — the parser, not a list of characters.
 
 ## Phase 4: The handle, where the race lives
 
