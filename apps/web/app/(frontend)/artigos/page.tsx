@@ -244,8 +244,27 @@ function categoriaNome(categoria: ArtigoDoc['categoria']): string {
   return asDoc<CategoriaDoc>(categoria)?.nome ?? ''
 }
 
-/** The person the article credits, or the lab when the profile did not arrive. */
+/**
+ * The person the article credits, the tombstone when they deleted their account, or the lab
+ * when a living profile simply did not arrive populated (T031 / FR-031, CLR-003).
+ *
+ * The three cases are told apart by what `autor` IS, not by what it lacks:
+ *
+ *   - **absent** (`null`/`undefined`) — since T029 dropped `NOT NULL`, the only thing that
+ *     empties this column is a deletion, so this is a person who exercised FR-031. Their work
+ *     stays up under `{ removido: true }`, which is the union's whole point: the card cannot
+ *     print a name that no longer exists because there is no field here to put one in.
+ *   - **a bare id** — `depth` did not populate, and the maker is alive. {@link AUTORIA_PENDENTE}
+ *     still applies; a tombstone here would announce a deletion that never happened, for every
+ *     article on the page at once.
+ *   - **populated** — the maker.
+ *
+ * The order matters. Reading `perfil?.nome` first, as this did before, collapses the first two
+ * cases into the lab byline — and crediting the organization for a deleted maker's article is
+ * not a missing credit but a wrong one.
+ */
 function autorDe(autor: ArtigoDoc['autor']): CardProjetoAutor {
+  if (autor === null || autor === undefined) return { removido: true }
   const perfil = asDoc<PerfilDoc>(autor)
   if (!perfil?.nome) return AUTORIA_PENDENTE
   return { nome: perfil.nome, handle: perfil.handle ?? '', nivel: NIVEL_PENDENTE }

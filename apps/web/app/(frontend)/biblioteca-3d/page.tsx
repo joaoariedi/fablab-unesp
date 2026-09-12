@@ -2,7 +2,7 @@ import type { CSSProperties, ReactElement, ReactNode } from 'react'
 
 import { notFound } from 'next/navigation'
 
-import { EmptyState, formatHandle, LikeButton, Pagination, SearchInput } from '@fablab/ui'
+import { AUTOR_REMOVIDO, EmptyState, formatHandle, LikeButton, Pagination, SearchInput } from '@fablab/ui'
 
 import { listPublic } from '../../../lib/public/listing'
 import {
@@ -334,10 +334,23 @@ function acaoDe(modelo: Modelo3dDoc, detalhe: string): ReactNode {
   )
 }
 
-/** The author strip: the person's name and `@nomesobrenome` (round 4, 2026-08-24). No level —
- *  `perfilMaker` carries none, and a number nobody earned on a public page is worse than its
- *  absence. `formatHandle` prints the `@`, in the one place that decides how. */
+/**
+ * The author strip: the person's name and `@nomesobrenome` (round 4, 2026-08-24). No level —
+ * `perfilMaker` carries none, and a number nobody earned on a public page is worse than its
+ * absence. `formatHandle` prints the `@`, in the one place that decides how.
+ *
+ * The **removed** case is the one T029 created: `autor` is nullable since that migration, and
+ * the only thing that empties it is a deletion, so an absent relationship is a person who
+ * exercised FR-031 rather than a row that was never filled in. CLR-003 keeps their work up
+ * *"with authorship replaced by a tombstone"* — returning `null` here, as this did before,
+ * keeps the work up with **no** authorship at all, which reads as content the lab published.
+ *
+ * A **bare id** stays `null`: that is a populate failure over a living maker, and printing the
+ * tombstone for it would announce a deletion nobody performed. The wording comes from
+ * `@fablab/ui` so these four hand-drawn bylines and `CardProjeto` cannot drift apart (CHK066).
+ */
 function autoriaDe(autor: Modelo3dDoc['autor']): ReactNode {
+  if (autor === null || autor === undefined) return <span style={ESTILO.autor}>{AUTOR_REMOVIDO}</span>
   const perfil = asDoc<PerfilDoc>(autor)
   if (perfil === null) return null
   return (

@@ -492,3 +492,70 @@ describe('foreign keys whose ON DELETE must not be Payload\'s default', () => {
     }
   }
 })
+
+/**
+ * The same source with the `up()` bodies cut away — every `down()`, and nothing else.
+ *
+ * The mirror of `committedUpSql`, and it exists for the reverse reason: a reversibility claim
+ * cannot be checked against text that also contains the forward statement. `DROP NOT NULL` and
+ * `SET NOT NULL` differ by one word, and grepping the whole file for the second finds the first
+ * migration that ever added the constraint.
+ */
+const committedDownSql = (): string =>
+  migrationFiles()
+    .map((f) => readFileSync(join(MIGRATIONS_DIR, f), 'utf8').split('export async function down')[1] ?? '')
+    .join('\n')
+
+/** Matches `ALTER TABLE "<table>" ALTER COLUMN "<column>" <verb> NOT NULL`, however it is wrapped. */
+const altersNotNull = (sql: string, table: string, column: string, verb: 'DROP' | 'SET'): boolean =>
+  new RegExp(
+    `ALTER TABLE\\s+"${table}"\\s+ALTER COLUMN\\s+"${column}"\\s+${verb} NOT NULL`,
+    'i',
+  ).test(sql)
+
+/**
+ * The tombstone's database half (T029, FR-031, CLR-003).
+ *
+ * Deletion erases the person and KEEPS what they published, so `autor` has to be able to hold
+ * nothing. Only the **database** constraint goes: `required: true` stays on all three
+ * collections, because an author is still mandatory when someone writes an article — the null
+ * is a state deletion produces, never a state a form may submit.
+ *
+ * That split is exactly why this is asserted here. A constraint the config no longer describes
+ * is a constraint nothing else in the repo would notice disappearing: the drift gate compares
+ * the collections against the last snapshot and would report both states as clean, and the
+ * first symptom of a regenerated migration putting NOT NULL back is a deletion that aborts
+ * mid-transaction, in a statement naming neither the person nor the article.
+ */
+describe('the tombstone migration: autor survives its author', () => {
+  const TOMBSTONE_TABLES = ['artigo', 'aula', 'modelo3d'] as const
+
+  for (const table of TOMBSTONE_TABLES) {
+    it(`created "${table}"."autor_id" NOT NULL, so dropping it is a real change`, () => {
+      // Without this the two assertions below could both pass against a column that was never
+      // constrained, proving nothing about the schema deletion actually runs against.
+      expect(
+        createTableBody(committedUpSql(), table),
+        `"${table}" is created by no migration`,
+      ).toContain('"autor_id" integer NOT NULL')
+    })
+
+    it(`releases "${table}"."autor_id" from NOT NULL, so deletion can null it`, () => {
+      expect(
+        altersNotNull(committedUpSql(), table, 'autor_id', 'DROP'),
+        `no committed migration drops NOT NULL on "${table}"."autor_id", so nulling the author ` +
+          'of a deleted maker is refused by the database and deleteAccount aborts its whole ' +
+          'transaction — erasing nothing (FR-031, CLR-003)',
+      ).toBe(true)
+    })
+
+    it(`restores "${table}"."autor_id" NOT NULL on rollback`, () => {
+      expect(
+        altersNotNull(committedDownSql(), table, 'autor_id', 'SET'),
+        `the migration that drops NOT NULL on "${table}"."autor_id" does not put it back in ` +
+          'down(), so rolling it back leaves the database permanently looser than the schema ' +
+          'the collections declare',
+      ).toBe(true)
+    })
+  }
+})

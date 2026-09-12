@@ -299,12 +299,64 @@ Every gate above was watched failing against the code that actually shipped.
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T029 | Migration: `autor` drops `NOT NULL` on `artigo`, `aula`, `modelo3d`. Additive — precedent at `20260907_122242_evento_inscricao_obrigatoria.ts` | FR-031, CLR-003 | `apps/web/migrations/` | T010 |
-| T030 | `CardProjetoAutor` becomes a **union**, so the compiler forces every consumer to handle the removed state | FR-031, CLR-003 | `packages/ui/src/components/CardProjeto.tsx` | T029 |
-| T031 | Every page that passes an author renders the tombstone. **Migration → component → pages, in that order** | FR-031, CLR-003 | `apps/web/app/(frontend)/` | T030 |
-| T032 | `deleteAccount`: erase, null the authors, delete `curtida` rows, `syncCounter` each — one transaction, remaining profiles counted **inside** it | FR-031, SC-010, US8 | `apps/web/lib/accounts/deletion.ts` | T031 |
-| T032b | The deletion screen: all three outcomes named, and the person's own `@handle` typed before it proceeds (CLR-010) | FR-031b, SC-015, US8 | `apps/web/app/(frontend)/minha-conta/excluir/page.tsx` | T032 |
-| T033 | Prove all three halves, including a card rendering the tombstone and the counters recomputed | SC-010, US8 | `apps/web/tests/accounts/deletion.test.ts` | T032 |
+| ✅ T029 | Migration: `autor` drops `NOT NULL` on `artigo`, `aula`, `modelo3d`. Additive — precedent at `20260907_122242_evento_inscricao_obrigatoria.ts` | FR-031, CLR-003 | `apps/web/migrations/` | T010 |
+| ✅ T030 | `CardProjetoAutor` becomes a **union**, so the compiler forces every consumer to handle the removed state | FR-031, CLR-003 | `packages/ui/src/components/CardProjeto.tsx` | T029 |
+| ✅ T031 | Every page that passes an author renders the tombstone. **Migration → component → pages, in that order** | FR-031, CLR-003 | `apps/web/app/(frontend)/` | T030 |
+| ✅ T032 | `deleteAccount`: erase, null the authors, delete `curtida` rows, `syncCounter` each — one transaction, remaining profiles counted **inside** it | FR-031, SC-010, US8 | `apps/web/lib/accounts/deletion.ts` | T031 |
+| ✅ T032b | The deletion screen: all three outcomes named, and the person's own `@handle` typed before it proceeds (CLR-010) | FR-031b, SC-015, US8 | `apps/web/app/(frontend)/minha-conta/excluir/page.tsx` | T032 |
+| ✅ T033 | Prove all three halves, including a card rendering the tombstone and the counters recomputed | SC-010, US8 | `apps/web/tests/accounts/deletion.test.ts` | T032 |
+
+### What phase 6 cost — a migration the app undid, and a third missing door
+
+Three rejections, all correct, and all three traced to **one root cause plus one missing path**.
+
+1. **`required: true` was the real NOT NULL, and the migration could not outlive a boot.**
+   `payload.config.ts` sets `push: env.NODE_ENV !== 'production'`, so
+   `@payloadcms/db-postgres` rebuilds every non-production database from the **config-derived**
+   schema on connect — and `@payloadcms/drizzle` sets a column's `notNull` from the field's
+   `required`. Measured: the migration's `up()` was applied, all three columns went
+   `is_nullable = YES`, one existing test was run, and all three were `NO` again. One `pnpm dev`,
+   one admin visit or one integration test silently reverted T029.
+
+   And the same flag blocked it a second time, one layer up: a declared `validate` **replaces**
+   Payload's default, and `sameTenant` re-implements the `required` floor itself — so
+   `{ autor: null }` returned `'validation:required'` regardless of what the column allowed.
+   Proven by calling it. So `required: true` came off `autor` on the three collections, which is
+   what finally made the database, the generator and the validator agree.
+
+   The gate that shipped with the migration **matched the migration file's text with a regex and
+   never opened a connection** — green while the schema it claimed to hold in place was gone.
+   `tests/tenancy/autor-nulavel.test.ts` replaces it by reading `information_schema` *after a
+   real boot*, and was watched failing with `required: true` put back on one collection.
+
+2. **The tombstone failed silently, which is worse than the rollback it was designed around.**
+   The choke point's `update` is a **bulk** update underneath, and Payload's bulk update collects
+   a per-document validation error into `result.errors` rather than throwing — so a refused write
+   arrives as `null`, not as an exception. `anonimizarAutoria` ignored the return and incremented
+   anyway. Against the real stack that meant: profile deleted, curtida rows deleted, counters
+   recomputed, three rows still pointing at a `perfilMaker` id that no longer existed, and the
+   person told their authorship had been removed. A dangling foreign key and a false LGPD report,
+   reported as success. It now refuses a `null` return, the way `syncCounter` already did.
+
+3. **Deletion had no door, and the screen fabricated a request to hide it.**
+   `{ headers } as never` carries no `user`, so `scopedAccess()` denied the very first read — and
+   the cast was the only reason it compiled. A real session would not have been enough either:
+   `perfilMaker.delete` is `teamOnly()` and `users.delete` is `masterOnly()`. Both rules are
+   right; both are about somebody erasing *other people's* work, and LGPD asks for the case
+   neither describes.
+
+   Third instance of the class — after the anonymous catalogue read and the anonymous account
+   write. `getErasureScopedPayload` follows the same pattern with one difference that matters:
+   the signup door is bounded by **host**, which is not enough here because every maker of a lab
+   shares one. This door is bounded by **ownership** — it proves the profile belongs to the
+   authenticated caller before unsealing anything, then refuses every id but that profile and
+   that account. `tests/tenancy/erasure-door.test.ts` drives a second maker of the *same lab* at
+   it, which is the case no tenant filter in this codebase would have caught.
+
+**A note on watching gates fail.** My first version of the page's assertion checked that the door
+was *opened*, and stayed green when the door was built and thrown away — `deleteAccount` fell back
+to the client that cannot delete either row. Opened is not used. The assertion now reaches into
+`deps.getStore` and calls it.
 
 ## Phase 7: Minha Conta, the gates, and the record
 

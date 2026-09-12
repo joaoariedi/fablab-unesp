@@ -7,6 +7,7 @@ import * as migration_20260907_063817_colecoes_002b from './20260907_063817_cole
 import * as migration_20260907_122242_evento_inscricao_obrigatoria from './20260907_122242_evento_inscricao_obrigatoria';
 import * as migration_20260912_025334_contas_avatar_004 from './20260912_025334_contas_avatar_004';
 import * as migration_20260912_062952_handle_unico_por_organizacao from './20260912_062952_handle_unico_por_organizacao';
+import * as migration_20260912_103126_autor_removivel_tombstone from './20260912_103126_autor_removivel_tombstone';
 
 export const migrations = [
   {
@@ -53,5 +54,10 @@ export const migrations = [
     up: migration_20260912_062952_handle_unico_por_organizacao.up,
     down: migration_20260912_062952_handle_unico_por_organizacao.down,
     name: '20260912_062952_handle_unico_por_organizacao'
+  },
+  {
+    up: migration_20260912_103126_autor_removivel_tombstone.up,
+    down: migration_20260912_103126_autor_removivel_tombstone.down,
+    name: '20260912_103126_autor_removivel_tombstone'
   },
 ];

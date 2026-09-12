@@ -206,7 +206,25 @@ export const Aula: CollectionConfig = {
       name: 'autor',
       type: 'relationship',
       relationTo: pendingSlug('perfilMaker'),
-      required: true,
+      // NOT `required: true`, and that is CLR-003 — not a relaxation of editorial policy.
+      //
+      // FR-031 keeps a deleted person's published work and removes their name from it, which
+      // means `autor` must be able to hold nothing. Three layers had to agree before it could,
+      // and the migration alone moved only one of them:
+      //
+      //   1. **The database.** `20260912_…_autor_nulavel` drops the NOT NULL.
+      //   2. **The generated schema.** `push` is on for every non-production database
+      //      (`payload.config.ts`), and `@payloadcms/drizzle` sets `notNull` from `required`
+      //      — so with `required: true` still here, one `pnpm dev`, one admin visit or one
+      //      integration test silently put the constraint back. Measured: the columns went
+      //      `is_nullable = YES` and were `NO` again after a single boot.
+      //   3. **The application.** A declared `validate` REPLACES Payload's default, and
+      //      `sameTenant` re-implements the `required` floor itself — so `{ autor: null }`
+      //      returned `'validation:required'` regardless of what the column allowed.
+      //
+      // The editorial rule is unchanged and is enforced where it belongs: the admin UI and the
+      // review queue require an author to publish. What is now expressible is the one state
+      // that has no author by design — work whose author asked to be erased.
       label: 'Autor',
       admin: {
         description: 'Perfil exibido no rodapé do card: nome, @handle e nível.',
