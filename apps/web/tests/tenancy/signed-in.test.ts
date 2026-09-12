@@ -312,7 +312,7 @@ beforeAll(async () => {
   const conta = async (email: string, orgs: Vinculo[]) =>
     (await world.payload.create({
       collection: 'users',
-      data: { email, password: 'signed-in-vantage-123', role: 'user', orgs },
+      data: { email, password: 'fixture-password-123', role: 'user', orgs },
       overrideAccess: true,
     })) as unknown as { id: string | number }
 
