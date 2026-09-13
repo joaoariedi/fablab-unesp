@@ -86,7 +86,7 @@ No dependencies, cheapest to get right, and every number in the feature is one o
 |---|---|---|---|---|
 | T001 | `XpRules`, `levelFor`, `progressInLevel` — pure, no IO, tunables passed in. The cap is applied **here and nowhere else**, which is why no column declares a `max` | FR-005, FR-007 | `packages/game/src/rules.ts` | — |
 | T002 | Export them; the `export {}` placeholder goes. The docblock's sketched `levelFor` becomes real | FR-005 | `packages/game/src/index.ts` | T001 |
-| T003 | The table test SC-006 names: 0→0, 5→1, 49→9, 50→10, 999→10. Plus `progressInLevel` at the cap, where the bar is full and stays full | SC-006 | `packages/game/tests/rules.test.ts` | T001 |
+| T003 | The table test over **injected** rules (CLR-010): the CITe seed's row (0→0, 5→1, 49→9, 50→10, 999→10) is **one case**, not the definition — plus a second table with a different cap, because a test asserting "the cap is 10" asserts a seed value and fails on a lab that retuned legitimately. And `progressInLevel` at the cap, where the bar is full and stays full (CLR-013) | SC-006, CLR-010 | `packages/game/tests/rules.test.ts` | T001 |
 | T004 | Prove the purity fence still bites: `packages/game` importing `payload` or `next` fails lint. Watch it fail with a planted import, then remove it | SC-005 | `eslint.config.mjs` (assert only) | T002 |
 
 ## Phase 2: The ledger, before anything writes to it
@@ -101,6 +101,8 @@ No dependencies, cheapest to get right, and every number in the feature is one o
 | T010 | The migration, via `./scripts/migrate-create.sh` so the `.json` snapshot ships with it — preamble item 7 | FR-001 | `apps/web/migrations/` | T009 |
 | T010b | Verify the migration against a **scratch database**: `DATABASE_URI=<scratch> bash scripts/migration-drift.sh` must PASS on a database built from the committed migrations alone | FR-001 | `scripts/migration-drift.sh` (verify only) | T010 |
 | T011 | Prove the index refuses a duplicate **at the database**, not in application code: insert the same tuple twice directly and assert `23505` | SC-002 | `apps/web/tests/content/xp-ledger.test.ts` | T010 |
+| T011b | `xpLedger.perfil` is **nullable** (CLR-011), and erasing a profile nulls it rather than deleting the entry — 004's tombstone applied to the ledger. Every reader tolerates an entry with no profile | FR-040, SC-021 | `apps/web/collections/content/XpLedger.ts`, `apps/web/lib/accounts/deletion.ts` | T010 |
+| T011c | The lab level is **unchanged** by an erasure, and `docs/lgpd.md` gains a row saying what deletion does to XP | SC-021, FR-012 | `apps/web/tests/content/xp-erasure.test.ts`, `docs/lgpd.md` | T011b |
 | T012 | Prove append-only is an access rule: `update` and `delete` are refused for a maker, for the team, and for a master | FR-001 | `apps/web/tests/content/xp-ledger.test.ts` | T011 |
 | T013 | Seed `regrasXp` on organization creation through `SEED_ON_CREATE`, and assert a **new** organization gets the CITe defaults | FR-009 | `apps/web/lib/tenancy/seed-on-create.ts` | T005 |
 
@@ -108,14 +110,17 @@ No dependencies, cheapest to get right, and every number in the feature is one o
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
+| T013b | The four publishables each gain a **`skill`** relationship, nullable, with `sameTenant` — what a publication's entry credits (CLR-009). The checklist found FR-002 required a skill and nothing mapped a publication to one | FR-039, CLR-009 | `apps/web/collections/content/{Projeto,Artigo,Aula,Modelo3d}.ts` | T009 |
+| T013c | Its migration, via `./scripts/migrate-create.sh`, and the drift gate on a scratch database | FR-039 | `apps/web/migrations/` | T013b |
 | T014 | `CounterDerivation` gains `{ kind: 'sum'; source; field }`. `count` reads `totalDocs` and touches no row; a sum must read them — say so where the type is declared | FR-010 | `apps/web/lib/content/counters.ts` | — |
 | T015 | `creditXp`: write the entry, **catch the duplicate as the SUCCESS path of idempotency**, rethrow anything else so it takes the caller's transaction with it. Recognise the duplicate by the `ValidationError` shape `@payloadcms/drizzle` actually raises — table plus column pair — with the raw `23505` as a second door (004's T020 measured that the code and index name are gone by the time a catch sees them) | FR-003, FR-004 | `apps/web/lib/content/xp.ts` | T007, T014 |
 | T016 | The projections: `perfilMaker.xpTotal`, `nivel`, and the matching `skills[]` entry, all maintained **inside the causing transaction** by passing the caller's own `req` — `counters.ts`'s three load-bearing properties, reused | FR-010 | `apps/web/lib/content/xp.ts` | T015 |
-| T017 | Register the credit `afterChange` hook on the five reviewable collections. It reads `aprovacaoRegistrada`/`aprovadoEm` — the record `stampApproval` wrote in `beforeChange` — and credits once | FR-006, US1 | `apps/web/collections/content/{Projeto,Artigo,Aula,Modelo3d,Evento}.ts` | T016 |
+| T017 | Register the credit `afterChange` hook on **FOUR** reviewable collections — **never `evento`** (CLR-012). It carries `aprovacaoRegistrada` exactly like the others, so "the reviewable collections" would credit event publication, which FR-008 forbids. The hook reads the record `stampApproval` wrote in `beforeChange` and credits once | FR-006, FR-042, US1 | `apps/web/collections/content/{Projeto,Artigo,Aula,Modelo3d}.ts` | T016 |
+| T017b | Prove it: approving an **`evento`** writes zero entries. The one collection that looks like the others and must not behave like them | SC-020, CLR-012 | `apps/web/tests/content/xp-credit.test.ts` | T017 |
 | T018 | Approve → unpublish → re-approve writes **exactly one** entry, driven against a real database | SC-001, US1 | `apps/web/tests/content/xp-credit.test.ts` | T017 |
 | T019 | A failed ledger write **rolls the approval back** — the content is still unpublished afterwards. This is the assertion that proves `afterChange` is inside the transaction rather than assuming it | SC-003, US1 | `apps/web/tests/content/xp-credit.test.ts` | T017 |
 | T020 | Extend `CounterField` and the gate's `satisfies Record<DerivedField, DerivedSource>` map with the XP fields. **This breaks typecheck until the reconciliation is written** — that is the mechanism, not an obstacle | FR-011, SC-004 | `apps/web/tests/content/counters.test.ts` | T016 |
-| T021 | Reconciliation: every projection equals a recount of the ledger, across the whole database. Watch it fail against a hand-desynced `xpTotal` | FR-011, SC-004 | `apps/web/tests/content/counters.test.ts` | T020 |
+| T021 | Reconciliation: every projection equals a recount of the ledger, across the whole database. Watch it fail against a hand-desynced `xpTotal`. **A CI gate, not a runtime repair** (CLR-014) — the same answer 002 gave for the counters, and giving a different one here would be two disciplines for one guarantee | FR-011, SC-004, CLR-014 | `apps/web/tests/content/counters.test.ts` | T020 |
 | T021b | The free oracle, asserted as an oracle and never as a dependency: while `xpPorAcao` is 1, a **sum equals a count**. The amount is still stored per entry, because `regrasXp` is tunable | FR-009 | `apps/web/tests/content/xp-vs-count.test.ts` | T016 |
 
 ## Phase 4: The class completion, and the profile bridge
@@ -136,7 +141,9 @@ No dependencies, cheapest to get right, and every number in the feature is one o
 | T027 | `missaoSubmissao` — **scoped**, with `comprovante` as a `midiaImagem` **relationship** (CLR-006) and a unique index on `(missao, maker)` so FR-023 is a constraint and not a check somebody must remember | FR-021, FR-023, FR-036 | `apps/web/collections/content/MissaoSubmissao.ts` | T026 |
 | T028 | Registry declarations for both, and their migration | FR-028 | `apps/web/lib/tenancy/scope-registry.ts`, `apps/web/migrations/` | T027 |
 | T029 | Team validation: approving a submission credits **once**, to the skill the mission names, through the same idempotency key | FR-022, SC-012 | `apps/web/collections/content/MissaoSubmissao.ts` | T028, T016 |
+| T029b | A **rejected** submission is reopened, never replaced (CLR-015): the maker edits it and it returns to `enviada`. The unique index would otherwise bar them permanently after one rejection, which is not what a review queue is for | FR-041, FR-023, SC-022 | `apps/web/collections/content/MissaoSubmissao.ts` | T029 |
 | T030 | Two team members approving the same submission credit once | SC-012, US3 | `apps/web/tests/content/missao.test.ts` | T029 |
+| T030b | reject → edit → approve credits **once**, and the row is the same row throughout | SC-022, FR-041 | `apps/web/tests/content/missao.test.ts` | T029b |
 | T031 | The upload is a **security-review surface** (Principle 5): the submission stores an **id** and never a key, URL or filename; the image is same-tenant; a maker cannot attach another maker's media. Feed all four wrong shapes and assert the write is refused | FR-036, SC-017 | `apps/web/tests/content/missao-upload.test.ts` | T029 |
 | T032 | The mission page: a maker submits, a signed-out visitor sees the mission with **no personal percentage** and an invitation to sign in | FR-024, US3 | `apps/web/app/(frontend)/missoes/page.tsx` | T029 |
 

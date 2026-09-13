@@ -147,7 +147,7 @@ exists"*. It lands here — see CLR-002.
 | FR-004 | XP is granted **inside the same transaction as the action that caused it**, never by a later job | P1 | US1 |
 | FR-005 | The economy lives in `packages/game` as pure functions — no Payload import, no IO, `tenantId` an explicit argument | P1 | US1 |
 | FR-006 | 1 XP per action; the actions are exactly: watch a class to 100%, publish a project, publish a 3D model, publish an article, complete a mission | P1 | US1 |
-| FR-007 | 5 XP per level, linear; level cap 10; the same curve and cap for the maker, each skill, and the lab | P1 | US1 |
+| FR-007 | `nivel = min(rules.nivelMaximo, floor(xp / rules.xpPorNivel))` — one rule for the maker, each skill and the lab. The CITe seed is 5 XP per level, cap 10; the **rule** is the requirement and the **numbers are data** (CLR-010) | P1 | US1 |
 | FR-008 | Likes award no XP, and calendar attendance awards none in v1 | P1 | US1 |
 | FR-009 | `regrasXp` is **per-organization data**, seeded on organization creation from the CITe default — retuning the economy is an edit, not a deploy | P1 | US7 |
 
@@ -156,7 +156,7 @@ exists"*. It lands here — see CLR-002.
 | ID | Requirement | Priority | Scenario |
 |----|-------------|----------|----------|
 | FR-010 | A maker's XP total and level, and each skill's XP and level, are **projections of the ledger**, maintained the way `counters.ts` maintains counters: recomputed from source rows inside the writing transaction | P1 | US1 |
-| FR-011 | A reconciliation gate recomputes every projection from the ledger and reports any disagreement, as `counters.ts` already does for counters | P1 | US1 |
+| FR-011 | A reconciliation gate recomputes every projection from the ledger and **fails CI** on any disagreement, as `counters.ts` already does for counters. Nothing repairs at runtime (CLR-014) | P1 | US1 |
 | FR-012 | The Nível do Lab is a projection of the organization's whole ledger, on the same curve | P2 | US8 |
 | FR-013 | The ranking orders this organization's makers by XP total, highest first, with a **declared tie-break** | P2 | US6 |
 
@@ -178,7 +178,7 @@ exists"*. It lands here — see CLR-002.
 | FR-020 | A `missao` collection, **scoped**, carrying a title, a description, an icon, the skill it credits, and a published state | P1 | US3 |
 | FR-021 | A maker submits a completion for a mission; the team approves or rejects it in the review queue 002 built | P1 | US3 |
 | FR-022 | The XP credits **on approval**, once, through the same idempotency key as every other action | P1 | US3 |
-| FR-023 | A maker may hold only one open submission per mission | P2 | US3 |
+| FR-023 | **One submission row per mission per maker, forever**, enforced by a unique index. A rejection does not bar the maker: the row is **reopened** (CLR-015) | P2 | US3 |
 | FR-024 | A mission's progress shown to a maker is **their own**; a signed-out visitor sees the mission with no personal percentage and an invitation to sign in | P2 | US3 |
 | FR-036 | A submission carries **one photo**, as a `midiaImagem` relationship — never a text key, never a second upload route (CLR-006). Missions therefore sit on the upload trust boundary, and constitution Principle 5's security review applies to them | P1 | US3 |
 
@@ -189,6 +189,11 @@ exists"*. It lands here — see CLR-002.
 | FR-025 | Idempotency is per content: a class credits once **ever**, however many times it is rewatched; a publication credits once per content, across unpublish/republish cycles | P1 | US2 |
 | FR-026 | There is no daily cap in v1 — the decision of 2026-08-24, recorded so its absence is deliberate | P2 | US2 |
 | FR-027 | A completion claim for a class with no progress row belonging to the requesting maker is refused | P1 | US2 |
+| FR-039 | `projeto`, `artigo`, `aula` and `modelo3d` each carry a **`skill`** relationship, nullable, naming the skill a publication credits (CLR-009). A publication with none credits the maker's total and no skill | P1 | US1 |
+| FR-040 | Deleting a profile **nulls** `xpLedger.perfil` on its entries and changes nothing else; every reader tolerates an entry with no profile (CLR-011) | P1 | US7 |
+| FR-041 | A rejected submission returns to `enviada` when the maker edits it — one row, reopened (CLR-015) | P2 | US3 |
+| FR-042 | The credit hook is registered on **four** collections, never on `evento` (CLR-012) | P1 | US1 |
+| FR-043 | `xpTotal` is uncapped; only `nivel` stops at the cap, and the pip bar stays full there (CLR-013) | P1 | US6 |
 | FR-038 | Beyond FR-027, a class completion is **trusted** in v1 — no elapsed-time floor, no checkpoints (CLR-008). The ledger is the audit trail: every credit carries who, what and when, and is append-only, so farming is bounded and visible rather than prevented | P2 | US2 |
 
 ### Multi-tenancy
@@ -219,7 +224,7 @@ exists"*. It lands here — see CLR-002.
 | SC-003 | A failed ledger write rolls the approval back — no published content without its entry | a test with a rejecting ledger, asserting the content is still unpublished |
 | SC-004 | Every projection equals a recount of the ledger, across the whole database | a reconciliation gate, in the shape `counters.test.ts` already uses |
 | SC-005 | `packages/game` imports nothing from Payload or Next | the existing import fence, extended to the new modules |
-| SC-006 | Level arithmetic matches the table: 0 XP → level 0, 5 → 1, 49 → 9, 50 → 10, 999 → 10 | a table test over the pure function |
+| SC-006 | Level arithmetic matches the rule against **injected** rules, and the CITe seed's table (0→0, 5→1, 49→9, 50→10, 999→10) is one case of it — never the definition (CLR-010) | a table test over the pure function, plus one with a different cap |
 | SC-007 | Deactivating a skill changes no `xp` value anywhere | a test that records every total, deactivates, and re-reads |
 | SC-008 | Reactivating restores every level to its previous value | the same test, continued |
 | SC-009 | Adding a skill gives it at level 0 to a maker who signed up before it existed | an integration test |
@@ -233,6 +238,9 @@ exists"*. It lands here — see CLR-002.
 | SC-017 | A mission submission stores a `midiaImagem` id, never a key, a URL or a filename | a test feeding each of those four shapes and asserting the write is refused |
 | SC-018 | `/ranking` answers for a signed-in maker and never lists another organization's makers | an integration test, plus the isolation layer of SC-010 |
 | SC-019 | Every XP credit is reconstructible from the ledger alone — who, what, when | a test that rebuilds one maker's history from entries only |
+| SC-020 | Publishing an `evento` credits nothing | an integration test approving an event and asserting zero entries |
+| SC-021 | Erasing a profile leaves its entries with `perfil` null, and the lab level is unchanged | an integration test around 004's `deleteAccount` |
+| SC-022 | A rejected submission can be reopened and approved, crediting once | an integration test driving reject → edit → approve |
 
 ## Clarifications
 
@@ -244,7 +252,8 @@ recorded as CLR-006, CLR-007 and CLR-008; the other five were decided while writ
 **Decision**: `perfilMaker.xp`, each skill's `nivel`/`xp`, the lab level and the ranking are all
 **derived**. They are stored for reading, maintained inside the writing transaction, and
 reconcilable against the ledger at any time. When a projection and the ledger disagree, the
-ledger is right and the projection is repaired.
+ledger is right and the projection is repaired **by re-running the maintenance — which CI
+requires before merge (CLR-014 narrows this: there is no runtime repair)**.
 
 **Rationale**: constitution Principle 3 makes the ledger append-only and idempotent; that only
 buys something if nothing else is authoritative. `counters.ts` already established this exact
@@ -365,4 +374,124 @@ the game is running — the two options costed were an elapsed-time floor agains
 changes `progressoAula`'s write path).
 
 **Impact**: FR-026, FR-027, FR-038.
+
+### CLR-009: A publication credits the skill its content names [design] — decided 2026-09-13
+
+**Decision**: `projeto`, `artigo`, `aula` and `modelo3d` each gain a **`skill` relationship**,
+chosen by the author and visible to the team at approval. That is the skill the ledger entry
+credits.
+
+**Rationale**: found by CHK010/011 — FR-002 requires the entry to record a skill and **nothing
+mapped a publication to one**. A project has a `categoria`; an article and a model have neither,
+and the three category vocabularies are independent of each other, so a category→skill mapping
+would have been a fourth vocabulary to seed and keep in step.
+
+Naming the skill on the content is the honest shape: a laser-cut piece credits *Corte a Laser*
+because its author said so, and the team confirms it in the same review that publishes it.
+`gamification.md` assumes exactly this when it says makers evolve skills *"pelo jogo — publicar
+modelos 3D, assistir aulas, publicar projetos"*.
+
+**Impact**: FR-039 (new), FR-002, FR-006. Four shipped collections gain a field and a migration.
+**Nullable**, for the reason CLR-002 already gives: a column created nullable never needs 004's
+two-layer `required: true` repair, and the content published before this feature has no skill to
+name. A publication with no skill credits the maker's total and no skill — which is also what
+the review queue is for.
+
+### CLR-010: `regrasXp` is the authority; 10 is the seed [architecture] — decided 2026-09-13
+
+**Decision**: the level cap, the XP per action and the XP per level are **whatever
+`regrasXp` says** for that organization. The numbers in `gamification.md` and in this spec are
+the **CITe defaults**, seeded on organization creation.
+
+**Rationale**: found by CHK001 — FR-007 stated the cap as a requirement while FR-009 made it
+editable data, and the two cannot both be true. Constitution Principle 3 breaks the tie in one
+sentence: *"retuning XP is an edit, not a deploy."*
+
+**What this changes about testing, which is the part that matters**: a test asserting *"the cap
+is 10"* is asserting a **seed value**, and it fails on a lab that retuned legitimately. Tests
+assert the **rule** — `levelFor(xp, rules) === min(rules.nivelMaximo, floor(xp / rules.xpPorNivel))`
+— against **injected** rules. SC-006's table becomes a table over the CITe defaults, named as
+such.
+
+**Impact**: FR-007, FR-009, SC-006, and every task that would otherwise have hard-coded a 10.
+
+### CLR-011: An erased maker's entries survive, anonymised [data-lifecycle] — decided 2026-09-13
+
+**Decision**: deleting a profile (004's FR-031) **nulls** `xpLedger.perfil` on that maker's
+entries and leaves everything else — skill, action, ref, amount, timestamp — untouched.
+
+**Rationale**: found by CHK013. It is 004's tombstone applied to the ledger, and for the same
+reason: *the work stays, the name goes*. The lab's collective level (FR-012) stays honest,
+because the XP was really earned; the ranking simply loses a row; and FR-001's append-only
+survives, because nulling one column is not rewriting history — the deletion itself is the
+historical event.
+
+The two rejected alternatives each broke something: deleting the entries would rewrite history
+*and* silently drop the lab's level when somebody leaves; leaving a dangling reference is the
+exact shape 004's phase 6 spent a round repairing.
+
+**Impact**: FR-040 (new), FR-001, FR-012, FR-013. `xpLedger.perfil` is **nullable**, and every
+reader — ranking, reconciliation, lab level — is written knowing an entry may have no profile.
+`docs/lgpd.md` gains a row saying what deletion does to XP.
+
+### CLR-012: Publishing an EVENT scores nothing [scope] — decided 2026-09-13
+
+**Decision**: the credit hook is registered on **four** collections — `projeto`, `artigo`,
+`aula`, `modelo3d` — and **not** on `evento`.
+
+**Rationale**: found by CHK002, and it is the cheapest bug this checklist prevented. `evento`
+carries `aprovacaoRegistrada` exactly like the other four, so *"register the hook on the
+reviewable collections"* would have credited event publication — which FR-008 forbids in one
+line, and which question 4 of `gamification.md` decided on 2026-08-24: *"o calendário não
+concede XP por enquanto"*.
+
+**Impact**: FR-006, FR-008, and T017's wording.
+
+### CLR-013: `xpTotal` is uncapped; only `nivel` stops at the cap [design] — decided 2026-09-13
+
+**Decision**: a maker's `xpTotal` keeps rising forever. `nivel` is
+`min(cap, floor(xpTotal / perLevel))`, and the pip bar stays **full** at the cap rather than
+resetting.
+
+**Rationale**: found by CHK003/CHK004. FR-013 sorts the ranking by XP total — if the total
+capped with the level, every maker at the cap would tie permanently and the ranking would stop
+being one. A bar that reset to empty at the top would read as a demotion.
+
+**Impact**: FR-007, FR-013, FR-032, SC-006.
+
+### CLR-014: The reconciliation is a CI gate, not a runtime repair [architecture] — decided 2026-09-13
+
+**Decision**: FR-011's reconciliation runs in CI and **fails the build** on drift. Nothing
+repairs a projection at runtime.
+
+**Rationale**: found by CHK006, which noticed FR-011 describes a *test* while CLR-001 says a
+disagreeing projection *"is repaired"*. The same question was answered for the like and download
+counters in 002, and this feature should not answer it differently: `counters.ts` says in its own
+docstring that a stored value goes stale through a path the hook never sees — an admin bulk
+delete, a migration, a manual SQL fix — and that *"nothing fails when that happens"* until the
+gate runs.
+
+Consistency is the argument. A runtime repair here and none there would mean two disciplines for
+one guarantee, which is what CLR-001 exists to prevent.
+
+**Impact**: FR-011 is reworded from "reports any disagreement" to "fails CI on any
+disagreement". CLR-001's *"is repaired"* becomes *"is repaired by re-running the maintenance,
+which CI requires before merge"*.
+
+### CLR-015: A rejected submission is reopened, never replaced [design] — decided 2026-09-13
+
+**Decision**: there is **one `missaoSubmissao` row per (mission, maker), forever**. A rejection
+sets its status to `recusada`; the maker edits it — a new photo, a new note — and it returns to
+`enviada`.
+
+**Rationale**: found by CHK017. The unique index FR-023 asks for would otherwise bar a maker
+permanently after one rejection, which is punitive and certainly not intended: a rejection means
+*"not yet"*, and a review queue whose only outcome is exile is not a review queue.
+
+Reopening keeps the constraint as a **database guarantee** rather than a partial index or an
+application check, and it keeps the review history in one row where a team member can see that
+this is the second attempt.
+
+**Impact**: FR-023 is reworded — one submission per mission per maker, reopenable — and FR-041
+(new) carries the reopen transition.
 

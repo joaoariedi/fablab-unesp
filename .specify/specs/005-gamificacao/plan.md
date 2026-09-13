@@ -21,7 +21,11 @@
 
 `xpLedger`, scoped, append-only by access control (`create` yes, `update`/`delete` never). The
 credit is `creditXp()` in `apps/web/lib/content/xp.ts`, called from an **`afterChange`** hook on
-the five reviewable collections and on `progressoAula`, passing the causing write's own `req`.
+**four** reviewable collections and on `progressoAula`, passing the causing write's own `req`.
+
+**Four, not five** — `evento` carries `aprovacaoRegistrada` exactly like the others, so
+"register it on the reviewable collections" would have credited event publication, which FR-008
+forbids. The checklist caught it before a line was written (CLR-012).
 
 `beforeChange` is wrong for it: `stampApproval` runs there and decides *whether this write is the
 approval*, and reading that decision before it is made is a race with an ordering nobody
@@ -140,6 +144,7 @@ during implementation is **a finding to report with the measurement**, not a doo
 | `apps/web/lib/content/review.ts` | modify | export what the credit hook needs to read the approval |
 | `apps/web/collections/content/{Projeto,Artigo,Aula,Modelo3d,Evento}.ts` | modify | register the credit `afterChange` hook |
 | `apps/web/collections/content/Projeto.ts` | modify | gains `autor`, **nullable**, with `sameTenant` |
+| `apps/web/collections/content/{Projeto,Artigo,Aula,Modelo3d}.ts` | modify | each gains `skill`, **nullable** — what a publication credits (CLR-009) |
 | `apps/web/collections/content/ProgressoAula.ts` | modify | the completion credit hook |
 | `apps/web/collections/content/PerfilMaker.ts` | modify | gains `xpTotal` and `nivel` at the top level |
 | `apps/web/collections/content/Skill.ts` | modify | deactivation semantics; refuse hard delete with entries |
@@ -193,6 +198,16 @@ text column.
 would make moving it a migration (the note `perfilMaker.skills[].nivel` already carries).
 
 **`projeto`** gains `autor` → `perfilMaker`, **nullable**, with `sameTenant`.
+
+**`xpLedger.perfil` is NULLABLE** (CLR-011). Erasing a profile nulls it and leaves the entry
+otherwise untouched — 004's tombstone applied to the ledger, so the lab level stays honest and
+append-only survives. Every reader is written knowing an entry may have no profile.
+
+**`projeto`, `artigo`, `aula` and `modelo3d` each gain `skill`** → `skill`, **nullable**, with
+`sameTenant` (CLR-009). This is what a publication's ledger entry credits, and the checklist
+found it missing: FR-002 required a skill on every entry and nothing mapped a publication to one.
+Nullable because content published before this feature names none — and because a column created
+nullable never needs 004's two-layer `required: true` repair.
 
 ## API Contracts
 
