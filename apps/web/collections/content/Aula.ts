@@ -68,12 +68,13 @@ const pendingSlug = (slug: string): CollectionSlug => slug as CollectionSlug
  * whenever they disagree, so config registration and registry entry cannot land separately.
  *
  * **Declared elsewhere, on purpose:**
- *   - **`skill`**, which `aulas.md` marks **(proposta)** and whose target collection belongs
- *     to feature 005 (FR-022 as amended by D2 — a `relationTo` cannot name a collection that
- *     does not exist; Payload throws `InvalidFieldRelationship` at config load).
  *   - **The like itself.** The heart on an aula is a `curtida` row (T043); `curtidas` here is
  *     the counter a card renders, maintained in the same transaction (`data-model.md`
  *     § Derived values). `curtida.conteudo` gains `aula` as a target when both are registered.
+ *
+ * `aulas.md`'s **(proposta)** `skill` has landed at the bottom of this file now that feature
+ * 005 registers the target collection — one skill per publication (FR-039, CLR-009), because
+ * the ledger entry it feeds records exactly one.
  */
 export const Aula: CollectionConfig = {
   slug: 'aula',
@@ -88,6 +89,27 @@ export const Aula: CollectionConfig = {
   // `beforeValidate fields → beforeValidate collection → beforeChange collection`). A maker's
   // refused hop therefore never reaches the hook as `publicado`, and SC-005 cannot leak an
   // approval through SC-004. A hook that is written but never registered stamps nothing.
+  //
+  // **No `afterChange` credit hook, and that is the deliberate half** (T017, FR-006, FR-042).
+  //
+  // T017 and CLR-012 name `aula` among the four collections the credit is registered on, and
+  // FR-006 names the five actions that score: *watch a class to 100%, publish a project,
+  // publish a 3D model, publish an article, complete a mission*. Publishing a class is not one
+  // of them, and `ACOES_XP` in `XpLedger.ts` is where that refusal is enforceable — there is no
+  // `publicar_aula` for a hook to write, and its own docblock says a value absent from that
+  // list is refused by the select column.
+  //
+  // The only action naming a class is `assistir_aula`, and crediting a publication with it
+  // would be worse than crediting nothing: the idempotency key is
+  // `(tenant, perfil, acao, refTipo, refId)`, so stamping `(autor, assistir_aula, aula, N)` at
+  // publication **consumes the key the author's own completion of class N would later use**,
+  // and their real credit (T023) is then refused as a duplicate for an action they did perform.
+  //
+  // What this collection's `skill` field feeds is that completion credit, not a publication:
+  // it names the subject the class teaches, which `progressoAula`'s hook credits to the maker
+  // who watched it. So the conflict is between FR-042's *"four"* and FR-006's action list, and
+  // this is the reading that leaves the ledger correct. `tests/content/xp-credit-hook.test.ts`
+  // asserts the absence rather than leaving it to be noticed.
   hooks: {
     beforeChange: [stampApproval],
   },
@@ -404,6 +426,23 @@ export const Aula: CollectionConfig = {
       admin: {
         description: 'Preenchida na publicação. Ordenação alternativa à ordem da trilha.',
       },
+    },
+    {
+      name: 'skill',
+      type: 'relationship',
+      relationTo: 'skill',
+      label: 'Skill',
+      admin: {
+        description:
+          'A skill creditada quando alguém assistir esta aula até o fim (FR-006). Publicar uma aula não pontua — CLR-016 — pode ficar vazia, o XP do autor sobe do mesmo jeito.',
+      },
+      // The map from a publication to the skill its ledger entry credits (FR-039, CLR-009),
+      // declared identically on all four publishables — `projeto.skill` carries the full
+      // reasoning. In short: FR-002 needs the entry to name a skill and nothing else here maps
+      // a publication to one; it is **nullable** because content published before feature 005
+      // names none and a publication with no skill still credits the maker's total; and
+      // `sameTenant` is not optional on a scoped→scoped edge (CLR-001, spike S4c).
+      validate: sameTenant,
     },
   ],
 }

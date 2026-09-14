@@ -41,6 +41,12 @@ class FakeCounterStore implements CounterStore {
     private readonly behaviour: {
       /** What a source-row count returns. Deliberately unrelated to `docs.length`. */
       totalDocs?: number
+      /**
+       * The source rows themselves, served one page at a time. Only a `sum` derivation ever
+       * sees them — when this is unset, `find` keeps returning an empty `docs` so the
+       * count assertions above stay honest.
+       */
+      docs?: Record<string, unknown>[]
       /** The target document as currently stored. */
       stored?: Record<string, unknown> | null
       /** When set, `update` rejects with it — the transaction-rollback path. */
@@ -54,9 +60,21 @@ class FakeCounterStore implements CounterStore {
 
   find = async <T>(args: FindArgs): Promise<PaginatedResult<T>> => {
     this.finds.push(args)
-    // `docs` is EMPTY while `totalDocs` is not: an implementation that counts `docs.length`
-    // reads 0 here and fails, which is the point. Counting rows must not load them.
-    return { docs: [] as T[], totalDocs: this.behaviour.totalDocs ?? 0 }
+    const rows = this.behaviour.docs
+    if (!rows) {
+      // `docs` is EMPTY while `totalDocs` is not: an implementation that counts `docs.length`
+      // reads 0 here and fails, which is the point. Counting rows must not load them.
+      return { docs: [] as T[], totalDocs: this.behaviour.totalDocs ?? 0 }
+    }
+    // Paged for real, because `totalDocs` is reported for the WHOLE source while `docs`
+    // carries one page: a sum that reads a single page and stops under-reports silently,
+    // and only a fake that paginates can show it.
+    const limit = args.limit ?? rows.length
+    const page = args.page ?? 1
+    return {
+      docs: rows.slice((page - 1) * limit, page * limit) as T[],
+      totalDocs: this.behaviour.totalDocs ?? rows.length,
+    }
   }
 
   findByID = async <T>(args: ByIDArgs): Promise<T | null> => {
@@ -272,5 +290,84 @@ describe('syncCounter runs inside the causing transaction (T030, FR-020)', () =>
         { getStore: async () => store },
       ),
     ).rejects.toThrow(/projeto/)
+  })
+})
+
+/**
+ * T014 / FR-010 — the third derivation. XP totals are projections of the ledger and they are
+ * expressed in this module's vocabulary on purpose (plan § D2), so the reconciliation gate
+ * reconciles them in the same sweep as the like and download counters.
+ *
+ * `sum` is the derivation that costs something: `count` reads `totalDocs` off the result and
+ * never touches a row, while a sum has to read every source row, because `regrasXp.xpPorAcao`
+ * makes an entry's amount tunable. Both assertions below exist because of that difference —
+ * one proves the amounts are added rather than the rows counted, the other proves the read
+ * does not stop at the first page.
+ */
+describe('syncCounter sums a field across the source rows (T014, FR-010)', () => {
+  const PERFIL_3 = { collection: 'perfilMaker', id: 3 } as const
+
+  it('adds up the stored amounts instead of counting the entries', async () => {
+    // `totalDocs` (3) is deliberately NOT the answer (12): an implementation that reused the
+    // `count` branch would return the row count and look plausible for as long as
+    // `xpPorAcao` stays 1. The amount is stored per entry because the rule is tunable, so
+    // the count/sum agreement is an oracle (T021b) and never a mechanism.
+    const store = new FakeCounterStore({
+      docs: [{ quantidade: 3 }, { quantidade: 4 }, { quantidade: 5 }],
+    })
+
+    const value = await syncCounter(
+      {
+        req: causingWrite(),
+        target: PERFIL_3,
+        field: 'curtidas',
+        derive: {
+          kind: 'sum',
+          field: 'quantidade',
+          source: { collection: 'xpLedger', where: { perfil: { equals: 3 } } },
+        },
+      },
+      { getStore: async () => store },
+    )
+
+    expect(value).toBe(12)
+    expect(store.writes).toEqual([
+      { collection: 'perfilMaker', id: 3, data: { curtidas: 12 } },
+    ])
+    expect(
+      store.reads,
+      'the sum read the target document: a projection is derived from its source rows, not ' +
+        'accumulated onto whatever the column already held',
+    ).toEqual([])
+  })
+
+  it('reads every page of the source, so a long ledger is not silently truncated', async () => {
+    // The failure this guards is invisible in production: one unpaged `find` returns a
+    // page-sized slice, the sum is short by everything after it, and nothing errors. The
+    // maker's XP simply stops rising once their ledger outgrows one page.
+    const entries = Array.from({ length: 250 }, () => ({ quantidade: 2 }))
+    const store = new FakeCounterStore({ docs: entries })
+
+    const value = await syncCounter(
+      {
+        req: causingWrite(),
+        target: PERFIL_3,
+        field: 'curtidas',
+        derive: {
+          kind: 'sum',
+          field: 'quantidade',
+          source: { collection: 'xpLedger', where: { perfil: { equals: 3 } } },
+        },
+      },
+      { getStore: async () => store },
+    )
+
+    expect(value).toBe(500)
+    expect(
+      store.finds.length,
+      'the whole source was requested in one unbounded read: a sum that asks for no page ' +
+        'size gets Payload\'s default and under-reports past it',
+    ).toBeGreaterThan(1)
+    expect(store.finds.every((call) => (call.limit ?? 0) > 0)).toBe(true)
   })
 })

@@ -41,8 +41,25 @@ import { CrossTenantError, getTenantScopedPayload, type TenantScopedPayload } fr
  * in that collection's `beforeChange` (T039) rather than here.
  */
 
-/** The stored counters of FR-020. `formatos` is derived on its own document — see above. */
-export type CounterField = 'curtidas' | 'downloads' | 'totalModelos'
+/**
+ * Every value this strategy maintains: FR-020's three counters, plus the two XP projections of
+ * FR-010 — `perfilMaker.xpTotal` and `perfilMaker.nivel`, recomputed from `xpLedger` inside the
+ * crediting transaction exactly as `curtidas` is recomputed from `curtida` inside the like's.
+ * (`formatos` is derived on its own document and is not a counter — see above.)
+ *
+ * **They share this vocabulary rather than getting one of their own** (plan § D2): FR-011's
+ * reconciliation then sweeps the projections in the SAME pass as the counters, instead of in a
+ * second gate that would be a second thing to get wrong. The cost is stated rather than
+ * inherited — `tests/content/counters.test.ts` keys its recount matrix by this type under
+ * `satisfies Record<DerivedField, DerivedSource>`, so a value added here **fails typecheck**
+ * until someone writes how it is recomputed.
+ *
+ * The per-skill `perfilMaker.skills[].xp` and `.nivel` are deliberately absent. Payload does not
+ * hoist an array's subfields into a collection's `flattenedFields` (they stay inside
+ * `FlattenedArrayField`), so the gate's column scan cannot see them and naming them here would
+ * claim a coverage no recount delivers — the one failure that whole gate is written against.
+ */
+export type CounterField = 'curtidas' | 'downloads' | 'totalModelos' | 'xpTotal' | 'nivel'
 
 /** The document whose column is being maintained. */
 export type CounterTarget = { collection: string; id: string | number }
@@ -69,6 +86,20 @@ export type CounterSource = { collection: string; where: Where }
 export type CounterDerivation =
   | { kind: 'count'; source: CounterSource }
   | { kind: 'delta'; by: number }
+  /**
+   * `sum` is the derivation the XP projections of FR-010 use, and it is the expensive one.
+   *
+   * **`count` reads `totalDocs` off the result and touches no row; a sum must read them.**
+   * There is no aggregate in the choke point's surface, so the amounts are added in this
+   * process, one page at a time — see `SUM_PAGE_SIZE`. It is stated here rather than
+   * discovered by whoever first points a sum at a large collection.
+   *
+   * The rows cannot be counted instead, however tempting: `regrasXp.xpPorAcao` makes an
+   * entry's amount tunable, so the amount is stored per entry. While that rule is 1 a sum
+   * and a count agree, and `tests/content/xp-vs-count.test.ts` asserts that as a free
+   * oracle — never as a mechanism this may lean on (plan § D2).
+   */
+  | { kind: 'sum'; source: CounterSource; field: string }
 
 /**
  * The slice of the choke-point client this needs. Narrowed to three operations so any
@@ -93,12 +124,52 @@ export type CounterSync = {
 /** `limit: 1` because only `totalDocs` is wanted — the rows themselves are never needed. */
 const COUNT_ONLY = 1
 
-const numberAt = (doc: Record<string, unknown> | null, field: CounterField): number => {
+/**
+ * A sum reads rows, so it must say how many at a time. Leaving `limit` off is the defect
+ * this constant exists to prevent: Payload would apply its own default page size and the
+ * sum would stop there, short by every row after it and reporting no error at all.
+ */
+const SUM_PAGE_SIZE = 200
+
+const numberAt = (doc: Record<string, unknown> | null, field: string): number => {
   const stored = doc?.[field]
   return typeof stored === 'number' ? stored : 0
 }
 
+/**
+ * Add `field` across every source row, page by page, until `totalDocs` have been read.
+ *
+ * The loop ends on an empty page as well as on the count, so a source that shrinks under a
+ * concurrent delete terminates instead of paging forever.
+ */
+const sumSourceRows = async (
+  store: CounterStore,
+  derive: { source: CounterSource; field: string },
+): Promise<number> => {
+  let total = 0
+  let read = 0
+
+  for (let page = 1; ; page += 1) {
+    const { docs, totalDocs } = await store.find<Record<string, unknown>>({
+      collection: derive.source.collection,
+      where: derive.source.where,
+      limit: SUM_PAGE_SIZE,
+      page,
+      depth: 0,
+    })
+
+    for (const doc of docs) total += numberAt(doc, derive.field)
+    read += docs.length
+
+    if (docs.length === 0 || read >= totalDocs) return total
+  }
+}
+
 const deriveValue = async (store: CounterStore, sync: CounterSync): Promise<number> => {
+  if (sync.derive.kind === 'sum') {
+    return sumSourceRows(store, sync.derive)
+  }
+
   if (sync.derive.kind === 'count') {
     const { totalDocs } = await store.find({
       collection: sync.derive.source.collection,

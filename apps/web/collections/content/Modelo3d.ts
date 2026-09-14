@@ -6,7 +6,7 @@ import { sameTenant } from '../../lib/tenancy/same-tenant-validator'
 import { scopedListEndpoint } from '../../lib/tenancy/scoped-endpoint'
 import { ALLOWED_EXTENSIONS } from '../../lib/uploads/limits'
 import { deriveFormatos, MODELO_FILE_TARGETS } from './formatos'
-import { downloadEndpoint } from './Projeto'
+import { creditOnApproval, downloadEndpoint } from './Projeto'
 
 /**
  * A relation target whose collection **exists but is not registered yet**.
@@ -81,9 +81,12 @@ const FORMATO_OPTIONS = [
  *   - `parametros_impressao` (material, altura de camada, suporte) and `licenca`, both marked
  *     **(proposta)** in `biblioteca-3d.md` and neither rendered by any surface this feature
  *     ships. Adding a group or an optional select later is an additive migration.
- *   - `skills_relacionadas` and the mission hooks, whose targets belong to feature 005 —
- *     Payload throws at config load for a `relationTo` naming a collection that does not
- *     exist (spec § D2).
+ *   - the mission hooks, whose targets belong to feature 005 — Payload throws at config load
+ *     for a `relationTo` naming a collection that does not exist (spec § D2).
+ *
+ * `biblioteca-3d.md`'s `skills_relacionadas` **has** landed, as the singular `skill` at the
+ * bottom of this file: FR-039 credits one skill per publication (CLR-009), not a list,
+ * because the ledger entry it feeds records exactly one.
  */
 export const Modelo3d: CollectionConfig = {
   slug: 'modelo3d',
@@ -103,6 +106,11 @@ export const Modelo3d: CollectionConfig = {
   // stage, measured in `collections/operations/create.js:93-138`.
   hooks: {
     beforeChange: [stampApproval, deriveFormatos],
+    // The credit of FR-006/FR-042, reading the record `stampApproval` just wrote in the same
+    // write. `publicar_modelo3d` and `modelo3d` are named here rather than inside the factory:
+    // a single default would credit whichever collection the author of the factory had in
+    // mind, and every union member typechecks on every publishable.
+    afterChange: [creditOnApproval('publicar_modelo3d', 'modelo3d')],
   },
   labels: {
     singular: 'Modelo 3D',
@@ -414,6 +422,23 @@ export const Modelo3d: CollectionConfig = {
       admin: {
         description: 'Preenchida na publicação. Ordena a listagem "Mais recentes".',
       },
+    },
+    {
+      name: 'skill',
+      type: 'relationship',
+      relationTo: 'skill',
+      label: 'Skill',
+      admin: {
+        description:
+          'A skill creditada quando este modelo for publicado — pode ficar vazia, o XP do autor sobe do mesmo jeito.',
+      },
+      // The map from a publication to the skill its ledger entry credits (FR-039, CLR-009),
+      // declared identically on all four publishables — `projeto.skill` carries the full
+      // reasoning. In short: FR-002 needs the entry to name a skill and nothing else here maps
+      // a publication to one; it is **nullable** because content published before feature 005
+      // names none and a publication with no skill still credits the maker's total; and
+      // `sameTenant` is not optional on a scoped→scoped edge (CLR-001, spike S4c).
+      validate: sameTenant,
     },
   ],
 }

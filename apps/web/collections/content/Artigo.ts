@@ -4,7 +4,7 @@ import { stampApproval } from '../../lib/content/review'
 import { canPublishField, scopedAccess, teamOnly } from '../../lib/tenancy/access'
 import { sameTenant } from '../../lib/tenancy/same-tenant-validator'
 import { scopedListEndpoint } from '../../lib/tenancy/scoped-endpoint'
-import { downloadEndpoint } from './Projeto'
+import { creditOnApproval, downloadEndpoint } from './Projeto'
 
 /**
  * An article written at **one** lab (FR-001, FR-021, T038) — the second collection off the
@@ -40,9 +40,10 @@ import { downloadEndpoint } from './Projeto'
  * Registration — the config list, the plugin's `collections` map and `SCOPE_REGISTRY` — is
  * T044's single edit; see `CategoriaArtigo.ts` for why it is not made here.
  *
- * **Declared elsewhere, on purpose:** `skills_relacionadas`, marked **(proposta)** in
- * `artigos.md` § Ganchos, whose target `skill` belongs to feature 005 (FR-022 as amended by
- * D2 — a `relationTo` cannot name a collection that does not exist).
+ * `artigos.md` § Ganchos marks `skills_relacionadas` **(proposta)**; it landed as the
+ * singular `skill` at the bottom of this file, once feature 005 registered the target
+ * collection. Singular because FR-039 credits one skill per publication (CLR-009), not a
+ * list — the ledger entry it feeds records exactly one.
  */
 /**
  * A relation target whose collection **exists but is not registered yet**.
@@ -76,6 +77,11 @@ export const Artigo: CollectionConfig = {
   // there; a hook that is written but never registered stamps nothing.
   hooks: {
     beforeChange: [stampApproval],
+    // The credit of FR-006/FR-042, reading the record `stampApproval` just wrote in the same
+    // write. `publicar_artigo` and `artigo` are named here rather than inside the factory: a
+    // single default would credit whichever collection the author of the factory had in mind,
+    // and every union member typechecks on every publishable.
+    afterChange: [creditOnApproval('publicar_artigo', 'artigo')],
   },
   labels: {
     singular: 'Artigo',
@@ -372,6 +378,23 @@ export const Artigo: CollectionConfig = {
       admin: {
         description: 'Preenchida na publicação. Exibida como 12 MAI 2024 e ordena a listagem.',
       },
+    },
+    {
+      name: 'skill',
+      type: 'relationship',
+      relationTo: 'skill',
+      label: 'Skill',
+      admin: {
+        description:
+          'A skill creditada quando este artigo for publicado — pode ficar vazia, o XP do autor sobe do mesmo jeito.',
+      },
+      // The map from a publication to the skill its ledger entry credits (FR-039, CLR-009),
+      // declared identically on all four publishables — `projeto.skill` carries the full
+      // reasoning. In short: FR-002 needs the entry to name a skill and nothing else here maps
+      // a publication to one; it is **nullable** because content published before feature 005
+      // names none and a publication with no skill still credits the maker's total; and
+      // `sameTenant` is not optional on a scoped→scoped edge (CLR-001, spike S4c).
+      validate: sameTenant,
     },
   ],
 }

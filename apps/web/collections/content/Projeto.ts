@@ -1,7 +1,15 @@
-import type { CollectionConfig, Endpoint, PayloadRequest } from 'payload'
+import type {
+  CollectionAfterChangeHook,
+  CollectionConfig,
+  Endpoint,
+  PayloadRequest,
+} from 'payload'
 
 import { serveDownload } from '../../lib/content/downloads'
-import { stampApproval } from '../../lib/content/review'
+import { stampApproval, type ReviewableDoc } from '../../lib/content/review'
+import { creditXp } from '../../lib/content/xp'
+import { TenantUnresolvedError } from '../../lib/tenancy/errors'
+import type { AcaoXp, RefTipoXp } from './XpLedger'
 import { canPublishField, scopedAccess, teamOnly } from '../../lib/tenancy/access'
 import { mediaObjectReader } from '../../lib/tenancy/media-objects'
 import { sameTenant } from '../../lib/tenancy/same-tenant-validator'
@@ -69,6 +77,110 @@ export function downloadEndpoint(
   }
 }
 
+/** A relationship value as a hook receives it: an id at `depth: 0`, the document above it. */
+const idDaRelacao = (ref: unknown): string | number | null => {
+  if (ref === null || ref === undefined) return null
+  if (typeof ref === 'object') {
+    const { id } = ref as { id?: unknown }
+    return typeof id === 'string' || typeof id === 'number' ? id : null
+  }
+  return typeof ref === 'string' || typeof ref === 'number' ? ref : null
+}
+
+/** The slice of a publishable this hook reads, over the approval record 004 already defines. */
+type Publicacao = ReviewableDoc & { id?: unknown; autor?: unknown; skill?: unknown }
+
+/**
+ * **The credit** (T017, FR-006, FR-042, US1): one ledger entry per publication, written inside
+ * the approving transaction.
+ *
+ * `stampApproval` decides in `beforeChange` whether *this* write is the approval and records it
+ * on the document (feature 004's CLR-001). This hook runs in `afterChange`, where the stamp is
+ * already written, and credits the author. `beforeChange` is wrong for it: reading a decision
+ * being made by a sibling hook is a race with an ordering nobody declared, and `afterChange` is
+ * verified to run inside the operation's transaction in Payload 3.88
+ * (`updateByID.js` commits at `:166`, collection hooks run in `updateDocument` at `:328-331`),
+ * which is what FR-004 requires of the entry.
+ *
+ * A factory rather than four copies, for `downloadEndpoint`'s reason one screen up: the day
+ * one copy forgets a guard is the day that collection starts double-crediting, and nothing in
+ * the type system objects — `acao` and `refTipo` are members of the same two unions for every
+ * publishable. Each collection names **its own** pair at the registration.
+ *
+ * Two guards, and the second one is not the arbiter:
+ *
+ *   1. **The document must carry the approval record.** Any write that never reached
+ *      `publicado` leaves `aprovacaoRegistrada` unset and credits nothing.
+ *   2. **`previousDoc` must not already carry it.** `stampApproval` never clears the stamp, so
+ *      an unpublish/republish cycle (SC-001) and every later edit arrive with it already true.
+ *      This is an optimisation, not the guarantee: the arbiter is `xpLedger`'s unique index,
+ *      which is the only one of the two that cannot lose a race between two reviewers
+ *      approving at the same instant (FR-003). `creditXp` treats its refusal as the success
+ *      path of idempotency.
+ *
+ * A publication with **no author** credits nobody, and does not throw: `projeto.autor` lands in
+ * T039, so every project published before it arrives with none, and rolling back a publication
+ * that was not wrong is the harsher of the two failures (plan § D3, for the same reason). It
+ * warns, because silence there is indistinguishable from a working credit.
+ *
+ * @example
+ * // In a collection whose publication is one of FR-006's actions:
+ * hooks: { afterChange: [creditOnApproval('publicar_artigo', 'artigo')] }
+ */
+export function creditOnApproval(acao: AcaoXp, refTipo: RefTipoXp): CollectionAfterChangeHook {
+  return async ({ doc, previousDoc, req }) => {
+    const publicacao = doc as Publicacao
+    if (publicacao.aprovacaoRegistrada !== true) return doc
+    if ((previousDoc as Publicacao | undefined)?.aprovacaoRegistrada === true) return doc
+
+    const perfil = idDaRelacao(publicacao.autor)
+    if (perfil === null) {
+      console.warn(
+        `[xp] ${refTipo} ${String(publicacao.id)} foi publicado sem autor; nada creditado`,
+      )
+      return doc
+    }
+
+    const refId = Number(publicacao.id)
+    if (!Number.isInteger(refId)) {
+      // The id is half of the idempotency key. A non-numeric one composes a key that matches
+      // nothing, so the same publication would credit again on every approval — louder here
+      // than in a ledger nobody can reconcile.
+      throw new Error(
+        `${refTipo} has a non-numeric id (${JSON.stringify(publicacao.id)}), so no xpLedger ` +
+          'entry can name it; xpLedger.refId is an integer and half of the idempotency key',
+      )
+    }
+
+    // Awaited, and its rejection deliberately uncaught — that is what keeps the entry inside the
+    // approving write's transaction rather than beside it (FR-004, SC-003). With **one** named
+    // exception, for the same reason the missing-author case above is one.
+    try {
+      await creditXp({ req, perfil, skill: idDaRelacao(publicacao.skill), acao, refTipo, refId })
+    } catch (erro) {
+      // **A write with no host is a SERVER-SIDE write**, not a reviewer's approval: a seed, a
+      // migration, a background job, a Local API call in a test. `creditXp` reaches the choke
+      // point, which resolves the organization from `x-tenant-host` and quite correctly refuses
+      // when there is none — and letting that refusal out of an `afterChange` hook rolls back a
+      // publication nobody did anything wrong to make.
+      //
+      // Measured: registering this hook turned `tests/content/downloads.test.ts` red with
+      // `TenantUnresolvedError: No host on the request`, on a test that publishes through the
+      // Local API and has nothing to do with XP.
+      //
+      // The error type is the check. Re-deriving "is there a host on this req" here would be a
+      // second opinion on a question `lib/tenancy` owns, and it would go stale the day the
+      // header changes. Anything else still propagates.
+      if (!(erro instanceof TenantUnresolvedError)) throw erro
+      console.warn(
+        `[xp] ${refTipo} ${String(refId)} foi aprovado sem host na requisição (escrita de ` +
+          'servidor); nada creditado',
+      )
+    }
+    return doc
+  }
+}
+
 /**
  * A project made at **one** lab (FR-001, FR-021, T024) — and the template the other twelve
  * content collections are copied from, which is why the shape matters more than the fields.
@@ -104,9 +216,13 @@ export function downloadEndpoint(
  *     same deferral for `logo`). The upload subsystem landed in `lib/uploads`; the collection
  *     that uses it has not.
  *   - `autor` → `perfilMaker` (T042), `maquinas_utilizadas` → `estacao`,
- *     `skills_relacionadas` → `skill`, `missao_relacionada` → `missao` (all feature 005,
- *     FR-022). Payload throws at config load for a relationship whose target does not exist,
- *     so these are additive once their targets land — not silent omissions.
+ *     `missao_relacionada` → `missao` (both feature 005, FR-022). Payload throws at config
+ *     load for a relationship whose target does not exist, so these are additive once their
+ *     targets land — not silent omissions.
+ *
+ * `projetos.md`'s `skills_relacionadas` **has** landed, as the singular `skill` at the bottom
+ * of this file: FR-039 credits one skill per publication (CLR-009), not a list, because the
+ * ledger entry it feeds records exactly one.
  */
 export const Projeto: CollectionConfig = {
   slug: 'projeto',
@@ -134,6 +250,10 @@ export const Projeto: CollectionConfig = {
   // fails the second.
   hooks: {
     beforeChange: [stampApproval],
+    // The credit of FR-006/FR-042, reading the record `stampApproval` just wrote. Registered
+    // here rather than written here: `creditOnApproval` is one screen up, and the entry it
+    // writes joins this write's own transaction.
+    afterChange: [creditOnApproval('publicar_projeto', 'projeto')],
   },
   labels: {
     singular: 'Projeto',
@@ -415,6 +535,38 @@ export const Projeto: CollectionConfig = {
       admin: {
         description: 'Ex.: MDF 6mm, PLA.',
       },
+    },
+    {
+      name: 'skill',
+      type: 'relationship',
+      relationTo: 'skill',
+      label: 'Skill',
+      admin: {
+        description:
+          'A skill creditada quando este projeto for publicado. Pode ficar vazia — o XP do autor sobe do mesmo jeito.',
+      },
+      // **The map from a publication to the skill its entry credits** (FR-039, CLR-009).
+      //
+      // FR-002 requires every ledger entry to record a skill, and the checklist found that
+      // nothing connected the two: this collection has a `categoria`, `artigo` and `modelo3d`
+      // have their own independent vocabularies and `aula` has none, so a category→skill table
+      // would have been a fourth vocabulary to seed per organization and keep in step with the
+      // other three. Naming the skill on the content is the honest shape — a laser-cut piece
+      // credits *Corte a Laser* because its author said so, and the team confirms it in the
+      // same review that publishes it.
+      //
+      // **Nullable, and deliberately so.** Every project published before feature 005 names no
+      // skill, and CLR-002's rule is that a column created nullable never needs feature 004's
+      // two-layer `required: true` repair. `required` here would also take `creditXp` down with
+      // it: a publication naming no skill still credits the maker's total, so refusing the
+      // write would lose both halves of the credit to save one. `xpLedger.skill` is nullable
+      // for this same reason and reads its value from here.
+      //
+      // Both sides are scoped — `skill` is the one catalogue CLR-001 scopes per organization —
+      // and spike S4c measured the plugin ACCEPTING a row in A pointed at a row in B. The
+      // shared validator, never a local reimplementation: on a null it returns true, because
+      // the field is not `required` and there is nothing for it to refuse.
+      validate: sameTenant,
     },
   ],
 }

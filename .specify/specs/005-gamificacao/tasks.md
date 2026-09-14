@@ -212,18 +212,70 @@ reading an interim state within a phase, which is worth knowing before believing
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T013b | The four publishables each gain a **`skill`** relationship, nullable, with `sameTenant` — what a publication's entry credits (CLR-009). The checklist found FR-002 required a skill and nothing mapped a publication to one | FR-039, CLR-009 | `apps/web/collections/content/{Projeto,Artigo,Aula,Modelo3d}.ts` | T009 |
-| T013c | Its migration, via `./scripts/migrate-create.sh`, and the drift gate on a scratch database | FR-039 | `apps/web/migrations/` | T013b |
-| T014 | `CounterDerivation` gains `{ kind: 'sum'; source; field }`. `count` reads `totalDocs` and touches no row; a sum must read them — say so where the type is declared | FR-010 | `apps/web/lib/content/counters.ts` | — |
-| T015 | `creditXp`: write the entry, **catch the duplicate as the SUCCESS path of idempotency**, rethrow anything else so it takes the caller's transaction with it. Recognise the duplicate by the `ValidationError` shape `@payloadcms/drizzle` actually raises — table plus column pair — with the raw `23505` as a second door (004's T020 measured that the code and index name are gone by the time a catch sees them) | FR-003, FR-004 | `apps/web/lib/content/xp.ts` | T007, T014 |
-| T016 | The projections: `perfilMaker.xpTotal`, `nivel`, and the matching `skills[]` entry, all maintained **inside the causing transaction** by passing the caller's own `req` — `counters.ts`'s three load-bearing properties, reused | FR-010 | `apps/web/lib/content/xp.ts` | T015 |
-| T017 | Register the credit `afterChange` hook on **FOUR** reviewable collections — **never `evento`** (CLR-012). It carries `aprovacaoRegistrada` exactly like the others, so "the reviewable collections" would credit event publication, which FR-008 forbids. The hook reads the record `stampApproval` wrote in `beforeChange` and credits once | FR-006, FR-042, US1 | `apps/web/collections/content/{Projeto,Artigo,Aula,Modelo3d}.ts` | T016 |
-| T017b | Prove it: approving an **`evento`** writes zero entries. The one collection that looks like the others and must not behave like them | [V] SC-020, CLR-012 | `apps/web/tests/content/xp-credit.test.ts` | T017 |
-| T018 | Approve → unpublish → re-approve writes **exactly one** entry, driven against a real database | [V] SC-001, US1 | `apps/web/tests/content/xp-credit.test.ts` | T017 |
-| T019 | A failed ledger write **rolls the approval back** — the content is still unpublished afterwards. This is the assertion that proves `afterChange` is inside the transaction rather than assuming it | [V] SC-003, US1 | `apps/web/tests/content/xp-credit.test.ts` | T017 |
+| ✅ T013b | The four publishables each gain a **`skill`** relationship, nullable, with `sameTenant` — what a publication's entry credits (CLR-009). The checklist found FR-002 required a skill and nothing mapped a publication to one | FR-039, CLR-009 | `apps/web/collections/content/{Projeto,Artigo,Aula,Modelo3d}.ts` | T009 |
+| ✅ T013c | Its migration, via `./scripts/migrate-create.sh`, and the drift gate on a scratch database | FR-039 | `apps/web/migrations/` | T013b |
+| ✅ T014 | `CounterDerivation` gains `{ kind: 'sum'; source; field }`. `count` reads `totalDocs` and touches no row; a sum must read them — say so where the type is declared | FR-010 | `apps/web/lib/content/counters.ts` | — |
+| ✅ T015 | `creditXp`: write the entry, **catch the duplicate as the SUCCESS path of idempotency**, rethrow anything else so it takes the caller's transaction with it. Recognise the duplicate by the `ValidationError` shape `@payloadcms/drizzle` actually raises — table plus column pair — with the raw `23505` as a second door (004's T020 measured that the code and index name are gone by the time a catch sees them) | FR-003, FR-004 | `apps/web/lib/content/xp.ts` | T007, T014 |
+| ✅ T016 | The projections: `perfilMaker.xpTotal`, `nivel`, and the matching `skills[]` entry, all maintained **inside the causing transaction** by passing the caller's own `req` — `counters.ts`'s three load-bearing properties, reused | FR-010 | `apps/web/lib/content/xp.ts` | T015 |
+| ✅ T017 | Register the credit `afterChange` hook on **THREE** collections — `projeto`, `artigo`, `modelo3d`. **Never `evento`** (CLR-012) and **never `aula`** (CLR-016): publishing a class does not score, watching one does, so `ACOES_XP` has no `publicar_aula` and `AcaoXp` makes a fourth registration a compile error. The hook reads the record `stampApproval` wrote in `beforeChange` and credits once | FR-006, FR-042, CLR-016, US1 | `apps/web/collections/content/{Projeto,Artigo,Modelo3d}.ts` | T016 |
+| ✅ T017b | Prove it: approving an **`evento`** writes zero entries. The one collection that looks like the others and must not behave like them | [V] SC-020, CLR-012 | `apps/web/tests/content/xp-credit.test.ts` | T017 |
+| ✅ T018 | Approve → unpublish → re-approve writes **exactly one** entry, driven against a real database | [V] SC-001, US1 | `apps/web/tests/content/xp-credit.test.ts` | T017 |
+| ✅ T019 | A failed ledger write **rolls the approval back** — the content is still unpublished afterwards. This is the assertion that proves `afterChange` is inside the transaction rather than assuming it | [V] SC-003, US1 | `apps/web/tests/content/xp-credit.test.ts` | T017 |
 | T020 | Extend `CounterField` and the gate's `satisfies Record<DerivedField, DerivedSource>` map with the XP fields. **This breaks typecheck until the reconciliation is written** — that is the mechanism, not an obstacle | [V] FR-011, SC-004 | `apps/web/tests/content/counters.test.ts` | T016 |
 | T021 | Reconciliation: every projection equals a recount of the ledger, across the whole database. Watch it fail against a hand-desynced `xpTotal`. **A CI gate, not a runtime repair** (CLR-014) — the same answer 002 gave for the counters, and giving a different one here would be two disciplines for one guarantee | [V] FR-011, SC-004, CLR-014 | `apps/web/tests/content/counters.test.ts` | T020 |
-| T021b | The free oracle, asserted as an oracle and never as a dependency: while `xpPorAcao` is 1, a **sum equals a count**. The amount is still stored per entry, because `regrasXp` is tunable | [V] FR-009 | `apps/web/tests/content/xp-vs-count.test.ts` | T016 |
+| ✅ T021b | The free oracle, asserted as an oracle and never as a dependency: while `xpPorAcao` is 1, a **sum equals a count**. The amount is still stored per entry, because `regrasXp` is tunable | [V] FR-009 | `apps/web/tests/content/xp-vs-count.test.ts` | T016 |
+
+### What phase 3 cost — the design decision that could not be built
+
+Eight of ten accepted, and **both rejections were right about something the plan got wrong**,
+not about the code failing to match it. One of them is the most consequential finding of the
+feature.
+
+**1. `creditXp` could not do what D1 asked, and no test could see it.** The plan said *"catch the
+duplicate as the SUCCESS path of idempotency"*. Measured on this tree, that is unbuildable:
+
+- Payload's `create` wraps every operation in
+  `catch (error) { await killTransaction(args.req); throw error }`;
+- `killTransaction` calls `rollbackTransaction(req.transactionID)` **unconditionally** and then
+  deletes the id — it does not consult `shouldCommit`;
+- `@payloadcms/drizzle` takes **no savepoint per operation**; there is no `SAVEPOINT` anywhere
+  in the adapter.
+
+So by the time the `catch` ran, the caller's transaction was gone. Probed directly:
+
+```text
+{ reconhecido: true, txAindaNoReq: null, sobreviveram: 0 }
+```
+
+The duplicate was recognised, the transaction was destroyed, and **the first, entirely valid
+entry did not survive**. `creditXp` returned `false` — *"already credited, carry on"* — over a
+rollback that had eaten the approval.
+
+Neither test could see it: the unit fake threw a hand-built object and killed no transaction,
+and the integration test drove its duplicate with **no enclosing transaction at all**. Both
+measured the error *shape*, correctly, and never the *consequence*.
+
+It reads first now, inside the caller's transaction. The unique index is no longer an arbiter
+the code consults but the **backstop**: a duplicate reaching the insert means a concurrent credit
+won the race, the transaction is already dead, and the error propagates — carrying a message
+that names the race rather than a `ValidationError` about a column pair. `xp-credit.test.ts`'s
+new case drives a duplicate on a **live `req.transactionID`** and asserts the causing write still
+commits; with the read removed it is the **only** case of eighteen that fails.
+
+**2. A publication approved with no host rolled back.** Registering the hook turned
+`tests/content/downloads.test.ts` red with `TenantUnresolvedError: No host on the request` — a
+test that publishes through the Local API and has nothing to do with XP. A seed, a migration, a
+background job and a test are all server-side writes with no host, and `creditXp` reaches the
+choke point, which quite correctly refuses. The hook now skips on that one error type, with the
+same reasoning its missing-author branch already carried: *rolling back a publication that was
+not wrong is the harsher of the two failures*.
+
+**3. My spec said four collections and the truth was three.** CLR-012 conflated *the reviewable
+collections minus `evento`* with *the collections whose publication scores*. FR-006 names five
+actions and **publishing a class is not one of them** — watching one is. `ACOES_XP` was built
+from FR-006, so `AcaoXp` made a fourth registration a **compile error**, and the type caught the
+contradiction before a test could. Recorded as CLR-016, and `Aula.ts`'s skill description was
+corrected with it.
 
 ## Phase 4: The class completion, and the profile bridge
 

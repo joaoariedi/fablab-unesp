@@ -126,6 +126,18 @@ const migratedColumns = (sql: string, table: string): string => {
 }
 
 /**
+ * The single `ALTER TABLE … ADD COLUMN "<column>" …;` statement, or null when there is none.
+ *
+ * `migratedColumns` above answers *whether* a column arrives and deliberately loses how: it
+ * concatenates the create body with every ALTER, so a `NOT NULL` anywhere in the table belongs
+ * to some other column as far as a substring search can tell. A nullability claim needs the one
+ * statement on its own.
+ */
+const addColumnStatement = (table: string, column: string): string | null =>
+  new RegExp(`ALTER TABLE "${table}" ADD COLUMN "${column}"[^;]*;`).exec(committedUpSql())?.[0] ??
+  null
+
+/**
  * Every collection whose table the committed migrations must create (T047, FR-001).
  *
  * Written out by name rather than derived from the resolved Payload config, for the reason
@@ -481,6 +493,53 @@ describe('the schema feature 005 adds', () => {
         `no committed migration gives "perfil_maker" a "${column}" column, so the projection ` +
           'FR-010 requires has nowhere to be written and the ranking sorts on nothing',
       ).toContain(`"${column}"`)
+    })
+  }
+
+  // FR-039 / CLR-009: the four publishables each gained a nullable `skill` relationship, so a
+  // ledger entry can name the skill the publication credited. T013b declared the field; without
+  // the migration below it exists only in a developer's dev-mode-pushed database, which is drift
+  // risk number one in `docs/tech-stack.md` arriving four tables at a time.
+  for (const collection of [Projeto, Artigo, Aula, Modelo3d]) {
+    const table = snake(collection.slug)
+
+    it(`adds "${table}"."skill_id" NULLABLE, so a publication may credit no skill`, () => {
+      const statement = addColumnStatement(table, 'skill_id')
+      expect(
+        statement,
+        `no committed migration gives "${table}" a "skill_id" column, so FR-039's map from a ` +
+          'publication to the skill its entry credits exists in the field config and nowhere ' +
+          'in the database — every write of it is refused',
+      ).not.toBeNull()
+      // NOT NULL here is not a stricter version of the same thing, it is a different schema:
+      // every publication written before feature 005 names no skill, and a NOT NULL column
+      // cannot be added to a table that already has rows without a default nobody can supply.
+      expect(
+        statement,
+        `"${table}"."skill_id" is NOT NULL. CLR-009 makes the skill optional — content ` +
+          'published before 005 credits none and still raises its maker total — so this ' +
+          'migration cannot apply to a table that already has rows.',
+      ).not.toContain('NOT NULL')
+    })
+
+    it(`nulls "${table}"."skill_id" when the skill it names is deleted`, () => {
+      // Read here rather than through `onDeleteFor` below, whose capture is a single `\w+` and
+      // so reports this two-word action as `set`. That helper serves the `restrict` rule, where
+      // one word is the whole answer; widening it would make it capture `restrict ON` there.
+      const fk = new RegExp(
+        `ALTER TABLE "${table}" ADD CONSTRAINT "[^"]+" FOREIGN KEY \\("skill_id"\\)[^;]+;`,
+      ).exec(committedUpSql())
+      expect(
+        fk,
+        `no foreign key on "${table}"."skill_id" in any committed migration's up(), so the ` +
+          'column keeps the id of a skill that has been deleted and every reader of it dangles',
+      ).not.toBeNull()
+      // The mirror of the `restrict` rule below: that one exists because `required` makes the
+      // column NOT NULL and `set null` then aborts the transaction with 25P02. Here the column
+      // is nullable, so `set null` is the one action that is actually satisfiable — `restrict`
+      // would refuse to delete a skill on account of a publication that is free to have none,
+      // and deactivating a skill is the documented product behaviour (`Skill.ts`).
+      expect(fk?.[0]).toContain('ON DELETE set null')
     })
   }
 })

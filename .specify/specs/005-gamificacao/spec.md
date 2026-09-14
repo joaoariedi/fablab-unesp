@@ -192,7 +192,7 @@ exists"*. It lands here — see CLR-002.
 | FR-039 | `projeto`, `artigo`, `aula` and `modelo3d` each carry a **`skill`** relationship, nullable, naming the skill a publication credits (CLR-009). A publication with none credits the maker's total and no skill | P1 | US1 |
 | FR-040 | Deleting a profile **nulls** `xpLedger.perfil` on its entries and changes nothing else; every reader tolerates an entry with no profile (CLR-011) | P1 | US7 |
 | FR-041 | A rejected submission returns to `enviada` when the maker edits it — one row, reopened (CLR-015) | P2 | US3 |
-| FR-042 | The credit hook is registered on **four** collections, never on `evento` (CLR-012) | P1 | US1 |
+| FR-042 | The publication credit hook is registered on **three** collections — `projeto`, `artigo`, `modelo3d`. Never `evento`, and never `aula`: a class scores when it is **watched**, not when it is published (CLR-012, amended by CLR-016) | P1 | US1 |
 | FR-043 | `xpTotal` is uncapped; only `nivel` stops at the cap, and the pip bar stays full there (CLR-013) | P1 | US6 |
 | FR-038 | Beyond FR-027, a class completion is **trusted** in v1 — no elapsed-time floor, no checkpoints (CLR-008). The ledger is the audit trail: every credit carries who, what and when, and is append-only, so farming is bounded and visible rather than prevented | P2 | US2 |
 
@@ -494,4 +494,28 @@ this is the second attempt.
 
 **Impact**: FR-023 is reworded — one submission per mission per maker, reopenable — and FR-041
 (new) carries the reopen transition.
+
+### CLR-016: `aula` does not score on publication — three collections, not four [scope] — decided 2026-09-14
+
+**Decision**: `creditOnApproval` is registered on **`projeto`, `artigo` and `modelo3d`**. `aula`
+does not carry it. `aula.skill` stays, because it is what a **watch** credits (FR-006's
+`assistir_aula`), not what a publication credits.
+
+**Rationale**: a defect in this spec, caught by the implementation. CLR-012 said *"four
+collections, never `evento`"*, which conflated two different sets — *the reviewable collections
+minus `evento`* and *the collections whose publication scores*. They are not the same set.
+
+FR-006 names the five scoring actions and **publishing a class is not one of them**:
+*"watch a class to 100%, publish a project, publish a 3D model, publish an article, complete a
+mission"*. `gamification.md` agrees twice — *"ao **assistir aulas**, **postar projetos** e
+**escrever artigos**"*, and the economy table's *"assistir aula, publicar projeto, publicar
+modelo 3D, publicar artigo, concluir missão"* — and adds that actions outside that list do not
+score.
+
+`ACOES_XP` was built from FR-006 and therefore has no `publicar_aula`, which made `AcaoXp` a
+**compile error** for a fourth registration. The type caught the contradiction before a test
+could. Registering `aula` would have meant inventing a sixth action the sources refuse.
+
+**Impact**: FR-042, CLR-012, T017. `Aula.ts`'s `skill` description is corrected with it — it
+said *"a skill creditada quando esta aula for publicada"*, which is now doubly wrong.
 
