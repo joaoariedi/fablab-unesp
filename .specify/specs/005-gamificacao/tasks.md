@@ -146,18 +146,67 @@ amount. Watched failing against the code exactly as T003 verified it.
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T005 | `regrasXp` — **scoped**, one row per organization: `xpPorAcao`, `xpPorNivel`, `nivelMaximo`. Declared first because everything else reads the economy | FR-009, FR-028 | `apps/web/collections/content/RegrasXp.ts` | — |
-| T006 | `xpLedger` — **scoped, append-only by ACCESS CONTROL** (`update`/`delete` return `false`). `refTipo`/`refId` scalars; `chaveIdempotencia` a generated text column | FR-001, FR-002 | `apps/web/collections/content/XpLedger.ts` | T005 |
-| T007 | The **unique index** on `chaveIdempotencia`, and the `beforeValidate` that composes it so no caller can get the tuple wrong | FR-003, SC-002 | `apps/web/collections/content/XpLedger.ts` | T006 |
-| T008 | `perfilMaker` gains top-level `xpTotal` and `nivel`, both `defaultValue: 0`, both **without `max`** | FR-010 | `apps/web/collections/content/PerfilMaker.ts` | — |
-| T009 | Registry declarations for `regrasXp` and `xpLedger` with their reasons, at the END and in walkable order. **Run the whole `tests/tenancy/` directory** — preamble item 4 | FR-028 | `apps/web/lib/tenancy/scope-registry.ts` | T006, T008 |
-| T010 | The migration, via `./scripts/migrate-create.sh` so the `.json` snapshot ships with it — preamble item 7 | FR-001 | `apps/web/migrations/` | T009 |
-| T010b | Verify the migration against a **scratch database**: `DATABASE_URI=<scratch> bash scripts/migration-drift.sh` must PASS on a database built from the committed migrations alone | FR-001 | `scripts/migration-drift.sh` (verify only) | T010 |
-| T011 | Prove the index refuses a duplicate **at the database**, not in application code: insert the same tuple twice directly and assert `23505` | [V] SC-002 | `apps/web/tests/content/xp-ledger.test.ts` | T010 |
-| T011b | `xpLedger.perfil` is **nullable** (CLR-011), and erasing a profile nulls it rather than deleting the entry — 004's tombstone applied to the ledger. Every reader tolerates an entry with no profile | FR-040, SC-021 | `apps/web/collections/content/XpLedger.ts`, `apps/web/lib/accounts/deletion.ts` | T010 |
-| T011c | The lab level is **unchanged** by an erasure, and `docs/lgpd.md` gains a row saying what deletion does to XP | [V] SC-021, FR-012 | `apps/web/tests/content/xp-erasure.test.ts`, `docs/lgpd.md` | T011b |
-| T012 | Prove append-only is an access rule: `update` and `delete` are refused for a maker, for the team, and for a master | [V] FR-001 | `apps/web/tests/content/xp-ledger.test.ts` | T011 |
-| T013 | Seed `regrasXp` on organization creation through `SEED_ON_CREATE`, and assert a **new** organization gets the CITe defaults | FR-009 | `apps/web/lib/tenancy/seed-on-create.ts` | T005 |
+| ✅ T005 | `regrasXp` — **scoped**, one row per organization: `xpPorAcao`, `xpPorNivel`, `nivelMaximo`. Declared first because everything else reads the economy | FR-009, FR-028 | `apps/web/collections/content/RegrasXp.ts` | — |
+| ✅ T006 | `xpLedger` — **scoped, append-only by ACCESS CONTROL** (`update`/`delete` return `false`). `refTipo`/`refId` scalars; `chaveIdempotencia` a generated text column | FR-001, FR-002 | `apps/web/collections/content/XpLedger.ts` | T005 |
+| ✅ T007 | The **unique index** on `chaveIdempotencia`, and the `beforeValidate` that composes it so no caller can get the tuple wrong | FR-003, SC-002 | `apps/web/collections/content/XpLedger.ts` | T006 |
+| ✅ T008 | `perfilMaker` gains top-level `xpTotal` and `nivel`, both `defaultValue: 0`, both **without `max`** | FR-010 | `apps/web/collections/content/PerfilMaker.ts` | — |
+| ✅ T009 | Registry declarations for `regrasXp` and `xpLedger` with their reasons, at the END and in walkable order. **Run the whole `tests/tenancy/` directory** — preamble item 4 | FR-028 | `apps/web/lib/tenancy/scope-registry.ts` | T006, T008 |
+| ✅ T010 | The migration, via `./scripts/migrate-create.sh` so the `.json` snapshot ships with it — preamble item 7 | FR-001 | `apps/web/migrations/` | T009 |
+| ✅ T010b | Verify the migration against a **scratch database**: `DATABASE_URI=<scratch> bash scripts/migration-drift.sh` must PASS on a database built from the committed migrations alone | FR-001 | `scripts/migration-drift.sh` (verify only) | T010 |
+| ✅ T011 | Prove the index refuses a duplicate **at the database**, not in application code: insert the same tuple twice directly and assert `23505` | [V] SC-002 | `apps/web/tests/content/xp-ledger.test.ts` | T010 |
+| ✅ T011b | `xpLedger.perfil` is **nullable** (CLR-011), and erasing a profile nulls it rather than deleting the entry — 004's tombstone applied to the ledger. Every reader tolerates an entry with no profile | FR-040, SC-021 | `apps/web/collections/content/XpLedger.ts`, `apps/web/lib/accounts/deletion.ts` | T010 |
+| ✅ T011c | The lab level is **unchanged** by an erasure, and `docs/lgpd.md` gains a row saying what deletion does to XP | [V] SC-021, FR-012 | `apps/web/tests/content/xp-erasure.test.ts`, `docs/lgpd.md` | T011b |
+| ✅ T012 | Prove append-only is an access rule: `update` and `delete` are refused for a maker, for the team, and for a master | [V] FR-001 | `apps/web/tests/content/xp-ledger.test.ts` | T011 |
+| ✅ T013 | Seed `regrasXp` on organization creation through `SEED_ON_CREATE`, and assert a **new** organization gets the CITe defaults | FR-009 | `apps/web/lib/tenancy/seed-on-create.ts` | T005 |
+
+### What phase 2 cost — two rejections, and three failures nobody reported
+
+Nine of eleven accepted. Both rejections were right, and the **whole-database and
+whole-directory rules earned their place again**: three more failures were sitting in the tree
+that neither verifier mentioned, because each verifier ran the files it owned.
+
+1. **The rot guard fired at registration time, exactly as designed.** Registering `XpLedger` in
+   `payload.config.ts` made `chaveIdempotencia` visible to `counters.test.ts`'s
+   `unaccountedDerivedFields()`, which demands every system-written field be reconciled or
+   listed with a reason — **and no task in this list owned that.** It is an idempotency key, not
+   a derived value: composed once by `beforeValidate`, never recomputed, because an append-only
+   ledger has no later state to drift from. Its gate is the unique index. Listed, with that
+   reason, and watched failing without it.
+
+2. **`PerfilMaker.ts` contradicted itself** two hundred lines above the fields T008 added. The
+   docblock still read *"what is still deliberately absent is feature 005's ledger: a maker's
+   overall `nivel` and `xpTotal`"*. Left standing that is not stale prose but a **false
+   invariant** — a reader would take it as an instruction that those fields must not exist. What
+   is absent is the ledger *itself*, and it always was: `xpLedger` is its own collection and the
+   two numbers are projections of it.
+
+3. **The fixture gave every organization TWO economies.** `seed-on-create` writes `regrasXp` when
+   an organization is created, and `fixtures.ts` then created a second — so `isolation.test.ts`'s
+   **graphql** vantage point went red with *"a surface disclosed row 871, which this fixture did
+   not seed"*, both rows belonging to lab A. Nothing had leaked; there were simply two of it, and
+   `RegrasXp.ts`'s own docblock says the row *"arrives exactly once"* and that *"every reader
+   expects one answer"*. The three other vantage points passed — which is why the rule is to run
+   the **whole** directory. `SeedFn` now carries the collection it writes, and the fixture
+   **adopts** those rows instead of duplicating them.
+
+4. **`getSystemScopedPayload` imported a fresh Payload instance.** `tests/uploads/native-upload.test.ts`
+   builds a **keyed** instance, and the seed hook wrote through a different connection pool —
+   failing with `23503, Key (tenant_id)=… is not present in table "organizations"`, which is the
+   exact error `seed-on-create`'s own docblock documents. Passing `req` never could have fixed
+   it: the transaction id belongs to an instance the function was not using. It now takes
+   `req.payload` — the authority on which instance is running the operation — and falls back to
+   the import only for callers with no request. **This was invisible until `SEED_ON_CREATE`
+   stopped being empty.**
+
+5. **CHK092's assertion became false and was narrowed, not deleted.** It asserted
+   `SEED_ON_CREATE` was empty; FR-009 made that false. What CHK092 was *about* is unchanged — a
+   second lab opens to empty **category** lists — so the assertion moved to the claim that is
+   still open. A test asserting `[]` forever would have been deleted by the first person who
+   needed a seed, taking the open question with it.
+
+Also: `docs/lgpd.md` now records the ledger and what erasure does to it, and T008's
+migration-column finding was **already closed by T010** later in the same phase — a verifier
+reading an interim state within a phase, which is worth knowing before believing one.
 
 ## Phase 3: The credit, and the projection
 

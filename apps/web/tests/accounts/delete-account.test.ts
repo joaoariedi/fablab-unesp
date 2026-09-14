@@ -54,6 +54,21 @@ type LinhaConteudo = { id: number; autor: string | number | null; curtidas: numb
 type LinhaPerfil = { id: number; usuario: string | number }
 type LinhaConta = { id: number; orgs: { organization: string }[] }
 
+/**
+ * A ledger entry, with **every** column CLR-011 promises to leave alone beside the one it nulls.
+ * They are here so "changes nothing else" is an assertion over the whole row rather than over
+ * the single field the implementation happens to touch.
+ */
+type LinhaLedger = {
+  id: number
+  perfil: string | number | null
+  acao: string
+  refTipo: string
+  refId: number
+  quantidade: number
+  chaveIdempotencia: string
+}
+
 const curtida = (
   id: number,
   usuario: string | number,
@@ -69,11 +84,17 @@ const curtida = (
  */
 const ARMAZENADO_DESATUALIZADO = 9
 
+/** The two entries the erasure must anonymise, and the one it must not touch. */
+const ENTRADA_ARTIGO = 101
+const ENTRADA_AULA = 102
+const ENTRADA_ALHEIA = 103
+
 type Mundo = {
   perfis: LinhaPerfil[]
   curtidas: LinhaCurtida[]
   conteudos: Record<string, LinhaConteudo[]>
   contas: LinhaConta[]
+  xpLedger: LinhaLedger[]
 }
 
 const mundoPadrao = (): Mundo => ({
@@ -101,6 +122,36 @@ const mundoPadrao = (): Mundo => ({
   contas: [
     { id: CONTA, orgs: [{ organization: LAB }] },
     { id: CONTA_ALHEIA, orgs: [{ organization: LAB }] },
+  ],
+  // Two credits this person really earned, and one somebody else's — the control.
+  xpLedger: [
+    {
+      id: ENTRADA_ARTIGO,
+      perfil: PERFIL,
+      acao: 'publicar_artigo',
+      refTipo: 'artigo',
+      refId: 3,
+      quantidade: 1,
+      chaveIdempotencia: '1:7:publicar_artigo:artigo:3',
+    },
+    {
+      id: ENTRADA_AULA,
+      perfil: PERFIL,
+      acao: 'assistir_aula',
+      refTipo: 'aula',
+      refId: 10,
+      quantidade: 1,
+      chaveIdempotencia: '1:7:assistir_aula:aula:10',
+    },
+    {
+      id: ENTRADA_ALHEIA,
+      perfil: PERFIL_ALHEIO,
+      acao: 'publicar_projeto',
+      refTipo: 'projeto',
+      refId: 5,
+      quantidade: 1,
+      chaveIdempotencia: '1:8:publicar_projeto:projeto:5',
+    },
   ],
 })
 
@@ -133,6 +184,13 @@ class FakeDeletionStore implements DeletionStore {
   constructor(
     readonly mundo: Mundo = mundoPadrao(),
     private readonly falhaEm?: Operacao,
+    /**
+     * The collection whose `update` returns `null` instead of throwing — Payload's **bulk**
+     * update collects a per-document failure into `result.errors` and returns, so a refused
+     * write reaches the caller as `null`. `anonimizarAutoria` already holds that discipline;
+     * the ledger tombstone is the second write on this path and owes the same.
+     */
+    private readonly recusaAtualizacaoDe?: string,
   ) {}
 
   private falhar(op: Operacao): void {
@@ -163,6 +221,10 @@ class FakeDeletionStore implements DeletionStore {
       const usuario = igual(args.where, 'usuario')
       return this.mundo.perfis.filter((p) => usuario === undefined || p.usuario === usuario)
     }
+    if (args.collection === 'xpLedger') {
+      const perfil = igual(args.where, 'perfil')
+      return this.mundo.xpLedger.filter((e) => perfil === undefined || e.perfil === perfil)
+    }
     const autor = igual(args.where, 'autor')
     return this.linhas(args.collection).filter((c) => autor === undefined || c.autor === autor)
   }
@@ -181,7 +243,11 @@ class FakeDeletionStore implements DeletionStore {
   update = async <T>(args: UpdateArgs): Promise<T | null> => {
     this.falhar('update')
     this.trilha.push(`update:${args.collection}:${String(args.id)}`)
-    const alvo = this.linhas(args.collection).find((c) => c.id === args.id)
+    if (this.recusaAtualizacaoDe === args.collection) return null
+    const alvo: { id: number } | undefined =
+      args.collection === 'xpLedger'
+        ? this.mundo.xpLedger.find((e) => e.id === args.id)
+        : this.linhas(args.collection).find((c) => c.id === args.id)
     if (!alvo) return null
     Object.assign(alvo, args.data)
     return alvo as T
@@ -193,6 +259,9 @@ class FakeDeletionStore implements DeletionStore {
     if (args.collection === 'curtida') return this.remover(this.mundo.curtidas, args.id) as T | null
     if (args.collection === 'perfilMaker') return this.remover(this.mundo.perfis, args.id) as T | null
     if (args.collection === 'users') return this.remover(this.mundo.contas, args.id) as T | null
+    // Modelled so an implementation that DELETED the entries would visibly empty the table,
+    // rather than silently no-op through the `conteudos` branch and read as append-only.
+    if (args.collection === 'xpLedger') return this.remover(this.mundo.xpLedger, args.id) as T | null
     return this.remover(this.linhas(args.collection), args.id) as T | null
   }
 
@@ -321,5 +390,100 @@ describe('deleteAccount — os três resultados que a exclusão deve à pessoa (
     expect(segunda.contaRemovida).toBe(false)
     // Nenhuma escrita: a segunda chamada só procura o perfil e para.
     expect(store.trilha.slice(trilhaAteAqui)).toEqual(['findByID:perfilMaker'])
+  })
+})
+
+/**
+ * T011b / FR-040, SC-021, CLR-011 — **the ledger's tombstone: the credit stays, the name goes.**
+ *
+ * 004's tombstone applied to `xpLedger`. The two rejected alternatives each broke something a
+ * test has to be able to tell apart from the right answer, so each has its own assertion below:
+ *
+ *   - **deleting the entries** rewrites history *and* silently drops the Nível do Lab by
+ *     whatever the departing maker earned — the lab's collective level (FR-012) is a projection
+ *     of the organization's whole ledger, so it would fall for a reason nobody asked for. The
+ *     fake `delete`s `xpLedger` rows for real, so that implementation empties the table here;
+ *   - **leaving the reference dangling** is the exact shape 004's phase 6 spent a round
+ *     repairing — asserted as `perfil === null`, never merely "not PERFIL".
+ *
+ * And *"changes nothing else"* is asserted over the **whole row**, against a snapshot taken
+ * before the erasure: an implementation that nulled `perfil` and also cleared `skill`, or
+ * recomposed `chaveIdempotencia` to the no-`perfil` tuple (which would make the credited content
+ * creditable all over again — see `composeIdempotencyKey`'s create-only note), passes a
+ * field-by-field check written after the fact and fails this one.
+ */
+describe('deleteAccount — a lápide do ledger: o crédito fica, o nome sai (FR-040, CLR-011)', () => {
+  const soma = (entradas: LinhaLedger[]) => entradas.reduce((t, e) => t + e.quantidade, 0)
+
+  it('anula `perfil` nas entradas da pessoa e não apaga nenhuma', async () => {
+    const store = new FakeDeletionStore()
+    const antes = structuredClone(store.mundo.xpLedger)
+    const { deps } = comLoja(store)
+
+    await deleteAccount({ req: REQ, perfilId: PERFIL }, deps)
+
+    // Append-only sobrevive: nulificar uma coluna não é reescrever a história — a exclusão é
+    // que é o evento histórico. As três linhas continuam lá, na mesma ordem.
+    expect(store.mundo.xpLedger.map((e) => e.id)).toEqual([
+      ENTRADA_ARTIGO,
+      ENTRADA_AULA,
+      ENTRADA_ALHEIA,
+    ])
+
+    const daPessoa = store.mundo.xpLedger.filter((e) => e.id !== ENTRADA_ALHEIA)
+    for (const entrada of daPessoa) {
+      // `null`, e não "qualquer coisa diferente de PERFIL": uma referência pendurada é
+      // exatamente o defeito que a fase 6 de 004 gastou uma rodada consertando.
+      expect(entrada.perfil).toBeNull()
+      // E **nada mais** mudou: a ação, o conteúdo creditado, a quantidade e a chave de
+      // idempotência são a mesma linha de antes, com um campo a menos.
+      const original = antes.find((e) => e.id === entrada.id)
+      expect(entrada).toEqual({ ...original, perfil: null })
+    }
+
+    // A entrada de outra pessoa não é tocada — nem o `perfil`, nem qualquer coluna.
+    expect(store.mundo.xpLedger.find((e) => e.id === ENTRADA_ALHEIA)).toEqual(
+      antes.find((e) => e.id === ENTRADA_ALHEIA),
+    )
+  })
+
+  it('mantém o XP total do lab intacto — o crédito foi realmente ganho (SC-021, FR-012)', async () => {
+    const store = new FakeDeletionStore()
+    const antes = soma(store.mundo.xpLedger)
+    const { deps } = comLoja(store)
+
+    await deleteAccount({ req: REQ, perfilId: PERFIL }, deps)
+
+    // O Nível do Lab é uma projeção do ledger inteiro da organização. Apagar as entradas o
+    // derrubaria quando alguém sai, que é a razão pela qual a lápide anula em vez de apagar.
+    expect(soma(store.mundo.xpLedger)).toBe(antes)
+  })
+
+  it('anula o ledger DENTRO da transação, antes de apagar o perfil', async () => {
+    const store = new FakeDeletionStore()
+    const { deps, pedidos } = comLoja(store)
+
+    await deleteAccount({ req: REQ, perfilId: PERFIL }, deps)
+
+    const anulouLedger = store.trilha.indexOf(`update:xpLedger:${ENTRADA_ARTIGO}`)
+    const apagouPerfil = store.trilha.indexOf(`delete:perfilMaker:${PERFIL}`)
+
+    expect(anulouLedger).toBeGreaterThanOrEqual(0)
+    // Depois do delete, o `where: { perfil: { equals: PERFIL } }` ainda encontraria as linhas
+    // (o ledger guarda o id, não a linha), mas a ordem inversa deixa uma janela dentro da
+    // transação em que as entradas apontam para um perfil que já não existe.
+    expect(apagouPerfil).toBeGreaterThan(anulouLedger)
+    // Um cliente só: a escrita no ledger é da mesma transação de quem chamou.
+    expect(pedidos).toEqual([REQ])
+  })
+
+  it('grita quando a atualização do ledger é recusada, em vez de relatar sucesso', async () => {
+    // O update em massa do Payload recolhe o erro de validação em `result.errors` e retorna, de
+    // modo que uma escrita recusada chega como `null` e não como exceção. Sem esta checagem, a
+    // pessoa seria informada de que seu nome saiu do ledger enquanto ele continua lá.
+    const store = new FakeDeletionStore(mundoPadrao(), undefined, 'xpLedger')
+    const { deps } = comLoja(store)
+
+    await expect(deleteAccount({ req: REQ, perfilId: PERFIL }, deps)).rejects.toThrow(/xpLedger/)
   })
 })

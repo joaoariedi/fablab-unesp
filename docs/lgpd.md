@@ -41,6 +41,25 @@ labs tem um login e dois perfis — feature 002, CLR-002).
 | `aceiteTermosEm` | `perfilMaker` | Quando a pessoa marcou o aceite no passo 2 | **Prova do consentimento** (art. 8º) | Cumprimento de obrigação legal (art. 7º, II) |
 | `aceiteTermosVersao` | `perfilMaker` | **Qual** versão do texto foi aceita | Permitir exigir novo aceite de quem aceitou o texto antigo | Cumprimento de obrigação legal (art. 7º, II) |
 | `skills` | `perfilMaker` | Nível e XP por skill do catálogo do lab. Atribuídas no cadastro, nível 0 — nunca escolhidas | Gamificação: o painel SUAS SKILLS | Execução do serviço pedido pelo titular (art. 7º, V) |
+| `xpTotal` | `perfilMaker` | XP acumulado no lab. **Projeção** do registro de XP, não a fonte da verdade (CLR-001) | Gamificação: nível do maker e ordenação do ranking público | Execução do serviço pedido pelo titular (art. 7º, V) |
+| `nivel` | `perfilMaker` | Nível derivado de `xpTotal` pela curva da organização (`regrasXp`) | Gamificação: exibido junto ao nome em cards e no ranking | Execução do serviço pedido pelo titular (art. 7º, V) |
+
+### O registro de XP (`xpLedger`) — feature 005
+
+Cada ação pontuada grava **uma linha imutável**: organização, perfil, ação, o conteúdo que a
+causou, a skill creditada, a quantidade e o instante. O registro é **append-only** por controle
+de acesso (`update` e `delete` recusados para todos os papéis), porque é ele que torna a
+concessão de XP auditável — inclusive a única ação que o v1 aceita sob confiança, a conclusão de
+aula (CLR-008).
+
+**Ao excluir a conta**, as linhas **permanecem** e o `perfil` é **anulado** (CLR-011). É a mesma
+decisão que o CLR-003 da feature 004 tomou para o conteúdo publicado: *o trabalho fica, o nome
+sai*. O nível coletivo do lab continua honesto — o XP foi de facto conquistado — e o ranking
+simplesmente perde uma linha. Anular uma coluna não é reescrever histórico: a exclusão é, ela
+própria, o acontecimento histórico.
+
+Nenhuma linha do registro carrega dado pessoal além da referência ao perfil, que é exatamente a
+referência que a exclusão remove.
 
 **Não coletado, e isso é uma decisão**: CPF, RG, número de matrícula, telefone, endereço e foto
 da pessoa. Nenhum é pedido em lugar nenhum do cadastro. O `perfilMaker` também **não** ganha
@@ -60,6 +79,7 @@ Além do que a pessoa digita, o uso produz registros ligados à conta dela:
 |---|---|---|
 | Curtidas | `curtida` | Que conteúdo a pessoa curtiu. Apagadas na exclusão — ver abaixo |
 | Progresso em aulas | `progressoAula` | Até onde a pessoa chegou em cada aula |
+| XP e nível | `xpLedger` | Cada crédito de XP que o uso rendeu: a ação, o conteúdo, quanto e quando. **Anonimizadas na exclusão, nunca apagadas** — `perfil` vira nulo e o resto da linha fica, de modo que o Nível do Lab não muda por alguém ter saído (ver abaixo) |
 | Autoria | `artigo`, `aula`, `modelo3d` | O conteúdo que ela publicou, creditado ao perfil |
 
 ### Sobre as bases legais desta tabela
@@ -126,7 +146,7 @@ em aberto*.
 
 ## O que a exclusão faz
 
-`apps/web/lib/accounts/deletion.ts`, em **uma transação**: ou os quatro efeitos acontecem, ou
+`apps/web/lib/accounts/deletion.ts`, em **uma transação**: ou os cinco efeitos acontecem, ou
 nenhum. Nada é engolido — um erro sobe para quem chamou e a transação inteira volta atrás,
 porque o estado parcial (curtidas apagadas com contadores intactos, autoria anulada com o perfil
 ainda de pé) é irreparável e se parece com sucesso.
@@ -145,7 +165,8 @@ ainda de pé) é irreparável e se parece com sucesso.
    apagada e o contador de cada conteúdo tocado é **recomputado a partir das linhas
    sobreviventes**, não decrementado — um decremento carrega para sempre qualquer divergência
    anterior. Uma curtida é um ato de uma pessoa, não uma contribuição.
-4. **A conta global só vai se nenhum outro lab a estiver usando.** Um login pode ter perfil em
+4. **O XP fica, sem dono.** Cada linha de `xpLedger` daquela pessoa tem `perfil` anulado e conserva tudo o mais — ação, skill, conteúdo, quantidade e data. É o mesmo raciocínio do item 2, uma coleção adiante: o crédito foi mesmo conquistado, então apagá-lo reescreveria a história e faria o **Nível do Lab** (uma projeção do ledger inteiro) encolher porque alguém saiu — o que ninguém pediu. A pessoa some do ranking, que é o que ela pediu, e as entradas deixam de nomear quem quer que seja.
+5. **A conta global só vai se nenhum outro lab a estiver usando.** Um login pode ter perfil em
    dois labs. A linha em `users` só é apagada quando não sobra perfil desta organização **e** não
    há vínculo com nenhuma outra — as duas contagens feitas dentro da mesma transação, para que
    dois labs apagando a mesma pessoa ao mesmo tempo se serializem em vez de os dois verem "ainda

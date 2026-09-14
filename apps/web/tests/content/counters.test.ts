@@ -137,6 +137,19 @@ const NOT_AN_FR020_DERIVED: Record<string, string> = {
   'aula.aprovadoEm': APPROVAL_STAMP,
   'evento.aprovacaoRegistrada': APPROVAL_STAMP,
   'evento.aprovadoEm': APPROVAL_STAMP,
+  // Feature 005. An **idempotency key**, not a derived value: `beforeValidate` composes it once
+  // from the entry's own `(tenant, perfil, acao, refTipo, refId)` and nothing ever recomputes
+  // it, because the ledger is append-only (FR-001) — there is no later state for it to drift
+  // from. Its gate is the UNIQUE INDEX itself, driven by `xp-ledger.test.ts` inserting the same
+  // tuple twice and asserting `23505`, which is a stronger check than a recount could be.
+  //
+  // This entry is here because registering `XpLedger` in `payload.config.ts` is what made the
+  // field visible to the scan below — so the rot guard fired at registration time, exactly as
+  // designed, on a field no task in the list had claimed. That is the guard working.
+  'xpLedger.chaveIdempotencia':
+    'an idempotency key composed once by beforeValidate and never recomputed; the ledger is ' +
+    'append-only (FR-001), so there is no source to reconcile against. Its gate is the unique ' +
+    'index, proven in xp-ledger.test.ts',
 }
 
 /**

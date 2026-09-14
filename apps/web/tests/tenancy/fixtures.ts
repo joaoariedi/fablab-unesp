@@ -1,6 +1,8 @@
 import { getPayload, type Payload } from 'payload'
 
 import config from '../../payload.config'
+import { REGRAS_XP_CITE } from '../../collections/content/RegrasXp'
+import { SEED_ON_CREATE } from '../../lib/tenancy/seed-on-create'
 import { scopedCollections } from '../../lib/tenancy/scope-registry'
 
 /**
@@ -235,6 +237,27 @@ const SEED_DATA: Record<string, (ctx: SeedContext) => Record<string, unknown>> =
     usuario: userId,
     conteudo: { relationTo: 'projeto', value: seeded.projeto },
   }),
+  // The 005 economy (T009), in registry order — both at the end, `regrasXp` first.
+  //
+  // The three tunables are written from `REGRAS_XP_CITE` rather than left to their
+  // `defaultValue`s: each column is `required: true`, and a fixture leaning on the default
+  // would stop exercising that the day somebody removed it. Importing the constant is what
+  // keeps this row from becoming a second, drifting copy of the CITe seed (CLR-010).
+  regrasXp: () => ({ ...REGRAS_XP_CITE }),
+  // A real credit rather than a bare row: `perfil` and `skill` are under `sameTenant`, so both
+  // must be the ones seeded into THIS organization, and `refTipo`/`refId` are scalars naming
+  // the project seeded above — which is what makes the entry reconstructable the way SC-019
+  // asks. `chaveIdempotencia` is composed by the collection's own `beforeValidate`; writing it
+  // here would test the fixture's copy of that rule instead of the collection's.
+  xpLedger: ({ seeded }) => ({
+    perfil: seeded.perfilMaker,
+    skill: seeded.skill,
+    acao: 'publicar_projeto',
+    refTipo: 'projeto',
+    // `number`, because the column is: a serial id, never the string form of one.
+    refId: Number(seeded.projeto),
+    quantidade: REGRAS_XP_CITE.xpPorAcao,
+  }),
 }
 
 /**
@@ -263,6 +286,16 @@ export function seedDataFor(
   }
   return build({ marker, userId, seeded })
 }
+
+/**
+ * Collections `SEED_ON_CREATE` writes when an organization is created.
+ *
+ * The fixture **adopts** these rather than creating its own, because they are singletons per
+ * organization and a second row breaks the invariant their collection states. Derived from the
+ * seed registry rather than hand-listed, so a seed added in a later feature is covered the day
+ * it lands instead of the day somebody remembers this file.
+ */
+const SEMEADAS_NA_CRIACAO = new Set(SEED_ON_CREATE.map((seed) => seed.collection))
 
 export async function buildWorld(): Promise<Fixture> {
   const payload = await getPayload({ config })
@@ -342,8 +375,41 @@ export async function buildWorld(): Promise<Fixture> {
     const seededFor = (marker: 'A' | 'B'): Record<string, string | number> =>
       Object.fromEntries(Object.entries(rows).map(([slug, ids]) => [slug, ids[marker]]))
 
-    const rowA = await create('A', a.id, userA, seededFor('A'), 'org-a.localhost')
-    const rowB = await create('B', b.id, userB, seededFor('B'), 'org-b.localhost')
+    // **A collection `SEED_ON_CREATE` already wrote is ADOPTED, never created a second time.**
+    //
+    // `regrasXp` is a singleton per organization — its own docblock says the row *"arrives
+    // exactly once"* and that *"every reader asks this collection one question and expects one
+    // answer"*. Creating a fixture row beside the one `seedNewOrganization` wrote gave each
+    // organization TWO economies, and `creditXp` would have read whichever came first.
+    //
+    // Measured, not theorised: it turned `isolation.test.ts`'s graphql vantage point red with
+    // *"a surface disclosed row 871, which this fixture did not seed"* — 871 and 873 both
+    // belonging to organization A. The row was never leaked; there were simply two of it. The
+    // other three vantage points passed, which is why running the WHOLE directory is the rule.
+    const adopt = async (tenant: string | number): Promise<{ id: string | number }> => {
+      const { docs } = await payload.find({
+        collection: collection as never,
+        where: { tenant: { equals: tenant } } as never,
+        limit: 2,
+        depth: 0,
+        overrideAccess: true,
+      })
+      if (docs.length !== 1) {
+        throw new Error(
+          `${collection} is seeded on organization creation, so exactly one row should exist ` +
+            `for tenant ${String(tenant)} — found ${String(docs.length)}. Either the seed ran ` +
+            `twice, or it did not run at all and this fixture has nothing to adopt.`,
+        )
+      }
+      return docs[0] as unknown as { id: string | number }
+    }
+
+    const rowA = SEMEADAS_NA_CRIACAO.has(collection)
+      ? await adopt(a.id)
+      : await create('A', a.id, userA, seededFor('A'), 'org-a.localhost')
+    const rowB = SEMEADAS_NA_CRIACAO.has(collection)
+      ? await adopt(b.id)
+      : await create('B', b.id, userB, seededFor('B'), 'org-b.localhost')
     rows[collection] = { A: rowA.id, B: rowB.id }
   }
 

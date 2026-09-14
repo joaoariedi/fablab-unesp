@@ -21,7 +21,9 @@ import { Modelo3d } from '../collections/content/Modelo3d'
 import { PerfilMaker } from '../collections/content/PerfilMaker'
 import { ProgressoAula } from '../collections/content/ProgressoAula'
 import { Projeto } from '../collections/content/Projeto'
+import { RegrasXp } from '../collections/content/RegrasXp'
 import { Skill } from '../collections/content/Skill'
+import { XpLedger } from '../collections/content/XpLedger'
 import { SCOPE_REGISTRY } from '../lib/tenancy/scope-registry'
 
 /**
@@ -163,8 +165,25 @@ const MIGRATED_COLLECTIONS: CollectionConfig[] = [
  */
 const COLLECTIONS_004: CollectionConfig[] = [TomDePele, TomDeCabelo, AvatarItem, Skill]
 
+/**
+ * The two collections feature 005 declares, whose tables T010's migration must create.
+ *
+ * Listed rather than derived, for the reason both rosters above are listed: a list taken from
+ * the resolved config passes vacuously for a collection nobody wired, and "declared in code,
+ * created by no migration" is precisely the drift this file exists to catch.
+ *
+ * In `SCOPE_REGISTRY` order, which is `payload.config.ts` order, which is the order
+ * `fixtures.ts` seeds in — `regrasXp` first because it points at nothing, `xpLedger` last
+ * because an entry names the `perfilMaker` that earned it and the `skill` it credited.
+ */
+const COLLECTIONS_005: CollectionConfig[] = [RegrasXp, XpLedger]
+
 /** Every collection whose table must exist, old and new — the per-table checks iterate this. */
-const ALL_MIGRATED_COLLECTIONS: CollectionConfig[] = [...MIGRATED_COLLECTIONS, ...COLLECTIONS_004]
+const ALL_MIGRATED_COLLECTIONS: CollectionConfig[] = [
+  ...MIGRATED_COLLECTIONS,
+  ...COLLECTIONS_004,
+  ...COLLECTIONS_005,
+]
 
 /** `scoped` collections carry the plugin's tenant column; `global` ones must not (FR-027). */
 const isScoped = (collection: CollectionConfig): boolean =>
@@ -385,6 +404,84 @@ describe('the schema feature 004 adds', () => {
         }
       })
     }
+  }
+})
+
+/**
+ * Feature 005's schema, over the same derived-not-listed rule the file opens with (T010, FR-001).
+ *
+ * The per-table checks above already demand the two new tables and a column for every field
+ * they declare. What they cannot see is everything 005 adds that is NOT a new collection's
+ * column, and each of those fails *silently* in a different way:
+ *
+ *   - a `select` whose Postgres enum type lags the config refuses every write of that column
+ *     with an error naming no field (the 004 block's measurement, applied to `acao`/`refTipo`);
+ *   - the unique index over `chaveIdempotencia` IS FR-003. Without it every assertion about
+ *     idempotency still passes in application code and the second credit for one action is
+ *     written anyway — `creditXp` catches a duplicate that the database never raises;
+ *   - `perfilMaker` is an EXISTING table, so its two new projection columns arrive by
+ *     `ALTER TABLE … ADD COLUMN` rather than in a create body. Nothing in the 004 block looks
+ *     for those, and a profile with no `xp_total` column loses the ranking, the pip bar and
+ *     the Nível do Lab while every other column is present and correct.
+ */
+describe('the schema feature 005 adds', () => {
+  for (const collection of COLLECTIONS_005) {
+    const table = snake(collection.slug)
+
+    for (const field of fieldsOfType(collection, 'select')) {
+      const typeName = `enum_${table}_${snake(field.name)}`
+
+      it(`declares "${typeName}" with every option "${collection.slug}.${field.name}" offers`, () => {
+        const declared = enumValues(typeName)
+        expect(
+          declared,
+          `no migration creates "${typeName}", so every write of ` +
+            `${collection.slug}.${field.name} is refused by the database`,
+        ).not.toBeNull()
+        for (const value of optionValues(field as SelectField)) {
+          expect(declared, `"${typeName}" is missing the option "${value}"`).toContain(`'${value}'`)
+        }
+      })
+    }
+  }
+
+  it('builds the unique index over "xp_ledger"."chave_idempotencia" — FR-003 itself', () => {
+    // Asserted as UNIQUE and not merely as an index: a plain index makes the duplicate lookup
+    // fast and refuses nothing, so the second credit for one action is written and the total
+    // it feeds is wrong by exactly one action. `creditXp` treats the violation as the success
+    // path of idempotency (T015), which means a missing UNIQUE here does not raise anywhere —
+    // it just stops the guarantee existing.
+    const index = /CREATE UNIQUE INDEX[^;]*"xp_ledger"[^;]*\("chave_idempotencia"\)/.exec(
+      committedUpSql(),
+    )
+    expect(
+      index,
+      'no committed migration builds a UNIQUE index over "xp_ledger"."chave_idempotencia", so ' +
+        'the tuple (tenant, perfil, acao, refTipo, refId) is unconstrained at the database and ' +
+        'FR-003 holds only for as long as every caller remembers to check first (SC-002)',
+    ).not.toBeNull()
+  })
+
+  it('keeps "xp_ledger"."chave_idempotencia" NOT NULL, or the unique index refuses nothing', () => {
+    // Postgres treats NULLs as DISTINCT in a unique index: a nullable key column lets unlimited
+    // unkeyed rows past the very index meant to refuse the second one. `XpLedger.ts` records
+    // this as the one property T007 could not have added after T006 without a migration.
+    expect(
+      createTableBody(committedUpSql(), 'xp_ledger'),
+      '"xp_ledger" is created by no migration',
+    ).toContain('"chave_idempotencia" varchar NOT NULL')
+  })
+
+  for (const column of ['xp_total', 'nivel'] as const) {
+    it(`adds "perfil_maker"."${column}" to the table that already exists`, () => {
+      // An ALTER, not a create body — `perfil_maker` shipped in 002b. `migratedColumns` reads
+      // both, which is the whole reason it exists.
+      expect(
+        migratedColumns(committedUpSql(), 'perfil_maker'),
+        `no committed migration gives "perfil_maker" a "${column}" column, so the projection ` +
+          'FR-010 requires has nowhere to be written and the ranking sorts on nothing',
+      ).toContain(`"${column}"`)
+    })
   }
 })
 

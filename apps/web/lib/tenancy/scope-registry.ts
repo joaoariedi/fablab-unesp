@@ -160,6 +160,21 @@ export const SCOPE_REGISTRY = {
     scope: 'scoped',
     why: 'A like points at one lab\'s content, so it is counted and read inside that lab (FR-017)',
   },
+  // The 005 economy (T009), declared at the END and in the order `regrasXp → missao →
+  // missaoSubmissao → xpLedger`. The order is the same load-bearing rule the two blocks above
+  // record: `fixtures.ts` seeds forward through this file and `resetWorld` deletes in reverse,
+  // so a collection is declared AFTER everything it points at. `regrasXp` leads because every
+  // other piece of the economy reads the rules row and it points at nothing; `xpLedger` trails
+  // because an entry names the `perfilMaker` that earned it and the `skill` it credited, both
+  // declared above. T028 lands `missao` and `missaoSubmissao` between the two.
+  regrasXp: {
+    scope: 'scoped',
+    why: 'The economy is per-organization DATA, not a deploy-time constant: a lab retunes XP by editing its own row, and a global table would impose CITe\'s 1/5/10 on every other lab (FR-009, CLR-010)',
+  },
+  xpLedger: {
+    scope: 'scoped',
+    why: 'One lab\'s XP history, and the sum of it IS that lab\'s ranking — a global ledger would rank a maker of A against credits earned at B, and expose the whole history to both (FR-001, FR-002)',
+  },
 } as const satisfies Record<string, ScopeEntry>
 
 /**

@@ -158,16 +158,19 @@ describe('perfilMaker carries the fields content renders (T042, FR-003b)', () =>
     ).toBeUndefined()
   })
 
-  it('still leaves the XP ledger to 005, now that 004 has landed its own fields', () => {
-    // `skills` left this list in T009: feature 004 adds it *here*, additively, which is what
-    // T042 planned for. What stays absent is the ledger — a maker's overall level and XP total
-    // are feature 005's, and `nivel`/`xp` exist only INSIDE a `skills` row, where they describe
-    // that maker's relation to one skill rather than a number for the whole profile.
-    for (const name of ['avatar', 'avatarPixel', 'nivel', 'xp', 'xpTotal']) {
+  it('still invents nothing at the top level that no feature owns', () => {
+    // `skills` left this list in T009 and `nivel`/`xpTotal` leave it in T008: each was absent
+    // because the feature that *owns* it had not landed, never because the top level must stay
+    // bare — T042's prediction was that 004 and 005 would EXTEND this collection, and both did.
+    //
+    // `xp` stays absent and that is still load-bearing: the profile's total is `xpTotal`, and a
+    // bare `xp` beside it would be a second name for the same number with nothing deciding
+    // which one the ranking reads. Per-skill `nivel`/`xp` remain inside a `skills` row.
+    for (const name of ['avatar', 'avatarPixel', 'xp']) {
       expect(
         fieldNamed(name),
-        `${name} was invented at the top level; 005 owns the ledger and would have to reshape ` +
-          'this collection. Per-skill level and XP belong to a `skills` row.',
+        `${name} was invented at the top level; no feature owns it, so every reader would have ` +
+          'to guess what it means. Per-skill level and XP belong to a `skills` row.',
       ).toBeUndefined()
     }
   })
@@ -378,5 +381,60 @@ describe('perfilMaker holds the maker\'s skills at level 0 (T009, FR-013)', () =
       'FR-013 assigns every ACTIVE skill, and a new organization has none until the team adds ' +
         'them — a minimum would refuse the first maker to sign up there',
     ).toBe(0)
+  })
+})
+
+/**
+ * T008 / FR-010 — the maker's **overall** XP total and level, at the top level of the profile.
+ *
+ * These are **projections of the xpLedger** (FR-010), maintained the way `counters.ts`
+ * maintains counters: recomputed from the source rows inside the writing transaction. They are
+ * stored rather than derived on read because the ranking sorts on them in the database
+ * (`sort: '-xpTotal,handle'`), and a sort cannot be computed per row at query time.
+ *
+ * The assertion that costs something is **neither may declare `max`**:
+ *
+ *  - `nivel` caps at `rules.nivelMaximo` (FR-007) and `xpTotal` caps at nothing at all
+ *    (FR-043) — the cap is a **rule**, enforced in `packages/game` where XP is awarded, and
+ *    `regrasXp` is per-organization data precisely so retuning the economy is an edit and not
+ *    a deploy (FR-009). A `max` here would be a Postgres-level constraint, so one lab raising
+ *    its ceiling would need a migration, and the first maker to cross the old cap would take a
+ *    write failure inside the approval transaction that FR-004 requires to succeed or roll the
+ *    approval back with it. The per-skill `nivel` already carries this note verbatim.
+ */
+describe('perfilMaker carries the overall XP projection (T008, FR-010)', () => {
+  it('declares xpTotal and nivel as numbers starting at 0', () => {
+    for (const name of ['xpTotal', 'nivel']) {
+      const numero = fieldNamed(name) as NumberField | undefined
+
+      expect(
+        numero,
+        `perfilMaker declares no top-level ${name}, so FR-010's projection has nowhere to land: ` +
+          'the ranking (FR-013) cannot sort in the database and every public page keeps printing ' +
+          'the level-1 stand-in its source already apologises for',
+      ).toBeDefined()
+      expect(numero?.type).toBe('number')
+      expect(
+        numero?.defaultValue,
+        `${name} has no default, so a profile created by anything other than the credit hook — ` +
+          'the tenancy fixtures, the seed, the admin — answers undefined, and a ranking sorted ' +
+          'on a three-valued number orders those rows arbitrarily',
+      ).toBe(0)
+    }
+  })
+
+  it('caps neither at the column: the ceiling is a rule, not a constraint', () => {
+    for (const name of ['xpTotal', 'nivel']) {
+      const numero = fieldNamed(name) as NumberField | undefined
+
+      expect(numero, `perfilMaker declares no top-level ${name} to cap or not cap`).toBeDefined()
+      expect(
+        numero?.max,
+        `${name} declares max, so the cap is frozen into the database. FR-007 puts it in ` +
+          'regrasXp — per-organization DATA — and FR-043 leaves xpTotal uncapped entirely; a ' +
+          'column constraint turns retuning one lab into a migration and makes the maker who ' +
+          'crosses the ceiling fail the approval transaction FR-004 requires to commit.',
+      ).toBeUndefined()
+    }
   })
 })

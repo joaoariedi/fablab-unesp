@@ -343,11 +343,24 @@ describe('a refused publish is discarded rather than refused (CHK087)', () => {
 })
 
 describe('a new organization starts empty and nothing says so (CHK092)', () => {
-  it('registers no seed, so the second lab has no categories on day one', () => {
+  /**
+   * Narrowed by feature 005, and narrowed rather than deleted.
+   *
+   * This asserted `SEED_ON_CREATE` was **empty**. That was true when CHK092 was left open, and
+   * 005 made it false: FR-009 registers the XP economy, so a new lab does start with something.
+   *
+   * What CHK092 was actually about is unchanged — *"US8's second lab opens the admin to empty
+   * CATEGORY lists and no requirement says what it sees"* — and no seed writes a category. So
+   * the assertion moves to the claim that is still open, instead of a proxy for it that has
+   * stopped being equivalent. A test that asserted `[]` forever would have been deleted by the
+   * first person who needed a seed, taking the open question with it.
+   */
+  it('registers no CATEGORY seed, so the second lab still opens to empty lists', () => {
+    const categorias = SEED_ON_CREATE.filter((seed) => /categoria/i.test(seed.collection))
     expect(
-      SEED_ON_CREATE,
-      'A seed was registered. CHK092 was left open because US8 second lab opens the admin to ' +
-        'empty category lists and no requirement says what it sees.',
+      categorias.map((seed) => seed.collection),
+      'A category seed was registered, so a second lab no longer opens to empty lists and ' +
+        'CHK092 can be re-adjudicated — it was left open precisely because nothing filled them.',
     ).toEqual([])
   })
 

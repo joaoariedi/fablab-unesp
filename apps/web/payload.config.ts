@@ -25,7 +25,9 @@ import { Modelo3d } from './collections/content/Modelo3d'
 import { PerfilMaker } from './collections/content/PerfilMaker'
 import { ProgressoAula } from './collections/content/ProgressoAula'
 import { Projeto } from './collections/content/Projeto'
+import { RegrasXp } from './collections/content/RegrasXp'
 import { Skill } from './collections/content/Skill'
+import { XpLedger } from './collections/content/XpLedger'
 import { MEDIA_COLLECTIONS, MEDIA_SLUGS } from './collections/Media'
 import { Organizations } from './collections/Organizations'
 import { PendingInvites } from './collections/PendingInvites'
@@ -131,6 +133,12 @@ const collections = [
   // they are derived from MEDIA_GROUPS, so a fourth media group arrives here on its own
   // instead of existing in `limits.ts` with nowhere to be uploaded to.
   ...MEDIA_COLLECTIONS,
+  // The 005 economy (T009). Order mirrors SCOPE_REGISTRY, where both are declared at the end
+  // and `regrasXp` comes first: seeding walks that file forward and `resetWorld` deletes in
+  // reverse, so `xpLedger` — which names a profile and a skill — has to be declared after
+  // them. T028 lands `missao` and `missaoSubmissao` between the two.
+  RegrasXp,
+  XpLedger,
 ]
 
 /**
@@ -342,6 +350,12 @@ export default buildConfig({
         // would carry no tenant column at all, and every lab would list every other lab's
         // files in the admin media view.
         ...Object.fromEntries(Object.values(MEDIA_SLUGS).map((slug) => [slug, {}])),
+        // The 005 economy (T009, FR-028). Both are scoped and both are listed: a lab's XP
+        // history is also its ranking, and its economy is the data FR-009 makes editable per
+        // organization — a missing entry here leaves the collection with no tenant column at
+        // all, and `scopedAccess()` then constrains on a field that does not exist.
+        regrasXp: {},
+        xpLedger: {},
       },
     }),
 

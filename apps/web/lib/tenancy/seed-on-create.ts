@@ -1,5 +1,6 @@
 import type { CollectionAfterChangeHook } from 'payload'
 
+import { REGRAS_XP_CITE } from '../../collections/content/RegrasXp'
 import { TENANT_RESOLUTION_TAG } from './resolve'
 import { getSystemScopedPayload, type SystemScopedPayload } from './system-payload'
 
@@ -16,10 +17,50 @@ import { getSystemScopedPayload, type SystemScopedPayload } from './system-paylo
  * gets debugged at 2am rather than designed away.
  */
 
-export type SeedFn = (sys: SystemScopedPayload, organizationId: string) => Promise<void>
+export type SeedFn = ((sys: SystemScopedPayload, organizationId: string) => Promise<void>) & {
+  /**
+   * The collection this seed writes.
+   *
+   * Carried on the function so the registry is **self-describing**: anything that needs to know
+   * "which collections already have a row the moment an organization exists" reads it from here
+   * instead of keeping a second list that goes stale silently.
+   *
+   * `tests/tenancy/fixtures.ts` is the first such reader — it **adopts** these rows rather than
+   * creating its own, because they are singletons per organization and a fixture row beside the
+   * seeded one gave each lab two economies. That was measured: `isolation.test.ts`'s graphql
+   * vantage point went red with *"a surface disclosed row 871, which this fixture did not
+   * seed"*, and 871 and 873 both belonged to organization A. Nothing had leaked; there were two
+   * of it.
+   */
+  readonly collection: string
+}
 
-/** Features 005+ push their defaults here. Empty in feature 000, by design. */
-export const SEED_ON_CREATE: SeedFn[] = []
+/**
+ * The XP economy a new organization starts with (T013, FR-009).
+ *
+ * `regrasXp.create` is a flat refusal for **every** role, so this is the only path by which
+ * the row can ever arrive: the system client runs `overrideAccess: true` and therefore never
+ * reaches that rule. A lab created without it has no economy at all, and every reader of the
+ * curve — `creditXp`, the projections, the lab level, the ranking — divides by `undefined`.
+ *
+ * The three tunables are written explicitly from `REGRAS_XP_CITE` rather than left to the
+ * collection's `defaultValue`s. Both spellings produce the same row today; this one keeps the
+ * seed honest the day somebody removes a default, and it is why `RegrasXp.ts` exports the
+ * constant instead of this file retyping `1 / 5 / 10` (CLR-010 — those numbers are the CITe
+ * **seed**, and the authority afterwards is the row).
+ *
+ * `organizationId` is not read: `sys.create` injects the tenant for a scoped collection, and
+ * naming it here again would be a second answer to a question the client already owns.
+ */
+const seedRegrasXp: SeedFn = Object.assign(
+  async (sys: SystemScopedPayload) => {
+    await sys.create({ collection: 'regrasXp', data: { ...REGRAS_XP_CITE } })
+  },
+  { collection: 'regrasXp' } as const,
+)
+
+/** Features 005+ push their defaults here. Feature 005 registers the XP economy (FR-009). */
+export const SEED_ON_CREATE: SeedFn[] = [seedRegrasXp]
 
 /**
  * Runs every registered seed against the **newly created** organization.
