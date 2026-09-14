@@ -55,6 +55,34 @@ rediscovering them.
 10. **gitleaks flags fixture passwords on ENTROPY near an English keyword.** Use the shared
     `fixture-password-123`; `senha:` does not trip it.
 
+### How to verify a TEST-ONLY task — read this before rejecting one
+
+**Twenty of the 58 tasks below write only tests**, and each is blocked by the task that delivers
+the implementation they test. That ordering is deliberate — it is what gives adversarial
+verification something to check — but it has a consequence that cost this feature a launch
+before anybody wrote a line of the ledger:
+
+> **A test-only task whose blocker already delivered the implementation CANNOT produce a RED.**
+> By this list's own ordering the code exists first, so there is no unimplemented behaviour for
+> the test to drive red. Reporting that as a failure is an orchestration artefact, not a defect,
+> and it halts the phase for a task that is complete.
+
+**Verify these by MUTATION instead.** That is a stronger check than a RED, not a weaker one:
+
+1. Write the assertions.
+2. Plant a mutation in the implementation that the requirement forbids — and **assert the file
+   actually changed**, because a mutation that never applied reports success on a tree it never
+   touched (measured twice on this tree).
+3. Watch the named tests fail, with a message that could only come from the assertion firing.
+4. **Restore, and prove the restore** — `git diff --stat` on the implementation must be empty.
+5. Report the mutants and their failure counts as the evidence. `tddStatus` is
+   `mutation-verified`, and that is an acceptance, not a flag.
+
+The T003 agent did exactly this — three mutants, each reverted, `git diff --stat` empty — and
+then reported it as a failure because the rules said RED. The rule is now this paragraph.
+
+**A [V] in the Refs column marks a task verified this way.**
+
 ### Facts from `research.md` these tasks must respect
 
 - **`stampApproval` is a PURE function** with no `req` and no IO, so the credit is a **separate
@@ -84,10 +112,35 @@ No dependencies, cheapest to get right, and every number in the feature is one o
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T001 | `XpRules`, `levelFor`, `progressInLevel` — pure, no IO, tunables passed in. The cap is applied **here and nowhere else**, which is why no column declares a `max` | FR-005, FR-007 | `packages/game/src/rules.ts` | — |
-| T002 | Export them; the `export {}` placeholder goes. The docblock's sketched `levelFor` becomes real | FR-005 | `packages/game/src/index.ts` | T001 |
-| T003 | The table test over **injected** rules (CLR-010): the CITe seed's row (0→0, 5→1, 49→9, 50→10, 999→10) is **one case**, not the definition — plus a second table with a different cap, because a test asserting "the cap is 10" asserts a seed value and fails on a lab that retuned legitimately. And `progressInLevel` at the cap, where the bar is full and stays full (CLR-013) | SC-006, CLR-010 | `packages/game/tests/rules.test.ts` | T001 |
-| T004 | Prove the purity fence still bites: `packages/game` importing `payload` or `next` fails lint. Watch it fail with a planted import, then remove it | SC-005 | `eslint.config.mjs` (assert only) | T002 |
+| ✅ T001 | `XpRules`, `levelFor`, `progressInLevel` — pure, no IO, tunables passed in. The cap is applied **here and nowhere else**, which is why no column declares a `max` | FR-005, FR-007 | `packages/game/src/rules.ts` | — |
+| ✅ T002 | Export them; the `export {}` placeholder goes. The docblock's sketched `levelFor` becomes real | FR-005 | `packages/game/src/index.ts` | T001 |
+| ✅ T003 | The table test over **injected** rules (CLR-010): the CITe seed's row (0→0, 5→1, 49→9, 50→10, 999→10) is **one case**, not the definition — plus a second table with a different cap, because a test asserting "the cap is 10" asserts a seed value and fails on a lab that retuned legitimately. And `progressInLevel` at the cap, where the bar is full and stays full (CLR-013) | [V] SC-006, CLR-010 | `packages/game/tests/rules.test.ts` | T001 |
+| ✅ T004 | Prove the purity fence still bites: `packages/game` importing `payload` or `next` fails lint. Watch it fail with a planted import, then remove it | SC-005 | `eslint.config.mjs` (assert only) | T002 |
+
+### What phase 1 cost — a task list defect, caught on the cheapest phase
+
+Three of four accepted. T003 was reported as a failure for a reason that was **not a defect in
+the work**: it is a test-only task blocked by the task that implements what it tests, so by this
+list's own ordering there was no unimplemented behaviour left to drive red.
+
+That is a flaw in **this file**, and it was about to be expensive: **twenty of the 58 tasks have
+the same shape.** Each would have halted its phase the same way — roughly eight more launches
+spent on an artefact. § *How to verify a test-only task* is the fix, and the twenty now carry
+`[V]`.
+
+The agent's own work was right in every respect, including the part it apologised for: it
+verified the teeth by **mutation** — cap hard-coded to 10 (CLR-010's exact named failure mode,
+3 tests red), level width hard-coded to 5 (8 red), the cap comparison weakened from `>=` to `>`
+(CLR-013, 7 red) — reverted each, and proved the revert with an empty `git diff --stat`. That is
+a stronger check than a RED. It reported it as a failure only because the rules said RED.
+
+**And its out-of-scope flag was worth more than the task.** It noticed `levelFor(-1)` returned
+**-1**, and `progressInLevel(-1)` a bar filled below empty, then correctly declined to fix what
+it had not been asked to fix. Both are clamped now, with the reasoning recorded where the clamp
+lives: a negative level sorts *below* a maker who has done nothing (FR-013), `-1 % 5` is `-1` in
+JavaScript rather than `4`, and "unreachable" is a property of today's callers rather than of the
+function — a reversal, a clawback or a correction after a bad import all arrive as a negative
+amount. Watched failing against the code exactly as T003 verified it.
 
 ## Phase 2: The ledger, before anything writes to it
 
@@ -100,10 +153,10 @@ No dependencies, cheapest to get right, and every number in the feature is one o
 | T009 | Registry declarations for `regrasXp` and `xpLedger` with their reasons, at the END and in walkable order. **Run the whole `tests/tenancy/` directory** — preamble item 4 | FR-028 | `apps/web/lib/tenancy/scope-registry.ts` | T006, T008 |
 | T010 | The migration, via `./scripts/migrate-create.sh` so the `.json` snapshot ships with it — preamble item 7 | FR-001 | `apps/web/migrations/` | T009 |
 | T010b | Verify the migration against a **scratch database**: `DATABASE_URI=<scratch> bash scripts/migration-drift.sh` must PASS on a database built from the committed migrations alone | FR-001 | `scripts/migration-drift.sh` (verify only) | T010 |
-| T011 | Prove the index refuses a duplicate **at the database**, not in application code: insert the same tuple twice directly and assert `23505` | SC-002 | `apps/web/tests/content/xp-ledger.test.ts` | T010 |
+| T011 | Prove the index refuses a duplicate **at the database**, not in application code: insert the same tuple twice directly and assert `23505` | [V] SC-002 | `apps/web/tests/content/xp-ledger.test.ts` | T010 |
 | T011b | `xpLedger.perfil` is **nullable** (CLR-011), and erasing a profile nulls it rather than deleting the entry — 004's tombstone applied to the ledger. Every reader tolerates an entry with no profile | FR-040, SC-021 | `apps/web/collections/content/XpLedger.ts`, `apps/web/lib/accounts/deletion.ts` | T010 |
-| T011c | The lab level is **unchanged** by an erasure, and `docs/lgpd.md` gains a row saying what deletion does to XP | SC-021, FR-012 | `apps/web/tests/content/xp-erasure.test.ts`, `docs/lgpd.md` | T011b |
-| T012 | Prove append-only is an access rule: `update` and `delete` are refused for a maker, for the team, and for a master | FR-001 | `apps/web/tests/content/xp-ledger.test.ts` | T011 |
+| T011c | The lab level is **unchanged** by an erasure, and `docs/lgpd.md` gains a row saying what deletion does to XP | [V] SC-021, FR-012 | `apps/web/tests/content/xp-erasure.test.ts`, `docs/lgpd.md` | T011b |
+| T012 | Prove append-only is an access rule: `update` and `delete` are refused for a maker, for the team, and for a master | [V] FR-001 | `apps/web/tests/content/xp-ledger.test.ts` | T011 |
 | T013 | Seed `regrasXp` on organization creation through `SEED_ON_CREATE`, and assert a **new** organization gets the CITe defaults | FR-009 | `apps/web/lib/tenancy/seed-on-create.ts` | T005 |
 
 ## Phase 3: The credit, and the projection
@@ -116,12 +169,12 @@ No dependencies, cheapest to get right, and every number in the feature is one o
 | T015 | `creditXp`: write the entry, **catch the duplicate as the SUCCESS path of idempotency**, rethrow anything else so it takes the caller's transaction with it. Recognise the duplicate by the `ValidationError` shape `@payloadcms/drizzle` actually raises — table plus column pair — with the raw `23505` as a second door (004's T020 measured that the code and index name are gone by the time a catch sees them) | FR-003, FR-004 | `apps/web/lib/content/xp.ts` | T007, T014 |
 | T016 | The projections: `perfilMaker.xpTotal`, `nivel`, and the matching `skills[]` entry, all maintained **inside the causing transaction** by passing the caller's own `req` — `counters.ts`'s three load-bearing properties, reused | FR-010 | `apps/web/lib/content/xp.ts` | T015 |
 | T017 | Register the credit `afterChange` hook on **FOUR** reviewable collections — **never `evento`** (CLR-012). It carries `aprovacaoRegistrada` exactly like the others, so "the reviewable collections" would credit event publication, which FR-008 forbids. The hook reads the record `stampApproval` wrote in `beforeChange` and credits once | FR-006, FR-042, US1 | `apps/web/collections/content/{Projeto,Artigo,Aula,Modelo3d}.ts` | T016 |
-| T017b | Prove it: approving an **`evento`** writes zero entries. The one collection that looks like the others and must not behave like them | SC-020, CLR-012 | `apps/web/tests/content/xp-credit.test.ts` | T017 |
-| T018 | Approve → unpublish → re-approve writes **exactly one** entry, driven against a real database | SC-001, US1 | `apps/web/tests/content/xp-credit.test.ts` | T017 |
-| T019 | A failed ledger write **rolls the approval back** — the content is still unpublished afterwards. This is the assertion that proves `afterChange` is inside the transaction rather than assuming it | SC-003, US1 | `apps/web/tests/content/xp-credit.test.ts` | T017 |
-| T020 | Extend `CounterField` and the gate's `satisfies Record<DerivedField, DerivedSource>` map with the XP fields. **This breaks typecheck until the reconciliation is written** — that is the mechanism, not an obstacle | FR-011, SC-004 | `apps/web/tests/content/counters.test.ts` | T016 |
-| T021 | Reconciliation: every projection equals a recount of the ledger, across the whole database. Watch it fail against a hand-desynced `xpTotal`. **A CI gate, not a runtime repair** (CLR-014) — the same answer 002 gave for the counters, and giving a different one here would be two disciplines for one guarantee | FR-011, SC-004, CLR-014 | `apps/web/tests/content/counters.test.ts` | T020 |
-| T021b | The free oracle, asserted as an oracle and never as a dependency: while `xpPorAcao` is 1, a **sum equals a count**. The amount is still stored per entry, because `regrasXp` is tunable | FR-009 | `apps/web/tests/content/xp-vs-count.test.ts` | T016 |
+| T017b | Prove it: approving an **`evento`** writes zero entries. The one collection that looks like the others and must not behave like them | [V] SC-020, CLR-012 | `apps/web/tests/content/xp-credit.test.ts` | T017 |
+| T018 | Approve → unpublish → re-approve writes **exactly one** entry, driven against a real database | [V] SC-001, US1 | `apps/web/tests/content/xp-credit.test.ts` | T017 |
+| T019 | A failed ledger write **rolls the approval back** — the content is still unpublished afterwards. This is the assertion that proves `afterChange` is inside the transaction rather than assuming it | [V] SC-003, US1 | `apps/web/tests/content/xp-credit.test.ts` | T017 |
+| T020 | Extend `CounterField` and the gate's `satisfies Record<DerivedField, DerivedSource>` map with the XP fields. **This breaks typecheck until the reconciliation is written** — that is the mechanism, not an obstacle | [V] FR-011, SC-004 | `apps/web/tests/content/counters.test.ts` | T016 |
+| T021 | Reconciliation: every projection equals a recount of the ledger, across the whole database. Watch it fail against a hand-desynced `xpTotal`. **A CI gate, not a runtime repair** (CLR-014) — the same answer 002 gave for the counters, and giving a different one here would be two disciplines for one guarantee | [V] FR-011, SC-004, CLR-014 | `apps/web/tests/content/counters.test.ts` | T020 |
+| T021b | The free oracle, asserted as an oracle and never as a dependency: while `xpPorAcao` is 1, a **sum equals a count**. The amount is still stored per entry, because `regrasXp` is tunable | [V] FR-009 | `apps/web/tests/content/xp-vs-count.test.ts` | T016 |
 
 ## Phase 4: The class completion, and the profile bridge
 
@@ -130,7 +183,7 @@ No dependencies, cheapest to get right, and every number in the feature is one o
 | T022 | `perfilDoUsuarioNesta` — resolve a **global** `users` id to the profile in **this** organization, through the choke point | FR-006, US2 | `apps/web/lib/content/xp.ts` | T016 |
 | T023 | The completion hook: credit when `concluidaEm` is newly stamped, and **not** when it was already set. Rewatching credits nothing, however many times | FR-025, SC-011 | `apps/web/collections/content/ProgressoAula.ts` | T022 |
 | T024 | The unresolvable case, decided rather than crashed on (D3): a user with progress and **no profile in this organization** gets no credit, no throw, one warning — failing there would roll back a watch that was not wrong | US2 | `apps/web/collections/content/ProgressoAula.ts` | T023 |
-| T025 | A claim for a class with **no progress row belonging to the requesting maker** is refused, and writes no entry | FR-027, US2 | `apps/web/tests/content/xp-aula.test.ts` | T023 |
+| T025 | A claim for a class with **no progress row belonging to the requesting maker** is refused, and writes no entry | [V] FR-027, US2 | `apps/web/tests/content/xp-aula.test.ts` | T023 |
 | T025b | Record CLR-008's posture where it will be read: v1 **trusts** the completion claim, the gain is bounded at 1 XP per class and every credit is an auditable ledger row. A comment beside the hook, not only in the spec — 004 learned that a gap recorded only in a spec is a gap nobody meets again | FR-038, CLR-008 | `apps/web/collections/content/ProgressoAula.ts` | T024 |
 
 ## Phase 5: Missions
@@ -142,32 +195,32 @@ No dependencies, cheapest to get right, and every number in the feature is one o
 | T028 | Registry declarations for both, and their migration | FR-028 | `apps/web/lib/tenancy/scope-registry.ts`, `apps/web/migrations/` | T027 |
 | T029 | Team validation: approving a submission credits **once**, to the skill the mission names, through the same idempotency key | FR-022, SC-012 | `apps/web/collections/content/MissaoSubmissao.ts` | T028, T016 |
 | T029b | A **rejected** submission is reopened, never replaced (CLR-015): the maker edits it and it returns to `enviada`. The unique index would otherwise bar them permanently after one rejection, which is not what a review queue is for | FR-041, FR-023, SC-022 | `apps/web/collections/content/MissaoSubmissao.ts` | T029 |
-| T030 | Two team members approving the same submission credit once | SC-012, US3 | `apps/web/tests/content/missao.test.ts` | T029 |
-| T030b | reject → edit → approve credits **once**, and the row is the same row throughout | SC-022, FR-041 | `apps/web/tests/content/missao.test.ts` | T029b |
-| T031 | The upload is a **security-review surface** (Principle 5): the submission stores an **id** and never a key, URL or filename; the image is same-tenant; a maker cannot attach another maker's media. Feed all four wrong shapes and assert the write is refused | FR-036, SC-017 | `apps/web/tests/content/missao-upload.test.ts` | T029 |
+| T030 | Two team members approving the same submission credit once | [V] SC-012, US3 | `apps/web/tests/content/missao.test.ts` | T029 |
+| T030b | reject → edit → approve credits **once**, and the row is the same row throughout | [V] SC-022, FR-041 | `apps/web/tests/content/missao.test.ts` | T029b |
+| T031 | The upload is a **security-review surface** (Principle 5): the submission stores an **id** and never a key, URL or filename; the image is same-tenant; a maker cannot attach another maker's media. Feed all four wrong shapes and assert the write is refused | [V] FR-036, SC-017 | `apps/web/tests/content/missao-upload.test.ts` | T029 |
 | T032 | The mission page: a maker submits, a signed-out visitor sees the mission with **no personal percentage** and an invitation to sign in | FR-024, US3 | `apps/web/app/(frontend)/missoes/page.tsx` | T029 |
 
 ## Phase 6: The catalogue semantics
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T033 | Deactivation moves no XP: record every total, set `ativa: false`, re-read, assert **nothing** changed | FR-015, SC-007 | `apps/web/tests/content/skill-catalogue.test.ts` | T016 |
-| T034 | Reactivation restores every level **exactly**, because it is recomputed from an untouched ledger — the same test, continued | FR-016, SC-008 | `apps/web/tests/content/skill-catalogue.test.ts` | T033 |
+| T033 | Deactivation moves no XP: record every total, set `ativa: false`, re-read, assert **nothing** changed | [V] FR-015, SC-007 | `apps/web/tests/content/skill-catalogue.test.ts` | T016 |
+| T034 | Reactivation restores every level **exactly**, because it is recomputed from an untouched ledger — the same test, continued | [V] FR-016, SC-008 | `apps/web/tests/content/skill-catalogue.test.ts` | T033 |
 | T035 | The repair itself (D4): the flag **commits first**, the recompute runs after it in pages, bounded by makers with at least one entry in that skill. Not inside the skill's own transaction — one sum per earner while holding its lock is a long transaction and a lock everyone waits on | FR-016 | `apps/web/collections/content/Skill.ts` | T034 |
 | T036 | Adding a skill assigns it at level 0 to **every** maker of that organization, including one who signed up before it existed | FR-017, SC-009 | `apps/web/collections/content/Skill.ts` | T035 |
 | T037 | A skill with ledger entries cannot be hard-deleted; the refusal **names how many** exist | FR-018 | `apps/web/collections/content/Skill.ts` | T036 |
-| T038 | A deactivated skill is hidden from the maker's panel and from new assignment, **without changing stored progress** — hidden is not erased | FR-019, US9 | `apps/web/tests/content/skill-catalogue.test.ts` | T037 |
+| T038 | A deactivated skill is hidden from the maker's panel and from new assignment, **without changing stored progress** — hidden is not erased | [V] FR-019, US9 | `apps/web/tests/content/skill-catalogue.test.ts` | T037 |
 
 ## Phase 7: The surfaces
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
 | T039 | `projeto` gains `autor` → `perfilMaker`, **NULLABLE on day one**, with `sameTenant`. Nullable now costs nothing; retrofitting it cost 004 a migration **and** the removal of `required: true`, because `push` rebuilds the schema from the field config and `sameTenant` re-implements the `required` floor | FR-034, CLR-002 | `apps/web/collections/content/Projeto.ts` | T009 |
-| T040 | Its migration, and `tests/tenancy/autor-nulavel.test.ts` extended to `projeto` — the gate that reads `information_schema` **after a real boot** rather than matching the migration's text | FR-034 | `apps/web/migrations/`, `apps/web/tests/tenancy/autor-nulavel.test.ts` | T039 |
+| T040 | Its migration, and `tests/tenancy/autor-nulavel.test.ts` extended to `projeto` — the gate that reads `information_schema` **after a real boot** rather than matching the migration's text | [V] FR-034 | `apps/web/migrations/`, `apps/web/tests/tenancy/autor-nulavel.test.ts` | T039 |
 | T041 | **Delete the placeholders in ONE change**, as their own comments instruct: `AUTORIA_PENDENTE` in the Home and Projetos, and the level-1 stand-in in Artigos and Aulas. Four files, one commit | FR-033, US10 | `apps/web/app/(frontend)/{page,projetos/page,artigos/page,aulas/page}.tsx` | T040 |
 | T042 | Minha Conta's SUAS SKILLS reads **real** levels — ten pips, empty at level 0, active skills only | FR-032, US9 | `apps/web/app/(frontend)/minha-conta/page.tsx` | T038 |
 | T043 | `/ranking` (CLR-007): this organization's makers by XP, with the **declared tie-break** `-xpTotal,handle` — sorting by XP alone leaves ties in whatever order Postgres returns, which differs between runs and makes SC-013 unprovable | FR-013, FR-037, US6 | `apps/web/app/(frontend)/ranking/page.tsx` | T016 |
-| T043b | The tie-break is stable **across runs**, and the page adds **no island** | SC-013, SC-015, SC-018 | `apps/web/tests/public/ranking-page.test.ts` | T043 |
+| T043b | The tie-break is stable **across runs**, and the page adds **no island** | [V] SC-013, SC-015, SC-018 | `apps/web/tests/public/ranking-page.test.ts` | T043 |
 | T044 | The lab level: a projection of the whole organization's ledger, on the same curve. An empty lab reads **0 with an empty bar**, never blank or `NaN` | FR-012, SC-014, US8 | `apps/web/lib/content/xp.ts` | T016 |
 
 ## Phase 8: The gates
@@ -178,7 +231,7 @@ because the new gate ran, reported red, and could be merged past.
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
 | T045 | Mark the mutation point: `/* @isolation-mutation-point */` above `creditXp`'s choice of client. No existing layer touches a caller's choice — the four today rewrite the machinery — and `creditXp` is the first module resolving a global identity to a scoped profile before writing a total to it (D7) | FR-035 | `apps/web/lib/content/xp.ts` | T016 |
-| T046 | The harness: a maker of A causes no credit at B, on every XP surface. `EVIDENCE` must be a message **only the counting assertion can print**, never a setup failure | SC-010 | `apps/web/tests/tenancy/xp-isolation.test.ts` | T045 |
+| T046 | The harness: a maker of A causes no credit at B, on every XP surface. `EVIDENCE` must be a message **only the counting assertion can print**, never a setup failure | [V] SC-010 | `apps/web/tests/tenancy/xp-isolation.test.ts` | T045 |
 | T047 | The `xp-ledger` layer in the script, with its `HARNESS`, `EXPECT` and `EVIDENCE` | FR-035 | `scripts/isolation-mutation.sh` | T046 |
 | T048 | **Watch it fail.** Plant the violation, **assert the file actually changed**, observe RED, restore. A mutation that mutates nothing reports success on a tree it never touched — which is what `tests/isolation-mutation-layers.test.ts` exists to catch, and what one of my own plants did in 004 | SC-010 | `scripts/isolation-mutation.sh` (verify only) | T047 |
 | T049 | Only now: the CI matrix leg | FR-035 | `.github/workflows/ci.yml` | T048 |
@@ -187,8 +240,9 @@ because the new gate ran, reported red, and could be merged past.
 
 ---
 
-**Legend**: `✅` in the ID cell = accepted · `[P]` = parallelizable · `⛔` = needs a human, and
-lives outside the phase tables
+**Legend**: `✅` in the ID cell = accepted · `[P]` = parallelizable · `[V]` = test-only, verified
+by **mutation** rather than by a RED (see § *How to verify a test-only task*) · `⛔` = needs a
+human, and lives outside the phase tables
 
 ## Outstanding, and not executable by a run
 
