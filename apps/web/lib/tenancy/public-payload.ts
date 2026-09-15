@@ -66,6 +66,8 @@ export type PublishableCollection = {
 type PublishableField = {
   name?: string
   type?: string
+  /** A `select`'s own vocabulary — see {@link declaresQueryableStatus}. */
+  options?: readonly (string | { value?: string })[]
   fields?: readonly PublishableField[]
   tabs?: readonly { name?: string; fields: readonly PublishableField[] }[]
 }
@@ -99,9 +101,36 @@ const and = (...clauses: (Where | undefined)[]): Where | undefined => {
  * ("a hand-kept list rots") one level down: the list of collections stopped being hand-kept,
  * the list of wrappers did not. `flattenAllFields` is a public export of `payload`, so the
  * answer can be *asked* instead of re-derived, and it cannot drift from what queries do.
+ *
+ * **A `select` must also be able to SAY `publicado`**, and that half arrived with feature 005.
+ * `missaoSubmissao` carries a `status` whose vocabulary is the review's — `enviada`, `aprovada`,
+ * `recusada` — because nothing public reads a submission. Being in this set on the strength of
+ * the field's *name* alone does not make its listing empty, as the second bullet above assumes;
+ * on Postgres the column is an enum and the filter **throws**:
+ *
+ * ```text
+ * Failed query: select count(*) from "missao_submissao" where "status" = $1
+ *   Caused by: invalid input value for enum enum_missao_submissao_status: "publicado"
+ * ```
+ *
+ * So the vocabulary is asked as well — of the field itself, never of a list kept here. A
+ * collection whose `status` cannot express `publicado` has no published state to filter for and
+ * does not belong in the set; a `status` that is not a `select` declares no vocabulary to check
+ * and keeps the name-only answer, which is the conservative direction for the text and
+ * radio-style fields this codebase does not have yet.
  */
-const declaresQueryableStatus = (fields: readonly PublishableField[]): boolean =>
-  flattenAllFields({ fields: fields as never }).some((field) => field.name === 'status')
+const podeDizerPublicado = (field: PublishableField): boolean =>
+  (field.options ?? []).some((option) =>
+    typeof option === 'string' ? option === PUBLISHED_STATUS : option?.value === PUBLISHED_STATUS,
+  )
+
+const declaresQueryableStatus = (fields: readonly PublishableField[]): boolean => {
+  const status = flattenAllFields({ fields: fields as never }).find(
+    (field) => (field as PublishableField).name === 'status',
+  ) as PublishableField | undefined
+  if (!status) return false
+  return status.type === 'select' ? podeDizerPublicado(status) : true
+}
 
 /**
  * The publishable set is **derived, never listed**.

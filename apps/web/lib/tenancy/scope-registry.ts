@@ -160,16 +160,25 @@ export const SCOPE_REGISTRY = {
     scope: 'scoped',
     why: 'A like points at one lab\'s content, so it is counted and read inside that lab (FR-017)',
   },
-  // The 005 economy (T009), declared at the END and in the order `regrasXp → missao →
-  // missaoSubmissao → xpLedger`. The order is the same load-bearing rule the two blocks above
-  // record: `fixtures.ts` seeds forward through this file and `resetWorld` deletes in reverse,
-  // so a collection is declared AFTER everything it points at. `regrasXp` leads because every
-  // other piece of the economy reads the rules row and it points at nothing; `xpLedger` trails
-  // because an entry names the `perfilMaker` that earned it and the `skill` it credited, both
-  // declared above. T028 lands `missao` and `missaoSubmissao` between the two.
+  // The 005 economy (T009, completed by T028), declared at the END and in the order
+  // `regrasXp → missao → missaoSubmissao → xpLedger`. The order is the same load-bearing rule
+  // the two blocks above record: `fixtures.ts` seeds forward through this file and `resetWorld`
+  // deletes in reverse, so a collection is declared AFTER everything it points at. `regrasXp`
+  // leads because every other piece of the economy reads the rules row and it points at
+  // nothing; `missaoSubmissao` follows `missao` because a submission names the mission it
+  // completes; `xpLedger` trails because an entry names the `perfilMaker` that earned it and
+  // the `skill` it credited, both declared above.
   regrasXp: {
     scope: 'scoped',
     why: 'The economy is per-organization DATA, not a deploy-time constant: a lab retunes XP by editing its own row, and a global table would impose CITe\'s 1/5/10 on every other lab (FR-009, CLR-010)',
+  },
+  missao: {
+    scope: 'scoped',
+    why: 'A challenge one lab publishes for its own makers; a global catalogue would put CITe\'s missions on every lab\'s Home and credit XP in a skill catalogue that is itself per-organization (FR-020)',
+  },
+  missaoSubmissao: {
+    scope: 'scoped',
+    why: 'A maker\'s proof PHOTO and the review\'s verdict — global would offer one lab\'s uploads to another lab\'s review queue, and FR-023\'s (missao, maker) index only means "once per maker" while both halves sit inside one lab (FR-021, FR-036)',
   },
   xpLedger: {
     scope: 'scoped',

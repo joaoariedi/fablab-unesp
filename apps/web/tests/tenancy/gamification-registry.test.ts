@@ -16,8 +16,12 @@ import { seedDataFor } from './fixtures.js'
  * registry against the *config*: a collection that reached neither is invisible to it, so that
  * gate passes vacuously rather than failing.
  *
- * The two are written out **by name**, driven from tasks.md rather than derived from whatever
+ * The four are written out **by name**, driven from tasks.md rather than derived from whatever
  * happens to be wired — a list derived from the config would agree with any config at all.
+ *
+ * T028 added `missao` and `missaoSubmissao` to the table, for the same reason the first two are
+ * here: `Missao.ts` and `MissaoSubmissao.ts` were authored by T026 and T027 and neither could
+ * register itself, so both end their docstring naming T028 as the task that wires them.
  *
  * No database: this inspects the sanitized config and the fixture table only.
  */
@@ -25,6 +29,16 @@ const GAMIFICATION_COLLECTIONS = {
   // FR-009: the economy is per-organization DATA, so a lab retunes it by editing its own row.
   // Global would hand every lab CITe's numbers and make retuning a deploy.
   regrasXp: 'scoped',
+  // FR-020 (T028): a mission is a challenge ONE lab publishes for its own makers. Global would
+  // put CITe's missions in every lab's Home and let a maker complete a challenge their lab
+  // never set — and, through the skill the mission names, credit XP in a catalogue entry that
+  // is itself per-organization.
+  missao: 'scoped',
+  // FR-021/FR-023/FR-036 (T028): a submission carries a maker's proof PHOTO and the review's
+  // verdict. Global would expose one lab's uploads to every other lab's review queue, which is
+  // the upload trust boundary CLR-006 names; and the `(missao, maker)` unique index of FR-023
+  // only means "one per mission per maker" while both halves live inside one lab.
+  missaoSubmissao: 'scoped',
   // FR-001/FR-002: the ledger is one lab's history, and its sum is that lab's ranking. Global
   // would let a maker of A read — and be ranked against — the credits of B.
   xpLedger: 'scoped',
@@ -42,6 +56,13 @@ const slugs = Object.keys(GAMIFICATION_COLLECTIONS) as (keyof typeof GAMIFICATIO
  * a test nobody trusts.
  */
 const LAST_PRE_005_COLLECTION = 'curtida'
+
+/**
+ * The declared order of the economy, which is load-bearing rather than tidy — see the order
+ * test below. Written out by name for the same reason `GAMIFICATION_COLLECTIONS` is: an order
+ * read off the registry would agree with any registry at all.
+ */
+const ORDEM_ECONOMIA = ['regrasXp', 'missao', 'missaoSubmissao', 'xpLedger'] as const
 
 /** Relationship fields hide inside tabs, groups, arrays and rows — a flat scan misses most. */
 const flattenFields = (fields: Field[]): Field[] =>
@@ -65,7 +86,7 @@ const collectionsBySlug = async (): Promise<Map<string, CollectionConfig>> => {
   return new Map(config.collections.map((c) => [c.slug, c as unknown as CollectionConfig]))
 }
 
-describe('005 economy collections are declared and registered (T009, FR-028)', () => {
+describe('005 economy collections are declared and registered (T009/T028, FR-028)', () => {
   it('declares each in SCOPE_REGISTRY with a non-empty reason', () => {
     const missing = slugs.filter((slug) => !(slug in SCOPE_REGISTRY))
     expect(
@@ -95,7 +116,7 @@ describe('005 economy collections are declared and registered (T009, FR-028)', (
     ).toEqual([])
   })
 
-  it('declares both at the END, after every collection that pre-dates this feature', () => {
+  it('declares each at the END, after every collection that pre-dates this feature', () => {
     const order = [...registeredCollections()] as string[]
     const last = order.indexOf(LAST_PRE_005_COLLECTION)
     expect(last, `${LAST_PRE_005_COLLECTION} is not in the registry at all`).toBeGreaterThan(-1)
@@ -112,24 +133,44 @@ describe('005 economy collections are declared and registered (T009, FR-028)', (
     }
   })
 
-  it('declares `regrasXp` BEFORE `xpLedger`, because the order is load-bearing', () => {
+  it('declares the four in the order `regrasXp → missao → missaoSubmissao → xpLedger`', () => {
     // `fixtures.ts` seeds in registry order and `resetWorld` deletes in REVERSE, so a
     // collection may only be related to by one declared later. Feature 002 paid for this once:
     // a media collection declared after `projeto` broke `resetWorld`, which threw in
     // `beforeAll` and reported 160 tests as *skipped* rather than one as failed (item 4).
+    //
+    // Asserted as the whole sequence rather than as one pair, because T028 inserts two
+    // collections INTO it: `missaoSubmissao.missao` points at `missao`, so a submission
+    // declared first is a submission `resetWorld` deletes after the mission it names — the
+    // foreign key refuses, inside `beforeAll`, and the directory reports as skipped.
     const order = [...registeredCollections()] as string[]
-    expect(
-      order.indexOf('regrasXp'),
-      `regrasXp is declared at ${order.indexOf('regrasXp')} and xpLedger at ` +
-        `${order.indexOf('xpLedger')}: everything else in the economy reads the rules row, so ` +
-        `it is declared first of the four (regrasXp → missao → missaoSubmissao → xpLedger).`,
-    ).toBeLessThan(order.indexOf('xpLedger'))
+    const positions = ORDEM_ECONOMIA.map((slug) => ({ slug, at: order.indexOf(slug) }))
+    const shown = positions.map(({ slug, at }) => `${slug}@${at}`).join(', ')
+
+    // Without this the walk below would report a clean order over an empty list — the vacuous
+    // pass this whole file exists to prevent.
+    expect(positions.length, 'the declared economy order is empty').toBe(ORDEM_ECONOMIA.length)
+
+    let anterior: { slug: string; at: number } | undefined
+    for (const atual of positions) {
+      expect(atual.at, `${atual.slug} is not in the registry at all (${shown})`).toBeGreaterThan(-1)
+      if (anterior) {
+        expect(
+          atual.at,
+          `${atual.slug} is declared before ${anterior.slug} (${shown}). The economy is ` +
+            `declared ${ORDEM_ECONOMIA.join(' → ')}: everything else reads the rules row, a ` +
+            `submission names a mission, and a ledger entry names the profile and skill above.`,
+        ).toBeGreaterThan(anterior.at)
+      }
+      anterior = atual
+    }
   })
 
   it('walks backwards: every collection they point at is declared EARLIER', async () => {
     // Asked of the CONFIG, not of a hand-kept list of which collection depends on which
-    // (preamble item 2). `xpLedger.perfil` → `perfilMaker` and `xpLedger.skill` → `skill` are
-    // the pairs today; a field added tomorrow is covered without editing this test.
+    // (preamble item 2). `xpLedger.perfil` → `perfilMaker`, `xpLedger.skill` → `skill` and
+    // `missaoSubmissao.missao` → `missao` are the pairs today; a field added tomorrow is
+    // covered without editing this test.
     const bySlug = await collectionsBySlug()
     const order = [...registeredCollections()] as string[]
     const backwards: string[] = []
@@ -195,7 +236,7 @@ describe('005 economy collections are declared and registered (T009, FR-028)', (
     // Called here, with no database, it fails one assertion loudly instead.
     for (const slug of slugs.filter((s) => GAMIFICATION_COLLECTIONS[s] === 'scoped')) {
       expect(
-        () => seedDataFor(slug, 'A', 1, { perfilMaker: 1, skill: 1, projeto: 1 }),
+        () => seedDataFor(slug, 'A', 1, { perfilMaker: 1, skill: 1, projeto: 1, midiaImagem: 1, missao: 1 }),
         `fixtures.ts has no seed data for ${slug}`,
       ).not.toThrow()
     }

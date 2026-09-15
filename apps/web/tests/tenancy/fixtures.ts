@@ -245,6 +245,31 @@ const SEED_DATA: Record<string, (ctx: SeedContext) => Record<string, unknown>> =
   // would stop exercising that the day somebody removed it. Importing the constant is what
   // keeps this row from becoming a second, drifting copy of the CITe seed (CLR-010).
   regrasXp: () => ({ ...REGRAS_XP_CITE }),
+  // The two T028 registers, in registry order — between `regrasXp` and `xpLedger`. Every
+  // relationship points at the row seeded into THIS organization, because `sameTenant` refuses
+  // anything else and a refusal here aborts `beforeAll` for the whole directory.
+  missao: ({ marker, seeded }) => ({
+    titulo: `Missão ${marker}`,
+    descricao: `Missão de fixture ${marker}.`,
+    icone: seeded.midiaImagem,
+    skill: seeded.skill,
+    // `publicado`, spelled exactly as `derivePublishable`'s filter spells it, and written out
+    // rather than left to the `defaultValue`: the column is `required: true`, and a fixture
+    // leaning on the default stops exercising that the day somebody removes it. A `rascunho`
+    // row would also be invisible to every published-only read, so an assertion about a
+    // mission being listed would pass by finding nothing.
+    status: 'publicado',
+  }),
+  // One row per (mission, maker) — the unique index of FR-023 — so the marker's own mission and
+  // the marker's own profile are what it names. `comprovante` is a `midiaImagem` id and never a
+  // key, a URL or a filename (CLR-006, FR-036); `status` is the state a submission is born in,
+  // written explicitly for the same reason `missao.status` is.
+  missaoSubmissao: ({ seeded }) => ({
+    missao: seeded.missao,
+    maker: seeded.perfilMaker,
+    comprovante: seeded.midiaImagem,
+    status: 'enviada',
+  }),
   // A real credit rather than a bare row: `perfil` and `skill` are under `sameTenant`, so both
   // must be the ones seeded into THIS organization, and `refTipo`/`refId` are scalars naming
   // the project seeded above — which is what makes the entry reconstructable the way SC-019

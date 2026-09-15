@@ -389,15 +389,73 @@ implementer named the hole in their own findings and marked the task complete an
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T026 | `missao` — **scoped**: title, description, icon, the **skill it credits**, published state | FR-020 | `apps/web/collections/content/Missao.ts` | T009 |
-| T027 | `missaoSubmissao` — **scoped**, with `comprovante` as a `midiaImagem` **relationship** (CLR-006) and a unique index on `(missao, maker)` so FR-023 is a constraint and not a check somebody must remember | FR-021, FR-023, FR-036 | `apps/web/collections/content/MissaoSubmissao.ts` | T026 |
-| T028 | Registry declarations for both, and their migration | FR-028 | `apps/web/lib/tenancy/scope-registry.ts`, `apps/web/migrations/` | T027 |
-| T029 | Team validation: approving a submission credits **once**, to the skill the mission names, through the same idempotency key | FR-022, SC-012 | `apps/web/collections/content/MissaoSubmissao.ts` | T028, T016 |
-| T029b | A **rejected** submission is reopened, never replaced (CLR-015): the maker edits it and it returns to `enviada`. The unique index would otherwise bar them permanently after one rejection, which is not what a review queue is for | FR-041, FR-023, SC-022 | `apps/web/collections/content/MissaoSubmissao.ts` | T029 |
-| T030 | Two team members approving the same submission credit once | [V] SC-012, US3 | `apps/web/tests/content/missao.test.ts` | T029 |
-| T030b | reject → edit → approve credits **once**, and the row is the same row throughout | [V] SC-022, FR-041 | `apps/web/tests/content/missao.test.ts` | T029b |
-| T031 | The upload is a **security-review surface** (Principle 5): the submission stores an **id** and never a key, URL or filename; the image is same-tenant; a maker cannot attach another maker's media. Feed all four wrong shapes and assert the write is refused | [V] FR-036, SC-017 | `apps/web/tests/content/missao-upload.test.ts` | T029 |
-| T032 | The mission page: a maker submits, a signed-out visitor sees the mission with **no personal percentage** and an invitation to sign in | FR-024, US3 | `apps/web/app/(frontend)/missoes/page.tsx` | T029 |
+| ✅ T026 | `missao` — **scoped**: title, description, icon, the **skill it credits**, published state | FR-020 | `apps/web/collections/content/Missao.ts` | T009 |
+| ✅ T027 | `missaoSubmissao` — **scoped**, with `comprovante` as a `midiaImagem` **relationship** (CLR-006) and a unique index on `(missao, maker)` so FR-023 is a constraint and not a check somebody must remember | FR-021, FR-023, FR-036 | `apps/web/collections/content/MissaoSubmissao.ts` | T026 |
+| ✅ T028 | Registry declarations for both, and their migration | FR-028 | `apps/web/lib/tenancy/scope-registry.ts`, `apps/web/migrations/` | T027 |
+| ✅ T029 | Team validation: approving a submission credits **once**, to the skill the mission names, through the same idempotency key | FR-022, SC-012 | `apps/web/collections/content/MissaoSubmissao.ts` | T028, T016 |
+| ✅ T029b | A **rejected** submission is reopened, never replaced (CLR-015): the maker edits it and it returns to `enviada`. The unique index would otherwise bar them permanently after one rejection, which is not what a review queue is for | FR-041, FR-023, SC-022 | `apps/web/collections/content/MissaoSubmissao.ts` | T029 |
+| ✅ T030 | Two team members approving the same submission credit once | [V] SC-012, US3 | `apps/web/tests/content/missao.test.ts` | T029 |
+| ✅ T030b | reject → edit → approve credits **once**, and the row is the same row throughout | [V] SC-022, FR-041 | `apps/web/tests/content/missao.test.ts` | T029b |
+| ✅ T031 | The upload is a **security-review surface** (Principle 5): the submission stores an **id** and never a key, URL or filename; the image is same-tenant; a maker cannot attach another maker's media. Feed all four wrong shapes and assert the write is refused | [V] FR-036, SC-017 | `apps/web/tests/content/missao-upload.test.ts` | T029 |
+| ✅ T032 | The mission page: a maker submits, a signed-out visitor sees the mission with **no personal percentage** and an invitation to sign in | FR-024, US3 | `apps/web/app/(frontend)/missoes/page.tsx` | T029 |
+
+### What phase 5 cost — FR-021 read in the mirror, and a filter that throws
+
+Eight of nine accepted. The one rejection was the phase-4 defect with the verbs swapped, and
+adjudicating it turned up a second thing nobody had asked about.
+
+**1. `missaoSubmissao.maker` was client-supplied on create.** `maker` carried
+`access: { update: () => false }` and no attribution at all — so the field was frozen on the
+verb an attacker does not need. FR-021 is *"**a maker** submits a completion"*: the row IS the
+record of who submitted. Reproduced through the real collection with `overrideAccess: false`,
+signed in as one maker and naming another:
+
+```text
+expected 16820 to be 16819   // missaoSubmissao.maker, as stored
+```
+
+What that bought is worse here than on the collections carrying the same shape, because this one
+deliberately makes the pair permanent: `(missao, maker)` is unique, `maker` cannot be re-pointed,
+and `delete` is `teamOnly()`. The forged row permanently occupies the victim's one-row-forever
+slot for that mission (FR-023), fills the team's queue with work attributed to somebody who did
+nothing, and — since `creditarAprovacao` resolves from the row's own `maker` — hands them the XP
+on approval (FR-022), feeding the ranking CLR-007 publishes.
+
+The delivered test file had **no** case constructing a `maker` other than the requester's own,
+and the implementer's own docstring named the hole before deferring it on a premise this tree
+contradicts: `curtida` and `progressoAula` close the create verb **today**, each with a
+`beforeValidate` attribution hook, and `ProgressoAula.ts` says so in the three properties it
+enumerates. `MissaoSubmissao` declared no `hooks` key at all. That is the **sixth** occurrence of
+*a guard written against its own test's cases*, and the fourth that was a live security defect.
+
+Closed with `attributeSubmissionToRequester`, the same five lines `Curtida.ts` has, resolving
+through `perfilDoUsuarioNesta`. Unregistering the hook and neutering its return each turn exactly
+the forgery case red, with the positive control green.
+
+**It changed what a fixture may write, and that is the honest part.** Hooks run whatever
+`overrideAccess` says, so a submission seeded *as a team member* is now refused outright — a team
+member holds no `perfilMaker` to attribute one to. Two files were seeding exactly that, and one
+of them aborted in `beforeAll` and reported five tests as **skipped** rather than failed, which
+is rule 4 of the preamble arriving on schedule. Both now seed as the maker, which is the only
+state the application can actually produce.
+
+**2. The publishable set contained a collection whose filter cannot run.** A secondary note in
+the rejection turned out to be a real defect: `MissaoSubmissao.ts` claimed its review vocabulary
+(`enviada | aprovada | recusada`) kept `derivePublishable` from counting it. It does not —
+`declaresQueryableStatus` asked only whether a field *named* `status` is queryable — so
+registering the collection put it in the set. That is not the empty listing the name-only rule
+assumed:
+
+```text
+Failed query: select count(*) from "missao_submissao" where "status" = $1
+  Caused by: invalid input value for enum enum_missao_submissao_status: "publicado"
+```
+
+A 500 on the first public read of it, not a blank page. The derivation now asks the field's own
+options as well — a `status` that cannot *say* `publicado` has no published state to filter for —
+and a `status` that declares no vocabulary keeps the name-only answer, which is the conservative
+direction. `publishable.test.ts`'s independent route asks the same second question of the
+sanitized config rather than re-running the implementation.
 
 ## Phase 6: The catalogue semantics
 

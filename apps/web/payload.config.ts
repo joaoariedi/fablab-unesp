@@ -21,6 +21,8 @@ import { Curtida } from './collections/content/Curtida'
 import { Evento } from './collections/content/Evento'
 import { Local } from './collections/content/Local'
 import { Maquina } from './collections/content/Maquina'
+import { Missao } from './collections/content/Missao'
+import { MissaoSubmissao } from './collections/content/MissaoSubmissao'
 import { Modelo3d } from './collections/content/Modelo3d'
 import { PerfilMaker } from './collections/content/PerfilMaker'
 import { ProgressoAula } from './collections/content/ProgressoAula'
@@ -133,11 +135,13 @@ const collections = [
   // they are derived from MEDIA_GROUPS, so a fourth media group arrives here on its own
   // instead of existing in `limits.ts` with nowhere to be uploaded to.
   ...MEDIA_COLLECTIONS,
-  // The 005 economy (T009). Order mirrors SCOPE_REGISTRY, where both are declared at the end
-  // and `regrasXp` comes first: seeding walks that file forward and `resetWorld` deletes in
-  // reverse, so `xpLedger` — which names a profile and a skill — has to be declared after
-  // them. T028 lands `missao` and `missaoSubmissao` between the two.
+  // The 005 economy (T009, completed by T028). Order mirrors SCOPE_REGISTRY, where all four
+  // are declared at the end and `regrasXp` comes first: seeding walks that file forward and
+  // `resetWorld` deletes in reverse, so a collection is listed after everything it points at —
+  // `missaoSubmissao` names a mission, and `xpLedger` names a profile and a skill.
   RegrasXp,
+  Missao,
+  MissaoSubmissao,
   XpLedger,
 ]
 
@@ -350,11 +354,15 @@ export default buildConfig({
         // would carry no tenant column at all, and every lab would list every other lab's
         // files in the admin media view.
         ...Object.fromEntries(Object.values(MEDIA_SLUGS).map((slug) => [slug, {}])),
-        // The 005 economy (T009, FR-028). Both are scoped and both are listed: a lab's XP
-        // history is also its ranking, and its economy is the data FR-009 makes editable per
-        // organization — a missing entry here leaves the collection with no tenant column at
-        // all, and `scopedAccess()` then constrains on a field that does not exist.
+        // The 005 economy (T009 and T028, FR-028). All four are scoped and all four are
+        // listed: a lab's XP history is also its ranking, its economy is the data FR-009 makes
+        // editable per organization, and a mission and its submissions carry one lab's
+        // challenges and one maker's proof photo. A missing entry here leaves the collection
+        // with no tenant column at all — `scopedAccess()` then constrains on a field that does
+        // not exist, and `sameTenant` has no tenant to compare on either.
         regrasXp: {},
+        missao: {},
+        missaoSubmissao: {},
         xpLedger: {},
       },
     }),
