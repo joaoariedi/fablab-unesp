@@ -221,8 +221,8 @@ reading an interim state within a phase, which is worth knowing before believing
 | ✅ T017b | Prove it: approving an **`evento`** writes zero entries. The one collection that looks like the others and must not behave like them | [V] SC-020, CLR-012 | `apps/web/tests/content/xp-credit.test.ts` | T017 |
 | ✅ T018 | Approve → unpublish → re-approve writes **exactly one** entry, driven against a real database | [V] SC-001, US1 | `apps/web/tests/content/xp-credit.test.ts` | T017 |
 | ✅ T019 | A failed ledger write **rolls the approval back** — the content is still unpublished afterwards. This is the assertion that proves `afterChange` is inside the transaction rather than assuming it | [V] SC-003, US1 | `apps/web/tests/content/xp-credit.test.ts` | T017 |
-| T020 | Extend `CounterField` and the gate's `satisfies Record<DerivedField, DerivedSource>` map with the XP fields. **This breaks typecheck until the reconciliation is written** — that is the mechanism, not an obstacle | [V] FR-011, SC-004 | `apps/web/tests/content/counters.test.ts` | T016 |
-| T021 | Reconciliation: every projection equals a recount of the ledger, across the whole database. Watch it fail against a hand-desynced `xpTotal`. **A CI gate, not a runtime repair** (CLR-014) — the same answer 002 gave for the counters, and giving a different one here would be two disciplines for one guarantee | [V] FR-011, SC-004, CLR-014 | `apps/web/tests/content/counters.test.ts` | T020 |
+| ✅ T020 | Extend `CounterField` and the gate's `satisfies Record<DerivedField, DerivedSource>` map with the XP fields. **This breaks typecheck until the reconciliation is written** — that is the mechanism, not an obstacle | [V] FR-011, SC-004 | `apps/web/tests/content/counters.test.ts` | T016 |
+| ✅ T021 | Reconciliation: every projection equals a recount of the ledger, across the whole database. Watch it fail against a hand-desynced `xpTotal`. **A CI gate, not a runtime repair** (CLR-014) — the same answer 002 gave for the counters, and giving a different one here would be two disciplines for one guarantee | [V] FR-011, SC-004, CLR-014 | `apps/web/tests/content/counters.test.ts` | T020 |
 | ✅ T021b | The free oracle, asserted as an oracle and never as a dependency: while `xpPorAcao` is 1, a **sum equals a count**. The amount is still stored per entry, because `regrasXp` is tunable | [V] FR-009 | `apps/web/tests/content/xp-vs-count.test.ts` | T016 |
 
 ### What phase 3 cost — the design decision that could not be built
@@ -276,6 +276,48 @@ actions and **publishing a class is not one of them** — watching one is. `ACOE
 from FR-006, so `AcaoXp` made a fourth registration a **compile error**, and the type caught the
 contradiction before a test could. Recorded as CLR-016, and `Aula.ts`'s skill description was
 corrected with it.
+
+### What T020 and T021 cost — half a requirement, and a world nothing could produce
+
+The phase-4 launch halted before it started: both rows came back rejected on the requirement
+lens, and both rejections were right.
+
+**1. The map covered two of FR-010's four projections and froze the gap in an assertion.**
+FR-010 names four — `xpTotal`, `nivel`, and each skill's `xp` and `nivel` — and FR-011 asks that
+*every* projection equal a recount. T020 declared the first two and excluded the panel, on the
+true observation that Payload does not hoist an array's subfields into `flattenedFields`, so
+`derivedColumns` cannot see `skills[].xp` as a column. That explains why one *mechanism* cannot
+reach it; it is not a reason to deliver no recount. The array field ITSELF is in
+`flattenedFields`, so the panel is reachable as one column whose recount walks its rows. Worse,
+the gap was pinned by `expect(Object.keys(DERIVED_SOURCES).sort())` listing exactly six keys, and
+the rot guard could not fire — `flattenedFields` never contains the subfields and they carry no
+`admin.readOnly`. `grep "FR-011" tasks.md` returns only T020 and T021: nothing downstream would
+have closed it.
+
+**2. Walking the stored rows makes a DELETED row invisible.** `skills[]` is the first projection
+in this gate whose row can be *absent* — a column can hold a wrong number, it cannot go missing —
+and that is exactly the drift class the file's own preamble names (an admin bulk edit, a
+migration, a manual SQL fix). The recount now walks the **union** of the stored rows and the
+skills the ledger credits. Probed by dropping the union: exactly **one** case goes red, the
+deleted row, and the stale-row case stays green — which is the measurement saying the two cases
+test different things rather than one of them being decoration.
+
+**3. The tenancy fixture builds a world the application could never produce.** `counters.test.ts`
+reconciles the whole database and reported **eight** drifts against a freshly built world:
+`xpTotal` and a missing `skills[]` row on both fixture profiles, `curtidas` on both projects,
+`totalModelos` on both categories. `buildWorld` creates one row per scoped collection with
+`overrideAccess: true` in registry order, which bypasses the server actions that maintain derived
+columns *and* creates a row storing a count before the row it counts. The world is left behind —
+`resetWorld` runs when a world is BUILT, never when one is torn down — so it outlives its run and
+the next run's **content** leg reconciles it. CI never saw it, because there the content leg runs
+first against a database where no world exists yet; only a developer running the suite twice
+does. `sincronizarDerivadosSemeados` now brings the seeded world into agreement with its own
+rows, and removing it turns the gate red on command.
+
+Two of those eight are **not this feature's**: `curtidas` is maintained by `curtir.ts` and the
+erasure path and by no hook, and `totalModelos` is maintained by **nothing at all** — no caller
+of `syncCounter` writes it. The second is a real gap in the application, recorded here because
+this is where it became visible, and left for its own change rather than smuggled into 005.
 
 ## Phase 4: The class completion, and the profile bridge
 

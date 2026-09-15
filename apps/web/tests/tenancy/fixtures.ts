@@ -1,3 +1,4 @@
+import { levelFor } from '@fablab/game'
 import { getPayload, type Payload } from 'payload'
 
 import config from '../../payload.config'
@@ -297,6 +298,121 @@ export function seedDataFor(
  */
 const SEMEADAS_NA_CRIACAO = new Set(SEED_ON_CREATE.map((seed) => seed.collection))
 
+/**
+ * The counters a seeded row is the SOURCE of, and the column that stores the count.
+ *
+ * `curtidas` is maintained in production by `lib/accounts/curtir.ts` and by the erasure path,
+ * never by a hook on `curtida` — so a fixture that writes the row directly writes no count.
+ *
+ * `totalModelos` is maintained by **nothing at all**: `CategoriaModelo.ts` declares it derived
+ * and `syncCounter` has no caller that writes it. That is a gap in the application rather than
+ * in this fixture, and it is recorded here because this is where it becomes visible — a world
+ * seeded with one `modelo3d` per organization leaves both categories reading zero.
+ */
+const CONTAGENS_SEMEADAS = [
+  // Polymorphic, so the target is addressed as `conteudo.value` — the same path the
+  // reconciliation in `tests/content/counters.test.ts` declares for it.
+  { alvo: 'projeto', campo: 'curtidas', de: 'curtida', por: 'conteudo.value' },
+  { alvo: 'categoriaModelo', campo: 'totalModelos', de: 'modelo3d', por: 'categoria' },
+] as const
+
+/**
+ * Brings the seeded world's derived columns into agreement with the rows that feed them.
+ *
+ * **Why a world needs this at all.** `buildWorld` creates one row per scoped collection with
+ * `overrideAccess: true`, in registry order — which means it bypasses the server actions that
+ * maintain derived columns, and that a row storing a count is created *before* the row it
+ * counts. A profile cannot know at creation about the `xpLedger` entry seeded several
+ * collections later; a project cannot know about the `curtida` that arrives after it. The world
+ * that results is a state the application itself could never produce: every derived column in
+ * it reads zero while its sources say otherwise.
+ *
+ * **It was measured, not anticipated.** `counters.test.ts` reconciles the WHOLE database and
+ * reported eight drifts against a freshly built world — `xpTotal` and a missing `skills[]` row
+ * on both profiles, `curtidas` on both projects, `totalModelos` on both categories. It surfaces
+ * in the *content* leg rather than the tenancy one because `resetWorld` runs when a world is
+ * BUILT and never when one is torn down: a world outlives its run, and the next run's content
+ * files reconcile it before any tenancy file rebuilds it. CI never saw it — there the content
+ * leg runs first, against a database where no world has been built yet.
+ *
+ * **Recomputed from the rows, never written as literals.** `levelFor` and the seeded economy are
+ * the authorities on what one entry is worth; a `nivel: 0` here would be a second copy of the
+ * curve to retune, which is the whole reason no column declares a `max` (CLR-013).
+ */
+async function sincronizarDerivadosSemeados(payload: Payload, rows: Fixture['rows']): Promise<void> {
+  const contar = async (collection: string, where: Record<string, unknown>): Promise<number> => {
+    // `limit: 1` and `totalDocs`: the count is what is wanted, and paging the rows in to
+    // measure their length is how a recount stops short of its own source.
+    const { totalDocs } = await payload.find({
+      collection: collection as never,
+      where: where as never,
+      limit: 1,
+      depth: 0,
+      overrideAccess: true,
+    })
+    return totalDocs
+  }
+
+  for (const marker of ['A', 'B'] as const) {
+    for (const { alvo, campo, de, por } of CONTAGENS_SEMEADAS) {
+      const id = rows[alvo]?.[marker]
+      if (id === undefined) continue
+      await payload.update({
+        collection: alvo as never,
+        id,
+        data: { [campo]: await contar(de, { [por]: { equals: id } }) } as never,
+        overrideAccess: true,
+      })
+    }
+
+    const perfil = rows.perfilMaker?.[marker]
+    if (perfil === undefined) continue
+
+    const { docs } = await payload.find({
+      collection: 'xpLedger',
+      where: { perfil: { equals: perfil } } as never,
+      depth: 0,
+      pagination: false,
+      overrideAccess: true,
+    })
+    const entradas = docs as unknown as { skill?: string | number | null; quantidade?: number }[]
+
+    const somar = (total: number, { quantidade }: { quantidade?: number }) =>
+      total + (typeof quantidade === 'number' ? quantidade : 0)
+    const xpTotal = entradas.reduce(somar, 0)
+
+    // Grouped rather than assumed to be one entry: the seed writes a single one today, and a
+    // second added later must not silently stop being projected.
+    const porSkill = new Map<string | number, number>()
+    for (const entrada of entradas) {
+      const { skill } = entrada
+      // An entry naming no skill credits the total and no skill (FR-039) — it belongs in
+      // `xpTotal` above and in no panel row.
+      if (skill === null || skill === undefined) continue
+      porSkill.set(skill, somar(porSkill.get(skill) ?? 0, entrada))
+    }
+
+    await payload.update({
+      collection: 'perfilMaker',
+      id: perfil,
+      // `as never` for the reason the seeding `create` above writes it the same way: ids in
+      // `Fixture['rows']` are `string | number` because a database need not use integers, while
+      // the generated `PerfilMaker` narrows `skill` to this database's own `number`. Widening
+      // the fixture to match a generated type would make it a statement about Postgres.
+      data: {
+        xpTotal,
+        nivel: levelFor(xpTotal, REGRAS_XP_CITE),
+        skills: [...porSkill].map(([skill, xp]) => ({
+          skill,
+          xp,
+          nivel: levelFor(xp, REGRAS_XP_CITE),
+        })),
+      } as never,
+      overrideAccess: true,
+    })
+  }
+}
+
 export async function buildWorld(): Promise<Fixture> {
   const payload = await getPayload({ config })
   await resetWorld(payload)
@@ -412,6 +528,8 @@ export async function buildWorld(): Promise<Fixture> {
       : await create('B', b.id, userB, seededFor('B'), 'org-b.localhost')
     rows[collection] = { A: rowA.id, B: rowB.id }
   }
+
+  await sincronizarDerivadosSemeados(payload, rows)
 
   const login = async (email: string): Promise<string> => {
     const result = await payload.login({
