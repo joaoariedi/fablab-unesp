@@ -1,5 +1,12 @@
-import type { CollectionBeforeValidateHook, CollectionConfig, CollectionSlug } from 'payload'
+import type {
+  CollectionAfterChangeHook,
+  CollectionBeforeValidateHook,
+  CollectionConfig,
+  CollectionSlug,
+} from 'payload'
 
+import { creditXp, perfilDoUsuarioNesta } from '../../lib/content/xp'
+import { TenantUnresolvedError } from '../../lib/tenancy'
 import { scopedAccess, teamOnly } from '../../lib/tenancy/access'
 import { sameTenant } from '../../lib/tenancy/same-tenant-validator'
 import { scopedListEndpoint } from '../../lib/tenancy/scoped-endpoint'
@@ -58,6 +65,126 @@ export const attributeProgressToRequester: CollectionBeforeValidateHook = ({
   return { ...data, usuario: userId }
 }
 
+/** A relationship value as a hook receives it: an id at `depth: 0`, the document above it. */
+const idDaRelacao = (ref: unknown): string | number | null => {
+  if (ref === null || ref === undefined) return null
+  if (typeof ref === 'object') {
+    const { id } = ref as { id?: unknown }
+    return typeof id === 'string' || typeof id === 'number' ? id : null
+  }
+  return typeof ref === 'string' || typeof ref === 'number' ? ref : null
+}
+
+/** The slice of a progress row the credit reads, at `depth: 0` or populated. */
+type Progresso = { id?: unknown; usuario?: unknown; aula?: unknown; concluidaEm?: unknown }
+
+/**
+ * **The class completion credit** (T023, FR-025, SC-011, US2): one ledger entry the first time
+ * `concluidaEm` is stamped, written inside the completing write's own transaction.
+ *
+ * **It fires on the TRANSITION, never on the state.** `concluidaEm` stays set forever once the
+ * class is finished, and the row keeps being written afterwards — `posicaoReproducao` moves on
+ * every rewatch and `percentualAssistido` is rewritten — so a hook that asked only *"is this
+ * row complete?"* would call `creditXp` on every one of those writes. It would not
+ * double-credit: `xpLedger`'s unique index is the arbiter (FR-003) and `creditXp` reads the
+ * ledger before inserting, so the second call returns `false`. But it would spend a ledger
+ * query and an economy read inside every player heartbeat, and it would make
+ * *"however many times it is rewatched"* a property of somebody else's index rather than of
+ * this hook. `previousDoc?.concluidaEm` is what makes rewatching cost nothing at all.
+ *
+ * `afterChange`, for `creditOnApproval`'s reason one file over: it is verified to run inside
+ * the operation's transaction in Payload 3.88, which is what FR-004 requires of the entry, and
+ * it sees the stamp already written rather than racing the hook that writes it.
+ *
+ * The profile is resolved from the **row's own `usuario`**, not from `req.user`: the credit
+ * belongs to whoever watched, and `attributeProgressToRequester` above is what makes those the
+ * same account for a real request while leaving seeds and migrations writing honest history.
+ * `progressoAula.usuario` is global and XP is per profile per organization, so the bridge is
+ * explicit (plan § D3).
+ *
+ * **What this hook does NOT check, on purpose: the completion claim is trusted** (CLR-008,
+ * FR-038). Nothing here verifies that the class was watched — there is no elapsed-time floor
+ * against `aula.duracaoMin`, and there are no server-side checkpoints — so a stamped
+ * `concluidaEm` credits whatever the client claimed. Both alternatives were costed and declined:
+ * the floor is cheap and beaten by waiting, checkpoints are strong and change this collection's
+ * whole write path.
+ *
+ * It is defensible because of what BOUNDS the claim, not because the claim is believed. FR-027
+ * still requires a progress row belonging to the requesting maker, and idempotency — `creditXp`'s
+ * key, FR-003 — caps the gain at **1 XP per class, forever**: someone who claims the entire
+ * catalogue in four minutes ends up with exactly the XP that watching it honestly pays. Every
+ * credit is an xpLedger row naming who, what and when, and that ledger is append-only, so the
+ * claim is visible after the fact by inspection, with no instrumentation built first.
+ *
+ * **It does not claim farming is prevented.** It is not — bounded and auditable is a weaker and
+ * different property, deliberately chosen (the honest-community posture of 2026-08-24, *"sem
+ * limite diário no v1"*). So a check added here is a REOPENING of CLR-008, not the repair of an
+ * oversight; the decision is revisitable once the game is running, and this comment is where the
+ * next reader finds that out instead of rediscovering the gap.
+ */
+export const creditarConclusao: CollectionAfterChangeHook = async ({ doc, previousDoc, req }) => {
+  const linha = doc as Progresso
+  if (!linha.concluidaEm) return doc
+  // Already credited: the stamp was carried in by the write before this one. A create has no
+  // earlier row at all, and `previousDoc` is then whatever Payload passes for "nothing" — so
+  // the test is on the stamp's presence, not on the existence of a previous document.
+  if ((previousDoc as Progresso | undefined)?.concluidaEm) return doc
+
+  const aula = idDaRelacao(linha.aula)
+  const refId = Number(aula)
+  if (!Number.isInteger(refId)) {
+    // The id is half of the idempotency key. A non-numeric one composes a key that matches
+    // nothing, so the same class would credit again on every completion — louder here than in
+    // a ledger nobody can reconcile.
+    throw new Error(
+      `progressoAula ${String(linha.id)} names a non-numeric aula (${JSON.stringify(aula)}), so ` +
+        'no xpLedger entry can name it; xpLedger.refId is an integer and half of the key',
+    )
+  }
+
+  try {
+    const perfil = await perfilDoUsuarioNesta(req, linha.usuario as never)
+    if (!perfil) {
+      // **No profile in this organization is a real state, and it is decided here rather than
+      // crashed on** (T024, US2, plan § D3). `usuario` is global and `perfilMaker` is scoped,
+      // so somebody may genuinely watch a class at a lab they never joined — and this hook
+      // runs inside the watching write's own transaction, so throwing would roll back a
+      // progress row that was entirely correct. Punishing the watch for the profile's absence
+      // is the harsher of the two failures.
+      //
+      // It warns rather than returning silently for `creditOnApproval`'s measured reason
+      // (`Projeto.ts`, missing author): a credit that never happened and a credit that worked
+      // are indistinguishable from the outside, so the one line is the only thing that makes
+      // an unjoined watcher — or a broken profile catalogue — findable at all. Once per
+      // completion and not once per rewatch: the transition guard above has already returned
+      // for every later write of this row.
+      console.warn(
+        `[xp] usuário ${String(idDaRelacao(linha.usuario))} concluiu a aula ${String(refId)} ` +
+          'mas não tem perfilMaker nesta organização; nada creditado',
+      )
+      return doc
+    }
+
+    // Awaited, and its rejection deliberately uncaught — that is what keeps the entry inside
+    // the completing write's transaction rather than beside it (FR-004). The one named
+    // exception below is `creditOnApproval`'s, for the same measured reason.
+    await creditXp({ req, perfil: perfil.id, acao: 'assistir_aula', refTipo: 'aula', refId })
+  } catch (erro) {
+    // **A write with no host is a SERVER-SIDE write** — a seed, a migration, the tenancy
+    // fixtures, which seed this very collection through the Local API with no host at all.
+    // The choke point quite correctly refuses to guess an organization there, and letting that
+    // refusal out of an `afterChange` hook would roll back a progress row nobody did anything
+    // wrong to write (measured on `creditOnApproval`, `Projeto.ts`). Anything else propagates.
+    if (!(erro instanceof TenantUnresolvedError)) throw erro
+    console.warn(
+      `[xp] aula ${String(refId)} concluída sem host na requisição (escrita de servidor); ` +
+        'nada creditado',
+    )
+  }
+
+  return doc
+}
+
 /**
  * How far one account got through one class — **`usuario` × `aula`** (FR-003, T040).
  *
@@ -108,6 +235,8 @@ export const ProgressoAula: CollectionConfig = {
   indexes: [{ fields: ['usuario', 'aula'], unique: true }],
   hooks: {
     beforeValidate: [attributeProgressToRequester],
+    // The 1-XP-per-aula credit, on the write that stamps `concluidaEm` and on no other.
+    afterChange: [creditarConclusao],
   },
   labels: {
     singular: 'Progresso de aula',
@@ -159,6 +288,34 @@ export const ProgressoAula: CollectionConfig = {
       // `tenant` to compare against — and data-model.md § "Relationships that need sameTenant"
       // names the global side as the exception for exactly that reason (`perfilMaker.usuario`
       // and `curtida.usuario` carry the same note). The scoped half is `aula`, below.
+      access: {
+        /**
+         * **Immutable once written, and this is FR-027 on the update verb.**
+         *
+         * `attributeProgressToRequester` is `create`-only, and `access.update` on the
+         * collection is `scopedAccess()` — a **lab-wide** constraint, not a row-owned one — so
+         * a signed-in maker may PATCH a lab-mate's progress row. With this field writable, they
+         * could name themselves in that PATCH and stamp `concluidaEm`, and `creditarConclusao`
+         * resolves the credit from the row's own `usuario`: the XP would land on an account
+         * that holds no progress row for the class at all. The unique `(usuario, aula)` pair
+         * cannot object, because the premise of the attack is that the pair is still free.
+         *
+         * Measured through the real collection before it was closed, not read off the source:
+         * `tests/content/xp-aula-integracao.test.ts` § 2 drove the PATCH with
+         * `overrideAccess: false` and watched `usuario` change hands.
+         *
+         * The refusal is **silent** — Payload drops a field the requester may not write rather
+         * than rejecting the operation — which is the behaviour wanted here: the rest of that
+         * PATCH (the percentage, the resume point) is an ordinary lab-wide write, and failing
+         * it outright would turn the narrowing into an outage for the player.
+         *
+         * It does not close the lab-vs-row gap this collection documents above; it closes the
+         * half where that gap becomes XP. A lab-mate can still mark somebody else's row
+         * complete — the credit then goes to whoever the row belongs to, capped at the 1 XP
+         * they would have earned by watching, and named in an append-only ledger row.
+         */
+        update: () => false,
+      },
     },
     {
       name: 'aula',

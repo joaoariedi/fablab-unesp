@@ -448,3 +448,105 @@ export async function creditXp(input: CreditInput, deps: XpDeps = {}): Promise<b
 
   return true
 }
+
+/**
+ * The slice of the choke-point client the bridge below needs. `find` and nothing else: resolving
+ * who earns is a read, and a type that cannot express a write says so more durably than a
+ * comment — the same narrowing {@link XpStore} applies to a credit.
+ */
+export type PerfilLookupStore = Pick<TenantScopedPayload, 'find'>
+
+export type PerfilLookupDeps = {
+  /** Defaults to the request-scoped choke point. Injected by tests. */
+  getStore?: (req: PayloadRequest) => Promise<PerfilLookupStore>
+}
+
+/** What the bridge returns: enough to credit, which is the profile's own id. */
+export type PerfilResolvido = { id: string | number }
+
+/**
+ * A `users` relationship as a caller may hold it — a bare id, or the document Payload populates
+ * at the collection's depth. Both are accepted; see {@link perfilDoUsuarioNesta}.
+ */
+export type ReferenciaUsuario =
+  | string
+  | number
+  // The populated document carries every other column of `users` with it, so the index
+  // signature is not laxness: without it a caller passing the real document is rejected
+  // by the excess-property check for holding the fields Payload actually populated.
+  | { id?: unknown; [campo: string]: unknown }
+  | null
+  | undefined
+
+/**
+ * The id inside a `users` relationship, whichever of its two shapes arrived.
+ *
+ * `null` for anything else — a caller holding no user at all. It is deliberately **not** an
+ * error: see the bridge's `@returns`.
+ */
+const idDoUsuario = (usuario: ReferenciaUsuario): string | number | null => {
+  if (typeof usuario === 'string' || typeof usuario === 'number') return usuario
+  if (typeof usuario === 'object' && usuario !== null) {
+    const { id } = usuario
+    if (typeof id === 'string' || typeof id === 'number') return id
+  }
+  return null
+}
+
+/**
+ * Resolve a **global** `users` id to that person's profile in **this** organization (T022,
+ * FR-006, US2, D3).
+ *
+ * The bridge exists because the two halves of a class completion do not name the same thing:
+ * `progressoAula.usuario` is a row of the global `users` collection, and XP belongs to a
+ * `perfilMaker`, which is scoped. One login can hold a profile at two labs (CLR-002), so
+ * *"which profile earns"* has no answer until an organization is named.
+ *
+ * **The organization is never named here, and that is the design.** The read goes through
+ * `getTenantScopedPayload(req)` — the choke point — which confines it to the request's
+ * organization with `overrideAccess: false`. A `tenant` clause written into the `where` below
+ * would be a second, hand-maintained copy of that rule; the one this file trusts is the one
+ * every other read in the product trusts (CHK032).
+ *
+ * `depth: 0` because the caller needs an id, and `limit: 1` because one login holds at most one
+ * profile per lab — the invariant CLR-002 states and `PerfilMaker.ts` explains it cannot yet
+ * enforce with a `(tenant, usuario)` index.
+ *
+ * @returns the profile, or `null` when this person has **no profile in this organization** —
+ * a real state, not an error (D3): somebody may watch a class at a lab they never joined.
+ * `null` is also the answer for a caller holding no resolvable user reference at all, which is
+ * the same question with the same answer — *nobody here earns this*. The caller's decided
+ * response is one warning line and no credit; failing instead would roll back a watch that was
+ * not wrong.
+ *
+ * @throws whatever the read raises, untouched (CHK045). *Nothing found* and *the read failed*
+ * must stay distinguishable: collapsing an outage into `null` would make the completion hook
+ * warn once and silently drop every credit in the lab, with every projection still agreeing
+ * with a ledger that stopped growing.
+ *
+ * @example
+ * // In progressoAula's afterChange hook, on the completing write's own request:
+ * const perfil = await perfilDoUsuarioNesta(req, doc.usuario)
+ * if (!perfil) return doc // no profile in this organization — warn, credit nothing
+ * await creditXp({ req, perfil: perfil.id, acao: 'assistir_aula', refTipo: 'aula', refId: doc.aula })
+ */
+export async function perfilDoUsuarioNesta(
+  req: PayloadRequest,
+  usuario: ReferenciaUsuario,
+  deps: PerfilLookupDeps = {},
+): Promise<PerfilResolvido | null> {
+  const id = idDoUsuario(usuario)
+  if (id === null) return null
+
+  const getStore = deps.getStore ?? ((pedido: PayloadRequest) => getTenantScopedPayload(pedido))
+  const store = await getStore(req)
+
+  const { docs } = await store.find<PerfilResolvido>({
+    collection: 'perfilMaker',
+    where: { usuario: { equals: id } } as Where,
+    limit: 1,
+    depth: 0,
+  })
+
+  return docs[0] ?? null
+}

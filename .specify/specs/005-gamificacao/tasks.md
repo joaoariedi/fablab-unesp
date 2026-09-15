@@ -323,11 +323,67 @@ this is where it became visible, and left for its own change rather than smuggle
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T022 | `perfilDoUsuarioNesta` — resolve a **global** `users` id to the profile in **this** organization, through the choke point | FR-006, US2 | `apps/web/lib/content/xp.ts` | T016 |
-| T023 | The completion hook: credit when `concluidaEm` is newly stamped, and **not** when it was already set. Rewatching credits nothing, however many times | FR-025, SC-011 | `apps/web/collections/content/ProgressoAula.ts` | T022 |
-| T024 | The unresolvable case, decided rather than crashed on (D3): a user with progress and **no profile in this organization** gets no credit, no throw, one warning — failing there would roll back a watch that was not wrong | US2 | `apps/web/collections/content/ProgressoAula.ts` | T023 |
-| T025 | A claim for a class with **no progress row belonging to the requesting maker** is refused, and writes no entry | [V] FR-027, US2 | `apps/web/tests/content/xp-aula.test.ts` | T023 |
-| T025b | Record CLR-008's posture where it will be read: v1 **trusts** the completion claim, the gain is bounded at 1 XP per class and every credit is an auditable ledger row. A comment beside the hook, not only in the spec — 004 learned that a gap recorded only in a spec is a gap nobody meets again | FR-038, CLR-008 | `apps/web/collections/content/ProgressoAula.ts` | T024 |
+| ✅ T022 | `perfilDoUsuarioNesta` — resolve a **global** `users` id to the profile in **this** organization, through the choke point | FR-006, US2 | `apps/web/lib/content/xp.ts` | T016 |
+| ✅ T023 | The completion hook: credit when `concluidaEm` is newly stamped, and **not** when it was already set. Rewatching credits nothing, however many times | FR-025, SC-011 | `apps/web/collections/content/ProgressoAula.ts` | T022 |
+| ✅ T024 | The unresolvable case, decided rather than crashed on (D3): a user with progress and **no profile in this organization** gets no credit, no throw, one warning — failing there would roll back a watch that was not wrong | US2 | `apps/web/collections/content/ProgressoAula.ts` | T023 |
+| ✅ T025 | A claim for a class with **no progress row belonging to the requesting maker** is refused, and writes no entry | [V] FR-027, US2 | `apps/web/tests/content/xp-aula.test.ts` | T023 |
+| ✅ T025b | Record CLR-008's posture where it will be read: v1 **trusts** the completion claim, the gain is bounded at 1 XP per class and every credit is an auditable ledger row. A comment beside the hook, not only in the spec — 004 learned that a gap recorded only in a spec is a gap nobody meets again | FR-038, CLR-008 | `apps/web/collections/content/ProgressoAula.ts` | T024 |
+
+### What phase 4 cost — a live privilege escalation, and a rejection that was a race
+
+Two accepted, three rejected. One rejection was a ghost, one was right about evidence, and one
+found a defect that would have shipped.
+
+**1. T022 was rejected for not existing, and it existed.** The verifier ran `find`, `grep` and
+`git status --porcelain` and got nothing — clean tree, no test file, no `perfilDoUsuarioNesta`
+anywhere, the work visible only in a dangling stash. Every one of those observations was true
+*at the moment it was made*. The mechanism is the one 002 measured and 004 hit twice: verifiers
+back files up and restore from their own backups, they run concurrently, and the run pipelines
+across tasks — so a verifier that snapshotted the tree before T022's implementer wrote to it
+restores over that write, and a neighbour that snapshotted after puts it back. `git status` after
+the halt shows five new test files and two modified sources; the five run green. **A rejection
+that says a file does not exist is a claim about a moment, not about the tree** — check it
+before acting on it.
+
+**2. T023 shipped only the weaker half of its own success criterion.** SC-011 asks for *"an
+integration test driving two completions"*, and every assertion delivered ran against
+`vi.mock('../../lib/content/xp')`. The mocked file is right for what it pins — *"`creditXp` was
+called zero times"* is a statement a database cannot make — but with only that half, nothing in
+the tree proved a completion credits XP **at all**, only that a hook calls a stub. This repo had
+already ruled on the distinction: `xp-credit.test.ts` says of its own mocked sibling that *"a
+credit reaching the ledger from anywhere else is invisible to it"*, and gave the `projeto` path
+both halves. `xp-aula-integracao.test.ts` § 1 now drives a real completion and counts a real
+ledger row. Two branches the same task added were also untested — the non-numeric-`aula` throw
+and the `TenantUnresolvedError` swallow, the latter being the branch that silently drops a
+credit. Both have cases now, and mutating each turns exactly its own case red.
+
+**3. FR-027 was violated on the `update` verb, live.** Not read off the source — reproduced
+through the real collection with `overrideAccess: false`:
+
+```text
+expected 22311 to be 22310   // progressoAula.usuario, after the PATCH
+```
+
+`attributeProgressToRequester` is **create-only**; `access.update` is `scopedAccess()`, which
+scopes to the **lab** and not to the row; and `usuario` carried no field-level access. So a
+signed-in maker holding no progress row for a class could PATCH a lab-mate's row, name
+themselves, stamp `concluidaEm`, and `creditarConclusao` — which resolves the credit from the
+row's own `usuario` — would credit **them**. The unique `(usuario, aula)` pair cannot object,
+because the premise of the attack is that the pair is still free. FR-027 is verb-agnostic;
+nothing in spec.md, tasks.md or the checklists scoped it to `create`.
+
+Closed with `access: { update: () => false }` on the field: Payload drops a field the requester
+may not write rather than failing the operation, which is what is wanted — the rest of that PATCH
+is an ordinary lab-wide write and failing it outright would turn the narrowing into an outage for
+the player. It does **not** close the lab-vs-row gap the collection documents; it closes the half
+where that gap becomes XP. A lab-mate can still mark somebody else's row complete, and the credit
+then goes to whoever the row belongs to, capped at the 1 XP they would have earned by watching
+and named in an append-only ledger row.
+
+The delivered T025 file passed only because its single update-verb case constructed the document
+with the **victim's** `usuario` rather than the forged one — the fourth occurrence of *a guard
+written against its own test's cases*, and the third that was a live security defect. The
+implementer named the hole in their own findings and marked the task complete anyway.
 
 ## Phase 5: Missions
 
