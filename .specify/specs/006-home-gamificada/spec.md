@@ -207,6 +207,8 @@ these, and a plan that re-derives them from `home.md` alone will be wrong:
 | FR-030 | Every read is confined to the request's organization by the choke point and by nothing else. No read names a tenant of its own | P1 | US2 |
 | FR-031 | This feature adds **no new door** to `lib/tenancy`. If an operation turns out to have no path through the existing ones, that is a finding to report with the measurement, not a widened rule | P1 | US2 |
 | FR-032 | The signed-out path reads only what an anonymous visitor may read, and the personal mission state is not among it | P1 | US2 |
+| FR-036 | The public door **refuses** a `perfilMaker` read that carries no `select`, so the collection's admission is conditional on the projection rather than on the caller's care (CLR-010) | P1 | US5 |
+| FR-037 | `docs/lgpd.md` records what an anonymous visitor can enumerate about a lab's members, and a test binds that record to the code rather than to a hand-kept list (CLR-014) | P1 | US5 |
 
 ### Performance
 
@@ -239,6 +241,9 @@ these, and a plan that re-derives them from `home.md` alone will be wrong:
 | SC-018 | `/missoes` is reachable by following a link from `/` | An HTTP request driving the real app, not a unit test |
 | SC-019 | No ranking row and no card authorship renders as an anchor | Page test asserting the absence, so CLR-007 cannot be half-undone |
 | SC-020 | `HeaderNav` renders no account state, and the shell still declares six tabs | Config-shape test, so CLR-008 and CLR-009 are visible rather than assumed |
+| SC-021 | A `perfilMaker` read through the public door with no `select` is refused, with a message naming the reason | Test calling the door directly, so the refusal is the door's and not the reader's |
+| SC-022 | `select` narrows the columns the DATABASE returns, not merely the object shape | Measured against a real database on a row with every field populated |
+| SC-023 | A signed-in maker whose personal read failed sees wording that a signed-out visitor does not | Page test with the overlay forced to fail |
 
 ## Clarifications
 
@@ -364,6 +369,82 @@ linked to it; one real link closes that. Changing the site's navigation is a del
 side effect of shipping a Home band.
 
 **Impact**: FR-011, SC-018.
+
+### CLR-010: The public door DENIES a `perfilMaker` read that names no `select` [security] — decided 2026-09-16
+
+**Decision**: `getPublicScopedPayload`'s `find` refuses `perfilMaker` unless the call carries a
+`select`. The `publicList` declaration admits the collection; the `select` is what decides which
+columns leave, and the door enforces its presence rather than trusting each caller.
+
+**Rationale**: CHK021. The declaration is **collection-wide** and the projection is **per-call**, so
+without this the day after this feature ships, any page may write
+`db.find({ collection: 'perfilMaker' })` and receive `dataNascimento`, `escolaridade` and `curso`.
+T011's tree scan would be the only thing standing in the way, and CHK022 is right that a scan is a
+convention: it fails only against a call written in the form it recognises.
+
+Deny-by-default is the shape this door already uses — `assertPubliclyReadable` refuses every
+collection it does not recognise, *"and that direction is the entire point"*. This is the same rule
+one level finer: for the one collection whose row is not safe to serve whole, the admission is
+conditional on the projection.
+
+**Impact**: FR-030, FR-031, a new FR-036, tasks T006/T008/T009, and CHK021–CHK023.
+
+### CLR-011: `nivelDoLab`'s block has two outcomes, not three [design] — decided 2026-09-16
+
+**Decision**: the lab level card distinguishes **value** from **failed**, and has no empty. A lab at
+level 0 with 0 XP is a legitimate value and renders as the card, not as an empty state.
+
+**Rationale**: CHK005. FR-022's three-way contract is written for list reads, where `[]` is a real
+and different state. `nivelDoLab` returns an object or throws; there is no third thing for it to
+return. Forcing an "empty" onto it would mean inventing a predicate — *"is this lab empty enough?"*
+— and the obvious one, `xp === 0`, is exactly the zero CLR-004 refused to let look like a broken
+product. `nivelDoLab`'s own docblock already decides this: *"an empty lab reads 0 with an empty bar
+(SC-014), which is this function's answer and not the caller's."*
+
+**Impact**: FR-012, FR-015, FR-022, US4, US8, CHK005.
+
+### CLR-012: The personal overlay is a fifth read, and it is outside FR-026's four [design] — decided 2026-09-16
+
+**Decision**: FR-026's concurrency requirement and SC-012's proof cover the **four block reads**.
+The personal mission overlay is awaited after them, deliberately, and that is not a violation.
+
+**Rationale**: CHK006. The overlay needs the mission ids to build its `where` — it cannot be issued
+before the missions resolve, and issuing it unfiltered to save a round trip would read every
+submission in the lab to use three. It is also the one read a signed-out visitor never makes, so on
+the anonymous path — which is what the LCP budget measures — there are exactly four. Recording it
+keeps SC-012 honest rather than letting "four" quietly mean "four of five".
+
+**Impact**: FR-026, SC-012, CLR-006, CHK006.
+
+### CLR-013: A failed personal read says so, and does not impersonate a signed-out visitor [design] — decided 2026-09-16
+
+**Decision**: when the missions load and the personal overlay fails, the band renders the cards with
+**a short line saying the personal progress could not be loaded** — not silently identical to the
+signed-out card.
+
+**Rationale**: CHK053. FR-010 says the band survives a failed personal read, and the first reading
+of that is "render without percentages" — which is character-for-character what a signed-out visitor
+sees. A signed-in maker would conclude they had been logged out. `/missoes` already models the state
+as its own case (`indisponivel`, distinct from `anonimo`), so the data is there; the Home just has to
+say it.
+
+**Impact**: FR-010, US1, CHK053.
+
+### CLR-014: The ranking's public disclosure is the PO's decision, already taken [security] — decided 2026-09-16
+
+**Decision**: the ranking is public, including on a lab with two makers, and no minimum lab size
+suppresses the card. `docs/lgpd.md` gains a line recording what a visitor with no account can
+enumerate about a lab's members, bound to the code by a test the way the erasure list already is.
+
+**Rationale**: CHK030, CHK031. `home.md` § *Propósito* (PO, 2026-08-24) makes the panel sections
+visible to signed-out visitors, and the public author strips already disclose name, handle and level
+per published item — the ranking adds **relative standing and the roster as a list**, which is a
+real increment and is the product that was asked for. What must not happen is the disclosure growing
+without the record following: 005 shipped a `COLECOES_COM_AUTOR` list that went stale under a comment
+explaining why it was correct, and `lgpd-doc.test.ts` could not catch it because it read that same
+list. The new line gets a test that reads the **code**, not the list.
+
+**Impact**: FR-030, a new FR-037, CHK030, CHK031.
 
 ## Out of scope
 
