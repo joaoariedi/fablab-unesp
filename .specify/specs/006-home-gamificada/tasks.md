@@ -14,6 +14,16 @@ Every item was **measured** on features 000–005, and several recurred after be
    later task in the same phase fixed them, one because verifiers snapshot and restore files
    concurrently. **Re-read the path and re-run the failing command on the current tree before
    rejecting**, and say what you saw. Stash-and-compare only if the failure survives that re-run.
+
+   **006's phase 1 added a sixth, and it named its own cause.** T002 was rejected with real
+   forensics — md5s matching HEAD, a clean `git status`, the task's own test passing *vacuously* at
+   21 tests instead of 30 — and the work was sitting in `git stash@{0}`, timestamped, with the
+   recovery command supplied. The verifier was right about the tree it saw. So:
+
+   **IMPLEMENTERS MUST NOT `git stash`.** The working tree is shared with verifiers running
+   concurrently, and a stash makes it lie to every one of them. If you need to compare against
+   HEAD, copy the file aside, or use `git show HEAD:path`. A stash that is popped a minute later
+   still costs a phase.
 2. **A module with tests and no caller is not a feature.** Five occurrences in 004. `nivelDoLab`
    has shipped with **zero callers** since 005 and this feature is what gives it one. Grep for
    importers outside the task's own test; for a page, check the control is actually bound — a page
@@ -75,11 +85,33 @@ whose test survives every mutation is the rejection.
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T001 | `destaqueHome` — a checkbox, `required: true` with `defaultValue: false`, labelled *Destaque na Home*, with an `admin.description` saying in the editor's own words that it does **not** publish | FR-001, CLR-004 | `apps/web/collections/content/Missao.ts` | — |
-| T002 | `ordemDestaque` — an optional number, *"menor primeiro; empates pelo título"* | FR-001, FR-003 | `apps/web/collections/content/Missao.ts` | T001 |
-| T003 | The migration **and its `.json` snapshot**, through `./scripts/migrate-create.sh`. `required: true` on an existing table is a NOT NULL: the column arrives with a default and the existing rows are backfilled, or the migration fails on the first lab that already has missions | FR-002 | `apps/web/migrations/` | T002 |
-| T004 | The drift gate on a scratch database — `DATABASE_URI=<scratch> bash scripts/migration-drift.sh`. `push` rebuilds non-production schemas from the field config, so the flag and the migration must agree or the column comes back with a NOT NULL the migration dropped | [V] FR-002 | `scripts/migration-drift.sh` | T003 |
-| T005 | The config-shape gate: both fields exist, `destaqueHome` is required and defaults to false, `ordemDestaque` is optional. Read from the **sanitized config**, never from the source text | [V] FR-001 | `apps/web/tests/content/missao-destaque.test.ts` | T002 |
+| ✅ T001 | `destaqueHome` — a checkbox, `required: true` with `defaultValue: false`, labelled *Destaque na Home*, with an `admin.description` saying in the editor's own words that it does **not** publish | FR-001, CLR-004 | `apps/web/collections/content/Missao.ts` | — |
+| ✅ T002 | `ordemDestaque` — an optional number, *"menor primeiro; empates pelo título"* | FR-001, FR-003 | `apps/web/collections/content/Missao.ts` | T001 |
+| ✅ T003 | The migration **and its `.json` snapshot**, through `./scripts/migrate-create.sh`. `required: true` on an existing table is a NOT NULL: the column arrives with a default and the existing rows are backfilled, or the migration fails on the first lab that already has missions | FR-002 | `apps/web/migrations/` | T002 |
+| ✅ T004 | The drift gate on a scratch database — `DATABASE_URI=<scratch> bash scripts/migration-drift.sh`. `push` rebuilds non-production schemas from the field config, so the flag and the migration must agree or the column comes back with a NOT NULL the migration dropped | [V] FR-002 | `scripts/migration-drift.sh` | T003 |
+| ✅ T005 | The config-shape gate: both fields exist, `destaqueHome` is required and defaults to false, `ordemDestaque` is optional. Read from the **sanitized config**, never from the source text | [V] FR-001 | `apps/web/tests/content/missao-destaque.test.ts` | T002 |
+
+### What phase 1 cost — a stash, and a verifier that was right about the wrong minute
+
+Four of five accepted. T002's rejection was the **sixth** across two features to describe a moment
+rather than the tree — and it is the best-argued of the six: md5s matching HEAD byte for byte, a
+clean `git status`, a note that the task's own test file passed **vacuously** at 21 tests rather
+than the claimed 30, and the work located in `git stash@{0}` with its timestamp and the recovery
+command. Every one of those observations was true when it was made.
+
+By the time the run halted the stash was empty and the work was on disk. Verified by executing:
+`Missao.ts` carries both fields, `missao-config.test.ts` names `ordemDestaque` ten times, and both
+files run green. The migration pair and its snapshot are committed, the drift gate passes on a
+scratch database, and the whole suite is 173 files green.
+
+**The cause is new and actionable**, which the previous five were not: an implementer used
+`git stash` as a working technique. The tree is shared with concurrent verifiers, so a stash makes
+it lie to all of them — and the lie outlives the stash by exactly as long as it takes a verifier to
+sample. The preamble now forbids it and names the alternatives.
+
+Worth keeping from the rejection: `git show HEAD:<path>` compared against the working file is the
+right instrument, and *"the file passes vacuously"* — 21 tests where 30 were claimed — is a better
+signal than a diff, because it survives a tree that is being rewritten underneath you.
 
 ## Phase 2: The anonymous read surface — the highest-risk phase
 
