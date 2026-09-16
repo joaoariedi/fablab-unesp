@@ -28,17 +28,46 @@ object nobody reads and would suggest a rejection path that does not exist. The 
 overlapped is an **event order**, never a clock: instrument the client, record when each `find` is
 issued and when each resolves, and assert all four were issued before the first resolved.
 
-### D2 — A named, projected public reader for the ranking, in `lib/tenancy`
+**Two obligations every new reader carries, and the review found both missing from the first
+draft.**
+
+1. **`TenantUnresolvedError` is rethrown into `notFound()`**, exactly as `lerUltimosProjetos` does
+   it. `notFound()` throws Next's control-flow error; a reader that catches broadly and returns
+   `null` **swallows its own 404**, and the page renders four error cards on an unresolved host.
+   Today it would still 404 by accident, because `lerUltimosProjetos` is in the array and throws
+   first — a behaviour that depends on which readers happen to be present is not a contract.
+2. **`lerNivelDoLab` catches.** `nivelDoLab` is documented to **throw** when a lab has no
+   `regrasXp` row, and the first draft's sketch showed the call without the wrapper. A lab with a
+   broken economy renders the card's error state, not a blank page.
+
+### D2 — A named public reader for the ranking, projected **by `select`**, in `lib/tenancy`
 
 The ranking card needs a list of `perfilMaker` for a visitor with no session. There is no existing
 path, and the two obvious ones are both wrong: `scopedAccess()` refuses anonymous outright, and a
-`publicList` declaration serves the **whole row**, personal data included.
+`publicList` declaration serves the **whole row** — the door says so verbatim, *"a `publicList`
+collection gets no status clause at all"* — which would put `dataNascimento`, `escolaridade`,
+`curso` and `vinculoUnesp` on a public page.
 
-So: `readPublicRanking(limit)` in `public-payload.ts`, beside `readPublicOrganizationTheme`, which
-already establishes the shape — a named function that runs the elevated client and returns **a
-projection, never the row**. Its bound is the projection itself: it can only ever return `nome`,
-`handle`, `avatarRender`, `xpTotal` and `nivel`, because that is all its return type has. A caller
-cannot ask it for `escolaridade`; there is no parameter that would.
+So: `readPublicRanking(limit)` in `public-payload.ts`, beside `readPublicOrganizationTheme`.
+
+**The bound is a `select`, not a return type, and the difference is the whole of this decision.**
+The first draft of D2 said *"the projection is the bound — there is no argument that widens it"*.
+That was false, and the review caught it: a TypeScript return type erases at runtime, so
+`db.find({ collection: 'perfilMaker' })` followed by `.map()` **reads the personal columns into
+memory** and relies on a convention to drop them. The data would sit inside a function running
+`overrideAccess: true` on behalf of an anonymous caller, one error serialization away from
+exposure.
+
+`FindArgs` in `lib/tenancy/client.ts` carries no `select` today — measured — so this feature
+**adds one**: `select?: Record<string, boolean>`, threaded to `payload.find`, which supports it in
+3.88. Additive, reusable by every future projected read, and it makes the bound a property of the
+query rather than of the caller's manners. The personal columns are never fetched.
+
+`readPublicOrganizationTheme` is the precedent **for the pattern and not for the mechanism**: it
+projects by mapping (`return record ? { theme: record.theme } : null` after a full `findByID`), and
+its docstring gives the right reason — *"projecting to one field here is what stops a later
+addition to the `organizations` collection … from becoming anonymously readable by the mere act of
+being declared."* This feature keeps that reason and gives it teeth.
 
 This is a **fifth named exemption**, and it gets the same written argument the other four carry.
 FR-031 said no new door and said that a path with no route is a finding to report — this is the
@@ -47,10 +76,20 @@ report, and the answer is the narrowest thing that works rather than a widened r
 **It also repairs `/ranking`**, which today shows a signed-out visitor an empty board on a lab that
 has makers. That page moves onto the same reader.
 
-**Rejected alternative**: field-level `read` access on the six personal fields plus `publicList`.
-It defends the data everywhere rather than in one reader, which is genuinely better — and it is a
-change to how every existing reader of `perfilMaker` behaves, including Minha Conta reading its own
-owner's row. That is its own feature, and this plan names it rather than smuggling it in.
+**Rejected alternative, with the measured reason.** Field-level `read` access on the six personal
+fields plus a `publicList` declaration. The first draft rejected it for breaking Minha Conta; that
+was assumed, and it is also wrong — `FieldAccessArgs` carries `doc`, so an ownership-aware rule is
+expressible. The real reason is decisive and is in the installed Payload
+(`fields/hooks/afterRead/promise.js`):
+
+```js
+const canReadField = overrideAccess ? true : await field.access.read({ ... })
+```
+
+**`overrideAccess: true` bypasses field-level read access entirely**, and the public door runs
+elevated by design — that is how it serves anonymous traffic with an explicit tenant and status
+filter instead of access control. Field rules would defend `perfilMaker` against signed-in readers
+and not against the one caller in question. Worth doing on its own merits, some day; it is not this.
 
 ### D3 — The mission model moves to `lib/content/missoes.ts`, and both pages import it
 
@@ -62,6 +101,15 @@ that lets FR-007's *"expressed once"* be true.
 `missoes/page.tsx` keeps its rendering — `acaoDe`, `progressoDe`, the copy — because the Home's
 card is a different card.
 
+**Split in two, because `lib/content/` has a convention worth keeping.** Every module there —
+`xp.ts`, `counters.ts`, `skill-catalogue.ts` — takes a `req` and a `deps` bag and is testable with
+a named fake; none of them reaches for `next/headers`. `estadoPessoal` calls
+`getTenantScopedPayloadForRSC`, which is RSC-only. So the **pure** model — `ETAPAS_DA_MISSAO`,
+`ETAPAS_POR_ESTADO`, `estadoDe`, the `StatusSubmissao` and `EstadoPessoal` types — goes to
+`lib/content/missoes.ts` where it can be unit-tested with no database at all, and the **RSC reader**
+— `estadoPessoal`, `submissoesDoMaker` — goes to `lib/public/`, beside `listing.ts`, which is where
+this codebase already keeps page-facing readers.
+
 ### D4 — The band reads through the public door, for everyone
 
 `lerMissoesEmDestaque` uses `getPublicScopedPayloadForRSC`, exactly as `/missoes` does, whether or
@@ -72,12 +120,22 @@ band could forget. The band's own `where` carries **only** `destaqueHome: { equa
 The personal overlay is the only part that touches the session client, and it is skipped entirely
 when there is none.
 
-### D5 — The LCP headroom is measured, not assumed, and the measurement is awkward
+### D5 — The LCP headroom could not be measured here, and the design is conservative because of it
 
-`scripts/lcp-budget.sh` is 2500 ms per page, median of three runs, 4G (1638 kbps), six pages. It
-cannot run against a developer's working database — `payload migrate` prompts on pushed schema —
-and it needs a Chrome the machine may not have. The baseline for `/` is being measured on a scratch
-database with Playwright's Chromium; **whatever it says, the design above is the conservative one**:
+`scripts/lcp-budget.sh` is 2500 ms per page, median of three runs, 4G (1638 kbps), six pages.
+**It does not run on a developer machine, and that was established by trying rather than assumed**:
+
+- Lighthouse needs a Chrome the runner can find. There is none on `PATH`; Playwright's cached
+  Chromium works when passed as `CHROME_PATH`.
+- `payload migrate` prompts *"you've run Payload in dev mode … data loss will occur"* and hangs on
+  stdin, **even on a database created seconds earlier**, because the script's own first step boots
+  Payload with `push` enabled and then migrates what it just pushed. `--force-accept-warning` is
+  passed and reaches the CLI; the prompt still appears. Three attempts, three hangs.
+
+CI does not hit this: its Postgres service is virgin per job and its runner has Chrome. **So the
+budget is a CI-only gate on this tree, and the baseline for `/` is a number this plan does not
+have.** That is recorded rather than guessed, and it makes the conservative design mandatory rather
+than merely prudent:
 four reads issued together rather than in series, `depth: 0` wherever a relationship is not art, and
 `limit` bounded by what the card draws (three missions, five makers) rather than by a page size.
 
@@ -85,11 +143,17 @@ If the measured headroom turns out to be thin, the lever this plan reaches for *
 ranking card's `depth: 1` — it is there only for `avatarRender`, and the compositor is blocked, so
 today it populates a relationship that is null for every maker.
 
-### D6 — `home.test.ts` § 3 is inverted in the same change that renders the panels
+### D6 — `home.test.ts` § 3 is inverted in the same change that renders the panels — and only half of it
 
 Not afterwards, and not in a later task. The four `AUTORIA_PENDENTE` placeholders of 005 are the
 precedent: a comment or an assertion that explains an absence is the instruction the next reader
 follows.
+
+**The inversion is partial, and the first draft said it wrong.** § 3's second case asserts that
+**both** `ProgressBar` and `SkillPips` mount zero times. The Home's panels draw mission bars and
+the lab bar, and **no skills** — the skills panel is Minha Conta's (005). So `ProgressBar` flips to
+"mounts"; **`SkillPips` stays at zero**, and the assertion that keeps it there stays with it. An
+implementer told simply to "invert § 3" would delete a live guard.
 
 ## Affected Files
 
@@ -97,8 +161,10 @@ follows.
 |---|---|---|
 | `apps/web/collections/content/Missao.ts` | modify | `destaqueHome` checkbox, `ordemDestaque` number |
 | `apps/web/migrations/` | create | The additive migration and its `.json` snapshot |
-| `apps/web/lib/content/missoes.ts` | create | The two-step model and the personal state, shared |
+| `apps/web/lib/content/missoes.ts` | create | The **pure** two-step model, unit-testable with no database |
+| `apps/web/lib/public/missoes.ts` | create | The RSC reader: the profile and this maker's submissions |
 | `apps/web/app/(frontend)/missoes/page.tsx` | modify | Imports what moved; keeps its own rendering |
+| `apps/web/lib/tenancy/client.ts` | modify | `FindArgs` gains `select?: Record<string, boolean>` — what makes D2's bound real |
 | `apps/web/lib/tenancy/public-payload.ts` | modify | `readPublicRanking` — the projected public reader |
 | `apps/web/app/(frontend)/ranking/page.tsx` | modify | Moves onto `readPublicRanking`; signed-out stops being blank |
 | `apps/web/app/(frontend)/page.tsx` | modify | Four concurrent reads, three new sections, docblock rewritten |
@@ -127,8 +193,10 @@ the migration must agree or the column comes back with a NOT NULL the migration 
 No REST surface. Two new module contracts:
 
 - `readPublicRanking(limit: number): Promise<RankingRow[] | null>` where
-  `RankingRow = { id, nome, handle, avatarRender, xpTotal, nivel }` — **a projection, and the type
-  is the bound**.
+  `RankingRow = { id, nome, handle, avatarRender, xpTotal, nivel }`. **The bound is the `select` in
+  the query, not the return type** — a type erases at runtime, and the personal columns must never
+  be fetched at all (D2).
+- `FindArgs` gains `select?: Record<string, boolean>`, threaded to `payload.find`.
 - `lib/content/missoes.ts` exports `ETAPAS_DA_MISSAO`, `ETAPAS_POR_ESTADO`, `estadoDe`,
   `estadoPessoal`, `type EstadoPessoal`.
 
@@ -196,23 +264,34 @@ async function lerMissoesEmDestaque(): Promise<MissaoDoc[] | null> {
 ### Sketch 3: the projected public reader
 
 **File:** `apps/web/lib/tenancy/public-payload.ts` (new export)
-**Intent:** the fifth named exemption, bounded by its return type.
+**Intent:** the fifth named exemption, and the `select` that is its bound.
 
 ```ts
-export type RankingRow = {
-  id: string | number; nome?: string; handle?: string
-  avatarRender?: { url?: string | null } | string | number | null
-  xpTotal?: number; nivel?: number
-}
+/** The columns the anonymous ranking is allowed to fetch. Everything `perfilMaker` also carries —
+ *  `dataNascimento`, `escolaridade`, `curso`, `vinculoUnesp`, `usuario` — is consented personal
+ *  data (004) and is absent here, so it is never read rather than read and dropped. */
+const CAMPOS_DO_RANKING = {
+  id: true, nome: true, handle: true, avatarRender: true, xpTotal: true, nivel: true,
+} as const
 
-/** The ranking a visitor with no account may see. NOT the row: `perfilMaker` also carries
- *  `dataNascimento`, `escolaridade`, `curso` and `vinculoUnesp`, collected under consent at
- *  signup (004). The projection is the bound — there is no argument that widens it. */
-export async function readPublicRanking(limit: number): Promise<RankingRow[] | null> { ... }
+export async function readPublicRanking(limit: number): Promise<RankingRow[] | null> {
+  const db = await getPublicScopedPayloadForRSC()
+  const { docs } = await db.find<RankingRow>({
+    collection: 'perfilMaker',
+    select: CAMPOS_DO_RANKING,   // the bound; a return type erases at runtime
+    sort: ORDENACAO_DO_RANKING,  // shared with /ranking, never retyped
+    limit,
+    depth: 1,                    // `avatarRender` only — D5's first lever if the budget is thin
+  })
+  return docs
+}
 ```
 
-**Why this shape:** `readPublicOrganizationTheme` is the precedent — *"deliberately not the whole
-row"* — and the type, not a code comment, is what stops the next caller asking for more.
+**Why this shape:** `readPublicOrganizationTheme` is the precedent for the *pattern* — *"deliberately
+not the whole row"* — but it projects by mapping, so the precedent is weaker than a `select` and
+this sketch says so. `perfilMaker` has no `status`, so it needs a `publicList` declaration to pass
+`assertPubliclyReadable`; the declaration's reason must say that the door is only ever reached
+through this function, which is the thing the `select` makes true.
 
 ### Sketch 4: the lab level card
 
@@ -291,6 +370,31 @@ expect(eventos.slice(0, 4).every((e) => e.startsWith('emitida:'))).toBe(true)
 **Why this shape:** SC-012 without a clock. A wall-time assertion is flaky on a loaded CI box and
 proves nothing about intent.
 
+### Sketch 8: the assertion that makes D2 a security boundary
+
+**File:** `apps/web/tests/tenancy/public-ranking.test.ts` (create)
+**Intent:** the fixture has personal data, so the assertion can fail.
+
+```ts
+// The maker is created WITH the consented fields populated. Without this the assertion below
+// passes on a row where they were empty anyway, which is a green test about nothing — the
+// failure class this repo has paid for six times (tasks.md § "Read before starting").
+const perfil = await criar('perfilMaker', {
+  nome: 'Ana', handle: '@ana', xpTotal: 9, nivel: 1,
+  dataNascimento: '1998-03-04', escolaridade: 'superior_incompleto',
+  curso: 'Engenharia', vinculoUnesp: 'aluno',
+})
+
+const linhas = await readPublicRanking(5)
+for (const proibido of ['dataNascimento', 'escolaridade', 'curso', 'vinculoUnesp', 'usuario']) {
+  expect(Object.keys(linhas![0]!), `${proibido} crossed the anonymous door`).not.toContain(proibido)
+}
+```
+
+**Why this shape:** Principle 5 makes an anonymous read surface a security-review surface, and the
+`select` is what makes the absence a property of the query rather than of the mapping — so the test
+is checking the door, not the manners of one function.
+
 ## Constitution Compliance
 
 - [x] **Principle 1 — locked stack**: Next.js RSC and Payload, no new runtime dependency.
@@ -311,7 +415,9 @@ proves nothing about intent.
 | `Promise.all` turning one failed block into a blank page | The opposite of FR-023 | The readers cannot reject — each catches and returns `null`. A test forces each to fail alone and asserts the other three render |
 | The LCP budget failing on `/` | A required CI gate red, on the page with the hero | Reads issued together, `depth` and `limit` bounded by what is drawn; D5 names the first lever if headroom is thin |
 | `lcp-mutation.sh`'s stand-in drifting from the page's shape | The budget's own proof fails for the wrong reason — measured last week | The stand-in is `async` and a guard asserts both halves of that shape |
-| `publicList` on `perfilMaker` | Would serve dates of birth and courses to anonymous visitors | D2: a projected reader instead, bounded by its return type |
+| `publicList` on `perfilMaker` | Would serve dates of birth and courses to anonymous visitors | D2: a named reader whose `select` never fetches them |
+| A projection enforced by mapping rather than by the query | The columns are read into an elevated anonymous context and discarded by convention | `FindArgs` gains `select`; Sketch 8 asserts against a fixture that actually has the data |
+| Field-level access mistaken for a defence here | It is bypassed entirely under `overrideAccess: true` — measured in `afterRead/promise.js` | Recorded in D2's rejected alternative so it is not proposed again |
 | A `required` flag re-imposing a NOT NULL the migration dropped | Permanent drift between config and schema | `./scripts/migrate-create.sh` for the pair, then the drift gate on a scratch database |
 | `home.test.ts` § 3 left asserting the old absence | A guaranteed red the run cannot interpret | FR-027 puts the inversion in the same task as the panels |
 | The band adding its own `status` filter | A second expression of a filter the door already applies | D4, and the band's `where` carries one clause |
@@ -321,8 +427,9 @@ proves nothing about intent.
 1. `destaqueHome` and `ordemDestaque` on `Missao`, the migration through
    `./scripts/migrate-create.sh`, and the drift gate on a scratch database.
 2. Move the mission model into `lib/content/missoes.ts`; `/missoes` imports it and stays green.
-3. `readPublicRanking` in `public-payload.ts`, with the test that it cannot return personal data;
-   move `/ranking` onto it and watch its signed-out board stop being empty.
+3. `select` on `FindArgs`, then `readPublicRanking` in `public-payload.ts`, then the test whose
+   fixture carries real personal data; move `/ranking` onto it and watch its signed-out board stop
+   being empty.
 4. The three panels on the Home, the four concurrent reads, and `home.test.ts` § 3 inverted — in
    one change.
 5. The gates: the whole suite, the island count, the drift gate, and the budget in CI.
