@@ -3,6 +3,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 
 import config from '../../payload.config'
 import { SEED_ON_CREATE, type SeedFn } from '../../lib/tenancy/seed-on-create'
+import type { SystemScopedPayload } from '../../lib/tenancy/system-payload'
 import { CITE_ORGANIZATION, seed } from '../../seed/index'
 import { resetWorld } from './fixtures'
 
@@ -100,13 +101,19 @@ describe('seed-on-create registry (T057, FR-031)', () => {
     // A fixture seed that actually writes. An empty registry would make this test pass
     // vacuously — the same failure mode as a harness with no scoped collections — so the
     // assertion below checks the copy landed, not merely that the loop ran.
-    const fixtureSeed: SeedFn = async (sys, organizationId) => {
-      seenTenants.push(organizationId)
-      await sys.create({
-        collection: 'tenantCanaries',
-        data: { label: `seeded-for-${organizationId}` },
-      })
-    }
+    // `Object.assign` because `SeedFn` now carries the collection it writes (005): the registry
+    // is self-describing so `fixtures.ts` can tell which rows already exist when an organization
+    // is created, and adopt them instead of seeding a second one.
+    const fixtureSeed: SeedFn = Object.assign(
+      async (sys: SystemScopedPayload, organizationId: string) => {
+        seenTenants.push(organizationId)
+        await sys.create({
+          collection: 'tenantCanaries',
+          data: { label: `seeded-for-${organizationId}` },
+        })
+      },
+      { collection: 'tenantCanaries' } as const,
+    )
     SEED_ON_CREATE.push(fixtureSeed)
 
     const payload = await getPayload({ config })

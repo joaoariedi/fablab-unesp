@@ -73,8 +73,9 @@ type MidiaDoc = {
   readonly sizes?: { readonly card?: { readonly url?: string | null } }
 }
 
-/** The author profile as `depth: 1` populates it. */
-type PerfilDoc = { readonly nome?: string; readonly handle?: string }
+/** The author profile as `depth: 1` populates it — `nivel` is the maker's own level, the
+ *  projection of the ledger `xp.ts` maintains (FR-010). */
+type PerfilDoc = { readonly nome?: string; readonly handle?: string; readonly nivel?: number }
 
 /**
  * One class as the listing reader returns it, populated one level.
@@ -144,12 +145,19 @@ function thumbSrc(imagem: AulaDoc['thumbnail']): string {
 }
 
 /**
- * The author strip: the person's name and `@nomesobrenome` (round 4, 2026-08-24).
+ * The author strip: the person's name, `@nomesobrenome` and `NÍVEL n` (round 4, 2026-08-24).
  *
- * No level. `aulas.md` draws `NÍVEL n` beside the handle, and the same file records that those
- * numbers are illustrative; `perfilMaker` carries no `nivel` until feature 005, so the only
- * options were a number nobody earned on a public page or its absence. `formatHandle` prints
- * the `@`, in the one place that decides how.
+ * **The level is here now, and its absence was the stand-in.** `aulas.md` § *Lista de aulas*
+ * draws `NÍVEL n` beside the handle; this page drew nothing, because `perfilMaker` carried no
+ * `nivel` and the only options were *"a number nobody earned on a public page or its absence"*.
+ * T008 gave a profile its `nivel` — a projection of the ledger, not a mockup number — so the
+ * third option exists and FR-033 asks for it. `?? 0` covers a profile written before that
+ * `defaultValue` landed: 0 is where FR-007's curve starts, so it invents no progress.
+ *
+ * The wording is spelled here rather than imported: `@fablab/ui` exports no level formatter, and
+ * `minha-conta/page.tsx` spells its own `NÍVEL ${n}` the same way. CHK066 binds the **tombstone**
+ * wording to one export, which is why `AUTOR_REMOVIDO` below is imported and this is not.
+ * `formatHandle` still prints the `@`, in the one place that decides how.
  *
  * The **removed** case is the one T029 created: `autor` is nullable since that migration, and
  * the only thing that empties it is a deletion, so an absent relationship is a person who
@@ -169,6 +177,7 @@ function autoriaDe(autor: AulaDoc['autor']): ReactNode {
     <span style={ESTILO.autor}>
       <span>{perfil.nome ?? ''}</span>
       <span style={ESTILO.handle}>{formatHandle(perfil.handle ?? '')}</span>
+      <span style={ESTILO.nivel}>{`NÍVEL ${perfil.nivel ?? 0}`}</span>
     </span>
   )
 }
@@ -576,6 +585,9 @@ const ESTILO: Record<string, CSSProperties> = {
   },
   autor: { display: 'flex', gap: 'var(--space-2)' },
   handle: { opacity: 0.8 },
+  // Display face, like every other caps label on this page: `NÍVEL n` is already uppercase in
+  // the source, so no `textTransform` is needed to make it read as the mockup draws it.
+  nivel: { fontFamily: 'var(--font-display)' },
   acoes: { display: 'flex', alignItems: 'center', flex: '0 0 auto' },
   assistir: {
     display: 'inline-flex',

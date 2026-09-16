@@ -67,9 +67,19 @@ const asOptions = (rotulos: Readonly<Record<string, string>>): Option[] =>
  * **Feature 004 arrived, additively** (T009). The prediction T042 made — that the avatar and
  * the skills would *extend* this collection rather than reshape it — is what actually happened:
  * `nome`, `handle` and `usuario` are untouched, and step 2's personal data, `avatarConfig`,
- * `avatarRender`, the consent stamp and `skills` are new columns beside them. What is still
- * deliberately absent is feature 005's **ledger**: a maker's overall `nivel` and `xpTotal`. The
- * per-skill numbers below belong to a maker's relation to one skill, not to the profile.
+ * `avatarRender`, the consent stamp and `skills` are new columns beside them.
+ *
+ * **Feature 005 arrived the same way** (T008), and this paragraph used to say the opposite: it
+ * read *"what is still deliberately absent is feature 005's ledger: a maker's overall `nivel`
+ * and `xpTotal`"*, two hundred lines above the two fields that now exist. Left standing it was
+ * not stale prose but a **false invariant** — a reader or an agent would have taken it as an
+ * instruction that those fields must not exist, which is how a decided thing gets reverted.
+ *
+ * What is absent is the **ledger itself**, and it always was: `xpLedger` is its own collection
+ * (FR-001), append-only, and the two numbers here are **projections of it** (CLR-001) —
+ * maintained inside the writing transaction and reconcilable against it, never the source of
+ * truth. The per-skill numbers below belong to a maker's relation to one skill, and the two
+ * top-level ones to the maker.
  *
  * **Every field 004 adds is nullable, and that is a decision.** FR-008 says step 2 *collects*
  * the personal data, and step 2's form is where an empty course must be refused — with a field
@@ -271,6 +281,45 @@ export const PerfilMaker: CollectionConfig = {
       // proof of consent, *which* is what makes a re-consent demandable of the people who
       // accepted the old text. A timestamp alone can only be compared against a release date
       // somebody remembers.
+    },
+    {
+      name: 'xpTotal',
+      type: 'number',
+      defaultValue: 0,
+      label: 'XP total',
+      admin: {
+        description: 'XP acumulado no lab inteiro. Projeção do xpLedger — nunca editado à mão.',
+      },
+      // **A projection of `xpLedger`, not a source** (FR-010): recomputed from the ledger rows
+      // inside the transaction that writes them, the way `lib/content/counters.ts` already
+      // maintains the content counters. It is *stored* rather than derived on read because the
+      // ranking sorts on it in the database (`-xpTotal,handle`, FR-013), and a sort cannot be
+      // computed per row at query time.
+      //
+      // **No `max`** — FR-043 leaves the total uncapped outright; only `nivel` stops, and it
+      // stops at a number that lives in `regrasXp`. See the note on `nivel` below.
+      //
+      // No `required` either, for the reason the personal columns above carry: profiles exist
+      // that no credit hook ever touched (the tenancy fixtures, the seed), and a NOT NULL added
+      // to a shipped table fails inside `beforeAll` rather than in one test.
+    },
+    {
+      name: 'nivel',
+      type: 'number',
+      defaultValue: 0,
+      label: 'Nível',
+      admin: {
+        description: 'Nível geral do maker. Projeção de xpTotal pela curva de regrasXp.',
+      },
+      // `min(rules.nivelMaximo, floor(xpTotal / rules.xpPorNivel))` (FR-007) — the same curve
+      // the skills and the lab use, evaluated in `packages/game`.
+      //
+      // **No `max`, deliberately**, and for a reason stronger than the per-skill `nivel`'s: the
+      // ceiling is `regrasXp.nivelMaximo`, which FR-009 makes **per-organization data** so that
+      // retuning the economy is an edit and not a deploy. A column constraint would freeze one
+      // number across every lab, make raising it a migration, and — worse — make the first
+      // maker to cross the old cap fail the write *inside* the approval transaction FR-004
+      // requires to commit or roll the approval back with it.
     },
     {
       name: 'skills',

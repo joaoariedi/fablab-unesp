@@ -20,13 +20,39 @@ import { isScoped } from '../../lib/tenancy/scope-registry'
 type Field = {
   name?: string
   type: string
+  options?: (string | { value?: string })[]
   fields?: Field[]
   tabs?: { name?: string; fields: Field[] }[]
 }
 
 const collection = (slug: string, fields: Field[]) => ({ slug, fields })
 
-const statusField: Field = { name: 'status', type: 'select' }
+/**
+ * A content `status`, vocabulary included.
+ *
+ * The options are not decoration: since feature 005 the derivation asks whether the field can
+ * express `publicado` as well as whether it is queryable, and a real content status always
+ * declares its own. A bare `{ name, type }` here would model a field this codebase does not
+ * have and would make every flattening case below a statement about the wrong rule.
+ */
+const statusField: Field = {
+  name: 'status',
+  type: 'select',
+  options: ['rascunho', 'em_revisao', 'publicado'],
+}
+
+/**
+ * `missaoSubmissao`'s own vocabulary — a **review** queue, not a content one (T027).
+ *
+ * Nothing public reads a submission, so its states are the reviewer's. Being counted as
+ * publishable on the strength of the field's NAME is not the harmless empty listing the
+ * name-only rule assumed: on Postgres the column is an enum and the filter throws.
+ */
+const statusDeRevisao: Field = {
+  name: 'status',
+  type: 'select',
+  options: ['enviada', 'aprovada', 'recusada'],
+}
 
 describe('derivePublishable, against the real Payload config', () => {
   /**
@@ -39,7 +65,17 @@ describe('derivePublishable, against the real Payload config', () => {
     const config = await configPromise
     const expected = config.collections
       .filter((c) => isScoped(c.slug))
-      .filter((c) => c.flattenedFields.some((f) => f.name === 'status'))
+      .filter((c) => {
+        const status = c.flattenedFields.find((f) => f.name === 'status')
+        if (!status) return false
+        // The second half of the question, and the same two-routes discipline: read the
+        // vocabulary off the sanitized field rather than re-running the implementation's
+        // option-shape handling.
+        if (status.type !== 'select') return true
+        return status.options.some((option) =>
+          typeof option === 'string' ? option === 'publicado' : option.value === 'publicado',
+        )
+      })
       .map((c) => c.slug)
       .sort()
 
@@ -50,6 +86,27 @@ describe('derivePublishable, against the real Payload config', () => {
       'PUBLISHABLE disagrees with the collection configs. A collection that gained `status` ' +
         'and is missing here is served to anonymous readers unfiltered — drafts included.',
     ).toEqual(expected)
+  })
+
+  it('excludes a scoped collection whose status cannot SAY publicado (T027)', async () => {
+    const config = await configPromise
+    const submissao = config.collections.find((c) => c.slug === 'missaoSubmissao')
+
+    // Non-vacuity: the exclusion below only means something while the collection really does
+    // carry a queryable `status` — it does, and that is exactly why the name-only rule counted
+    // it. `enviada | aprovada | recusada`: a review vocabulary, because nothing public reads a
+    // submission.
+    expect(submissao?.flattenedFields.some((f) => f.name === 'status')).toBe(true)
+    expect(isScoped('missaoSubmissao')).toBe(true)
+
+    expect(
+      derivePublishable(config.collections).has('missaoSubmissao'),
+      'a collection whose status cannot express `publicado` was counted as publishable. The ' +
+        'public read then filters on a value the Postgres enum does not contain, and the ' +
+        'query THROWS — measured: `invalid input value for enum ' +
+        'enum_missao_submissao_status: "publicado"`. Not the empty listing the name-only rule ' +
+        'assumed, and a 500 on the first public read of it',
+    ).toBe(false)
   })
 
   it('excludes a global collection that declares a status of its own', async () => {
@@ -74,6 +131,25 @@ describe('derivePublishable, on collection configs', () => {
     const derived = derivePublishable([
       collection('tenantCanaries', [{ name: 'label', type: 'text' }, statusField]),
     ])
+    expect(derived.has('tenantCanaries')).toBe(true)
+  })
+
+  it('excludes a scoped collection whose status select declares another vocabulary', () => {
+    const derived = derivePublishable([collection('tenantCanaries', [statusDeRevisao])])
+    expect(
+      derived.has('tenantCanaries'),
+      'a status that cannot say `publicado` has no published state to filter for; on Postgres ' +
+        'the filter is not empty but invalid, and the anonymous read fails outright',
+    ).toBe(false)
+  })
+
+  it('keeps the name-only answer for a status that declares no vocabulary', () => {
+    // A `text` status declares no options to check, so there is nothing to ask and the
+    // conservative direction is to keep it in the set: `assertPubliclyReadable` refuses an
+    // unfiltered serve, whereas dropping it would make a legitimate public collection
+    // unreadable. This codebase has no such field today; the branch exists so the rule does
+    // not silently change meaning the day one arrives.
+    const derived = derivePublishable([collection('tenantCanaries', [{ name: 'status', type: 'text' }])])
     expect(derived.has('tenantCanaries')).toBe(true)
   })
 

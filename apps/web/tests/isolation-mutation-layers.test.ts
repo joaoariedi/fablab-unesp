@@ -136,3 +136,85 @@ describe('the isolation mutation gate covers what it claims to (T013)', () => {
     }
   })
 })
+
+/**
+ * The `xp-ledger` layer, specifically (T047, FR-035, SC-010, D7).
+ *
+ * The suite above asks the questions that apply to every layer. This one asks the three that
+ * are only answerable about this one, and each guards a way the layer could exist in the
+ * script while proving nothing:
+ *
+ *   1. it fails through `tests/tenancy/xp-isolation.test.ts` — the only harness that drives an
+ *      ACTION rather than a read matrix, and the only one that can notice a credit landing at
+ *      the wrong lab;
+ *   2. its `EXPECT` is a title that harness actually declares, not a phrase from the plan that
+ *      no test ever prints;
+ *   3. its `EVIDENCE` matches the assertion's RENDERED message and **not** the harness source.
+ *      That distinction is the whole of T046's requirement: vitest prints a code frame of the
+ *      failing file, so an `EVIDENCE` that also matches the template would be satisfied by any
+ *      failure in the file — a missing database included — and the script would report a proof
+ *      it never obtained.
+ */
+describe('the xp-ledger layer (T047, FR-035)', () => {
+  const XP_HARNESS = 'tests/tenancy/xp-isolation.test.ts'
+
+  /** One `case` arm of the script's layer table, read as its three shell assignments. */
+  function xpLedgerArm(): { harness: string; surface: string; evidence: string } | null {
+    const arm = /^\s*xp-ledger\)\n([\s\S]*?)\n\s*;;/m.exec(read(SCRIPT))
+    if (!arm) return null
+    const value = (name: string) => new RegExp(`${name}="([^"]*)"`).exec(arm[1]!)?.[1] ?? ''
+    return { harness: value('HARNESS'), surface: value('EXPECT'), evidence: value('EVIDENCE') }
+  }
+
+  it('is a layer the script accepts', () => {
+    const { usage } = usageOf()
+    expect(
+      advertisedLayers(usage),
+      'FR-035 gives the ledger its own vantage point in the mutation gate; without the layer ' +
+        'the XP harness has never been observed failing',
+    ).toContain('xp-ledger')
+  })
+
+  it('fails through the XP harness, which no other layer drives', () => {
+    expect(
+      xpLedgerArm()?.harness,
+      `the xp-ledger layer must run ${XP_HARNESS}: isolation.test.ts asks what a user can SEE ` +
+        `and stays green no matter where a credit lands`,
+    ).toBe(XP_HARNESS)
+  })
+
+  it('expects a surface the harness actually declares', () => {
+    const surface = xpLedgerArm()?.surface ?? ''
+    expect(surface, 'the xp-ledger layer names no EXPECT surface').not.toBe('')
+    expect(
+      read(`apps/web/${XP_HARNESS}`),
+      `EXPECT is '${surface}', which ${XP_HARNESS} never prints — the script would report ` +
+        `"failed, but not for the right reason" on a harness that failed for exactly it`,
+    ).toContain(surface)
+  })
+
+  it('mutates creditXp choice of client, not the machinery four layers already rewrite', () => {
+    expect(
+      mutations().map((mutation) => mutation.target),
+      'no mutation touches lib/content/xp.ts, so nothing in the layer breaks the credit path',
+    ).toContain('apps/web/lib/content/xp.ts')
+  })
+
+  it('takes EVIDENCE only the counting assertion can print, never a code frame', () => {
+    const evidence = xpLedgerArm()?.evidence ?? ''
+    expect(evidence, 'the xp-ledger layer names no EVIDENCE').not.toBe('')
+
+    const source = read(`apps/web/${XP_HARNESS}`)
+    expect(
+      new RegExp(evidence).test(source),
+      `EVIDENCE /${evidence}/ matches the harness SOURCE. Vitest prints a code frame of the ` +
+        `failing file, so any failure in it — a database that never started included — would ` +
+        `satisfy the grep and the script would announce a proof it never ran.`,
+    ).toBe(false)
+    expect(
+      new RegExp(evidence).test(source.replaceAll('${desvio}', '7')),
+      `EVIDENCE /${evidence}/ does not match the message the delta assertion RENDERS, so a ` +
+        `real leak would be reported as "something else broke"`,
+    ).toBe(true)
+  })
+})

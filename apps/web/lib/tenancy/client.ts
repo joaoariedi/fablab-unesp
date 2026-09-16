@@ -37,8 +37,21 @@ export type FindArgs = {
   where?: Where
   limit?: number
   depth?: number
-  /** Payload's sort syntax: a field name, `-` prefixed for descending. */
-  sort?: string
+  /**
+   * Payload's sort syntax: a field name, `-` prefixed for descending.
+   *
+   * **An array for more than one key, never a comma-joined string.** The comma form is REST-only:
+   * `sanitizeSortParams` is the one function in payload that splits on `,`, and it is wired into
+   * the REST layer alone — the local API an RSC reaches calls `sanitizeSortQuery`, which does
+   * not. `@payloadcms/drizzle`'s `buildOrderBy` then wraps a string WITHOUT splitting it, fails
+   * to resolve a column of that name, and swallows the failure in a bare `catch (_) { continue }`
+   * — leaving only the `-createdAt` it pushes unconditionally before the loop.
+   *
+   * So a comma sort does not order by the first key and fall back on the second: it orders by
+   * **neither**, silently. Measured on `/ranking` in `tests/public/ranking-ordem.test.ts`, where
+   * `'-xpTotal,handle'` returned the makers newest-profile-first.
+   */
+  sort?: string | string[]
   /** 1-based, as Payload counts pages. */
   page?: number
 }

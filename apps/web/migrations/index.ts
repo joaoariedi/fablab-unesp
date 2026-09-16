@@ -8,6 +8,10 @@ import * as migration_20260907_122242_evento_inscricao_obrigatoria from './20260
 import * as migration_20260912_025334_contas_avatar_004 from './20260912_025334_contas_avatar_004';
 import * as migration_20260912_062952_handle_unico_por_organizacao from './20260912_062952_handle_unico_por_organizacao';
 import * as migration_20260912_103126_autor_removivel_tombstone from './20260912_103126_autor_removivel_tombstone';
+import * as migration_20260914_173408_economia_xp_005 from './20260914_173408_economia_xp_005';
+import * as migration_20260914_194612_publicacao_skill_005 from './20260914_194612_publicacao_skill_005';
+import * as migration_20260915_190424_missoes_005 from './20260915_190424_missoes_005';
+import * as migration_20260916_005202_projeto_autor_005 from './20260916_005202_projeto_autor_005';
 
 export const migrations = [
   {
@@ -53,11 +57,31 @@ export const migrations = [
   {
     up: migration_20260912_062952_handle_unico_por_organizacao.up,
     down: migration_20260912_062952_handle_unico_por_organizacao.down,
-    name: '20260912_062952_handle_unico_por_organizacao'
+    name: '20260912_062952_handle_unico_por_organizacao',
   },
   {
     up: migration_20260912_103126_autor_removivel_tombstone.up,
     down: migration_20260912_103126_autor_removivel_tombstone.down,
-    name: '20260912_103126_autor_removivel_tombstone'
+    name: '20260912_103126_autor_removivel_tombstone',
+  },
+  {
+    up: migration_20260914_173408_economia_xp_005.up,
+    down: migration_20260914_173408_economia_xp_005.down,
+    name: '20260914_173408_economia_xp_005',
+  },
+  {
+    up: migration_20260914_194612_publicacao_skill_005.up,
+    down: migration_20260914_194612_publicacao_skill_005.down,
+    name: '20260914_194612_publicacao_skill_005',
+  },
+  {
+    up: migration_20260915_190424_missoes_005.up,
+    down: migration_20260915_190424_missoes_005.down,
+    name: '20260915_190424_missoes_005',
+  },
+  {
+    up: migration_20260916_005202_projeto_autor_005.up,
+    down: migration_20260916_005202_projeto_autor_005.down,
+    name: '20260916_005202_projeto_autor_005'
   },
 ];

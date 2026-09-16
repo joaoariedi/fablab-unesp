@@ -36,7 +36,12 @@ const nextConfig = {
   // Both earlier revisions of this comment are corrected here: one blamed `--webpack` (row 3
   // falsifies it — the bundler never changed the layout), and one called the copied layout the
   // *untested* reason to keep the flag. It is tested; the copy was made by hand and reverted.
-  transpilePackages: ['@fablab/ui'],
+  //
+  // `@fablab/game` is on the same list for the same reason and not by analogy: its export
+  // map points at raw `packages/game/src/*.ts` too, and `lib/content/xp.ts` imports it into
+  // the server bundle (feature 005, T016). Leaving it off would build here and fail only in
+  // a hoisted or `pnpm deploy` layout — the last row of the table above.
+  transpilePackages: ['@fablab/ui', '@fablab/game'],
 }
 
 export default withPayload(nextConfig)

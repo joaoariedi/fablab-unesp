@@ -20,6 +20,11 @@ import { getTenantScopedPayload, tenantIdsOf, type TenantScopedPayload } from '.
  *   3. **the likes go, and the counters are recomputed** — a like is an act by a person, not a
  *      contribution.
  *
+ * 005's CLR-011 adds a fourth, of the same kind as the second: **the XP entries stay, with
+ * `perfil` nulled** ({@link anonimizarLedger}). The credit was really earned, so deleting it
+ * would drop the lab's collective level when somebody leaves; the name is personal data, so it
+ * goes. The work stays, the name goes — the tombstone, one collection further.
+ *
  * ── One transaction, and what that is actually made of ────────────────────────────────────
  *
  * The client is built **once**, from the caller's `req`, and every read and write goes through
@@ -75,14 +80,19 @@ export type DeletionStore = Pick<
 /**
  * The collections that carry an author and therefore a tombstone (CLR-003).
  *
- * `projeto` is deliberately absent: it has no `autor` relationship yet — its author arrives
- * with the collection's own feature, and the plan names that as the reason the tombstone is a
- * `packages/ui` change first. A collection added here without a nullable column is a write
- * that fails, which is the loud half; one *forgotten* here is a byline that survives the
- * erasure, which is the silent half — so the list is a constant a reviewer can diff against
- * `CardProjetoAutor`'s consumers rather than three literals inline.
+ * **`projeto` joined the list at T039**, which is when it gained its nullable `autor`. It was
+ * absent before that, and the comment recording why outlived the reason: a list whose omission
+ * is *"the silent half — a byline that survives the erasure"* is exactly the kind that has to be
+ * revisited the day the column lands, and nothing was watching. `lgpd-doc.test.ts` iterates over
+ * this constant, so the gap could not show up there either; the guard that would have caught it
+ * is `deletion-autoria.test.ts`, which asks the **config** which collections declare an `autor`
+ * and requires every one of them to appear here.
+ *
+ * A collection added here without a nullable column is a write that fails, which is the loud
+ * half; one forgotten is the silent one. The list stays a named constant so a reviewer can diff
+ * it against `CardProjetoAutor`'s consumers rather than read four literals inline.
  */
-export const COLECOES_COM_AUTOR = ['artigo', 'aula', 'modelo3d'] as const
+export const COLECOES_COM_AUTOR = ['artigo', 'aula', 'modelo3d', 'projeto'] as const
 
 /**
  * `limit: 0` — Payload's documented "no limit" (`find.js`: `limit ?? (usePagination ? 10 : 0)`).
@@ -247,6 +257,58 @@ async function anonimizarAutoria(
   return total
 }
 
+/**
+ * Null `xpLedger.perfil` on this profile's entries — the ledger's tombstone (FR-040, CLR-011).
+ *
+ * **The credit stays, the name goes**, which is CLR-003's rule applied to a collection that is
+ * append-only *by access rule* (`XpLedger.ts`: `update: () => false`). The two alternatives
+ * were rejected for reasons this function's shape encodes:
+ *
+ *   - **deleting the entries** rewrites history and silently drops the Nível do Lab — a
+ *     projection of the organization's whole ledger (FR-012) — by whatever the departing maker
+ *     earned. Nobody asked for the lab to shrink because somebody left;
+ *   - **leaving the reference dangling** is the shape 004's phase 6 spent a round repairing.
+ *
+ * Nulling one column is not rewriting history: the deletion itself is the historical event. The
+ * stored `chaveIdempotencia` is deliberately NOT recomposed — `composeIdempotencyKey` runs on
+ * `create` only, so the key outlives the profile it names and the content this entry credited
+ * does not become creditable all over again.
+ *
+ * The write reaches the row because the erasure door runs with `overrideAccess: true`; the
+ * refusal in the config stops a *user* rewriting history, not this path.
+ */
+async function anonimizarLedger(store: DeletionStore, perfilId: string | number): Promise<number> {
+  const { docs } = await store.find<{ id: string | number }>({
+    collection: 'xpLedger',
+    where: { perfil: { equals: perfilId } },
+    limit: TODAS_AS_LINHAS,
+    depth: 0,
+  })
+
+  for (const entrada of docs) {
+    const atualizado = await store.update({
+      collection: 'xpLedger',
+      id: entrada.id,
+      data: { perfil: null },
+    })
+
+    // Checked for the same reason `anonimizarAutoria` checks — see the comment there. A bulk
+    // update collects a per-document refusal into `result.errors` and returns, so the client
+    // hands back `null` rather than throwing, and silence here would tell the person their name
+    // left the ledger while every entry still names them. That is a false LGPD report.
+    if (atualizado === null) {
+      throw new Error(
+        `nao foi possivel anonimizar a entrada xpLedger #${String(entrada.id)}: a atualizacao ` +
+          `nao retornou documento. O update em massa do Payload recolhe o erro em vez de lancar, ` +
+          `entao isto e o que impede a exclusao de reportar sucesso deixando o ledger apontando ` +
+          `para um perfil que acabou de ser apagado (FR-040, CLR-011).`,
+      )
+    }
+  }
+
+  return docs.length
+}
+
 /** Profiles this login still holds here. Confined to this organization by the choke point. */
 async function contarPerfisRestantes(
   store: DeletionStore,
@@ -314,6 +376,10 @@ export async function deleteAccount(
 
   const curtidasRemovidas = await removerCurtidas(store, input.req, conta)
   const conteudosAnonimizados = await anonimizarAutoria(store, input.perfilId)
+  // Before the profile row goes: the ledger keeps ids, not rows, so the order is not what makes
+  // the query work — it is what keeps the transaction from ever holding entries that point at a
+  // profile already deleted (FR-040, CLR-011).
+  await anonimizarLedger(store, input.perfilId)
   await store.delete({ collection: 'perfilMaker', id: input.perfilId })
 
   // Depois do delete, e aqui dentro: ver o docblock para por que a ordem e a decisao.

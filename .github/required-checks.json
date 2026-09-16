@@ -1,7 +1,7 @@
 {
   "$comment": "The live branch-protection answer, recorded (T030, SC-012). Regenerate with scripts/required-checks.sh --write; never hand-edit. tasks.md § Outstanding is checked against it by apps/web/tests/required-checks.test.ts.",
   "repo": "joaoariedi/fablab-unesp",
-  "measuredAt": "2026-09-12",
+  "measuredAt": "2026-09-16",
   "branches": {
     "main": [
       "Build",

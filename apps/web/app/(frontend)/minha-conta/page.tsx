@@ -11,6 +11,7 @@ import {
   type DirecaoAvatar,
 } from '@fablab/ui'
 
+import { ACTIVE_SKILLS_ONLY } from '../../../lib/content/skill-catalogue'
 import { getTenantScopedPayloadForRSC } from '../../../lib/tenancy'
 // Deep import, exactly as every listing and `criar-conta` do it: the anonymous read path is not
 // re-exported from `lib/tenancy`'s index, because it runs with `overrideAccess: true` and that
@@ -100,8 +101,12 @@ type ItemDoc = {
   readonly spriteFolhas?: MidiaDoc | string | number | null
 }
 
-/** One `skill` row as `perfilMaker.skills[].skill` populates it. */
+/** One `skill` row — as `perfilMaker.skills[].skill` populates it, and as the lab's catalogue
+ *  read returns it. */
 type SkillDoc = { readonly id?: string | number; readonly nome?: string; readonly ativa?: boolean }
+
+/** One card of the SUAS SKILLS panel: a skill of this lab and the maker's level in it. */
+type LinhaDoPainel = { readonly chave: string; readonly nome: string; readonly nivel: number }
 
 /** One row of the profile's `skills` array: the catalogue row, the level, and the XP inside it. */
 type SkillDoPerfil = { readonly skill?: SkillDoc | string | number | null; readonly nivel?: number }
@@ -243,13 +248,56 @@ async function camadasDoAvatar(config: unknown): Promise<AvatarCamada[]> {
  * An unpopulated `skill` (a bare id) is skipped for the same reason a layer with no art is: it
  * has no name, and a level under a blank label is not information.
  */
-function skillsVisiveis(perfil: PerfilDoc): { chave: string; nome: string; nivel: number }[] {
+function skillsVisiveis(perfil: PerfilDoc): LinhaDoPainel[] {
   return (perfil.skills ?? []).flatMap((linha, indice) => {
     const skill = linha.skill
     if (typeof skill !== 'object' || skill === null) return []
     if (skill.ativa === false || !skill.nome) return []
     return [{ chave: String(skill.id ?? indice), nome: skill.nome, nivel: linha.nivel ?? 0 }]
   })
+}
+
+/**
+ * The panel: **every active skill of this lab**, at the level the ledger projected (T042,
+ * FR-032, US9).
+ *
+ * The stored rows come first and carry the levels, because `skills[].nivel` is the real one —
+ * `levelFor` over that skill's ledger entries, recomputed inside the crediting transaction
+ * (CLR-001). What the catalogue adds is the skills the profile has **no row for**, drawn empty.
+ *
+ * ── Why the array alone was the wrong set ───────────────────────────────────────────────────
+ *
+ * US9 asks for *"each **active** skill"*, which is the lab's vocabulary and not one profile's
+ * array — and the two part company in a way the page could not even see. A profile the signup
+ * flow never created carries no rows at all (the tenancy fixtures seed one from `nome`,
+ * `handle` and `usuario`, as `PerfilMaker.ts` says), and a skill added to the lab reaches a
+ * maker through `Skill.ts`'s assignment hook. Reading only the array, this page printed *"este
+ * lab ainda não cadastrou skills"* while observing something entirely different — that **this
+ * profile** had no rows — and a lab with five skills got the copy for a lab with none.
+ *
+ * **Nothing is repaired here.** A missing row is shown at 0 and left missing: CLR-014 puts
+ * reconciliation in CI precisely so no page writes on view, and 0 is not an invention — a skill
+ * with no row has no ledger entry either, so it claims no progress the ledger cannot account
+ * for.
+ *
+ * `ativa` is re-checked on the catalogue rows rather than trusted to the query: FR-019's rule is
+ * that a retired skill is hidden, and a filter that lives only in a `where` disappears the day
+ * someone widens the read.
+ */
+function skillsDoPainel(perfil: PerfilDoc, catalogo: readonly SkillDoc[] | null): LinhaDoPainel[] {
+  const doPerfil = skillsVisiveis(perfil)
+  // `null` is a failed catalogue read: the maker's own stored levels are still theirs, and one
+  // outage should cost the offer of a skill they have not started rather than the whole panel.
+  if (catalogo === null) return doPerfil
+
+  const jaNoPainel = new Set(doPerfil.map((linha) => linha.chave))
+  const aindaSemLinha = catalogo.flatMap((skill) => {
+    const chave = String(skill.id ?? '')
+    if (skill.ativa === false || !skill.nome || chave === '' || jaNoPainel.has(chave)) return []
+    return [{ chave, nome: skill.nome, nivel: 0 }]
+  })
+
+  return [...doPerfil, ...aindaSemLinha]
 }
 
 /** The avatar card: the composed figure over the grid the mockup draws. */
@@ -301,9 +349,12 @@ function cartaoDeSkill(skill: { chave: string; nome: string; nivel: number }): R
  * A lab whose team has added no skills yet has nothing to show, and FR-013's *"every **active**
  * skill at level 0"* is the reason that is an ordinary state rather than a bug: a new
  * organization starts with an empty catalogue, and its first maker's panel is empty with it.
+ *
+ * Since T042 the empty panel means exactly that — the **lab's** catalogue is empty — because
+ * {@link skillsDoPainel} reads it. It used to mean "this profile carries no rows", which is a
+ * different fact printed under the same sentence.
  */
-function painelDeSkills(perfil: PerfilDoc): ReactElement {
-  const skills = skillsVisiveis(perfil)
+function painelDeSkills(skills: readonly LinhaDoPainel[]): ReactElement {
   return (
     <section style={ESTILO.painel} aria-labelledby="suas-skills">
       <h2 id="suas-skills" style={ESTILO.painelTitulo}>
@@ -440,6 +491,42 @@ async function lerConteudo(
 }
 
 /**
+ * How many skills of one lab the panel will draw.
+ *
+ * A guard against an unbounded read rather than a paging strategy, exactly as the listings size
+ * their category reads: `gamification.md` seeds five, and a vocabulary that outgrows this is a
+ * design problem — a panel nobody can scan — long before it is a pagination one.
+ */
+const LIMITE_DO_CATALOGO = 50
+
+/**
+ * This lab's **active** skills, alphabetically (T042, FR-032).
+ *
+ * `ACTIVE_SKILLS_ONLY` rather than a second `{ ativa: { equals: true } }` typed here: the
+ * catalogue module owns what "active" means for the whole feature, and a second copy is a
+ * second thing to keep true. Sorted so two renders of the same lab put the cards in the same
+ * order — Postgres is free to return rows in whatever order it likes, and a panel that
+ * reshuffles between refreshes reads as data changing.
+ *
+ * `depth: 0`: the panel needs a name and an id, and populating this row's relationships would
+ * be a read of the whole vocabulary's neighbours to print a label.
+ */
+async function lerSkillsAtivas(
+  db: Awaited<ReturnType<typeof getTenantScopedPayloadForRSC>>,
+): Promise<SkillDoc[] | null> {
+  return lerOuFalhar(async () => {
+    const { docs } = await db.find<SkillDoc>({
+      collection: 'skill',
+      where: ACTIVE_SKILLS_ONLY,
+      depth: 0,
+      limit: LIMITE_DO_CATALOGO,
+      sort: 'nome',
+    })
+    return docs
+  })
+}
+
+/**
  * This request's own profile in this lab, read from the session on every call.
  *
  * The lookup is filtered by the signed-in account. Scoped to the organization alone it would
@@ -481,9 +568,10 @@ export default async function Page(): Promise<ReactElement> {
 
   // In parallel, and each answered separately: the avatar catalogue is a different door from the
   // content, and one outage should cost one region of the page rather than the screen.
-  const [camadas, conteudos] = await Promise.all([
+  const [camadas, conteudos, catalogo] = await Promise.all([
     lerOuFalhar(() => camadasDoAvatar(perfil.avatarConfig)),
     Promise.all(BLOCOS.map((bloco) => lerConteudo(db, bloco, perfil.id))),
+    lerSkillsAtivas(db),
   ])
 
   return (
@@ -494,7 +582,7 @@ export default async function Page(): Promise<ReactElement> {
           {cartaoDoAvatar(perfil, camadas ?? [])}
           {identidade(perfil)}
         </div>
-        {painelDeSkills(perfil)}
+        {painelDeSkills(skillsDoPainel(perfil, catalogo))}
       </section>
       <section style={ESTILO.blocos}>
         {BLOCOS.map((bloco, indice) => blocoDeConteudo(bloco, conteudos[indice] ?? null))}

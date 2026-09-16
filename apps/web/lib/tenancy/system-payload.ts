@@ -1,4 +1,4 @@
-import { getPayload, type PayloadRequest } from 'payload'
+import { getPayload, type Payload, type PayloadRequest } from 'payload'
 
 import { buildTenantClient, type TenantScopedPayload } from './client'
 
@@ -66,8 +66,24 @@ export async function getSystemScopedPayload(
     throw new Error('getSystemScopedPayload requires an explicit tenant id — it never infers one.')
   }
 
-  const payload = await getPayload({ config: (await import('../../payload.config')).default })
   const req = options.req
+  // **The request's OWN Payload instance, when there is one.**
+  //
+  // `getPayload` is keyed, and a second key is a second instance with its own connection pool.
+  // Importing a fresh one here means a hook running inside a keyed instance's transaction writes
+  // through a *different* pool — which cannot see the row that transaction has not committed.
+  //
+  // Measured the day `SEED_ON_CREATE` stopped being empty: `tests/uploads/native-upload.test.ts`
+  // builds `getPayload({ config, key: 'native-upload-t034' })`, created an organization, and the
+  // seed hook failed with `23503 — Key (tenant_id)=(15241) is not present in table
+  // "organizations"`. Passing `req` was not enough and never could have been: the transaction id
+  // it carries belongs to an instance this function was not using.
+  //
+  // `req.payload` is the authority on which instance is running the operation. The import stays
+  // as the fallback for the callers that have no request at all.
+  const payload =
+    (req?.payload as Payload | undefined) ??
+    (await getPayload({ config: (await import('../../payload.config')).default }))
   const base = buildTenantClient({ payload, tenantId, overrideAccess: true, req })
 
   return {

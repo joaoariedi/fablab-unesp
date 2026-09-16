@@ -200,6 +200,27 @@ describe('the gap between the gates and the protection is pinned (T030, T018, SC
       ).toBe(true)
     }
   })
+
+  it("accounts for feature 005's own xp-ledger isolation gate", () => {
+    // FR-035, T049/T050. The `xp-ledger` matrix leg is the seventeenth context ci.yml can
+    // report, and feature 004 shipped its sixteenth leg while protection still knew sixteen —
+    // a gate that ran, went red, and was merged past for the length of a feature. Recorded
+    // either way, required or named as outstanding, that cannot repeat silently.
+    const gate = 'Isolation harness can fail (xp-ledger)'
+    expect(
+      ciGateNames(),
+      `${WORKFLOW} no longer reports "${gate}", so the xp-ledger mutation leg is not running ` +
+        'at all and SC-010 is being claimed on a harness nobody executes.',
+    ).toContain(gate)
+    const required = new Set(snapshot().branches.dev)
+    const documented = new Set(documentedGaps())
+    expect(
+      required.has(gate) || documented.has(gate),
+      `"${gate}" is neither a required status check nor listed as outstanding in ${TASKS}. ` +
+        'The leg then runs, reports its red, and is merged past with nobody having decided ' +
+        'that — the exact state feature 004 spent a whole feature in.',
+    ).toBe(true)
+  })
 })
 
 describe('the record is re-derivable from the live API (T030)', () => {

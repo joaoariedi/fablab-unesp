@@ -5,6 +5,7 @@ import config from '../../payload.config'
 
 /**
  * T029 / FR-031, CLR-003 — `autor` can hold nothing, **after the app has booted**.
+ * T040 / FR-034, CLR-002 — extended to `projeto`, which gained `autor` in 005.
  *
  * ## Why this reads the database instead of the migration
  *
@@ -24,10 +25,21 @@ import config from '../../payload.config'
  * that asserts the artefact instead of the state.** Asking `information_schema` after a real boot
  * is asking the authority.
  *
- * `projeto` is deliberately absent: it carries no `autor` at all until feature 005.
+ * ## Why `projeto` is now in the list
+ *
+ * 005 gave `projeto` the `autor` it had deferred by name (FR-034, CLR-002), and CLR-002's whole
+ * argument is that it arrives **nullable on day one** so it never needs the migration 004 paid
+ * for. That argument is only worth something if something checks it, and it has to be checked
+ * from the same vantage point: the column is created by `push` from the field config on every
+ * non-production boot, so the only statement about it that cannot be quietly reverted is one made
+ * against a booted database. A `required: true` added to `Projeto.autor` in a later edit — the
+ * exact regression 004 lived through — turns this case red; the migration's text staying correct
+ * would not have.
  */
 
-const COM_AUTOR = ['artigo', 'aula', 'modelo3d'] as const
+// Every collection whose `autor` must be able to hold nothing. `projeto` joined in 005 (T040);
+// the other three were retrofitted in 004 (T029).
+const COM_AUTOR = ['artigo', 'aula', 'modelo3d', 'projeto'] as const
 
 let payload: Payload
 let nulabilidade: Map<string, string>
@@ -37,9 +49,14 @@ beforeAll(async () => {
   // resolves — which is precisely the window the old gate never entered.
   payload = await getPayload({ config })
 
+  // The IN list is built from COM_AUTOR rather than written out beside it. Spelled twice, the two
+  // drift: a table added to the array but not to the query reads `undefined` instead of `'NO'`,
+  // which is a failure here but a *confusing* one, and one the first case below would have to
+  // explain. These are compile-time literals, so the interpolation carries no input.
+  const tabelas = COM_AUTOR.map((t) => `'${t}'`).join(', ')
   const resultado = await payload.db.drizzle.execute(
     `select table_name, is_nullable from information_schema.columns
-     where column_name = 'autor_id' and table_name in ('artigo', 'aula', 'modelo3d')`,
+     where column_name = 'autor_id' and table_name in (${tabelas})`,
   )
   const linhas = ((resultado as { rows?: unknown[] }).rows ?? resultado) as {
     table_name: string
@@ -48,12 +65,13 @@ beforeAll(async () => {
   nulabilidade = new Map(linhas.map((l) => [l.table_name, l.is_nullable]))
 }, 180_000)
 
-describe('the tombstone column survives a boot (FR-031, CLR-003)', () => {
-  it('found all three columns — an empty read would make every case below vacuous', () => {
+describe('the tombstone column survives a boot (FR-031, FR-034, CLR-002, CLR-003)', () => {
+  it('found all four columns — an empty read would make every case below vacuous', () => {
     expect(
       [...nulabilidade.keys()].sort(),
-      'the query matched no `autor_id` columns at all, so the assertions below are scanning ' +
-        'an empty map and would pass against any schema whatsoever',
+      'the query matched fewer `autor_id` columns than this suite claims to cover, so at least ' +
+        'one assertion below is reading an empty slot and would pass against any schema ' +
+        'whatsoever. A missing `projeto.autor_id` means `autor` never reached the field config.',
     ).toEqual([...COM_AUTOR].sort())
   })
 

@@ -184,6 +184,13 @@ jobs:
     # tests/tenancy/relationships.test.ts. See scripts/isolation-mutation.sh for the
     # measurement.
     #
+    # `xp-ledger` (T049, FR-035, D7) is the first leg that breaks a caller's CHOICE of client
+    # rather than the machinery the other four rewrite: `creditXp` resolves a global
+    # identity to a scoped profile before writing a total to it, and every read layer stays
+    # green when a credit lands at the wrong lab — they ask what a user can SEE, not where the
+    # points went. Only tests/tenancy/xp-isolation.test.ts drives the write, so only this leg
+    # has ever observed that harness fail.
+    #
     # The matrix is the gate set: a layer the script accepts but this list omits is a gate
     # that shrank without the diff saying so, which SC-012 forbids and
     # apps/web/tests/isolation-mutation-layers.test.ts checks.
@@ -191,7 +198,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        layer: [access-composition, choke-point, public-path, same-tenant]
+        layer: [access-composition, choke-point, public-path, same-tenant, xp-ledger]
     services:
       postgres:
         image: postgres:16-alpine

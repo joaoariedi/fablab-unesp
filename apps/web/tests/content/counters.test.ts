@@ -1,5 +1,7 @@
-import { getPayload, type Payload } from 'payload'
+import { getPayload, type Payload, type Where } from 'payload'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+
+import { levelFor, type XpRules } from '@fablab/game'
 
 import configPromise from '../../payload.config'
 import type { CounterField } from '../../lib/content/counters'
@@ -40,8 +42,13 @@ import type { CounterField } from '../../lib/content/counters'
  * derived on the document being saved rather than counted across rows — so it is not a counter
  * and never arrives through that type. Both halves are reconciled by this gate, because FR-020
  * makes no such distinction: it names four values and demands one maintenance strategy.
+ *
+ * Feature 005 widened `CounterField` itself (T020): `perfilMaker.xpTotal` and `perfilMaker.nivel`
+ * are FR-010's projections of `xpLedger`, and plan § D2 puts them in this vocabulary so FR-011's
+ * reconciliation is **this sweep** rather than a second gate. They arrive here automatically,
+ * which is the mechanism working: the map below could not typecheck until each was declared.
  */
-type DerivedField = CounterField | 'formatos'
+type DerivedField = CounterField | 'formatos' | 'skills'
 
 /**
  * How the truth is recomputed for each derived value of FR-020.
@@ -70,6 +77,46 @@ type DerivedSource =
    * appears, so the commit that gives it a subject is the commit that must reconcile it.
    */
   | { awaitingSubject: { collection: string; task: string; derivedFrom: string } }
+  /**
+   * **Summed, never counted.** The stored value is the total of `amount` across the rows that
+   * point back through `foreignKey` — `xpLedger.quantidade` for `perfilMaker.xpTotal` (FR-010).
+   * A row count would agree with it only while `regrasXp.xpPorAcao` is 1, and that rule is
+   * per-organization data a team can retune (FR-009): the free oracle of plan § D2, which
+   * `xp-vs-count.test.ts` asserts as an oracle and which this recount must not lean on.
+   */
+  | { fromLedger: { collection: string; foreignKey: string; amount: string } }
+  /**
+   * A projection of another declared value through a rule rather than of rows: `nivel` is
+   * `levelFor(xpTotal, rules)` and nothing else (FR-007), with the numbers living in `regrasXp`.
+   *
+   * Recomputed from the **recounted** total rather than the stored one. A level derived from a
+   * wrong total agrees with that total perfectly, so a recount that read the stored column
+   * would call the pair "in sync" at the exact moment both are wrong.
+   */
+  | { fromCurve: { of: DerivedField; rules: string; how: string } }
+  /**
+   * A **panel** of projections rather than a single column: `perfilMaker.skills[]` carries one
+   * `{ xp, nivel }` pair per skill, each of them the ledger entries that name THAT skill,
+   * recomputed (FR-010) — so one row of the map stands for as many projections as the maker
+   * holds skills, and the recount has to narrow the sum by `rowKey` as well as by the profile.
+   *
+   * Its own variant rather than a second `fromLedger`, because the two differ in what they
+   * read and in what they can report: a column drift names a row, a panel drift has to name
+   * the row AND the skill inside it, or a person reading the failure cannot find the pair.
+   */
+  | {
+      fromLedgerRows: {
+        collection: string
+        /** Back to the document that owns the panel. */
+        foreignKey: string
+        amount: string
+        /** The field naming the skill — on the panel row AND on the ledger entry, both. */
+        rowKey: string
+        xpField: string
+        levelField: string
+        rules: string
+      }
+    }
 
 const DERIVED_SOURCES = {
   // `conteudo.value`, not `conteudo`: T043 declares the target as a POLYMORPHIC relationship
@@ -99,6 +146,41 @@ const DERIVED_SOURCES = {
     fromOwnRelationship: {
       field: 'arquivosModelo',
       how: 'the distinct lowercased extensions of the linked media documents\' filenames',
+    },
+  },
+  // Feature 005, FR-010 — the two projections `creditXp` maintains inside the transaction that
+  // writes the ledger entry. Declared here, and not in a gate of their own, because a second
+  // reconciliation would be a second discipline for one guarantee (plan § D2): drift in a total
+  // and drift in a like are the same failure, and this file is where it is reported.
+  xpTotal: { fromLedger: { collection: 'xpLedger', foreignKey: 'perfil', amount: 'quantidade' } },
+  nivel: {
+    fromCurve: {
+      of: 'xpTotal',
+      rules: 'regrasXp',
+      how:
+        'levelFor(the RECOUNTED xpTotal, this organization\'s regrasXp) — FR-007\'s curve, ' +
+        'evaluated in @fablab/game and expressed nowhere else, cap included (CLR-013)',
+    },
+  },
+  // FR-010's THIRD projection, and the one a maker actually looks at (US9's SUAS SKILLS panel).
+  // It was declared absent here until T021 — with the reason that `derivedColumns` scans
+  // `flattenedFields`, which does not hoist an array's subfields, so `skills[].xp` could not be
+  // found as a column and declaring it would have claimed a coverage this gate never delivered.
+  // That objection was right about the danger and wrong about the conclusion: the array field
+  // ITSELF is in `flattenedFields` (`FlattenedArrayField`), so the panel is reachable as one
+  // column whose recount walks its rows — `driftInSkillPanel`. The coverage is now delivered,
+  // which is the only thing that ever entitled the map to claim it.
+  skills: {
+    fromLedgerRows: {
+      collection: 'xpLedger',
+      foreignKey: 'perfil',
+      amount: 'quantidade',
+      // The same field name on both sides, and that is not a coincidence to be tidied away:
+      // the panel row names a skill and so does the entry, and the recount joins them on it.
+      rowKey: 'skill',
+      xpField: 'xp',
+      levelField: 'nivel',
+      rules: 'regrasXp',
     },
   },
 } as const satisfies Record<DerivedField, DerivedSource>
@@ -137,6 +219,19 @@ const NOT_AN_FR020_DERIVED: Record<string, string> = {
   'aula.aprovadoEm': APPROVAL_STAMP,
   'evento.aprovacaoRegistrada': APPROVAL_STAMP,
   'evento.aprovadoEm': APPROVAL_STAMP,
+  // Feature 005. An **idempotency key**, not a derived value: `beforeValidate` composes it once
+  // from the entry's own `(tenant, perfil, acao, refTipo, refId)` and nothing ever recomputes
+  // it, because the ledger is append-only (FR-001) — there is no later state for it to drift
+  // from. Its gate is the UNIQUE INDEX itself, driven by `xp-ledger.test.ts` inserting the same
+  // tuple twice and asserting `23505`, which is a stronger check than a recount could be.
+  //
+  // This entry is here because registering `XpLedger` in `payload.config.ts` is what made the
+  // field visible to the scan below — so the rot guard fired at registration time, exactly as
+  // designed, on a field no task in the list had claimed. That is the guard working.
+  'xpLedger.chaveIdempotencia':
+    'an idempotency key composed once by beforeValidate and never recomputed; the ledger is ' +
+    'append-only (FR-001), so there is no source to reconcile against. Its gate is the unique ' +
+    'index, proven in xp-ledger.test.ts',
 }
 
 /**
@@ -168,7 +263,15 @@ type Drift = {
 }
 
 let payload: Payload
-let seeded: { org: number; categoria: number; midia: number; projeto: number }
+let seeded: {
+  org: number
+  categoria: number
+  midia: number
+  projeto: number
+  perfil: number
+  usuario: number
+  skill: number
+}
 
 const collectionsInConfig = async () => (await configPromise).collections
 
@@ -241,6 +344,220 @@ const driftInOwnRelationship = async (
   return drifts
 }
 
+/**
+ * Every row a query matches, at `depth: 0` — ids, not populated relationships.
+ *
+ * `pagination: false` on purpose, and it is load-bearing for the sums below: a page limit would
+ * make a total stop short of its own ledger and report no error at all, the defect `counters.ts`
+ * declares `SUM_PAGE_SIZE` against. The runtime path pages because it runs inside a user's
+ * transaction; a CI gate reading the whole database does not have to.
+ */
+const rowsOf = async (collection: string, where?: Where): Promise<Record<string, unknown>[]> => {
+  const { docs } = await payload.find({
+    collection: collection as never,
+    where: where as never,
+    depth: 0,
+    pagination: false,
+    overrideAccess: true,
+  })
+  return docs as unknown as Record<string, unknown>[]
+}
+
+/** The total of `amount` across every source row pointing at `id`. */
+const sumOfSourceRows = async (
+  from: { collection: string; foreignKey: string; amount: string },
+  id: unknown,
+): Promise<number> => {
+  const rows = await rowsOf(from.collection, { [from.foreignKey]: { equals: id } } as Where)
+  return rows.reduce((total, row) => {
+    const amount = row[from.amount]
+    return total + (typeof amount === 'number' ? amount : 0)
+  }, 0)
+}
+
+/**
+ * The economy of one organization, or `null` when it has none.
+ *
+ * **Read per row rather than cached.** A cache keyed by tenant would hand back a `null` recorded
+ * before a test seeded its `regrasXp`, and the gate would then report every level in that
+ * organization as drift — a failure in the gate reported as a failure in the code it watches.
+ * The cost is one small query per profile, paid in CI.
+ */
+const rulesOf = async (tenant: unknown): Promise<XpRules | null> => {
+  const [row] = await rowsOf('regrasXp', { tenant: { equals: tenant } } as Where)
+  const { xpPorAcao, xpPorNivel, nivelMaximo } = (row ?? {}) as Partial<XpRules>
+  return typeof xpPorAcao === 'number' &&
+    typeof xpPorNivel === 'number' &&
+    typeof nivelMaximo === 'number'
+    ? { xpPorAcao, xpPorNivel, nivelMaximo }
+    : null
+}
+
+/**
+ * The ledger declaration a curve projects, resolved **through the map** rather than restated.
+ *
+ * Restating `{ collection: 'xpLedger', foreignKey: 'perfil' }` beside the level's recount is how
+ * the two would drift apart from each other without either being wrong on its own — two
+ * statements of one fact, and the map is the one the typecheck protects.
+ */
+const ledgerBehind = (
+  of: DerivedField,
+): { collection: string; foreignKey: string; amount: string } => {
+  const declared: DerivedSource = DERIVED_SOURCES[of]
+  if (!('fromLedger' in declared)) {
+    throw new Error(
+      `${of} is named as the value a curve projects, but its declaration is ` +
+        `${JSON.stringify(declared)} — nothing recounts it, so the level cannot be recomputed`,
+    )
+  }
+  return declared.fromLedger
+}
+
+/**
+ * Rows whose stored projection disagrees with `recompute` (T020, FR-011).
+ *
+ * One walk for both projections, because the difference between them is only *what the truth
+ * is* — a sum of the ledger, or the curve applied to that sum. Writing the walk twice would let
+ * the two report drift in two shapes, and the drift report is what a person reads at 2am.
+ */
+const driftInProjection = async (
+  column: DerivedColumn,
+  recompute: (doc: Record<string, unknown>) => Promise<number>,
+): Promise<Drift[]> => {
+  const drifts: Drift[] = []
+  for (const doc of await rowsOf(column.collection)) {
+    const stored = typeof doc[column.field] === 'number' ? (doc[column.field] as number) : 0
+    const recomputed = await recompute(doc)
+    if (stored !== recomputed) {
+      drifts.push({
+        where: `${column.collection}.${column.field}`,
+        id: doc.id as string | number,
+        stored,
+        recomputed,
+      })
+    }
+  }
+  return drifts
+}
+
+/** What a panel declaration says, once, so the two functions below cannot state it twice. */
+type PanelSource = Extract<DerivedSource, { fromLedgerRows: unknown }>['fromLedgerRows']
+
+/** One panel row of `perfilMaker.skills[]`, at `depth: 0` — the skill arrives as an id. */
+type PanelRow = Record<string, unknown>
+
+/**
+ * The drift in ONE panel row: its stored `{ xp, nivel }` against a recount of the entries that
+ * name this profile and this skill (T021, FR-010).
+ *
+ * The level is recomputed from the **recounted** xp, never the stored one, for the reason
+ * `fromCurve` gives for the profile's own pair: a level derived from a wrong total agrees with
+ * that total perfectly, so reading the stored column would call a desynced pair "in sync".
+ *
+ * `rules` of `null` — an organization with no `regrasXp` row — means no XP can have been granted
+ * there at all, so every level reads 0. Arithmetic, not a skip: a panel claiming level 3 in a
+ * lab whose economy does not exist is drift, and is reported as such.
+ */
+const driftInPanelRow = (
+  column: DerivedColumn,
+  panel: PanelSource,
+  doc: Record<string, unknown>,
+  row: PanelRow,
+  xp: number,
+  rules: XpRules | null,
+): Drift[] => {
+  const chave = row[panel.rowKey]
+  const nivel = rules ? levelFor(xp, rules) : 0
+
+  // Named per row AND per skill: `perfilMaker.skills[6715].xp`. A report that named only the
+  // profile would leave whoever reads it at 2am opening the panel to guess which pair moved.
+  const where = `${column.collection}.${column.field}[${String(chave)}].`
+  const numberAt = (field: string) => (typeof row[field] === 'number' ? (row[field] as number) : 0)
+
+  return [
+    { field: panel.xpField, recomputed: xp },
+    { field: panel.levelField, recomputed: nivel },
+  ]
+    .filter(({ field, recomputed }) => numberAt(field) !== recomputed)
+    .map(({ field, recomputed }) => ({
+      where: where + field,
+      id: doc.id as string | number,
+      stored: numberAt(field),
+      recomputed,
+    }))
+}
+
+/**
+ * What one profile's ledger says each skill has earned, read in ONE query and grouped here.
+ *
+ * Keyed by `String(id)` on both sides: the panel row and the ledger entry both arrive at
+ * `depth: 0` as raw ids, and a Map keyed by the raw value would miss `3` against `'3'` the day
+ * either side changes shape — a miss that would read as a skill the ledger never credited.
+ *
+ * Entries naming **no** skill are dropped rather than bucketed under a key of their own: they
+ * credit the maker's total and no skill (FR-039), and a bucket for them would demand a panel row
+ * for a skill that does not exist.
+ */
+const ledgerBySkill = async (panel: PanelSource, id: unknown): Promise<Map<string, number>> => {
+  const earned = new Map<string, number>()
+  for (const entry of await rowsOf(panel.collection, { [panel.foreignKey]: { equals: id } } as Where)) {
+    const chave = entry[panel.rowKey]
+    if (chave === null || chave === undefined) continue
+    const amount = entry[panel.amount]
+    const key = String(chave)
+    earned.set(key, (earned.get(key) ?? 0) + (typeof amount === 'number' ? amount : 0))
+  }
+  return earned
+}
+
+/**
+ * Every panel row in the database whose stored projection disagrees with the ledger (T021).
+ *
+ * **The walk is the UNION of the stored rows and the skills the ledger credits, never the stored
+ * rows alone.** `skills[]` is the first projection in this gate whose row can be *deleted* — a
+ * column cannot go missing, it can only hold a wrong number — and that is exactly the drift class
+ * this file's own preamble names: an admin bulk edit, a migration, a manual SQL fix. Walking only
+ * what is stored makes a missing row invisible, because there is nothing to iterate for a skill
+ * the panel forgot, and a maker whose panel was wiped outright would reconcile clean while their
+ * ledger holds every XP they ever earned.
+ *
+ * The economy and the ledger are each read once per document rather than once per row — two
+ * queries per maker, not two per skill they hold — and the economy is never cached across
+ * documents, for the reason {@link rulesOf} states.
+ */
+const driftInSkillPanel = async (
+  column: DerivedColumn,
+  panel: PanelSource,
+  known: Set<string>,
+): Promise<Drift[]> => {
+  const ledgerExists = known.has(panel.collection)
+  const drifts: Drift[] = []
+
+  for (const doc of await rowsOf(column.collection)) {
+    const stored = doc[column.field]
+    const rows = Array.isArray(stored) ? (stored as PanelRow[]) : []
+    const earned = ledgerExists ? await ledgerBySkill(panel, doc.id) : new Map<string, number>()
+    if (rows.length === 0 && earned.size === 0) continue
+
+    const rules = await rulesOf(doc.tenant)
+    const carregadas = new Set<string>()
+    for (const row of rows) {
+      const chave = String(row[panel.rowKey])
+      carregadas.add(chave)
+      drifts.push(...driftInPanelRow(column, panel, doc, row, earned.get(chave) ?? 0, rules))
+    }
+
+    // The other half of the union: a skill the ledger credits and the panel does not carry. It is
+    // reported as a row storing zero, which is what a missing row *means* to whoever reads the
+    // panel — the maker sees no progress in a skill their own history says they earned.
+    for (const [chave, xp] of earned) {
+      if (carregadas.has(chave)) continue
+      drifts.push(...driftInPanelRow(column, panel, doc, { [panel.rowKey]: chave }, xp, rules))
+    }
+  }
+  return drifts
+}
+
 /** Rows whose stored counter disagrees with a recount of its source rows. */
 const driftIn = async (column: DerivedColumn, known: Set<string>): Promise<Drift[]> => {
   const declared: DerivedSource = DERIVED_SOURCES[column.field]
@@ -252,17 +569,33 @@ const driftIn = async (column: DerivedColumn, known: Set<string>): Promise<Drift
 
   if ('fromOwnRelationship' in declared) return driftInOwnRelationship(column, declared)
 
+  // FR-010's projections: a sum of the ledger, and the curve applied to that sum (T020).
+  if ('fromLedger' in declared) {
+    const { fromLedger } = declared
+    // A ledger that is not in this config cannot hold an entry, so the truth is zero — the same
+    // arithmetic applied below to a counter whose source collection has not landed yet.
+    return driftInProjection(column, async (doc) =>
+      known.has(fromLedger.collection) ? sumOfSourceRows(fromLedger, doc.id) : 0,
+    )
+  }
+  // FR-010's per-skill pair: one column, as many projections as the maker holds skills (T021).
+  if ('fromLedgerRows' in declared) return driftInSkillPanel(column, declared.fromLedgerRows, known)
+
+  if ('fromCurve' in declared) {
+    const from = ledgerBehind(declared.fromCurve.of)
+    // An organization with no `regrasXp` row can grant no XP at all — `creditXp` refuses without
+    // an economy — so every level there must read 0. That is arithmetic, not a skip: a profile
+    // claiming level 3 in a lab whose economy does not exist is drift, and is reported as such.
+    return driftInProjection(column, async (doc) => {
+      const rules = await rulesOf(doc.tenant)
+      return rules ? levelFor(await sumOfSourceRows(from, doc.id), rules) : 0
+    })
+  }
+
   const { from } = declared
 
-  const { docs } = await payload.find({
-    collection: column.collection as never,
-    depth: 0,
-    pagination: false,
-    overrideAccess: true,
-  })
-
   const drifts: Drift[] = []
-  for (const doc of docs as unknown as Record<string, unknown>[]) {
+  for (const doc of await rowsOf(column.collection)) {
     const stored = typeof doc[column.field] === 'number' ? (doc[column.field] as number) : 0
     // A source collection that does not exist yet cannot hold a row, so the truth is zero.
     // This is arithmetic, not a skip: a document claiming three likes while nothing in the
@@ -379,6 +712,191 @@ const reconcileEveryCounter = async (): Promise<Drift[]> => {
   return drifts
 }
 
+
+/**
+ * T021 / FR-011, SC-004 — the XP half of this gate needs **real ledger rows**, and this is them.
+ *
+ * T020 declared how `xpTotal` and `nivel` are recomputed and wrote the recount. A declaration
+ * reconciles nothing on its own: with no profile and no entries in the database, the sweep walks
+ * zero rows for both projections and reports "no drift" about nothing at all — the vacuous green
+ * this whole file is written against. The fixture below is what gives the recount a subject.
+ */
+
+/**
+ * The fixture's economy, and **not one of its numbers is the CITe seed's** (`{1, 5, 10}`).
+ *
+ * `xpPorNivel: 4` makes the right level for 9 XP **2**, where the seeded curve would read 1. So a
+ * recount that evaluated FR-007's curve against a constant — instead of against *this*
+ * organization's own `regrasXp` row, which FR-009 lets a lab retune — reports drift on a profile
+ * that is in perfect sync, and this fixture is what turns that into a red run.
+ */
+const CURVA_DO_LAB = { xpPorAcao: 3, xpPorNivel: 4, nivelMaximo: 5 }
+
+/** One entry per content id. Four of them, each worth three — see `XP_ESPERADO`. */
+const ENTRADAS_XP = [1, 2, 3, 4]
+
+/**
+ * **Three, never one.** With `xpPorAcao` at 1 a sum and a row count agree, which is plan § D2's
+ * free oracle and is exactly why a recount that counts rows instead of adding `quantidade` would
+ * pass unnoticed everywhere else. Here the two answers are 12 and 4, and only one of them is the
+ * total this profile stores.
+ */
+const XP_POR_ENTRADA = CURVA_DO_LAB.xpPorAcao
+const XP_ESPERADO = ENTRADAS_XP.length * XP_POR_ENTRADA
+
+/** `floor(12 / 4)`, below the cap of 5. A literal, so the curve is asserted and not echoed. */
+const NIVEL_ESPERADO = 3
+
+/**
+ * The skill **three of the four entries** credit — `perfilMaker.skills[]`, FR-010's third
+ * projection and the one the two top-level columns cannot stand in for.
+ *
+ * Three rather than four, deliberately: the skill's own total is then 9 where the profile's is
+ * 12, so a recount that summed the whole ledger instead of the entries naming this skill reports
+ * drift on a panel that is in perfect sync. The fourth entry credits no skill at all (FR-039's
+ * nullable credit), which is the state that must NOT appear in the panel as a row.
+ */
+const SKILL_SLUG_XP = 'reconciliacao-skill'
+const ENTRADAS_COM_SKILL = [1, 2, 3]
+const XP_SKILL_ESPERADO = ENTRADAS_COM_SKILL.length * XP_POR_ENTRADA
+
+/**
+ * `floor(9 / 4)` — and **not** `floor(9 / 5)`, which the CITe seed would make it. The panel's
+ * level is recomputed through a second read of `regrasXp`, one the profile's own level does not
+ * share, so this row is what turns a panel recount hardcoded to the seed curve into a red run.
+ */
+const NIVEL_SKILL_ESPERADO = 2
+
+const HANDLE_XP = '@reconciliacao-xp'
+const EMAIL_XP = 'reconciliacao-xp@example.test'
+
+/**
+ * The XP fixture a previous run left behind, removed before this one seeds again.
+ *
+ * Not tidiness. This gate reads the **whole database**, so a profile with ledger entries and no
+ * cleanup is drift reported against code that is working correctly — `erasure-door.test.ts` and
+ * `signed-in.test.ts` both carry an `afterAll` for precisely this, and both cite measuring it.
+ * A run interrupted between create and cleanup would otherwise make every later run red, and the
+ * organization delete does not reach these rows: the profile is found by its own handle.
+ */
+const removeStaleXpFixture = async (): Promise<void> => {
+  const { docs } = await payload.find({
+    collection: 'perfilMaker',
+    where: { handle: { equals: HANDLE_XP } },
+    pagination: false,
+    overrideAccess: true,
+  })
+  // Entries first: `xpLedger.perfil` is nullable (CLR-011's tombstone), so deleting the profile
+  // would leave them behind pointing at nobody instead of failing loudly.
+  for (const perfil of docs) {
+    await payload.delete({
+      collection: 'xpLedger',
+      where: { perfil: { equals: perfil.id } },
+      overrideAccess: true,
+    })
+  }
+  await payload.delete({
+    collection: 'perfilMaker',
+    where: { handle: { equals: HANDLE_XP } },
+    overrideAccess: true,
+  })
+  await payload.delete({
+    collection: 'users',
+    where: { email: { equals: EMAIL_XP } },
+    overrideAccess: true,
+  })
+  // Last: `perfilMaker.skills[].skill` and `xpLedger.skill` both point at it, so a skill removed
+  // before them would leave rows naming a row that is gone.
+  await payload.delete({
+    collection: 'skill',
+    where: { slug: { equals: SKILL_SLUG_XP } },
+    overrideAccess: true,
+  })
+}
+
+/**
+ * A maker whose two projections are in sync with a ledger of three entries — the subject of the
+ * reconciliation below.
+ *
+ * `overrideAccess: true` throughout, as everywhere else in this file: `xpLedger.create` is scoped
+ * and `regrasXp.update` is the team's, and a gate is neither. Writing the rows directly is also
+ * the point rather than a shortcut — the credit path is pinned by its own tests, and a fixture
+ * built by calling `creditXp` would only prove the recount agrees with the code that wrote it.
+ */
+const seedXpFixture = async (
+  org: number,
+): Promise<{ perfil: number; usuario: number; skill: number }> => {
+  // The organization was created with the CITe economy by `seed-on-create.ts`. Retuning it is
+  // what FR-009 makes possible, and what makes the level recount's source observable.
+  await payload.update({
+    collection: 'regrasXp',
+    where: { tenant: { equals: org } },
+    data: CURVA_DO_LAB,
+    overrideAccess: true,
+  })
+
+  const usuario = await payload.create({
+    collection: 'users',
+    data: { email: EMAIL_XP, password: 'fixture-password-123', role: 'user' },
+    overrideAccess: true,
+  })
+  // Before the profile: its panel names this row, and before the entries: they credit it.
+  const skill = await payload.create({
+    collection: 'skill',
+    data: { nome: 'Reconciliação', slug: SKILL_SLUG_XP, ativa: true, tenant: org },
+    overrideAccess: true,
+  })
+  const perfil = await payload.create({
+    collection: 'perfilMaker',
+    data: {
+      nome: 'Maker da Reconciliação',
+      handle: HANDLE_XP,
+      usuario: usuario.id,
+      tenant: org,
+      // Stated rather than left to the field defaults, for the reason the project row above
+      // states its `curtidas`: these are the values the gate is about to recount, so what they
+      // start from belongs in the test. Both agree with the entries created next.
+      xpTotal: XP_ESPERADO,
+      nivel: NIVEL_ESPERADO,
+      // The third projection, in sync with the two entries that name this skill. Stated here
+      // for the same reason the two above are: it is what the recount is about to check.
+      skills: [{ skill: skill.id, xp: XP_SKILL_ESPERADO, nivel: NIVEL_SKILL_ESPERADO }],
+    },
+    overrideAccess: true,
+  })
+
+  for (const refId of ENTRADAS_XP) {
+    await payload.create({
+      collection: 'xpLedger',
+      data: {
+        perfil: perfil.id,
+        acao: 'publicar_projeto',
+        refTipo: 'projeto',
+        // Distinct per entry: `chaveIdempotencia` is composed from the tuple and carries a
+        // unique index, so three entries with one `refId` would be one entry and a 23505.
+        refId,
+        // Two of the three name the skill; the third credits the maker's total and no skill
+        // (FR-039). A fixture where every entry named it would let a recount that ignored the
+        // `skill` filter agree with the panel by accident.
+        skill: ENTRADAS_COM_SKILL.includes(refId) ? skill.id : null,
+        quantidade: XP_POR_ENTRADA,
+        tenant: org,
+        // `as never` for the reason `xp-credit-idempotencia.test.ts` writes it the same way:
+        // `chaveIdempotencia` is `required: true` in the generated types and is composed by the
+        // collection's own `beforeValidate`, so a caller that satisfied the type would be
+        // writing the key by hand — the one thing T007 built the hook to make impossible.
+      } as never,
+      overrideAccess: true,
+    })
+  }
+
+  return {
+    perfil: perfil.id as number,
+    usuario: usuario.id as number,
+    skill: skill.id as number,
+  }
+}
+
 beforeAll(async () => {
   payload = await getPayload({ config: configPromise })
 
@@ -389,6 +907,7 @@ beforeAll(async () => {
     where: { slug: { equals: 'reconciliacao' } },
     overrideAccess: true,
   })
+  await removeStaleXpFixture()
 
   const org = await payload.create({
     collection: 'organizations',
@@ -427,6 +946,11 @@ beforeAll(async () => {
     overrideAccess: true,
   })
 
+  // The XP half (T021): a maker, an economy of this lab's own, and three ledger entries whose
+  // sum is the total the profile stores. Seeded after the organization because its `regrasXp`
+  // row arrives with it (`seed-on-create.ts`) and this retunes that row rather than adding one.
+  const xp = await seedXpFixture(org.id as number)
+
   // Ids are `string | number` without the generated `payload-types.ts`, which is gitignored —
   // so this narrows here rather than typechecking locally and failing in CI.
   seeded = {
@@ -434,11 +958,18 @@ beforeAll(async () => {
     categoria: categoria.id as number,
     midia: midia.id as number,
     projeto: projeto.id as number,
+    perfil: xp.perfil,
+    usuario: xp.usuario,
+    skill: xp.skill,
   }
 }, 120_000)
 
 afterAll(async () => {
   if (!payload || !seeded) return
+  // The XP rows first, and they are removed rather than left for the next run to overwrite: this
+  // gate reads the whole database, so a profile left behind with its entries is drift reported
+  // against whichever file runs next.
+  await removeStaleXpFixture()
   await payload.delete({ collection: 'projeto', id: seeded.projeto, overrideAccess: true })
   await payload.delete({ collection: 'categoriaProjeto', id: seeded.categoria, overrideAccess: true })
   await payload.delete({ collection: 'organizations', id: seeded.org, overrideAccess: true })
@@ -521,6 +1052,35 @@ describe('the reconciliation matrix cannot rot (T031, SC-012)', () => {
         expect(task, `${field} names no task that will give it a subject`).toBeTruthy()
         expect(derivedFrom.length, `${field} does not say what it will be derived from`)
           .toBeGreaterThan(20)
+      } else if ('fromLedger' in declared) {
+        // A sum has to name the column it adds up. Without `amount` the only recount available
+        // is a row count, which is the thing plan § D2 forbids leaning on.
+        const { collection, foreignKey, amount } = declared.fromLedger
+        expect(collection, `${field} names no ledger to sum`).toBeTruthy()
+        expect(foreignKey, `${field} names no foreign key back to the row it projects`).toBeTruthy()
+        expect(amount, `${field} names no amount column — a row count is not a sum`).toBeTruthy()
+      } else if ('fromLedgerRows' in declared) {
+        // A panel has to name everything a single column does, PLUS the key that joins a row to
+        // its entries and the two fields it stores. A declaration missing `rowKey` would recount
+        // each skill as the maker's whole total and report no drift on a panel desynced to it.
+        const { collection, foreignKey, amount, rowKey, xpField, levelField, rules } =
+          declared.fromLedgerRows
+        expect(collection, `${field} names no ledger to sum`).toBeTruthy()
+        expect(foreignKey, `${field} names no foreign key back to the row it projects`).toBeTruthy()
+        expect(amount, `${field} names no amount column — a row count is not a sum`).toBeTruthy()
+        expect(rowKey, `${field} names no key joining a panel row to its entries`).toBeTruthy()
+        expect(xpField, `${field} does not say which field of the row holds the total`).toBeTruthy()
+        expect(levelField, `${field} does not say which field of the row holds the level`)
+          .toBeTruthy()
+        expect(rules, `${field} does not say where the numbers of its curve live`).toBeTruthy()
+      } else if ('fromCurve' in declared) {
+        const { of, rules, how } = declared.fromCurve
+        expect(of, `${field} does not say which value it is a projection of`).toBeTruthy()
+        expect(rules, `${field} does not say where the numbers of its curve live`).toBeTruthy()
+        expect(how.length, `${field} does not say how the curve derives it`).toBeGreaterThan(20)
+        // The value it projects must itself be recountable, or the level is derived from a
+        // number this gate never checks.
+        expect(() => ledgerBehind(of), `${field} projects a value nothing recounts`).not.toThrow()
       } else if ('fromOwnRelationship' in declared) {
         // A self-derivation names the field it reads and how, so the recount below can be
         // checked against a sentence rather than inferred from the code that performs it.
@@ -598,16 +1158,28 @@ const FAKE_ACERVO: ScannedCollection = {
 }
 
 describe('the guard sees derived values that are not numbers (T031, FR-020)', () => {
-  it('covers all four derived values of FR-020, not only the three counters', () => {
+  it('covers all four derived values of FR-020 and both XP projections of FR-010', () => {
     // FR-020 names four: `curtidas`, `downloads`, `total_modelos` and `formatos`. Three of
     // them are counters and live in `CounterField`; `formatos` is a derived list on the
     // document being saved, so it is not a counter and would never arrive through that type.
     // It still has to be reconciled, and the map is where that is stated.
+    //
+    // Feature 005 added the last two (T020): `xpTotal` and `nivel` are FR-010's projections of
+    // `xpLedger`, reconciled in this same sweep rather than in a gate of their own (plan § D2).
+    // The list is spelled out rather than derived so that *removing* a value is as visible as
+    // adding one — a deletion here is a coverage loss no typecheck would report.
+    //
+    // T021 added the third XP projection: `skills`, the per-skill `{ xp, nivel }` pair of the
+    // SUAS SKILLS panel (US9). It is one key standing for as many projections as a maker holds
+    // skills, which is why its declaration is a `fromLedgerRows` rather than a second column.
     expect(Object.keys(DERIVED_SOURCES).sort()).toEqual([
       'curtidas',
       'downloads',
       'formatos',
+      'nivel',
+      'skills',
       'totalModelos',
+      'xpTotal',
     ])
   })
 
@@ -648,5 +1220,330 @@ describe('the guard sees derived values that are not numbers (T031, FR-020)', ()
     }
     expect(unaccountedDerivedFields([invented])).toContain('modelo3d.inventadoPeloSistema')
     expect(unaccountedDerivedFields(await collectionsInConfig())).toEqual([])
+  })
+})
+
+/**
+ * T020 / FR-011, SC-004 — the XP projections enter the SAME matrix as the counters.
+ *
+ * `perfilMaker.xpTotal` and `perfilMaker.nivel` are not stored facts either: they are
+ * `xpLedger`, recomputed inside the crediting transaction (FR-010), exactly as `curtidas` is
+ * `curtida` recomputed inside the like's. Plan § D2 makes that sameness structural rather than
+ * rhetorical — the projections are named in `CounterField`, so this map's
+ * `satisfies Record<DerivedField, DerivedSource>` forces a statement of how each one is
+ * recomputed, and FR-011's reconciliation sweeps them in the same pass as the counters instead
+ * of in a second gate that would be a second thing to get wrong.
+ *
+ * The per-skill `skills[].xp` and `skills[].nivel` were declared absent here in T020, with the
+ * reason that Payload does not hoist an array's subfields into `flattenedFields`
+ * (`FlattenedArrayField` keeps its own), so `derivedColumns` could not see them and declaring
+ * them would claim a coverage this gate never delivers — the one failure the whole file is
+ * written against.
+ *
+ * **T021 closed it, and the reason above is why it is closed in this shape rather than deleted.**
+ * The subfields are indeed invisible; the array field ITSELF is not, so the panel is reconciled
+ * as one column whose recount walks its rows (`skills` → `driftInSkillPanel`), and the claim is
+ * made only now that it is delivered. Left standing, the paragraph would have read as an
+ * instruction that the panel must NOT be swept — and FR-011 asks that *every* projection equal
+ * a recount, of which the panel is the third and the one a maker actually reads (US9).
+ */
+describe('the XP projections are reconciled by this gate too (T020, FR-011, SC-004)', () => {
+  const declaredFor = (field: string): DerivedSource | undefined =>
+    (DERIVED_SOURCES as Record<string, DerivedSource>)[field]
+
+  it('recounts xpTotal from the ledger rows, summed rather than counted', () => {
+    // Summed, never counted: `regrasXp.xpPorAcao` makes an entry's amount tunable, so a row
+    // count agrees with the total only while that rule is 1 — the free oracle of plan § D2,
+    // which T021b asserts as an oracle and which this gate must not lean on.
+    expect(
+      declaredFor('xpTotal'),
+      'perfilMaker.xpTotal is a projection of xpLedger (FR-010) and this map says nothing ' +
+        'about it, so the reconciliation of FR-011 walks past it and a total that disagrees ' +
+        'with its own ledger is reported by nothing',
+    ).toEqual({
+      fromLedger: { collection: 'xpLedger', foreignKey: 'perfil', amount: 'quantidade' },
+    })
+  })
+
+  it('recounts nivel from the recounted total, on the organization\'s own curve', () => {
+    const declared = declaredFor('nivel')
+    expect(
+      declared,
+      'perfilMaker.nivel is levelFor(xpTotal) and nothing else (FR-007); undeclared, a level ' +
+        'that no longer matches its total drifts with nothing to report it',
+    ).toHaveProperty('fromCurve')
+
+    const { fromCurve } = declared as { fromCurve: { of: string; rules: string; how: string } }
+    // `of: 'xpTotal'` is what makes the level recount read the RECOUNTED total rather than the
+    // stored one: a level derived from a wrong total agrees with it perfectly, and a recount
+    // that read the stored column would call that pair "in sync" while both are wrong.
+    expect(fromCurve.of, 'the curve does not say which value it is a projection of').toBe('xpTotal')
+    expect(fromCurve.rules, 'the curve does not say where its numbers live').toBe('regrasXp')
+    expect(fromCurve.how.length, 'the curve does not say how the level is derived').toBeGreaterThan(
+      20,
+    )
+  })
+
+  it('watches both projection columns, so the declarations are not claims about nothing', async () => {
+    const columns = await derivedColumns()
+    expect(
+      columns,
+      'the map declares a recount for xpTotal and the column scan never finds the column, so ' +
+        'every green run of the reconciliation proves nothing about it',
+    ).toContainEqual({ collection: 'perfilMaker', field: 'xpTotal' })
+    expect(columns).toContainEqual({ collection: 'perfilMaker', field: 'nivel' })
+  })
+})
+
+/**
+ * T021 / FR-011, SC-004, CLR-014 — **the reconciliation itself**, run against real ledger rows.
+ *
+ * The block above (T020) asserts the *declarations*: that the map says how each projection is
+ * recomputed. This one asserts the recount, and the difference is the whole point of a gate —
+ * a matrix that states a recount nobody ever performed is a claim, and this file exists because
+ * claims about stored numbers are how a maker's XP ends up disagreeing with its own history.
+ *
+ * **A CI gate, not a runtime repair** (CLR-014). Nothing here fixes a drifted projection and
+ * nothing in the product does either: the answer 002 gave for the like and download counters is
+ * the answer FR-011 gives for XP, because a runtime repair here and none there would be two
+ * disciplines for one guarantee. The repair is re-running the maintenance, which CI requires
+ * before merge — so the only thing this has to do is **fail**.
+ *
+ * **These two cases passed the moment they were written**, because T020 landed the recount in
+ * this same file along with the declarations — so they were probed rather than trusted, by
+ * breaking the recount three ways and watching what each case said. Measured, not assumed:
+ *
+ *   - the sum made a row count (`+ 1` instead of `+ quantidade`) — both cases red; the total
+ *     recomputes to 3 where the ledger holds 9;
+ *   - the level recomputed from the **stored** total instead of the recounted one — the first
+ *     case still green, the second red with the `nivel` drift missing from the report: the
+ *     desynced pair agrees with itself, which is the failure that branch is written against;
+ *   - the curve read as the CITe seed `{1, 5, 10}` instead of this organization's `regrasXp`
+ *     row — both red, on a profile that is in perfect sync with its ledger.
+ *
+ * **The panel case (T021) was probed the same way**, because the recount that serves it landed
+ * in the same change as the case and would otherwise be a claim checking itself:
+ *
+ *   - the sum narrowed by the profile alone, dropping the per-skill bucket — six cases red; the
+ *     panel row recomputes to the maker's whole 12 where its own entries hold 9;
+ *   - the panel's level recomputed from the row's **stored** xp instead of the recounted one —
+ *     two cases red, the desynced one with the `nivel` drift MISSING from the report, which is
+ *     the desynced-pair failure `driftInPanelRow` is written against;
+ *   - the panel's curve hardcoded to the CITe seed `{1, 5, 10}` instead of this lab's
+ *     `regrasXp` — six cases red, which is what `NIVEL_SKILL_ESPERADO` exists to make visible;
+ *   - **the union dropped**, so the walk covers the stored rows and nothing else — exactly ONE
+ *     case red, the deleted row, and the desynced one stayed green. That is the measurement that
+ *     says the two panel cases test different things: the union serves one and serves only it,
+ *     and without this probe a walk over the stored rows would have passed for coverage of a
+ *     projection whose row can go missing.
+ */
+describe('every XP projection equals a recount of the ledger (T021, FR-011, SC-004)', () => {
+  /**
+   * The sweep's report about the fixture's profile alone.
+   *
+   * The reconciliation reads the whole database by design, and the two cases at the top of this
+   * file already assert that whole report is empty. Narrowing here is not a weakening of that:
+   * a row a neighbouring test file left behind is drift this file can neither cause nor repair,
+   * and blaming T021 for it would make the wrong test red. What is asserted below is the part
+   * T021 owns — what the recount says about a profile whose ledger this file wrote.
+   */
+  const driftsForPerfil = async (): Promise<Drift[]> =>
+    (await reconcileEveryCounter())
+      .filter((drift) => drift.where.startsWith('perfilMaker.') && drift.id === seeded.perfil)
+      // Sorted, so the assertion pins WHICH projections drifted rather than the order the sweep
+      // happens to walk one collection's columns in.
+      .sort((a, b) => a.where.localeCompare(b.where))
+
+  it('sums the ledger — never counts it — and reads this organization\'s own curve', async () => {
+    const entradas = await rowsOf('xpLedger', { perfil: { equals: seeded.perfil } } as Where)
+    expect(
+      entradas,
+      'the fixture wrote no ledger entries, so the recount below reconciles this profile ' +
+        'against nothing and every green run of it means only that it compared nothing',
+    ).toHaveLength(ENTRADAS_XP.length)
+    expect(
+      XP_ESPERADO,
+      'the fixture made a sum and a row count agree, so a recount that counted rows instead of ' +
+        'adding quantidade would pass — the free oracle of plan § D2 must not be leaned on here',
+    ).not.toBe(entradas.length)
+
+    expect(
+      await driftsForPerfil(),
+      'a profile whose stored total IS the sum of its ledger was reported as drift: either the ' +
+        'recount counts rows instead of adding quantidade, or the level was evaluated against ' +
+        'the CITe seed instead of this lab\'s own regrasXp (FR-009)',
+    ).toEqual([])
+  })
+
+  it('reports a hand-desynced xpTotal, and the level that still agrees with it', async () => {
+    // What a migration, an admin bulk edit or a hand-run UPDATE looks like from the projections'
+    // point of view — and the hard half deliberately: the two columns move TOGETHER and stay
+    // perfectly consistent with each other. `levelFor(20, CURVA_DO_LAB)` is 5, so a level
+    // recomputed from the STORED total would call this pair in sync at the exact moment both are
+    // wrong. The ledger is what is right (CLR-001), and both must be reported against it.
+    const DESSINCRONIZADO = { xpTotal: 20, nivel: 5 }
+    await payload.update({
+      collection: 'perfilMaker',
+      id: seeded.perfil,
+      data: DESSINCRONIZADO,
+      overrideAccess: true,
+    })
+
+    try {
+      expect(
+        await driftsForPerfil(),
+        'a total was desynced by hand and the reconciliation reported nothing. FR-011 fails CI ' +
+          'on drift and CLR-014 leaves no runtime repair behind it, so with this gate inert a ' +
+          'maker\'s XP can disagree with its own ledger forever and nothing says so',
+      ).toEqual([
+        {
+          where: 'perfilMaker.nivel',
+          id: seeded.perfil,
+          stored: DESSINCRONIZADO.nivel,
+          recomputed: NIVEL_ESPERADO,
+        },
+        {
+          where: 'perfilMaker.xpTotal',
+          id: seeded.perfil,
+          stored: DESSINCRONIZADO.xpTotal,
+          recomputed: XP_ESPERADO,
+        },
+      ])
+    } finally {
+      await payload.update({
+        collection: 'perfilMaker',
+        id: seeded.perfil,
+        data: { xpTotal: XP_ESPERADO, nivel: NIVEL_ESPERADO },
+        overrideAccess: true,
+      })
+    }
+
+    // Re-running the maintenance is the only repair CLR-014 allows, so the gate has to go quiet
+    // once it has been run: one that stays red after the fix teaches people to ignore it.
+    expect(await driftsForPerfil()).toEqual([])
+  })
+
+  /** The maker's stored panel, rows and their ids — what a repair has to hand back verbatim. */
+  const painelDoPerfil = async (): Promise<Record<string, unknown>[]> => {
+    const [doc] = await rowsOf('perfilMaker', { id: { equals: seeded.perfil } } as Where)
+    return (doc?.skills as Record<string, unknown>[] | undefined) ?? []
+  }
+
+  it('reports a hand-desynced skills[] row, which neither top-level column can show', async () => {
+    // The third projection `creditXp` maintains (T016, FR-010) — and the one a maker actually
+    // reads, since SUAS SKILLS renders it (US9). A drift here moves no total and no overall
+    // level, so the two columns above stay in perfect sync while the panel is wrong: this is
+    // precisely the disagreement FR-011 says nothing else reports.
+    const panel = await painelDoPerfil()
+    expect(
+      panel,
+      'the fixture wrote no skills row, so the recount below reconciles the panel against ' +
+        'nothing and every green run of it means only that it compared nothing',
+    ).toHaveLength(1)
+    expect(
+      panel[0],
+      'the stored panel does not agree with the two entries that name this skill, so the case ' +
+        'below would go red on the fixture rather than on the drift it introduces',
+    ).toMatchObject({ xp: XP_SKILL_ESPERADO, nivel: NIVEL_SKILL_ESPERADO })
+
+    // `xp: 9` is the profile's whole total, and it is chosen for that: a recount that summed the
+    // ledger without filtering on `skill` would call this desynced row correct.
+    const DESSINCRONIZADA = { xp: XP_ESPERADO, nivel: NIVEL_ESPERADO }
+    await payload.update({
+      collection: 'perfilMaker',
+      id: seeded.perfil,
+      data: { skills: panel.map((row) => ({ ...row, ...DESSINCRONIZADA })) },
+      overrideAccess: true,
+    })
+
+    try {
+      expect(
+        await driftsForPerfil(),
+        'a per-skill projection was desynced by hand and the reconciliation reported nothing. ' +
+          'FR-011 asks that EVERY projection equal a recount of the ledger, and the panel is a ' +
+          'projection: with it unswept, a maker\'s skill level can disagree with its own ' +
+          'history forever and CLR-014 leaves no runtime repair to notice',
+      ).toEqual([
+        {
+          where: `perfilMaker.skills[${seeded.skill}].nivel`,
+          id: seeded.perfil,
+          stored: DESSINCRONIZADA.nivel,
+          recomputed: NIVEL_SKILL_ESPERADO,
+        },
+        {
+          where: `perfilMaker.skills[${seeded.skill}].xp`,
+          id: seeded.perfil,
+          stored: DESSINCRONIZADA.xp,
+          recomputed: XP_SKILL_ESPERADO,
+        },
+      ])
+    } finally {
+      await payload.update({
+        collection: 'perfilMaker',
+        id: seeded.perfil,
+        data: { skills: panel },
+        overrideAccess: true,
+      })
+    }
+
+    expect(await driftsForPerfil()).toEqual([])
+  })
+
+  it('reports a skills[] row that is GONE, which walking the stored panel cannot see', async () => {
+    // The drift class `skills[]` adds to this gate and no column before it could have: a
+    // projection whose row can be **deleted**. `xpTotal` can hold a wrong number; it cannot be
+    // absent. An admin bulk edit, a migration that rewrites the array, a hand-run UPDATE that
+    // drops a row — the file's own preamble names all three — and the maker is then shown no
+    // progress at all in a skill their ledger says they earned nine XP in.
+    //
+    // A recount that iterates the STORED rows and only then asks the ledger has nothing to
+    // iterate here, so it reports clean on exactly the case it was added to catch.
+    const panel = await painelDoPerfil()
+    expect(
+      panel,
+      'the fixture wrote no skills row, so wiping the panel below removes nothing and the case ' +
+        'asserts drift the ledger alone would have to produce',
+    ).toHaveLength(1)
+
+    await payload.update({
+      collection: 'perfilMaker',
+      id: seeded.perfil,
+      data: { skills: [] },
+      overrideAccess: true,
+    })
+
+    try {
+      expect(
+        await driftsForPerfil(),
+        'the panel row was DELETED and the reconciliation reported nothing. A recount that ' +
+          'walks the stored rows sees an empty array and agrees with it, so FR-011 covers a ' +
+          'stale projection and not a missing one — and the missing one is what an admin bulk ' +
+          'edit or a migration actually produces',
+      ).toEqual([
+        {
+          where: `perfilMaker.skills[${seeded.skill}].nivel`,
+          id: seeded.perfil,
+          // What the maker is shown once the row is gone: no progress, in a skill the ledger
+          // credits. Zero is the *stored* value of a row that does not exist.
+          stored: 0,
+          recomputed: NIVEL_SKILL_ESPERADO,
+        },
+        {
+          where: `perfilMaker.skills[${seeded.skill}].xp`,
+          id: seeded.perfil,
+          stored: 0,
+          recomputed: XP_SKILL_ESPERADO,
+        },
+      ])
+    } finally {
+      await payload.update({
+        collection: 'perfilMaker',
+        id: seeded.perfil,
+        data: { skills: panel },
+        overrideAccess: true,
+      })
+    }
+
+    expect(await driftsForPerfil()).toEqual([])
   })
 })

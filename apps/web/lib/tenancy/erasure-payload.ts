@@ -40,12 +40,26 @@ import type { ByIDArgs, FindArgs, UpdateArgs } from './client'
  * rows that were proven to be the caller's. A bug that passed the wrong id gets a throw naming
  * both ids rather than a deletion.
  *
- * `update` is confined to the three collections that carry an author, because that is the
- * tombstone (FR-031) and nothing else about erasure edits anything. There is no `create`.
+ * `update` is confined to the collections the erasure nulls a person out of — the three that
+ * carry an author (FR-031, CLR-003) and `xpLedger` (FR-040, CLR-011) — because that is the
+ * tombstone and nothing else about erasure edits anything. There is no `create`.
  */
 
-/** The collections whose `autor` the tombstone nulls — the same three `deletion.ts` walks. */
-const ANONIMIZAVEIS = new Set(['artigo', 'aula', 'modelo3d'])
+/**
+ * The collections this door may null a person out of — the same set `deletion.ts` walks.
+ *
+ * The three that carry `autor` are CLR-003's tombstone. `xpLedger` joins them for 005's CLR-011
+ * and is the *same* act one collection further: the entry stays, `perfil` is nulled, so the
+ * credit the person really earned keeps counting toward the lab's collective level while their
+ * name leaves the row. Without it here this door throws mid-erasure and the whole thing rolls
+ * back — the allow-list is the reason `deletion.ts`'s writes are bounded, so a collection it
+ * writes to and this set omits is a deletion that cannot complete.
+ *
+ * `xpLedger.update` is a flat `false` in the collection config (append-only, FR-001); that
+ * refusal is about *requests*, and this door runs through `getSystemScopedPayload`'s
+ * `overrideAccess: true`, which is exactly the split `XpLedger.ts`'s docstring describes.
+ */
+const ANONIMIZAVEIS = new Set(['artigo', 'aula', 'modelo3d', 'xpLedger'])
 
 export type ErasureScopedPayload = {
   readonly tenantId: string
@@ -54,7 +68,7 @@ export type ErasureScopedPayload = {
   readonly usuarioId: string | number
   find: <T>(args: FindArgs) => Promise<{ docs: T[]; totalDocs: number }>
   findByID: <T>(args: ByIDArgs) => Promise<T | null>
-  /** `artigo`, `aula`, `modelo3d` only. */
+  /** `artigo`, `aula`, `modelo3d` and `xpLedger` only — the tombstoned columns. */
   update: <T>(args: UpdateArgs) => Promise<T | null>
   /** The caller's own `perfilMaker` row, and their own `users` row. Nothing else. */
   delete: <T>(args: ByIDArgs) => Promise<T | null>
