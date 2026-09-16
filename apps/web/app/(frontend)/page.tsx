@@ -62,6 +62,7 @@ import { notFound } from 'next/navigation'
 
 import {
   CardProjeto,
+  type CardProjetoAutor,
   EmptyState,
   LikeButton,
   LOGIN_HREF,
@@ -377,28 +378,49 @@ type MidiaDoc = {
  * type-checks without it (tasks.md § "Read before starting", item 6). A page that imported a
  * generated type would compile locally and fail the pipeline.
  */
+/** The author profile as `depth: 1` populates it — `nivel` is the maker's own level, the
+ *  projection of the ledger `xp.ts` maintains (FR-010). */
+type PerfilDoc = { readonly nome?: string; readonly handle?: string; readonly nivel?: number }
+
 type ProjetoDoc = {
   readonly titulo?: string
   readonly slug?: string
   readonly descricaoCurta?: string
   readonly categoria?: { readonly nome?: string } | number | null
   readonly imagemCapa?: MidiaDoc | number | null
+  readonly autor?: PerfilDoc | number | null
   readonly curtidas?: number
 }
 
 /**
- * The author strip, until feature 005 gives the collection an author.
+ * The author strip: the maker who made the project, or the tombstone deletion leaves behind.
  *
- * The same constant, and the same reasoning, as `projetos/page.tsx`: `CardProjeto.autor` is
- * required because the mockups draw the strip on every card, and `projeto` carries no `autor`
- * field at all — `Projeto.ts` defers it to feature 005's `perfilMaker`. The two honest options
- * were a fabricated maker on a public page or crediting the lab itself; this is the second.
- * It is duplicated rather than imported because the alternative is one page module importing
- * another, which is a dependency between routes that nothing else in this tree has.
+ * This replaces `AUTORIA_PENDENTE`, the constant that credited the lab on *every* card because
+ * `projeto` carried no `autor` field at all. T039 added it — `perfilMaker`, nullable on day one
+ * — and T008 gave a profile its `nivel`, so the strip finally reads a row instead of a literal
+ * (FR-033, FR-034, US10). The level is the profile's own: two projects by two makers show two
+ * different numbers, which the level-1 stand-in could never do.
  *
- * **Delete this the moment `autor` exists**, here and there, in one change.
+ * **An absent `autor` is an erased maker, not a missing one.** The field is nullable by design
+ * and its admin description says so in as many words — *"Pode ficar vazio — um autor que pediu
+ * exclusão deixa a obra sem assinatura"* — so `null` is FR-031's deletion and CLR-003's
+ * tombstone is what the card owes it. Inventing a byline here is the one thing US10's error
+ * case forbids: *"a project with no author is never rendered with a fabricated one"*.
+ *
+ * **A bare id falls in the same branch, deliberately.** It means `depth` did not populate over
+ * a living maker, and the card's strip is required, so the choice is between a tombstone that
+ * overstates and a lab byline that misattributes. 004 settled which is worse while writing the
+ * tombstone itself (`tests/public/tombstone.test.ts` §1): *"Crediting the lab is the worse of
+ * the two, because it re-attributes the work rather than merely dropping the credit."* The
+ * Artigos listing keeps a lab fallback because `artigo.autor` is **required**, so an absent
+ * profile there can only be a populate failure; here the two states are not that far apart, and
+ * neither is worth an invented maker.
  */
-const AUTORIA_PENDENTE = { nome: 'Fab Lab', handle: 'fablab', nivel: 1 } as const
+function autorDe(autor: ProjetoDoc['autor']): CardProjetoAutor {
+  const perfil = typeof autor === 'object' && autor !== null ? autor : null
+  if (perfil === null) return { removido: true }
+  return { nome: perfil.nome ?? '', handle: perfil.handle ?? '', nivel: perfil.nivel ?? 0 }
+}
 
 /** The cover URL: the generated card derivative, or the original when none was made. */
 function capaSrc(imagem: ProjetoDoc['imagemCapa']): string {
@@ -436,7 +458,7 @@ function cardDe(projeto: ProjetoDoc, posicao: number): ReactElement {
           decoding="async"
         />
       }
-      autor={AUTORIA_PENDENTE}
+      autor={autorDe(projeto.autor)}
       curtidas={projeto.curtidas ?? 0}
       // The island, on the Home's carousel too (T003, FR-025, US7). US7 says *"on any card
       // that shows a heart"*, and these cards show one: a heart that answers a press on

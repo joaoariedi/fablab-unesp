@@ -74,7 +74,9 @@ type MidiaDoc = {
 type ArquivoRef = { readonly relationTo?: string; readonly value?: MidiaDoc | string | number }
 
 /** The author profile as `depth: 1` populates it. */
-type PerfilDoc = { readonly nome?: string; readonly handle?: string }
+/** The author profile as `depth: 1` populates it — `nivel` is the maker's own level, the
+ *  projection of the ledger `xp.ts` maintains (FR-010, FR-033). */
+type PerfilDoc = { readonly nome?: string; readonly handle?: string; readonly nivel?: number }
 
 /**
  * One model as the public read returns it, populated one level.
@@ -176,6 +178,7 @@ function autoria(modelo: Modelo3dDoc): ReactNode {
     <span style={ESTILO.autor}>
       <span>{perfil.nome}</span>
       {perfil.handle === undefined ? null : <span>{formatHandle(perfil.handle)}</span>}
+      <span style={ESTILO.nivel}>{`NÍVEL ${perfil.nivel ?? 0}`}</span>
     </span>
   )
 }
@@ -392,6 +395,9 @@ const ESTILO: Record<string, CSSProperties> = {
     fontSize: 'var(--text-sm)',
   },
   autor: { display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)' },
+  // Display face, like every other caps label on these pages: `NÍVEL n` is already uppercase in
+  // the source, so no `textTransform` is needed to make it read as the mockup draws it.
+  nivel: { fontFamily: 'var(--font-display)' },
   resumo: {
     margin: 0,
     fontFamily: 'var(--font-body)',

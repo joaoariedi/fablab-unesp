@@ -216,10 +216,10 @@ export function creditOnApproval(acao: AcaoXp, refTipo: RefTipoXp): CollectionAf
  *     collection to point at, and none exists yet (`Organizations.ts:158` already carries the
  *     same deferral for `logo`). The upload subsystem landed in `lib/uploads`; the collection
  *     that uses it has not.
- *   - `autor` → `perfilMaker` (T042), `maquinas_utilizadas` → `estacao`,
- *     `missao_relacionada` → `missao` (both feature 005, FR-022). Payload throws at config
- *     load for a relationship whose target does not exist, so these are additive once their
- *     targets land — not silent omissions.
+ *   - `maquinas_utilizadas` → `estacao`, `missao_relacionada` → `missao` (both feature 005,
+ *     FR-022). Payload throws at config load for a relationship whose target does not exist,
+ *     so these are additive once their targets land — not silent omissions. `autor` was on
+ *     this list until `perfilMaker` landed; it is now declared below (T039, FR-034).
  *
  * `projetos.md`'s `skills_relacionadas` **has** landed, as the singular `skill` at the bottom
  * of this file: FR-039 credits one skill per publication (CLR-009), not a list, because the
@@ -324,6 +324,46 @@ export const Projeto: CollectionConfig = {
       // vocabulary — and spike S4c measured that the plugin ACCEPTS such a write on its own
       // (a row in A updated to reference a row in B succeeded). The shared validator, never
       // a local reimplementation: FR-007 is a guarantee only while there is one of it.
+      validate: sameTenant,
+    },
+    {
+      name: 'autor',
+      type: 'relationship',
+      // **`perfilMaker`, not the global `usuario`** (CLR-002). `projetos.md` says "relação →
+      // usuario", written before CLR-002 split identity from profile: level, XP and skills are
+      // per-organization, so one person making at two labs has one login and two profiles, and
+      // the byline on the card renders the profile. This is also what `creditOnApproval` reads
+      // one screen up — the credit goes to the maker *at this lab*.
+      relationTo: 'perfilMaker',
+      // **NOT `required: true`, and the omission is the task** (FR-034, CLR-002).
+      //
+      // Feature 004 paid for the other order on `artigo`, `aula` and `modelo3d`, where `autor`
+      // was declared required and FR-031 later needed it to hold nothing. Undoing it took a
+      // change in *two* places, because one alone is silently reverted:
+      //
+      //   1. **The generated schema.** `push` is on for every non-production database
+      //      (`payload.config.ts`) and `@payloadcms/drizzle` derives a column's `notNull` from
+      //      this flag — so the migration that dropped the NOT NULL was put back by the next
+      //      boot. Measured in 004: the columns went `is_nullable = YES` and were `NO` again
+      //      after a single `pnpm dev`.
+      //   2. **The application.** A declared `validate` REPLACES Payload's default, and
+      //      `sameTenant` re-implements the `required` floor itself — so `{ autor: null }`
+      //      returned `'validation:required'` regardless of what the column allowed.
+      //
+      // Nullable from the start costs nothing here and spares this collection both. It is not
+      // a relaxation of editorial policy: the admin and the review queue still want an author
+      // before anything is published, and `creditOnApproval` already warns rather than throws
+      // for a publication with none. What the schema must be able to express is the one state
+      // that has no author *by design* — work whose author asked to be erased (FR-031,
+      // CLR-003). Pinned by `tests/content/projeto-autor.test.ts` against the config and by
+      // `tests/tenancy/autor-nulavel.test.ts` against a booted database.
+      label: 'Autor',
+      admin: {
+        description: 'Perfil exibido no rodapé do card: nome, @handle e nível. Pode ficar vazio — um autor que pediu exclusão deixa a obra sem assinatura.',
+      },
+      // Scoped → scoped (CLR-002), so the same-tenant rule applies exactly as it does to
+      // `categoria`: a profile belongs to the lab it was made at. On a null it returns true,
+      // because the field is not `required` and there is nothing for it to refuse.
       validate: sameTenant,
     },
     {

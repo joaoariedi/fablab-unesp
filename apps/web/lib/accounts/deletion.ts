@@ -80,14 +80,19 @@ export type DeletionStore = Pick<
 /**
  * The collections that carry an author and therefore a tombstone (CLR-003).
  *
- * `projeto` is deliberately absent: it has no `autor` relationship yet — its author arrives
- * with the collection's own feature, and the plan names that as the reason the tombstone is a
- * `packages/ui` change first. A collection added here without a nullable column is a write
- * that fails, which is the loud half; one *forgotten* here is a byline that survives the
- * erasure, which is the silent half — so the list is a constant a reviewer can diff against
- * `CardProjetoAutor`'s consumers rather than three literals inline.
+ * **`projeto` joined the list at T039**, which is when it gained its nullable `autor`. It was
+ * absent before that, and the comment recording why outlived the reason: a list whose omission
+ * is *"the silent half — a byline that survives the erasure"* is exactly the kind that has to be
+ * revisited the day the column lands, and nothing was watching. `lgpd-doc.test.ts` iterates over
+ * this constant, so the gap could not show up there either; the guard that would have caught it
+ * is `deletion-autoria.test.ts`, which asks the **config** which collections declare an `autor`
+ * and requires every one of them to appear here.
+ *
+ * A collection added here without a nullable column is a write that fails, which is the loud
+ * half; one forgotten is the silent one. The list stays a named constant so a reviewer can diff
+ * it against `CardProjetoAutor`'s consumers rather than read four literals inline.
  */
-export const COLECOES_COM_AUTOR = ['artigo', 'aula', 'modelo3d'] as const
+export const COLECOES_COM_AUTOR = ['artigo', 'aula', 'modelo3d', 'projeto'] as const
 
 /**
  * `limit: 0` — Payload's documented "no limit" (`find.js`: `limit ?? (usePagination ? 10 : 0)`).

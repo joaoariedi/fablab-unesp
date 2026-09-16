@@ -1,4 +1,4 @@
-import { levelFor, type XpRules } from '@fablab/game'
+import { levelFor, progressInLevel, type XpRules } from '@fablab/game'
 import type { PayloadRequest, Where } from 'payload'
 
 import type { AcaoXp, RefTipoXp } from '../../collections/content/XpLedger'
@@ -32,6 +32,17 @@ import { CrossTenantError, getTenantScopedPayload, type TenantScopedPayload } fr
  * create, deliberately — see {@link syncMakerProjections}.
  */
 export type XpStore = Pick<TenantScopedPayload, 'create' | 'find' | 'update'>
+
+/**
+ * The narrower slice a **read-only** projection needs: the economy and the ledger rows it is
+ * summed from, and nothing that could write either.
+ *
+ * Narrowed for {@link XpStore}'s reason — a type that cannot express `create` or `update` says
+ * so more durably than a comment — and separate from it because {@link nivelDoLab} is a read on
+ * a page, not a credit. `XpStore` is assignable to this, so the credit path goes on handing its
+ * own client to the helpers below unchanged.
+ */
+export type LedgerReader = Pick<TenantScopedPayload, 'find'>
 
 export type XpDeps = {
   /** Defaults to the request-scoped choke point. Injected by tests. */
@@ -156,7 +167,7 @@ export const isDuplicateLedgerEntry = (error: unknown): boolean => {
  * levels indistinguishable from real ones, and every projection derived from the ledger would
  * inherit the invention.
  */
-const rulesForTenant = async (store: XpStore): Promise<XpRules> => {
+const rulesForTenant = async (store: LedgerReader): Promise<XpRules> => {
   const { docs } = await store.find<Partial<Record<keyof XpRules, unknown>>>({
     collection: 'regrasXp',
     limit: 1,
@@ -191,6 +202,10 @@ const LEDGER_PAGE_SIZE = 200
 /**
  * Add `quantidade` across every ledger entry matching `where`, page by page.
  *
+ * **`where` omitted is the whole organization's ledger** — what FR-012's lab level sums. It is
+ * not a wider read than it looks: the choke point AND-s the tenant clause into every query, so
+ * the broadest thing this can express is one lab.
+ *
  * The loop ends on an empty page as well as on the count, so a ledger that changes under a
  * concurrent write terminates instead of paging forever.
  *
@@ -199,7 +214,7 @@ const LEDGER_PAGE_SIZE = 200
  * as a mechanism this may lean on. The rate is tunable, which is why the amount is stored per
  * entry (plan § D2).
  */
-const sumLedger = async (store: XpStore, where: Where): Promise<number> => {
+const sumLedger = async (store: LedgerReader, where?: Where): Promise<number> => {
   let total = 0
   let read = 0
 
@@ -769,4 +784,74 @@ export async function assignSkillAtLevelZero(
     // signup terminates instead of paging forever.
     if (docs.length === 0 || lidos >= totalDocs) return atribuidas
   }
+}
+
+/** {@link XpDeps} for a read-only projection, which reaches a narrower client than a credit. */
+export type LabLevelDeps = {
+  /** Defaults to the request-scoped choke point. Injected by tests. */
+  getStore?: (req: PayloadRequest) => Promise<LedgerReader>
+}
+
+/**
+ * What the NÍVEL DO LAB card renders: the organization's XP, its level, and the bar between them.
+ *
+ * `progresso` is returned beside `nivel` rather than recomputed by the caller, because a card
+ * that derives the bar itself is a second expression of FR-007's curve — and the one that would
+ * go stale when a lab retunes `xpPorNivel`.
+ */
+export type NivelDoLab = {
+  /** The sum of every entry in this organization's ledger. Uncapped (CLR-013). */
+  xp: number
+  /** That total on the organization's own curve, 0–`nivelMaximo`. */
+  nivel: number
+  /** The XP earned inside the current level, and the level's width — what the pip bar fills. */
+  progresso: { atual: number; de: number }
+}
+
+/**
+ * **The Nível do Lab** (T044, FR-012, SC-014, US8): the organization's whole ledger, projected
+ * on the same curve every maker's level uses.
+ *
+ * A read, not a credit — it writes nothing and stores nothing. The lab level is not a column:
+ * like every other projection here it is `xpLedger` recomputed (CLR-001), so it cannot drift
+ * from the ledger and there is nothing for FR-011's reconciliation gate to reconcile.
+ *
+ * **Every entry counts, including the ones that name nobody**, which is why the sum carries no
+ * `perfil` clause at all. CLR-011 erases a maker by *nulling* `xpLedger.perfil` and leaving the
+ * amount untouched, precisely so the lab does not shrink when somebody exercises their right to
+ * be forgotten: *the work stays, the name goes*. A reader that filtered on the profile — or that
+ * summed `perfilMaker.xpTotal` across the roster instead of the ledger — would drop the lab a
+ * level in public, and nothing would report it, because no maker's own total changed.
+ *
+ * **An empty lab reads 0 with an empty bar** (SC-014), which is this function's answer and not
+ * the caller's: `sumLedger` returns `0` for no rows, `levelFor(0, …)` is level 0 — a real level,
+ * CLR-005 — and `progressInLevel` reports `{ atual: 0, de: xpPorNivel }`, a full-width bar with
+ * nothing in it. A card that renders `NaN` or a gap on a lab's first day looks like the product
+ * broken rather than the product new.
+ *
+ * Confined to one organization by the choke point and by nothing else (FR-029): the sum names no
+ * tenant, because the client it is issued through cannot express another one.
+ *
+ * @throws Error when this organization has no `regrasXp` row — {@link rulesForTenant}'s refusal,
+ * for its reason: FR-009 seeds the economy on organization creation, so its absence is a broken
+ * lab rather than a state a visitor can reach, and a default curve would render a level nobody's
+ * economy produced, indistinguishable from a real one.
+ *
+ * @example
+ * // In a server component, on the request's own choke point:
+ * const { nivel, progresso } = await nivelDoLab(req)
+ * // { xp: 16, nivel: 3, progresso: { atual: 1, de: 5 } }
+ */
+export async function nivelDoLab(
+  req: PayloadRequest,
+  deps: LabLevelDeps = {},
+): Promise<NivelDoLab> {
+  const getStore = deps.getStore ?? ((pedido: PayloadRequest) => getTenantScopedPayload(pedido))
+  const store = await getStore(req)
+
+  const rules = await rulesForTenant(store)
+  // No `where`: the lab level is the organization's whole ledger, anonymised entries and all.
+  const xp = await sumLedger(store)
+
+  return { xp, nivel: levelFor(xp, rules), progresso: progressInLevel(xp, rules) }
 }

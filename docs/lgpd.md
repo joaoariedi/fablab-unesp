@@ -80,7 +80,7 @@ Além do que a pessoa digita, o uso produz registros ligados à conta dela:
 | Curtidas | `curtida` | Que conteúdo a pessoa curtiu. Apagadas na exclusão — ver abaixo |
 | Progresso em aulas | `progressoAula` | Até onde a pessoa chegou em cada aula |
 | XP e nível | `xpLedger` | Cada crédito de XP que o uso rendeu: a ação, o conteúdo, quanto e quando. **Anonimizadas na exclusão, nunca apagadas** — `perfil` vira nulo e o resto da linha fica, de modo que o Nível do Lab não muda por alguém ter saído (ver abaixo) |
-| Autoria | `artigo`, `aula`, `modelo3d` | O conteúdo que ela publicou, creditado ao perfil |
+| Autoria | `artigo`, `aula`, `modelo3d`, `projeto` | O conteúdo que ela publicou, creditado ao perfil |
 
 ### Sobre as bases legais desta tabela
 
@@ -154,8 +154,8 @@ ainda de pé) é irreparável e se parece com sucesso.
 1. **O dado pessoal vai.** A linha de `perfilMaker` é apagada — com ela, todo campo que a pessoa
    digitou sobre si mesma: nome, handle, nascimento, vínculo, escolaridade, curso, avatar,
    carimbo de aceite e skills.
-2. **O trabalho publicado fica, sem assinatura.** Em `artigo`, `aula` e `modelo3d`, o campo
-   `autor` vira nulo e o documento continua publicado. O card passa a desenhar um **tombstone**
+2. **O trabalho publicado fica, sem assinatura.** Em `artigo`, `aula`, `modelo3d` e `projeto`, o
+   campo `autor` vira nulo e o documento continua publicado. O card passa a desenhar um **tombstone**
    (uma lápide: *"Maker removido"*) — que é um **estado de renderização**, nunca uma linha de
    perfil substituta, porque uma linha é algo a que se pode voltar a pendurar dados. O § CLR-003
    escolheu isso de propósito: a biblioteca pública do lab é feita dessas contribuições, e

@@ -109,7 +109,9 @@ type ArquivoRef = { readonly relationTo?: string; readonly value?: MidiaDoc | st
 
 /** The author strip's source: this organization's maker profile, populated one level.
  *  `perfilMaker` carries **no level** — XP is feature 005 — so the card prints none. */
-type PerfilDoc = { readonly nome?: string; readonly handle?: string }
+/** The author profile as `depth: 1` populates it — `nivel` is the maker's own level, the
+ *  projection of the ledger `xp.ts` maintains (FR-010, FR-033). */
+type PerfilDoc = { readonly nome?: string; readonly handle?: string; readonly nivel?: number }
 
 /** One model as the listing reader returns it, populated one level. */
 type Modelo3dDoc = {
@@ -335,9 +337,16 @@ function acaoDe(modelo: Modelo3dDoc, detalhe: string): ReactNode {
 }
 
 /**
- * The author strip: the person's name and `@nomesobrenome` (round 4, 2026-08-24). No level —
- * `perfilMaker` carries none, and a number nobody earned on a public page is worse than its
- * absence. `formatHandle` prints the `@`, in the one place that decides how.
+ * The author strip: the person's name, `@nomesobrenome` and `NÍVEL n` (round 4, 2026-08-24).
+ * `biblioteca-3d.md` § *Rodapé de autoria* draws all three. `formatHandle` prints the `@`, in
+ * the one place that decides how. *
+ * **The level is here now, and its absence was the stand-in.** This strip drew no level because
+ * *"`perfilMaker` carries none"* — true when it was written, false since T008, which gave a
+ * profile a `nivel` that is a projection of the ledger rather than a mockup number. FR-033 is
+ * one rule for every author strip on cards AND detail pages, so leaving this one out would show
+ * the same maker at `NÍVEL 7` on an Aulas card and at no level here. `?? 0` covers a profile
+ * written before that `defaultValue` landed: 0 is where FR-007's curve starts, so it invents no
+ * progress.
  *
  * The **removed** case is the one T029 created: `autor` is nullable since that migration, and
  * the only thing that empties it is a deletion, so an absent relationship is a person who
@@ -357,6 +366,7 @@ function autoriaDe(autor: Modelo3dDoc['autor']): ReactNode {
     <span style={ESTILO.autor}>
       <span>{perfil.nome ?? ''}</span>
       <span style={ESTILO.handle}>{formatHandle(perfil.handle ?? '')}</span>
+      <span style={ESTILO.nivel}>{`NÍVEL ${perfil.nivel ?? 0}`}</span>
     </span>
   )
 }
@@ -812,6 +822,9 @@ const ESTILO: Record<string, CSSProperties> = {
   descricao: { fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'var(--text-on-light)' },
   autor: { display: 'flex', gap: 'var(--space-2)', fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)' },
   handle: { opacity: 0.8 },
+  // Display face, like every other caps label on these pages: `NÍVEL n` is already uppercase in
+  // the source, so no `textTransform` is needed to make it read as the mockup draws it.
+  nivel: { fontFamily: 'var(--font-display)' },
   acoes: {
     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-2)',
     // "coluna de ações à direita, separada por divisória".

@@ -65,7 +65,10 @@ const MODELO = {
   descricaoCurta: 'Bolsa decorativa com estrutura vazada e design paramétrico.',
   categoria: CATEGORIAS[0],
   thumbnail: { id: 3, url: '/media/bolsa.png', sizes: { card: { url: '/media/bolsa-card.png' } } },
-  autor: { id: 5, nome: 'Maria Silva', handle: 'mariasilva' },
+  // `nivel` is the maker's own level, the projection of the ledger `xp.ts` maintains — a real
+  // number the card now prints (FR-033). Seven rather than one, so a card hard-coding a level
+  // fails here instead of agreeing with a stand-in.
+  autor: { id: 5, nome: 'Maria Silva', handle: 'mariasilva', nivel: 7 },
   arquivosModelo: [{ relationTo: 'midiaModelo3d', value: { id: 7, filename: 'bolsa.stl' } }],
   curtidas: 42,
 }
@@ -562,16 +565,24 @@ describe('§5 — the numbered cards (FR-007, FR-021, US3)', () => {
     expect(imgs[2]?.props.loading, 'a below-the-fold thumbnail was eager-loaded').toBe('lazy')
   })
 
-  it('credits the maker by name and handle, and invents no level', async () => {
+  it('credits the maker by name, handle and their own level', async () => {
     const texto = textOf(cardsDe((await render()).tree)[0] ?? null)
 
     // Round 4, 2026-08-24: the card shows the person's NAME and the `@nomesobrenome`
     // identifier; the mockups' handles are illustrative.
     expect(texto).toContain('Maria Silva')
     expect(texto).toContain('@mariasilva')
-    // `perfilMaker` carries no level — XP is feature 005 — so a `NÍVEL n` here would be a
-    // number nobody earned, printed on a public page.
-    expect(texto).not.toContain('NÍVEL')
+    // **This case used to assert the opposite**, and the assertion was right when it was
+    // written: `perfilMaker` carried no level, so `NÍVEL n` here would have been a number
+    // nobody earned on a public page. T008 gave a profile its `nivel` — a projection of the
+    // ledger — and `biblioteca-3d.md` § *Rodapé de autoria* draws it, so FR-033 asks for it.
+    // Left standing, this was the assertion that kept the fifth author strip out of the four
+    // T041 enumerated.
+    expect(
+      texto,
+      'the Biblioteca 3D card draws no level while every other author strip does, so the same ' +
+        'maker reads NÍVEL 7 on an Aulas card and nothing here',
+    ).toContain('NÍVEL 7')
   })
 
   it('shows the like count to everyone, as text (FR-015)', async () => {

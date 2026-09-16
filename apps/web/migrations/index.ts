@@ -11,6 +11,7 @@ import * as migration_20260912_103126_autor_removivel_tombstone from './20260912
 import * as migration_20260914_173408_economia_xp_005 from './20260914_173408_economia_xp_005';
 import * as migration_20260914_194612_publicacao_skill_005 from './20260914_194612_publicacao_skill_005';
 import * as migration_20260915_190424_missoes_005 from './20260915_190424_missoes_005';
+import * as migration_20260916_005202_projeto_autor_005 from './20260916_005202_projeto_autor_005';
 
 export const migrations = [
   {
@@ -77,5 +78,10 @@ export const migrations = [
     up: migration_20260915_190424_missoes_005.up,
     down: migration_20260915_190424_missoes_005.down,
     name: '20260915_190424_missoes_005',
+  },
+  {
+    up: migration_20260916_005202_projeto_autor_005.up,
+    down: migration_20260916_005202_projeto_autor_005.down,
+    name: '20260916_005202_projeto_autor_005'
   },
 ];

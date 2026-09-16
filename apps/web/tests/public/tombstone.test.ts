@@ -53,8 +53,15 @@ const PAGE_SOURCES = {
   'biblioteca-3d/[slug]': join(FRONTEND, 'biblioteca-3d', '[slug]', 'page.tsx'),
 } as const
 
-/** The live profile every fixture starts from — the state that must keep rendering unchanged. */
-const PERFIL = { id: 9, nome: 'Maria Silva', handle: 'mariasilva' }
+/**
+ * The live profile every fixture starts from — the state that must keep rendering unchanged.
+ *
+ * `nivel` arrived with 005: T008 put it on `perfilMaker` and T041 deleted the level-1 stand-in
+ * the pages printed in its place, so a profile with no `nivel` is no longer a state the reader
+ * returns. It is 7 rather than 1 for the same reason §4 asserts it below — a fixture at the
+ * stand-in's own value cannot tell a page that reads the profile from one that ignores it.
+ */
+const PERFIL = { id: 9, nome: 'Maria Silva', handle: 'mariasilva', nivel: 7 }
 
 const CATEGORIAS_ARTIGO = [{ id: 1, nome: 'Cultura Maker', slug: 'cultura-maker', ordem: 1 }]
 const CATEGORIAS_MODELO = [{ id: 1, nome: 'Animais', slug: 'animais', totalModelos: 4, ordem: 1 }]
@@ -281,7 +288,9 @@ describe('§4 — the tombstone keys on a deleted author, and nothing else', () 
   it('still renders the maker when the profile is there', async () => {
     const tree = await renderListagem(ArtigosPage, ARTIGO, CATEGORIAS_ARTIGO)
 
-    expect(autorDoCard(tree)).toEqual({ nome: 'Maria Silva', handle: 'mariasilva', nivel: 1 })
+    // The level is the profile's own since T041 (FR-033); it used to be `NIVEL_PENDENTE = 1`,
+    // a literal this page wrote over whatever the maker had earned.
+    expect(autorDoCard(tree)).toEqual({ nome: 'Maria Silva', handle: 'mariasilva', nivel: 7 })
     expect(markupDoCard(tree)).toContain('Maria Silva')
     expect(markupDoCard(tree)).not.toContain(AUTOR_REMOVIDO)
   })

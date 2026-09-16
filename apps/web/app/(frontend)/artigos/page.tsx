@@ -82,9 +82,9 @@ type MidiaDoc = {
   readonly sizes?: { readonly card?: { readonly url?: string | null } }
 }
 
-/** The author profile as `depth: 1` populates it. `nivel` is deliberately absent — see
- *  {@link NIVEL_PENDENTE}. */
-type PerfilDoc = { readonly nome?: string; readonly handle?: string }
+/** The author profile as `depth: 1` populates it — `nivel` is the maker's own level, the
+ *  projection of the ledger `xp.ts` maintains (FR-010). */
+type PerfilDoc = { readonly nome?: string; readonly handle?: string; readonly nivel?: number }
 
 /** One article as the listing reader returns it, populated one level. */
 type ArtigoDoc = {
@@ -99,26 +99,22 @@ type ArtigoDoc = {
 }
 
 /**
- * The level the strip shows until feature 005 gives a profile one.
- *
- * `CardProjetoAutor.nivel` is required — the mockups draw `NÍVEL n` on every card — and
- * `PerfilMaker.ts` states the omission in its own header: *"`nivel`/`xp`/`skills` are"* feature
- * 005's. The floor of the 1–10 scale is the only honest stand-in: any other number reads as
- * earned progress nobody earned.
- *
- * **Delete this the moment `nivel` exists** and read it off the profile in {@link autorDe}.
- */
-const NIVEL_PENDENTE = 1
-
-/**
  * The author strip when the relationship arrived as a bare id.
  *
  * `autor` is required on the collection, so this is a populate failure rather than an absent
  * author — but the card's strip is required too, and a `@undefined` under a published article
- * is worse than crediting the lab. The same choice the Projetos listing records, arrived at
- * from the other direction.
+ * is worse than crediting the lab. The Projetos listing recorded the same choice from the other
+ * direction until T041; it no longer needs one, because `projeto.autor` is nullable by design
+ * and an empty one there is a *deleted* maker rather than a read that failed.
+ *
+ * **The level is 0, and that is not the stand-in this constant used to carry.** `NIVEL_PENDENTE
+ * = 1` was a number invented for a profile that had none, and T008 ended that: `perfilMaker`
+ * has a `nivel`, {@link autorDe} reads it, and FR-033 asks for the real one. What is left here
+ * is the lab, which is not a maker and has earned nothing on the maker curve — and 0 is a
+ * rendered state of that curve, not an absence (FR-007's `floor(xp / xpPorNivel)` starts there,
+ * and FR-032 draws it as ten empty pips).
  */
-const AUTORIA_PENDENTE: CardProjetoAutor = { nome: 'Fab Lab', handle: 'fablab', nivel: NIVEL_PENDENTE }
+const AUTORIA_PENDENTE: CardProjetoAutor = { nome: 'Fab Lab', handle: 'fablab', nivel: 0 }
 
 /**
  * How many category rows a tab bar may hold.
@@ -267,7 +263,10 @@ function autorDe(autor: ArtigoDoc['autor']): CardProjetoAutor {
   if (autor === null || autor === undefined) return { removido: true }
   const perfil = asDoc<PerfilDoc>(autor)
   if (!perfil?.nome) return AUTORIA_PENDENTE
-  return { nome: perfil.nome, handle: perfil.handle ?? '', nivel: NIVEL_PENDENTE }
+  // The maker's **real** level (FR-033): `perfilMaker.nivel` is a projection of the ledger, and
+  // `?? 0` covers a profile written before T008's `defaultValue` rather than inventing a floor —
+  // 0 is where the curve starts, so it claims no progress the ledger cannot account for.
+  return { nome: perfil.nome, handle: perfil.handle ?? '', nivel: perfil.nivel ?? 0 }
 }
 
 /**

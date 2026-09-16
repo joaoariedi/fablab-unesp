@@ -521,13 +521,62 @@ does not need one; it needs the request to be in the lab it is deleting from.
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T039 | `projeto` gains `autor` → `perfilMaker`, **NULLABLE on day one**, with `sameTenant`. Nullable now costs nothing; retrofitting it cost 004 a migration **and** the removal of `required: true`, because `push` rebuilds the schema from the field config and `sameTenant` re-implements the `required` floor | FR-034, CLR-002 | `apps/web/collections/content/Projeto.ts` | T009 |
-| T040 | Its migration, and `tests/tenancy/autor-nulavel.test.ts` extended to `projeto` — the gate that reads `information_schema` **after a real boot** rather than matching the migration's text | [V] FR-034 | `apps/web/migrations/`, `apps/web/tests/tenancy/autor-nulavel.test.ts` | T039 |
-| T041 | **Delete the placeholders in ONE change**, as their own comments instruct: `AUTORIA_PENDENTE` in the Home and Projetos, and the level-1 stand-in in Artigos and Aulas. Four files, one commit | FR-033, US10 | `apps/web/app/(frontend)/{page,projetos/page,artigos/page,aulas/page}.tsx` | T040 |
-| T042 | Minha Conta's SUAS SKILLS reads **real** levels — ten pips, empty at level 0, active skills only | FR-032, US9 | `apps/web/app/(frontend)/minha-conta/page.tsx` | T038 |
-| T043 | `/ranking` (CLR-007): this organization's makers by XP, with the **declared tie-break** `-xpTotal,handle` — sorting by XP alone leaves ties in whatever order Postgres returns, which differs between runs and makes SC-013 unprovable | FR-013, FR-037, US6 | `apps/web/app/(frontend)/ranking/page.tsx` | T016 |
-| T043b | The tie-break is stable **across runs**, and the page adds **no island** | [V] SC-013, SC-015, SC-018 | `apps/web/tests/public/ranking-page.test.ts` | T043 |
-| T044 | The lab level: a projection of the whole organization's ledger, on the same curve. An empty lab reads **0 with an empty bar**, never blank or `NaN` | FR-012, SC-014, US8 | `apps/web/lib/content/xp.ts` | T016 |
+| ✅ T039 | `projeto` gains `autor` → `perfilMaker`, **NULLABLE on day one**, with `sameTenant`. Nullable now costs nothing; retrofitting it cost 004 a migration **and** the removal of `required: true`, because `push` rebuilds the schema from the field config and `sameTenant` re-implements the `required` floor | FR-034, CLR-002 | `apps/web/collections/content/Projeto.ts` | T009 |
+| ✅ T040 | Its migration, and `tests/tenancy/autor-nulavel.test.ts` extended to `projeto` — the gate that reads `information_schema` **after a real boot** rather than matching the migration's text | [V] FR-034 | `apps/web/migrations/`, `apps/web/tests/tenancy/autor-nulavel.test.ts` | T039 |
+| ✅ T041 | **Delete the placeholders in ONE change**, as their own comments instruct: `AUTORIA_PENDENTE` in the Home and Projetos, and the level-1 stand-in in Artigos and Aulas. Four files, one commit | FR-033, US10 | `apps/web/app/(frontend)/{page,projetos/page,artigos/page,aulas/page}.tsx` | T040 |
+| ✅ T042 | Minha Conta's SUAS SKILLS reads **real** levels — ten pips, empty at level 0, active skills only | FR-032, US9 | `apps/web/app/(frontend)/minha-conta/page.tsx` | T038 |
+| ✅ T043 | `/ranking` (CLR-007): this organization's makers by XP, with the **declared tie-break** `['-xpTotal', 'handle']` — an ARRAY, because the comma form is REST-only and orders by nothing at all on the local API — sorting by XP alone leaves ties in whatever order Postgres returns, which differs between runs and makes SC-013 unprovable | FR-013, FR-037, US6 | `apps/web/app/(frontend)/ranking/page.tsx` | T016 |
+| ✅ T043b | The tie-break is stable **across runs**, and the page adds **no island** | [V] SC-013, SC-015, SC-018 | `apps/web/tests/public/ranking-page.test.ts` | T043 |
+| ✅ T044 | The lab level: a projection of the whole organization's ledger, on the same curve. An empty lab reads **0 with an empty bar**, never blank or `NaN` | FR-012, SC-014, US8 | `apps/web/lib/content/xp.ts` | T016 |
+
+### What phase 7 cost — a sort that ordered by nothing, and a rule applied to a list
+
+Three of seven accepted at the halt, and every rejection was worth its launch.
+
+**1. `/ranking` was not ordered by XP. At all.** The declared sort was the string
+`'-xpTotal,handle'`, and a comma-joined sort is not a multi-key sort on the path an RSC takes.
+`sanitizeSortParams` — the one function in payload that splits on `,` — is wired into the REST
+layer alone; the local API calls `sanitizeSortQuery`, which does not split. `@payloadcms/drizzle`
+then wraps the whole string in an array, fails to resolve a column called `xpTotal,handle`, and
+swallows the failure in a bare `catch (_) { // continue }`, leaving the `-createdAt` it pushes
+unconditionally before the loop. The board listed the **newest profile first**: no XP ordering, no
+tie-break, FR-013 met in no part, and SC-013's determinism an accident of `createdAt`.
+
+Only one thing knew: the unit fake's `ordenar()` split the comma, so the test modelled the page's
+intent rather than the database's behaviour, and §1 asserted the comma string — meaning the suite
+would have *rejected the correction*.
+
+**My first attempt to reproduce it passed**, and the fixture was the reason: I created the makers
+in the reverse of their XP order, which is exactly the order `-createdAt` returns. The broken sort
+gave the right answer by coincidence. `ranking-ordem.test.ts` now creates them in the ranking's own
+order — so the fallback returns the exact opposite — and opens with a case asserting that the
+fallback is the *wrong* answer, because a fixture where the two agree proves nothing. The fake no
+longer splits a comma either, so regressing the page turns **both** files red.
+
+**2. FR-033 was applied to an inventory of four files, and the rule covers more.** T041's task row
+named four pages and its test asserted those four. A **fifth** card surface carried the identical
+deferral comment — `biblioteca-3d/page.tsx`, *"No level — `perfilMaker` carries none"*, a sentence
+that stopped being true at T008 — and the three detail bylines were in the same position, while
+FR-033 says *"on cards **and detail pages**"*. The same maker would have read `NÍVEL 7` on an Aulas
+card and nothing one route over.
+
+The repair is the rule rather than a longer list: § 6 of `autor-nivel.test.ts` walks
+`app/(frontend)` for every `page.tsx` that imports the tombstone — which is what makes a file an
+author strip — and requires each to print the level. A sixth surface is covered on the day it
+becomes one. `biblioteca-3d-page.test.ts` carried the assertion that pinned the stand-in
+(*"invents no level"*); it now asserts the level, with the reason it used to say the opposite.
+
+**3. The erasure list had gone stale under a comment explaining why it was correct.**
+`COLECOES_COM_AUTOR` omitted `projeto` because `projeto` had no `autor` — true until T039 landed
+the column in this very phase. The constant's own docblock names the danger: a collection
+forgotten there is *"the silent half — a byline that survives the erasure"*, and `docs/lgpd.md`
+would have promised a removal the code did not perform. `lgpd-doc.test.ts` could not catch it: it
+iterates over **that same constant**. `deletion-autoria.test.ts` now asks the config which
+collections declare an `autor` → `perfilMaker` and requires the list to name exactly those.
+
+**T039 itself was a moment, not the tree** — the third time. It was rejected for leaving
+`migrations.test.ts` red on a missing `autor_id`, with causation properly proven; T040, scoped to
+the migration and accepted in the same run, landed it. The suite was green at the halt.
 
 ## Phase 8: The gates
 
