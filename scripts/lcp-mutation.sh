@@ -212,7 +212,18 @@ mutate_home() {
   cat > "$HOME_PAGE" <<TSX
 // MUTATED by scripts/lcp-mutation.sh — restored when that script exits. If you are reading
 // this in a commit, the script was killed before its trap ran: restore the file from git.
-export default function HomePage() {
+//
+// \`async\`, and that is not decoration. The page this replaces is
+// \`export default async function HomePage(): Promise<ReactElement>\`, and \`next build\` runs
+// TypeScript over the whole project — TESTS INCLUDED. A synchronous stand-in has a different
+// type from every real page in this codebase, so anything that typechecks against one stops
+// compiling the moment this is planted, the build fails, and the budget exits non-zero having
+// measured nothing. That is the exact shape this script refuses to accept as proof, and it
+// refused it: \`tests/public/autor-nivel.test.ts\` passes \`HomePage\` to a renderer typed
+// \`(props) => Promise<unknown>\`, and CI reported
+// \`FAIL: the budget exited 1, but nothing in its output names / with a measured LCP\`.
+// The stand-in has to be a faithful one.
+export default async function HomePage() {
   return (
     <main>
       <img

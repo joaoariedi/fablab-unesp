@@ -291,6 +291,51 @@ describe('the mutation is really in the tree while the gate runs (T016, SC-012)'
     )
   })
 
+  /**
+   * **The stand-in has to have the same SHAPE as the page it replaces.**
+   *
+   * `next build` runs TypeScript over the whole project, tests included. The planted Home was
+   * `export default function HomePage()` — synchronous — while the real one is
+   * `export default async function HomePage(): Promise<ReactElement>`, so anything that
+   * typechecks against a page stopped compiling the moment the mutation landed. It went
+   * unnoticed until a test did exactly that: `tests/public/autor-nivel.test.ts` passes
+   * `HomePage` to a renderer typed `(props) => Promise<unknown>`, and CI reported
+   *
+   * ```text
+   * FAIL: the budget exited 1, but nothing in its output names / with a measured LCP
+   *   tests/public/autor-nivel.test.ts(214,37): error TS2345:
+   *     Argument of type '() => Element' is not assignable to parameter of type
+   *     '(props: { searchParams: Promise<Record<string, string>>; }) => Promise<unknown>'
+   * ```
+   *
+   * The script behaved correctly — it refuses exit-code-1 as proof for exactly this reason, and
+   * a build that fails to compile is the canonical case. What was wrong was the stand-in. This
+   * asserts the shape at the source, so the next change to a page's signature fails here rather
+   * than on a red gate whose message is about something else.
+   */
+  it('plants a stand-in with the real page\'s own signature', () => {
+    const script = readFileSync(SCRIPT, 'utf8')
+    // **Anchored to the start of a line, and that is not fussiness.** The first version of this
+    // assertion was `toContain('export default async function HomePage()')` — and it passed
+    // with the stand-in reverted to synchronous, because the paragraph above the heredoc QUOTES
+    // the real page's signature. A guard that matches its own documentation checks nothing; the
+    // `^` is what makes this about the planted code.
+    expect(
+      script,
+      'the planted Home is not async. `next build` typechecks the tests too, so a stand-in ' +
+        'shaped unlike a real page breaks the build — and the budget then exits non-zero ' +
+        'having measured nothing, which this script rightly refuses to call a proof.',
+    ).toMatch(/^export default async function HomePage\(\) \{$/m)
+
+    // Non-vacuity, and the half that will actually rot: the assertion above is about the real
+    // page, so it only means something while the real page is still shaped that way.
+    expect(
+      readFileSync(HOME_PAGE, 'utf8'),
+      'the Home page is no longer an async default export, so the stand-in above now has the ' +
+        'wrong shape in the other direction',
+    ).toContain('export default async function HomePage(')
+  })
+
   it('leaves the working tree exactly as it found it', () => {
     expect(
       treeState(),
