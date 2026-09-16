@@ -461,12 +461,61 @@ sanitized config rather than re-running the implementation.
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T033 | Deactivation moves no XP: record every total, set `ativa: false`, re-read, assert **nothing** changed | [V] FR-015, SC-007 | `apps/web/tests/content/skill-catalogue.test.ts` | T016 |
-| T034 | Reactivation restores every level **exactly**, because it is recomputed from an untouched ledger — the same test, continued | [V] FR-016, SC-008 | `apps/web/tests/content/skill-catalogue.test.ts` | T033 |
-| T035 | The repair itself (D4): the flag **commits first**, the recompute runs after it in pages, bounded by makers with at least one entry in that skill. Not inside the skill's own transaction — one sum per earner while holding its lock is a long transaction and a lock everyone waits on | FR-016 | `apps/web/collections/content/Skill.ts` | T034 |
-| T036 | Adding a skill assigns it at level 0 to **every** maker of that organization, including one who signed up before it existed | FR-017, SC-009 | `apps/web/collections/content/Skill.ts` | T035 |
-| T037 | A skill with ledger entries cannot be hard-deleted; the refusal **names how many** exist | FR-018 | `apps/web/collections/content/Skill.ts` | T036 |
-| T038 | A deactivated skill is hidden from the maker's panel and from new assignment, **without changing stored progress** — hidden is not erased | [V] FR-019, US9 | `apps/web/tests/content/skill-catalogue.test.ts` | T037 |
+| ✅ T033 | Deactivation moves no XP: record every total, set `ativa: false`, re-read, assert **nothing** changed | [V] FR-015, SC-007 | `apps/web/tests/content/skill-catalogue.test.ts` | T016 |
+| ✅ T034 | Reactivation restores every level **exactly**, because it is recomputed from an untouched ledger — the same test, continued | [V] FR-016, SC-008 | `apps/web/tests/content/skill-catalogue.test.ts` | T033 |
+| ✅ T035 | The repair itself (D4): the flag **commits first**, the recompute runs after it in pages, bounded by makers with at least one entry in that skill. Not inside the skill's own transaction — one sum per earner while holding its lock is a long transaction and a lock everyone waits on | FR-016 | `apps/web/collections/content/Skill.ts` | T034 |
+| ✅ T036 | Adding a skill assigns it at level 0 to **every** maker of that organization, including one who signed up before it existed | FR-017, SC-009 | `apps/web/collections/content/Skill.ts` | T035 |
+| ✅ T037 | A skill with ledger entries cannot be hard-deleted; the refusal **names how many** exist | FR-018 | `apps/web/collections/content/Skill.ts` | T036 |
+| ✅ T038 | A deactivated skill is hidden from the maker's panel and from new assignment, **without changing stored progress** — hidden is not erased | [V] FR-019, US9 | `apps/web/tests/content/skill-catalogue.test.ts` | T037 |
+
+### What phase 6 cost — two live defects, and two rejections about a moment
+
+Two of six accepted at the halt, and the four rejections split cleanly down the middle.
+
+**T034 and T035 were right when they were written and wrong by the time the run ended.** Both
+rejected on the same measured regression: `Skill.afterChange` guarded create with
+`previousDoc === undefined || previousDoc === null`, and Payload 3.88 passes `previousDoc: {}` on
+a create (`collections/operations/create.js:285`), so the repair ran on **every skill ever
+created** and took `signup.test.ts` and `counters.test.ts` down with `TenantUnresolvedError`. The
+verifier proved causation properly — stashed the two implementation files, watched both suites go
+green, popped the stash, watched them go red. And a later task in the same phase had already
+fixed it: the guard now asks `operation !== 'update'`, with the measurement recorded beside it.
+The full suite is green on the halted tree. That is the second time a rejection has described a
+moment rather than the tree, and the fix is the same: **re-run it before acting on it.**
+
+**T036 was a real hole, one admin click wide.** FR-017 says *"not only to new ones"*.
+`assignNewSkillToEveryMaker` answers `create` and skips `ativa !== true`; the reactivation hook
+calls `recomputeSkillPanels`, which is bounded by `earnersOfSkill` — **the ledger** — and returns
+zero immediately for a skill nobody has ever earned in. So a skill created retired and published
+later reached every maker who signed up **afterwards** (`skillsAoNivelZero` reads the active
+catalogue) and no maker who was already there. Permanently and silently: the panel renders from
+the stored rows, and FR-011's gate compares against the ledger, where a level-0 row has no XP to
+disagree about. Reproduced in `skill-nivel-zero.test.ts` § 3, then closed by running the level-0
+assignment beside the repair on activation — it skips a maker who already carries the row, so the
+earners just restored are untouched.
+
+Closing it moved `atribuirNoNivelZero` out of `Skill.ts` into `lib/content/xp.ts` as
+`assignSkillAtLevelZero`. Not tidying: `skill-reparo.test.ts` mocks `lib/content/xp` **whole** to
+pin the commit-then-repair ordering, so a second panel writer living outside that module was
+invisible to the contract it belongs to — and reaching the choke point directly from the hook
+turned three of its cases red. The backfill now has its place in that ordering assertion, and the
+deactivation case asserts it does **not** run.
+
+**T037 was a cross-tenant hole, and the role it needs is one this codebase designs for.** FR-018
+is unconditional; the guard counted the ledger through `getTenantScopedPayload(req)` — the lab the
+**request's host** resolves to, not the lab that owns the skill. `master` is first-class
+cross-tenant here (`userHasAccessToAllTenants: isMaster`, and both `teamOnly()` and
+`scopedAccess()` return `true` for it), so a master browsing lab B deleting lab A's credited skill
+had the count land in lab B, find nothing, and let the delete through. `xp_ledger.skill_id` is
+`ON DELETE set null`, so every entry that credited it lost the skill with no error anywhere and
+nothing for FR-011 to notice — the entries keep their `quantidade`, so no total moves. Measured in
+`skill-exclusao.test.ts` § 4: the skill row went and two entries were orphaned.
+
+Closed by asking the choke point a question it can answer: **is this skill even visible from
+here?** A delete from a host that cannot see the skill is refused, naming the skill's own lab as
+where to perform it. The alternative the rejection proposed — look the skill's tenant up through
+`unscopedLookupTenant` and act inside it — would have been a new door in `lib/tenancy`, and FR-018
+does not need one; it needs the request to be in the lab it is deleting from.
 
 ## Phase 7: The surfaces
 

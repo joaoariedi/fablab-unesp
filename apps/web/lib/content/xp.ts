@@ -550,3 +550,223 @@ export async function perfilDoUsuarioNesta(
 
   return docs[0] ?? null
 }
+
+/**
+ * Every maker in this organization holding at least one ledger entry in this skill.
+ *
+ * **This is the bound on the repair below**, and it is the ledger's own: a maker with no entry
+ * in the skill has no level in it to restore, and a lab that added a skill nobody ever used
+ * pays one query to reactivate it. Deriving the set from `perfilMaker` instead — "everyone with
+ * a row for this skill on their panel" — would miss precisely the maker whose row was lost,
+ * which is the case FR-016 exists for.
+ *
+ * Paged for {@link sumLedger}'s reason: an unpaged read stops at Payload's default page size and
+ * reports no error, so the makers past it would simply never be repaired.
+ */
+const earnersOfSkill = async (
+  store: XpStore,
+  skill: string | number,
+): Promise<(string | number)[]> => {
+  const perfis = new Set<string | number>()
+  let read = 0
+
+  for (let page = 1; ; page += 1) {
+    const { docs, totalDocs } = await store.find<{ perfil?: unknown }>({
+      collection: 'xpLedger',
+      where: { skill: { equals: skill } } as Where,
+      limit: LEDGER_PAGE_SIZE,
+      page,
+      depth: 0,
+    })
+
+    for (const { perfil } of docs) {
+      if (typeof perfil === 'string' || typeof perfil === 'number') perfis.add(perfil)
+    }
+    read += docs.length
+
+    if (docs.length === 0 || read >= totalDocs) return [...perfis]
+  }
+}
+
+/**
+ * Recompute every maker's level in **one** skill from the ledger (T035, FR-016, SC-008).
+ *
+ * The repair `Skill.ts` fires when `ativa` changes. FR-016 promises that reactivating a skill
+ * makes every maker's level in it *reappear at its previous value*, and the reason that promise
+ * can be kept at all is that the value was never stored anywhere else: `xpLedger` is
+ * append-only (FR-001) and deactivation touches none of it (FR-015), so the level is still
+ * derivable long after the panel stopped showing it. This recomputes it rather than restoring a
+ * copy — there is no copy, and a saved-and-restored level is one that can go stale between the
+ * two halves.
+ *
+ * Bounded twice over: by {@link earnersOfSkill} to the makers the ledger says can have a level
+ * here, and by the choke point to this organization. It writes **only this skill's row** on each
+ * panel — {@link withSkillRow} copies every other row back verbatim — so reactivating one skill
+ * cannot disturb a level in another.
+ *
+ * @returns how many makers were repaired. Zero is an ordinary answer: a skill nobody earned in.
+ *
+ * @throws CrossTenantError when a profile the ledger names is not updatable here, for
+ * {@link syncMakerProjections}'s reason — a silent miss is a maker whose panel stays wrong with
+ * nothing to report it.
+ *
+ * @example
+ * // In Skill.ts's afterChange, on the admin's own request:
+ * if (doc.ativa !== previousDoc.ativa) await recomputeSkillPanels(req, doc.id)
+ */
+export async function recomputeSkillPanels(
+  req: PayloadRequest,
+  skill: string | number,
+  deps: XpDeps = {},
+): Promise<number> {
+  const getStore = deps.getStore ?? ((pedido: PayloadRequest) => getTenantScopedPayload(pedido))
+  const store = await getStore(req)
+
+  const earners = await earnersOfSkill(store, skill)
+  // Read after the bound, so a lab reactivating an unused skill never touches `regrasXp` — and
+  // so a broken economy cannot fail a repair that had nothing to repair.
+  if (earners.length === 0) return 0
+  const rules = await rulesForTenant(store)
+
+  for (const perfil of earners) {
+    const xp = await sumLedger(store, {
+      and: [{ perfil: { equals: perfil } }, { skill: { equals: skill } }],
+    } as Where)
+
+    const written = await store.update({
+      collection: 'perfilMaker',
+      id: perfil,
+      data: {
+        skills: withSkillRow(await currentPanel(store, perfil), skill, xp, levelFor(xp, rules)),
+      },
+    })
+
+    if (!written) {
+      throw new CrossTenantError(
+        `perfilMaker ${String(perfil)} matched no row in this organization, so its level in ` +
+          `skill ${String(skill)} was not restored to ${String(xp)} XP — the ledger says it ` +
+          'earned there and the panel will keep saying otherwise (FR-016)',
+      )
+    }
+  }
+
+  return earners.length
+}
+
+/** One row of the SUAS SKILLS panel, as `perfilMaker.skills[]` stores it at `depth: 0`. */
+type LinhaDoPainel = { skill?: unknown; nivel?: number; xp?: number }
+
+/**
+ * The slice of the choke-point client {@link assignSkillAtLevelZero} needs — narrowed for
+ * {@link XpStore}'s reason: putting a skill on a panel has no business creating or deleting
+ * anything, and a type that cannot express those operations says so more durably than a comment.
+ */
+export type RosterStore = Pick<TenantScopedPayload, 'find' | 'update'>
+
+/** {@link XpDeps} for the roster, which reaches a narrower client than a credit does. */
+export type RosterDeps = {
+  /** Defaults to the request-scoped choke point. Injected by the caller that already has one. */
+  getStore?: (req: PayloadRequest) => Promise<RosterStore>
+}
+
+/**
+ * The level and the XP a skill enters a panel at — `onboarding.md` round 4: the pip bar starts
+ * empty. The same two values `lib/accounts/signup.ts` writes for a profile it creates, because
+ * FR-017 and FR-013 are one rule seen from the catalogue's side and from the maker's.
+ */
+const NIVEL_INICIAL = 0
+const XP_INICIAL = 0
+
+/**
+ * How many makers are read at a time.
+ *
+ * A read that names no `limit` stops at Payload's default page size and reports no error, so the
+ * makers past it would simply never receive the skill — `SUM_PAGE_SIZE` exists for the same
+ * reason and this one is deliberately its twin.
+ */
+const PAGINA_DE_MAKERS = 200
+
+/**
+ * **Adding a skill puts it on every maker's panel of this lab, at level 0** (T036, FR-017,
+ * SC-009, US5).
+ *
+ * `lib/accounts/signup.ts` already assigns the active catalogue to a profile it is *creating*
+ * (FR-013), so the maker FR-017 is actually about is the one who signed up **before** the skill
+ * existed: nothing in the signup path ever runs again for them. Without this their panel is
+ * missing a skill their lab offers, silently and permanently — and invisibly to FR-011's
+ * reconciliation gate, which compares projections against the **ledger**: a missing level-0 row
+ * carries no XP, so the gate and the panel agree that nothing was earned while the maker is
+ * simply absent from a catalogue everybody else has.
+ *
+ * CHK008 asks whether *"every maker"* is bounded. It is bounded by the lab's own roster — the
+ * smallest set the requirement admits — and read in **pages**, so a large lab costs a
+ * predictable number of queries instead of one unbounded read that Payload would silently cut
+ * to its default page size. A maker who already carries the row is skipped, which makes a
+ * re-run cost writes for nobody.
+ *
+ * @returns how many makers received the skill. Zero is an ordinary answer: a lab whose first
+ * maker has not signed up yet.
+ *
+ * @throws CrossTenantError when a profile this lab's own roster returned a moment ago is not
+ * updatable, for {@link recomputeSkillPanels}'s reason — a silent miss is a maker left out of
+ * the catalogue with nothing anywhere to report it.
+ */
+export async function assignSkillAtLevelZero(
+  req: PayloadRequest,
+  skill: string | number,
+  deps: RosterDeps = {},
+): Promise<number> {
+  const getStore = deps.getStore ?? ((pedido: PayloadRequest) => getTenantScopedPayload(pedido))
+  const store = await getStore(req)
+
+  let atribuidas = 0
+  let lidos = 0
+
+  for (let pagina = 1; ; pagina += 1) {
+    const { docs, totalDocs } = await store.find<{ id: string | number; skills?: LinhaDoPainel[] }>(
+      {
+        collection: 'perfilMaker',
+        limit: PAGINA_DE_MAKERS,
+        page: pagina,
+        // Ordered by a column this loop never writes. The default order is whatever the
+        // database returns, and paging over it while updating rows can show one profile twice
+        // and skip another entirely — the skipped one being precisely the maker FR-017 is about.
+        sort: 'id',
+        depth: 0,
+      },
+    )
+
+    for (const perfil of docs) {
+      const painel = perfil.skills ?? []
+      // Already there: a profile signup created between this skill's insert and this read
+      // carries the row already, and appending a second one would give the maker two levels in
+      // one skill with no rule for which the panel shows. It is also what makes re-running a
+      // half-finished assignment safe.
+      if (painel.some((linha) => String(linha.skill) === String(skill))) continue
+
+      // Every other row copied back verbatim — `withSkillRow`'s reason: Payload writes an array
+      // field by REPLACING it, so a panel rebuilt from the catalogue instead of appended to
+      // erases every level on it, and the append-only ledger it then disagrees with raises
+      // nothing at all.
+      const escrito = await store.update({
+        collection: 'perfilMaker',
+        id: perfil.id,
+        data: { skills: [...painel, { skill, nivel: NIVEL_INICIAL, xp: XP_INICIAL }] },
+      })
+
+      if (!escrito) {
+        throw new CrossTenantError(
+          `perfilMaker ${String(perfil.id)} matched no row in this organization, so the new ` +
+            `skill ${String(skill)} was not assigned to it at level 0 — this lab's own roster ` +
+            'returned the profile a moment ago and the panel will keep saying otherwise (FR-017)',
+        )
+      }
+      atribuidas += 1
+    }
+
+    lidos += docs.length
+    // The empty page ends the loop as well as the count, so a roster growing under a concurrent
+    // signup terminates instead of paging forever.
+    if (docs.length === 0 || lidos >= totalDocs) return atribuidas
+  }
+}

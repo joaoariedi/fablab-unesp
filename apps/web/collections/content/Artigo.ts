@@ -1,5 +1,6 @@
 import type { CollectionConfig, CollectionSlug } from 'payload'
 
+import { offeredSkills } from '../../lib/content/skill-catalogue'
 import { stampApproval } from '../../lib/content/review'
 import { canPublishField, scopedAccess, teamOnly } from '../../lib/tenancy/access'
 import { sameTenant } from '../../lib/tenancy/same-tenant-validator'
@@ -383,6 +384,11 @@ export const Artigo: CollectionConfig = {
       name: 'skill',
       type: 'relationship',
       relationTo: 'skill',
+      // **The retired skill is not on offer here** (FR-019, T038): the active catalogue,
+      // plus whatever this document already names — `lib/content/skill-catalogue.ts` records
+      // why the second half is not optional, and why a static filter would brick every
+      // publication that ever credited a skill the lab later retired.
+      filterOptions: offeredSkills('artigo'),
       label: 'Skill',
       admin: {
         description:

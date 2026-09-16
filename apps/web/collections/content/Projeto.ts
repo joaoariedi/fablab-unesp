@@ -5,6 +5,7 @@ import type {
   PayloadRequest,
 } from 'payload'
 
+import { offeredSkills } from '../../lib/content/skill-catalogue'
 import { serveDownload } from '../../lib/content/downloads'
 import { stampApproval, type ReviewableDoc } from '../../lib/content/review'
 import { creditXp } from '../../lib/content/xp'
@@ -540,6 +541,11 @@ export const Projeto: CollectionConfig = {
       name: 'skill',
       type: 'relationship',
       relationTo: 'skill',
+      // **The retired skill is not on offer here** (FR-019, T038): the active catalogue,
+      // plus whatever this document already names — `lib/content/skill-catalogue.ts` records
+      // why the second half is not optional, and why a static filter would brick every
+      // publication that ever credited a skill the lab later retired.
+      filterOptions: offeredSkills('projeto'),
       label: 'Skill',
       admin: {
         description:
