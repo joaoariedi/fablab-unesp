@@ -40,8 +40,9 @@ these, and a plan that re-derives them from `home.md` alone will be wrong:
 - **When** they open `/`
 - **Then** each card shows the mission's icon, title and description, and a progress bar reading
   **their own** state: 0% with no submission, 50% with one awaiting review, 100% once approved
-- **Edge**: a maker whose submission was **rejected** sees the bar at 50%, because the row exists
-  and CLR-015 reopens it by editing — not 0%, which would read as never having tried
+- **Edge**: a maker whose submission was **rejected** sees the bar at 0% and the words that say
+  so — nothing was credited, and CLR-015 puts the whole of the work back in front of them
+  (CLR-003, corrected against the shipped model)
 - **Error**: the personal read fails while the missions read succeeds → the cards still render,
   with no percentage at all rather than a 0% that claims something about this person
 
@@ -267,14 +268,22 @@ somebody, and there is nobody. This supersedes that line of `home.md`.
 
 **Impact**: FR-009, SC-002, US2.
 
-### CLR-003: A rejected submission reads 50%, not 0% [design] — decided 2026-09-16
+### CLR-003: A rejected submission reads 0%, because that is what the shipped model says [design] — corrected 2026-09-16
 
-**Decision**: the two-step progress counts a **rejected** submission as step one, exactly as
-`/missoes` does.
+**Decision**: the two-step progress is `enviada` = 1, `aprovada` = 2, **`recusada` = 0**, exactly
+as `/missoes` already computes it. The Home inherits the mapping; it does not re-decide it.
 
-**Rationale**: CLR-015 of 005 reopens a rejected row by having the maker edit it rather than
-creating a second one — the row survives, and so does the work behind it. Rendering 0% would tell
-a maker who submitted and was asked for changes that they had not started.
+**Rationale, and the correction**: this clarification was first written the other way — rejected
+reads 50%, on the argument that the row survives and so does the work behind it. **The code says
+otherwise, and its reason is better**: `ETAPAS_POR_ESTADO` in `missoes/page.tsx` maps `recusada`
+to 0 with the note *"`recusada` is 0 and not 'half': nothing was credited, and CLR-015 reopens the
+row on the maker's next photo, so the work still ahead of them is the whole of it."* A bar is a
+claim about how much is done, and after a rejection the answer is none of it.
+
+Caught while building the Truth Map, which is what that phase is for — and it is the same failure
+003 and 004 each paid for once: a requirement written against a specification instead of against
+the merged code. FR-007 says the arithmetic is expressed **once**; a clarification that contradicts
+the one expression is the contradiction, not the exception.
 
 **Impact**: FR-007, US1.
 
