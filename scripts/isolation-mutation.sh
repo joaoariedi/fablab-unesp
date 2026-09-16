@@ -81,10 +81,76 @@
 # green no matter what happens to the validator, which is the same shape of hole the public
 # path had.
 #
+# ── Why the LEDGER is a SIXTH layer, and why it strips the write guard first (T047, FR-035) ─
+#
+# Every layer above mutates MACHINERY: the filter in `client.ts`, the constraint in `access.ts`,
+# the anonymous read, the relationship validator. None of them touches a CALLER'S CHOICE OF
+# CLIENT, because until `creditXp` no caller had a choice worth making. It is the first module
+# that resolves a GLOBAL identity (`progressoAula.usuario`) to a SCOPED profile and then writes
+# a total to it, so reaching for a broader client is a mistake available here and nowhere else
+# (D7). Pinning that choice to another organization compiles, typechecks, and credits XP at a
+# lab nobody acted in — where the damage is not a row leaking into a list but a row MINTED, with
+# every projection downstream inheriting it as if it had been earned.
+#
+# It also fails through a harness of its own. `isolation.test.ts` asks what a user can SEE, and
+# `xpLedger` is already a row in that matrix — it stays green wherever a credit lands, because
+# a correctly filtered read of a wrongly written row is still correctly filtered. Only
+# `xp-isolation.test.ts` drives an ACTION and measures both labs either side of it.
+#
+# The mutation pins the host to organization B's, so a maker of A earns into B: the sentence
+# FR-035 and SC-010 are written in. Pinning a FIXTURE host is the one place in this script where
+# a mutation depends on a test's data, and it is deliberate — a leak has to name a destination,
+# and "the other lab" is not something the patched expression can compute. The coupling is
+# guarded rather than trusted: the host is checked against `tests/tenancy/fixtures.ts` BEFORE
+# anything is patched, so a renamed fixture host fails loudly instead of quietly mutating a
+# credit that still lands in the right place.
+#
+# ── Why this layer strips THREE outer layers first ───────────────────────────────────────────
+#
+# The same reason `choke-point` removes the two layers outside it: each of them refuses the
+# mis-scoped credit for a reason that is NOT "the credit landed at the wrong lab", so leaving one
+# standing buys a red that re-proves a layer already proven, while the EVIDENCE below never
+# prints. Both refusals were MEASURED on 2026-09-16 by T048, and the second contradicted what
+# this header previously claimed.
+#
+# 1/2 — the write guard (`same-tenant`). A mis-scoped credit writes an `xpLedger` row whose
+# `tenant` is B and whose `perfil` and `skill` point into A, and both of those fields carry
+# `validate: sameTenant`. The validator REFUSES the row, `creditXp` rethrows, and the harness goes
+# red on "the credit at A raised …" with nothing having moved anywhere. Reasoned at T047 from
+# `same-tenant-validator.ts` and `XpLedger.ts`.
+#
+# 2/2 — the two READ layers (`access-composition`). This half was reasoned WRONG at T047, which
+# stripped the write guard alone and shipped a layer that proved nothing. T048 ran it: the harness
+# still went red on "the credit at A raised …", now carrying
+#
+#     Error: no regrasXp row with a numeric xpPorAcao … in this organization, so there is no
+#     economy to credit at (got undefined from 0 row(s))
+#
+# `creditXp`'s FIRST act is not the write at all — it is `rulesForTenant(store)`, a READ of
+# `regrasXp` through the mis-scoped client while `req.user` is still a maker of A. The access
+# constraint and the plugin composition both guard that read, so B's economy is filtered out, the
+# credit dies before it creates anything, and no lab's numbers move for the harness to see. The
+# write guard was never even reached. A mutation refused by a layer ABOVE the one under test is
+# the exact false assurance this script exists to prevent, and only running it found this one.
+#
+# What the three removals deliberately leave standing is `client.ts`'s choke-point filter, and
+# that is the point: it is the layer that reads a client's tenant and confines every operation to
+# it, so with the other three gone the ONLY thing deciding which lab is credited is the client
+# `creditXp` chose. The control was run alongside (2026-09-16) — all three outer layers stripped
+# and `creditXp`'s choice left ALONE, harness 12/12 green. The red belongs to the choice and to
+# nothing else, which is what D7 claims and what this layer now actually proves.
+#
+# EVIDENCE here is a rendered NUMBER, not a phrase. Vitest prints a code frame of the failing
+# file, so an EVIDENCE that also matched the message TEMPLATE would be satisfied by any failure
+# in that file — a database that never started included. `moved by 3 while a maker of` can only
+# come from a delta the assertion computed, and `tests/isolation-mutation-layers.test.ts`
+# asserts exactly that property of this string.
+#
 # Usage:  scripts/isolation-mutation.sh choke-point
 #         scripts/isolation-mutation.sh access-composition
 #         scripts/isolation-mutation.sh public-path
 #         scripts/isolation-mutation.sh same-tenant
+#         scripts/isolation-mutation.sh xp-ledger
 set -euo pipefail
 
 LAYER="${1:-}"
@@ -115,8 +181,13 @@ case "$LAYER" in
     EXPECT="refuses a row in A pointing at a row in B"
     EVIDENCE="the S4c hole is open"
     ;;
+  xp-ledger)
+    HARNESS="tests/tenancy/xp-isolation.test.ts"
+    EXPECT="a credit earned at A moves nothing at B"
+    EVIDENCE="moved by -?[1-9][0-9]* while a maker of"
+    ;;
   *)
-    echo "usage: $0 <choke-point|access-composition|public-path|same-tenant>" >&2
+    echo "usage: $0 <choke-point|access-composition|public-path|same-tenant|xp-ledger>" >&2
     exit 64
     ;;
 esac
@@ -137,6 +208,7 @@ restore() {
 # Every file any layer may mutate — the list restore() walks, so a new mutation target that
 # is not listed here is a mutation that survives the run.
 TARGETS=(
+  apps/web/lib/content/xp.ts
   apps/web/lib/tenancy/same-tenant-validator.ts
   apps/web/lib/tenancy/client.ts
   apps/web/lib/tenancy/access.ts
@@ -202,12 +274,45 @@ mutate_same_tenant() {
   }
 }
 
+# The fixture host the mutation pins the credit to. Named here rather than inline so the guard
+# below and the substitution cannot drift apart into two different labs.
+XP_LEAK_HOST="org-b.localhost"
+
+mutate_xp_ledger() {
+  # Checked BEFORE the patch, not after: a renamed fixture host would otherwise produce a
+  # mutation that applies cleanly, resolves nothing, and leaves the credit exactly where it
+  # belonged — a green harness reported as a proof.
+  grep -q "$XP_LEAK_HOST" "$WEB/tests/tenancy/fixtures.ts" || {
+    echo "the xp-ledger layer pins the credit to '$XP_LEAK_HOST', which tests/tenancy/fixtures.ts no longer builds" >&2
+    exit 1
+  }
+  # The choice of client, and nothing else — `creditXp` keeps running, keeps writing through a
+  # real scoped client, and keeps returning true. What changes is WHICH lab the client belongs
+  # to, which is the whole of D7: a caller reaching past its own request for a broader or
+  # different tenant. Deleting the call instead would fail the harness on a module error, which
+  # is indistinguishable from a typo and proves nothing about tenancy.
+  perl -0pi -e "s/const getStore = deps\.getStore \?\? \(\(req: PayloadRequest\) => getTenantScopedPayload\(req\)\)/const getStore = deps.getStore ?? ((req: PayloadRequest) => getTenantScopedPayload(req, { host: '$XP_LEAK_HOST' })) \/* MUTATED *\//" \
+    "$WEB/lib/content/xp.ts"
+  grep -q "MUTATED" "$WEB/lib/content/xp.ts" || {
+    echo "xp.ts mutation did not apply — creditXp's choice of client moved (see tests/content/xp-mutation-point.test.ts)" >&2
+    exit 1
+  }
+}
+
 if [ "$LAYER" = "public-path" ]; then
   mutate_public_path
 elif [ "$LAYER" = "same-tenant" ]; then
   # No outer layer is stripped first: the read guards do not look at a relationship's contents
   # at all. The two expressions this removes are both inside the validator — see the header.
   mutate_same_tenant
+elif [ "$LAYER" = "xp-ledger" ]; then
+  # Three outer layers go FIRST, in the order the credit meets them — see the header. The two
+  # read layers guard `rulesForTenant`, which `creditXp` reaches before it writes anything; the
+  # write guard then refuses the row itself. With either standing the credit is refused rather
+  # than misplaced, and no lab's numbers move for the harness to see.
+  mutate_access_composition
+  mutate_same_tenant
+  mutate_xp_ledger
 elif [ "$LAYER" = "choke-point" ]; then
   # Strip the two OUTER layers as well: with them in place the choke-point filter is
   # redundant, and its removal is invisible. See the note above.

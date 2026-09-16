@@ -590,6 +590,36 @@ replacement form restates all fifteen and drops any it forgets, silently.
 
 ---
 
+## Outstanding, and not executable by a run
+
+This section is the one `apps/web/tests/required-checks.test.ts` reads: the backticked first
+cell of every row below is a CI gate that runs on every pull request and is **not** a required
+status check, so a change that fails it can still be merged. The list must be exactly the gap
+the live protection API reports — an unlisted advisory gate turns that suite red, which is the
+failure that let `Colour tokens` and `Isolation harness can fail (public-path)` sit unnoticed
+for a whole feature.
+
+### The seventeenth context (feature 005, T050 / T052)
+
+Feature 005 added the `xp-ledger` leg to `ci.yml`'s `isolation-mutation` matrix (FR-035). The
+leg runs; requiring it is a repository-admin action on both `dev` and `main`, tracked as
+**T052 ⛔** in `.specify/specs/005-gamificacao/tasks.md`, and no run can perform it. Recorded
+here, measured rather than assumed — `.github/required-checks.json` carries the live answer of
+the same date.
+
+| Missing context | Advisory since | Closed by |
+|---|---|---|
+| `Isolation harness can fail (xp-ledger)` | feature 005 (T049) | 005 T052 ⛔ |
+
+```sh
+gh api -X POST \
+  repos/joaoariedi/fablab-unesp/branches/<branch>/protection/required_status_checks/contexts \
+  -f 'contexts[]=Isolation harness can fail (xp-ledger)'
+# then: scripts/required-checks.sh --write, and delete the row above
+```
+
+---
+
 **Legend**: `[P]` = parallelizable | `✅` = accepted and on disk | `⛔` = outside the run's
 reach — it needs a human with repository-admin rights, so a workflow skips it rather than
 reporting it done | `FR-NNN` / `SC-NNN` / `US#`

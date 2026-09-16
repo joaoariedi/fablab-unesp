@@ -585,15 +585,60 @@ because the new gate ran, reported red, and could be merged past.
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T045 | Mark the mutation point: `/* @isolation-mutation-point */` above `creditXp`'s choice of client. No existing layer touches a caller's choice — the four today rewrite the machinery — and `creditXp` is the first module resolving a global identity to a scoped profile before writing a total to it (D7) | FR-035 | `apps/web/lib/content/xp.ts` | T016 |
-| T046 | The harness: a maker of A causes no credit at B, on every XP surface. `EVIDENCE` must be a message **only the counting assertion can print**, never a setup failure | [V] SC-010 | `apps/web/tests/tenancy/xp-isolation.test.ts` | T045 |
-| T047 | The `xp-ledger` layer in the script, with its `HARNESS`, `EXPECT` and `EVIDENCE` | FR-035 | `scripts/isolation-mutation.sh` | T046 |
-| T048 | **Watch it fail.** Plant the violation, **assert the file actually changed**, observe RED, restore. A mutation that mutates nothing reports success on a tree it never touched — which is what `tests/isolation-mutation-layers.test.ts` exists to catch, and what one of my own plants did in 004 | SC-010 | `scripts/isolation-mutation.sh` (verify only) | T047 |
-| T049 | Only now: the CI matrix leg | FR-035 | `.github/workflows/ci.yml` | T048 |
-| T050 | And with it, in the same change: regenerate `.github/required-checks.json` with `scripts/required-checks.sh --write`, so `required-checks.test.ts` stays green. A gate that runs and can be merged past is what that test refuses | FR-035 | `.github/required-checks.json` | T049 |
-| T051 | Full suites, lint, markdownlint, typecheck **both ways**, and the drift gate on a scratch database | — | — | T050 |
+| ✅ T045 | Mark the mutation point: `/* @isolation-mutation-point */` above `creditXp`'s choice of client. No existing layer touches a caller's choice — the four today rewrite the machinery — and `creditXp` is the first module resolving a global identity to a scoped profile before writing a total to it (D7) | FR-035 | `apps/web/lib/content/xp.ts` | T016 |
+| ✅ T046 | The harness: a maker of A causes no credit at B, on every XP surface. `EVIDENCE` must be a message **only the counting assertion can print**, never a setup failure | [V] SC-010 | `apps/web/tests/tenancy/xp-isolation.test.ts` | T045 |
+| ✅ T047 | The `xp-ledger` layer in the script, with its `HARNESS`, `EXPECT` and `EVIDENCE` | FR-035 | `scripts/isolation-mutation.sh` | T046 |
+| ✅ T048 | **Watch it fail.** Plant the violation, **assert the file actually changed**, observe RED, restore. A mutation that mutates nothing reports success on a tree it never touched — which is what `tests/isolation-mutation-layers.test.ts` exists to catch, and what one of my own plants did in 004 | SC-010 | `scripts/isolation-mutation.sh` (verify only) | T047 |
+| ✅ T049 | Only now: the CI matrix leg | FR-035 | `.github/workflows/ci.yml` | T048 |
+| ✅ T050 | And with it, in the same change: regenerate `.github/required-checks.json` with `scripts/required-checks.sh --write`, so `required-checks.test.ts` stays green. A gate that runs and can be merged past is what that test refuses | FR-035 | `.github/required-checks.json` | T049 |
+| ✅ T051 | Full suites, lint, markdownlint, typecheck **both ways**, and the drift gate on a scratch database | — | — | T050 |
 
 ---
+
+### What phase 8 cost — one rejection, and it was the fifth moment
+
+Six of seven accepted. The rejection was T047, and it was the most carefully argued of the
+feature: the `xp-ledger` layer mutates `creditXp`'s choice of client to a B-scoped one while
+`req.user` is still A's maker, and — with the read guards standing — `rulesForTenant` intersects
+A's access constraint with B's client, comes back with zero rows, and `creditXp` throws *before*
+`store.create`. No entry, no projection, every delta zero. The harness then went red on the teeth
+half (*"the isolation above is passing because nothing works"*), which is a red for the wrong
+reason and exactly what the script's `EVIDENCE` check exists to reject.
+
+It was true when it was measured. By the end of the run the layer stripped `access_composition`
+and `same_tenant` first — the composition the rejection's own root-cause analysis called for —
+and the gate witnesses the leak it was written for:
+
+```text
+── PASS: removing 'xp-ledger' made tests/tenancy/xp-isolation.test.ts fail on
+   'a credit earned at A moves nothing at B' with 'moved by -?[1-9][0-9]* while a maker of'.
+   → xpLedger: organização B moved by 1 while a maker of A earned — XP credited at the wrong lab
+```
+
+That is the **fifth** rejection this feature that described a moment rather than the tree, after
+T022, T034, T035 and T039. Four of the five were resolved by a later task in the same phase; one
+was a verifier's snapshot-restore race. It is now the first rule in every launch note, and it is
+still the single most expensive pattern in this run.
+
+All five layers were then watched red, each on its own surface with its own evidence string —
+`choke-point`, `access-composition`, `public-path`, `same-tenant`, `xp-ledger`. And the failure
+class 003 shipped was probed directly: breaking the perl pattern so it matches nothing makes the
+script **exit 1** with *"xp.ts mutation did not apply — creditXp's choice of client moved"*,
+rather than running a harness against an unmutated tree and reporting a pass.
+
+The app was then driven rather than described. Built (`next build`, exit 0), started, and asked
+for real status codes on the host `localhost` resolves to:
+
+| route | signed out | signed in |
+|---|---|---|
+| `/` | 200 | — |
+| `/ranking` | 200 | 200, and renders `Smoke 005`, `@smoke005`, `12` |
+| `/missoes` | 200 | 200 |
+| `/minha-conta` | **307 → `/login?de=%2Fminha-conta`** | 200, renders `SUAS SKILLS` |
+| `/projetos`, `/biblioteca-3d`, `/artigos`, `/aulas` | 200 | — |
+
+The smoke account was removed afterwards and `counters.test.ts` re-run green, because that file
+reconciles the whole database and a maker left behind is somebody else's red.
 
 **Legend**: `✅` in the ID cell = accepted · `[P]` = parallelizable · `[V]` = test-only, verified
 by **mutation** rather than by a RED (see § *How to verify a test-only task*) · `⛔` = needs a

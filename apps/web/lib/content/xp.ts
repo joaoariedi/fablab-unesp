@@ -400,6 +400,7 @@ const syncMakerProjections = async (
  * })
  */
 export async function creditXp(input: CreditInput, deps: XpDeps = {}): Promise<boolean> {
+  /* @isolation-mutation-point */
   const getStore = deps.getStore ?? ((req: PayloadRequest) => getTenantScopedPayload(req))
   const store = await getStore(input.req)
 
