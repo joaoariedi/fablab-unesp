@@ -509,8 +509,12 @@ describe('a published project reads publicly, an unpublished one does not (T035)
  *     tabs, a cover image is *populated* behind a project the published-only filter already
  *     cleared. "Has no status" would admit both, and it would hand out every file the lab ever
  *     uploaded — the ones attached to drafts included.
- *   - `perfilMaker` — the public maker profile is a future spec (spec § Scope), so nothing may
- *     list it yet; a listing is every maker's handle and the account behind it.
+ *   - `perfilMaker` — it **does** carry a `publicList` declaration since T008, for the anonymous
+ *     ranking, and it is still refused here: the declaration admits the collection while the
+ *     door (CLR-010, FR-036) admits the *call* only when it names the columns it wants. A
+ *     listing with no `select` is every maker's date of birth, course and account, so the
+ *     refusal moved rather than lifted — and the reason string below is what says which of the
+ *     two refused it.
  *   - `curtida` — a like row names the **person**, not the count. FR-015 shows a count; it never
  *     shows who.
  *   - `users` — `global`, so `buildTenantClient` puts no tenant clause on it at all. A
@@ -544,7 +548,10 @@ describe('publicList opened four doors and nothing else (T005)', () => {
   /** Refused collection → the half of the gate's message that must name its reason. */
   const REFUSED = [
     ['midiaImagem', 'declares no `status`'],
-    ['perfilMaker', 'declares no `status`'],
+    // Refused for the projection, not for the missing status filter: T008 gave it a
+    // `publicList` reason, so the message a caller gets has to send them to the `select` they
+    // omitted rather than to a declaration that is already there.
+    ['perfilMaker', '`select`'],
     ['curtida', 'declares no `status`'],
     ['users', 'it is `global`'],
   ] as const

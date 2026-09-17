@@ -125,6 +125,22 @@ function* modulosDe(dir: string): Generator<string> {
   }
 }
 
+/**
+ * Values that are **not writes to the column**, and are therefore not what this scan is about.
+ *
+ * - `null` is a *clear*, which the section below says is anyone's.
+ * - `true` is a **projection flag** — `select: { avatarRender: true }` — and it arrived with
+ *   feature 006's `CAMPOS_DO_RANKING`, the anonymous ranking's `select`. It is a read, and this
+ *   section is about writes. It cannot mask a real one either: `avatarRender` is a relationship,
+ *   so `true` is not a value the column can hold, and a `data: { avatarRender: true }` would be
+ *   refused by Payload long before this scan could have helped.
+ *
+ * Widened rather than narrowed on purpose. The alternative was teaching the regex to recognise a
+ * `select` block, which is a text heuristic about syntax; this is a statement about values, and a
+ * value that cannot be stored cannot be a write.
+ */
+const NAO_SAO_ESCRITAS = new Set(['null', 'true'])
+
 /** Every `avatarRender: <value>` an application module writes, with the file it is in. The
  *  module under test is excluded: it is the path, not a second one. */
 function escritasDoRender(): { caminho: string; valor: string }[] {
@@ -357,7 +373,7 @@ describe('§5 — feature 002’s upload limits apply to the asset, not only to 
 
 describe('§6 — one path: no other module SETS this column', () => {
   it('leaves every other avatarRender write as a clear', () => {
-    const alheias = escritasDoRender().filter(({ valor }) => valor !== 'null')
+    const alheias = escritasDoRender().filter(({ valor }) => !NAO_SAO_ESCRITAS.has(valor))
 
     expect(
       alheias,

@@ -1,6 +1,10 @@
 import { flattenAllFields, getPayload, type PayloadRequest, type Where } from 'payload'
 import { cache } from 'react'
 
+// `/ranking` declares the order (FR-013) and this reader honours it — see `readPublicRanking`.
+// The import is of a constant, so no component is evaluated by it.
+import { ORDENACAO_DO_RANKING } from '../../app/(frontend)/ranking/page'
+
 import {
   buildTenantClient,
   type ByIDArgs,
@@ -349,6 +353,71 @@ export async function getPublicScopedPayload(
     )
   }
 
+  /**
+   * The collections whose admission is conditional on the **projection**, not on the collection
+   * (CLR-010, FR-036).
+   *
+   * `assertPubliclyReadable` answers "may an anonymous visitor read this collection at all?".
+   * For `perfilMaker` that is the wrong granularity on its own: the `publicList` declaration is
+   * collection-wide and permanent, while the columns a ranking may show are a property of the
+   * call. Without this gate the day after FR-017 ships any page may write
+   * `db.find({ collection: 'perfilMaker' })` and receive `dataNascimento`, `escolaridade`,
+   * `curso`, `vinculoUnesp` and `usuario` — the consented personal data of feature 004 — because
+   * the door would already have said yes to the collection.
+   *
+   * So it is the same deny-by-default `assertPubliclyReadable` uses, one level finer: the
+   * collection is admitted, the unprojected *call* is refused.
+   *
+   * ⚠ **Field-level `read` access is not an alternative, and must not be proposed as one.** This
+   * client runs with `overrideAccess: true`, and the installed Payload short-circuits on exactly
+   * that — `const canReadField = overrideAccess ? true : await field.access.read({ … })` in
+   * `fields/hooks/afterRead/promise.js`. A field rule would defend `perfilMaker` against
+   * signed-in readers and not against the one caller in question.
+   *
+   * A module constant rather than a registry flag, for the reason `PUBLIC_GLOBAL_CATALOGUE`
+   * gives: **removing** a slug from here is the dangerous direction, and it should be a diff in
+   * this file, next to the reasoning, rather than a deleted line in a data table.
+   */
+  const PROJECTION_REQUIRED: ReadonlySet<string> = new Set(['perfilMaker'])
+
+  /**
+   * True when the call actually names the columns it wants.
+   *
+   * Two ways a `select` can be present and bound nothing, both measured against payload 3.88's
+   * `getSelectMode`, which returns `'exclude'` the moment any value is `false`:
+   *
+   *   - `{ dataNascimento: false }` is exclude mode — every column NOT named comes back, so the
+   *     four personal ones the caller forgot are served in full.
+   *   - `{}` is include mode with nothing included. Harmless today (the row is `{ id }`), and
+   *     refused anyway, because "carries a select object" and "says which columns may leave"
+   *     have to be the same question or the next dynamically built projection satisfies the gate
+   *     while naming nothing.
+   */
+  const namesItsColumns = (select?: Record<string, boolean>): boolean => {
+    const wanted = Object.values(select ?? {})
+    return wanted.length > 0 && wanted.every((keep) => keep === true)
+  }
+
+  /**
+   * The projection gate. Throws for a `PROJECTION_REQUIRED` collection read without one.
+   *
+   * The refusal names the `select` rather than the collection's admission, because the caller
+   * who trips it has a declaration in front of them that says the collection *is* listable —
+   * a message about `publicList` would send them to fix something that is not broken.
+   */
+  const assertProjected = (collection: string, select?: Record<string, boolean>): void => {
+    if (!PROJECTION_REQUIRED.has(collection)) return
+    if (namesItsColumns(select)) return
+    throw new PublicReadDeniedError(
+      collection,
+      'it carries consented personal data (`dataNascimento`, `escolaridade`, `curso`, ' +
+        '`vinculoUnesp`, `usuario`) beside the columns a public board shows, so its `publicList` ' +
+        'declaration admits the collection and the call must carry a `select` naming the columns ' +
+        'it wants. This one names none — and an absent projection, an exclude-mode projection ' +
+        '(any `false` value) or an empty one all fetch columns the caller never asked for',
+    )
+  }
+
   /* @isolation-mutation-point */
   const publishedOnly = (): Where => {
     return { status: { equals: PUBLISHED_STATUS } } as Where
@@ -403,6 +472,46 @@ export async function getPublicScopedPayload(
    * unreachable without a declaration — `assertPubliclyReadable` runs first, and the tenant
    * constraint is `buildTenantClient`'s either way.
    */
+/**
+ * What a **populated relationship** may return to a visitor with no account.
+ *
+ * ── The vector `select` does not cover, measured on this tree ────────────────────────────────
+ *
+ * `select` bounds the columns of the collection being *read*. It says nothing about the rows
+ * Payload fetches to POPULATE a relationship on that collection — and every public listing runs
+ * at `depth: 1`, so an author's name and handle arrive as art rather than as an id. An anonymous
+ * read of `artigo` therefore returned the **whole** `perfilMaker` row:
+ *
+ *     aceiteTermosEm, aceiteTermosVersao, avatarConfig, avatarRender, createdAt, curso,
+ *     dataNascimento, escolaridade, handle, id, nivel, nome, skills, tenant, updatedAt,
+ *     usuario, vinculoUnesp, xpTotal
+ *
+ * `dataNascimento`, `vinculoUnesp`, `escolaridade` and `curso` among them — the consented fields
+ * of 004's signup step 2 — through `/artigos`, `/projetos`, `/aulas`, `/biblioteca-3d` and
+ * `evento.responsavel`.
+ *
+ * **It predates feature 006 and nothing here is a regression.** `perfilMaker.read` is
+ * `scopedAccess()`, which keeps it off the REST surface, so it never reached a browser: it was
+ * fetched into the server's memory on every anonymous page view and discarded unrendered. That is
+ * a data-minimisation failure (LGPD art. 6, III) and one client component, one error
+ * serialization or one `depth` change away from being a disclosure.
+ *
+ * With this, the same read returns `avatarRender, handle, id, nivel, nome` and nothing else.
+ *
+ * ── Why it lives here and not at the call sites ──────────────────────────────────────────────
+ *
+ * Six pages populate an author today and the seventh is written next week. A rule each of them has
+ * to remember is a rule that holds until somebody forgets. This door is the one place every
+ * anonymous read already passes through, and `assertPubliclyReadable` beside it is the precedent:
+ * bound centrally, so a new page inherits the guarantee by existing rather than by being careful.
+ *
+ * Media is deliberately absent. `midiaImagem` and its siblings are public art, and a URL is the
+ * whole of what a card wants from them.
+ */
+const POPULACAO_PUBLICA = {
+  perfilMaker: { nome: true, handle: true, nivel: true, avatarRender: true },
+} as const
+
   const publicWhere = (collection: string): Where | undefined => {
     assertPubliclyReadable(collection)
     return PUBLISHABLE.has(collection) ? publiclyVisible(collection) : undefined
@@ -424,13 +533,30 @@ export async function getPublicScopedPayload(
     // allow-list refuses, and a synchronous throw out of a promise-returning method is a
     // different thing for callers to catch than a rejection. Every other method here rejects,
     // so this one must too — `.catch()` on the returned promise has to see it.
-    find: async (args) =>
-      base.find({ ...args, where: and(args.where, publicWhere(args.collection)) }),
+    find: async (args) => {
+      // Before `publicWhere`, so the caller who omitted the projection is told about the
+      // projection rather than about an admission that already exists.
+      assertProjected(args.collection, args.select)
+      return base.find({
+        ...args,
+        // The bound on populated relationships, applied to every anonymous read rather than
+        // remembered by each caller — see POPULACAO_PUBLICA.
+        populate: POPULACAO_PUBLICA,
+        where: and(args.where, publicWhere(args.collection)),
+      })
+    },
 
     // Issued as a constrained `find` for the same reason `findByID` is inside the builder:
     // an unpublished or foreign document must match zero rows rather than be fetched and
     // then judged. Guessing an id must not be a way past the status filter.
     findByID: async <T>(args: ByIDArgs) => {
+      // `ByIDArgs` carries no `select`, so a projection-required collection can never satisfy
+      // the gate here — the honest answer is a refusal rather than a whole row fetched by id.
+      // Guessing an id must not be the way past the projection, exactly as it is not the way
+      // past the status filter. If a single public profile is ever a page, it gets a named
+      // reader with its own `select`, not this method.
+      assertProjected(args.collection, undefined)
+
       // The one global read the anonymous path is allowed, and only for the organization the
       // **host** resolved to — never an id the caller chose. It is how a logged-out visitor
       // gets their own lab's accent colour (feature 001's FR-003), and `organizations` cannot
@@ -531,6 +657,122 @@ export async function readPublicOrganizationTheme(
   })
 
   return record ? { theme: record.theme } : null
+}
+
+/**
+ * One populated `midiaImagem`, reduced to the only field a sprite needs. Structural rather than
+ * imported from `payload-types.ts`, which is gitignored: a module that imported a generated type
+ * would compile locally and fail CI (tasks.md § "Read before starting").
+ */
+type MidiaDoc = { readonly url?: string | null }
+
+/**
+ * One place on the public board. The shape a caller may rely on — **and not the bound**, which is
+ * {@link CAMPOS_DO_RANKING}: a return type erases at runtime, so it decides what the caller sees
+ * and nothing at all about what the database was asked for.
+ */
+export type RankingRow = {
+  readonly id?: string | number
+  readonly nome?: string
+  readonly handle?: string
+  /** Populated at `depth: 1`; `null` while the compositor is blocked (FR-019, 004 T042). */
+  readonly avatarRender?: MidiaDoc | string | number | null
+  readonly xpTotal?: number
+  readonly nivel?: number
+}
+
+/**
+ * The columns the anonymous ranking is allowed to **fetch** (FR-030, FR-031, D2).
+ *
+ * Everything else `perfilMaker` carries — `dataNascimento`, `escolaridade`, `curso`,
+ * `vinculoUnesp`, `usuario` — is consented personal data (feature 004) and is absent here, so it
+ * is never read rather than read into an elevated anonymous context and dropped by convention.
+ *
+ * **Include mode only, every value `true`.** Payload's `getSelectMode` returns `exclude` the
+ * moment any value is `false`, and an exclude-mode projection serves every column nobody thought
+ * to name — which is how a field added to `perfilMaker` next year would become anonymously
+ * readable by the mere act of being declared. `assertProjected` refuses such a call at the door;
+ * this constant is the shape that satisfies it.
+ */
+export const CAMPOS_DO_RANKING = {
+  id: true,
+  nome: true,
+  handle: true,
+  avatarRender: true,
+  xpTotal: true,
+  nivel: true,
+} as const
+
+/**
+ * This organization's makers by XP, for a visitor with **no session** (FR-017, FR-021, FR-031).
+ *
+ * The fifth named exemption in `lib/tenancy`, and the one that reads a table holding consented
+ * personal data — so the argument is written out here rather than left to the call sites.
+ *
+ * ── Why this function exists at all ─────────────────────────────────────────────────────────
+ *
+ * Neither existing path serves an anonymous ranking. `scopedAccess()` refuses a caller with no
+ * user outright, and a bare `publicList` declaration serves the **whole row**: the door's own
+ * docstring says a `publicList` collection gets no status clause and no projection, which would
+ * put dates of birth and courses on a public page. `readPublicOrganizationTheme` above is the
+ * precedent for the *pattern* — *"deliberately not the whole row"* — and not for the mechanism:
+ * it projects by mapping after a full read, and a mapping is manners, not a bound.
+ *
+ * ── The bound is the `select`, and that is the whole of the decision ────────────────────────
+ *
+ * {@link CAMPOS_DO_RANKING} is passed to the query. A `RankingRow` return type would erase at
+ * runtime and leave the personal columns fetched into a function running `overrideAccess: true`
+ * on behalf of nobody, one error serialization away from exposure. A field-level `read` rule is
+ * **not** an alternative either: `fields/hooks/afterRead/promise.js` short-circuits on
+ * `overrideAccess ? true : …`, so it would defend `perfilMaker` against signed-in readers and
+ * not against this one caller.
+ *
+ * ── The order is imported, never retyped (FR-021) ───────────────────────────────────────────
+ *
+ * `ORDENACAO_DO_RANKING` is `/ranking`'s declaration, and a second literal here would be a second
+ * ranking free to disagree with the page the Home card links to. The import points at the page
+ * because that is where the constant is declared and tested (`tests/public/ranking-ordem.test.ts`
+ * asks a real Postgres whether it orders anything at all); nothing is evaluated at module load,
+ * so the reference costs a module, not a request.
+ *
+ * ── `depth: 1`, for `avatarRender` alone ────────────────────────────────────────────────────
+ *
+ * At depth 0 the relationship is an id, and an id is not art. Depth is the first lever to pull if
+ * the Home's LCP budget gets thin — and the projection does **not** reach into the populated
+ * document (`tests/tenancy/select.test.ts`), which is why a relationship to a collection that did
+ * hold personal data could not be made safe by this select alone.
+ *
+ * ── `null` means the read failed; `TenantUnresolvedError` is not a failed read ───────────────
+ *
+ * Both callers — `/ranking` and the Home card — draw *"Não foi possível carregar"* for `null` and
+ * an empty state for `[]` (FR-022), so the distinction is made once, here. An unresolved host is
+ * the **site's** 404 and is rethrown: a reader that swallowed it into `null` would render an
+ * error card on a host that belongs to no lab.
+ *
+ * @example
+ *   const linhas = await readPublicRanking(5) // the Home card's top five
+ */
+export async function readPublicRanking(limit: number): Promise<RankingRow[] | null> {
+  try {
+    const db = await getPublicScopedPayloadForRSC()
+    const { docs } = await db.find<RankingRow>({
+      // No `where`: the tenant is the door's, and a second opinion here is a second place to
+      // get it wrong.
+      collection: 'perfilMaker',
+      // Spread because the constant is `as const` — readonly, and `FindArgs.select` is a
+      // mutable `Record<string, boolean>`. A copy per call is cheaper than either a cast
+      // that hides the mismatch or a widened constant a caller could mutate.
+      select: { ...CAMPOS_DO_RANKING },
+      sort: ORDENACAO_DO_RANKING,
+      limit,
+      depth: 1,
+    })
+    return docs
+  } catch (erro) {
+    if (erro instanceof TenantUnresolvedError) throw erro
+    console.warn('[ranking] a leitura pública dos perfis falhou; quem chamou reporta em lugar.', erro)
+    return null
+  }
 }
 
 /**

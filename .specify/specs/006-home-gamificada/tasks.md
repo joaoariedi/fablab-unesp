@@ -120,17 +120,74 @@ and the thing it is exempting is a table carrying consented personal data.
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T006 | `FindArgs` gains `select?: Record<string, boolean>` **and `buildTenantClient.find` threads it**. Measured trap: that method does NOT spread its args — it lists `collection`, `depth`, `limit`, `sort`, `page`, `where` explicitly — so a type-only change typechecks green, drops the select, and fetches the personal columns while D2's bound appears to exist. Conditional spread, like `sort` and `page`, with their reason | FR-030, CHK001 | `apps/web/lib/tenancy/client.ts` | — |
-| T007 | Prove the `select` **narrows what the database returns**, against a real database — not that it typechecks, and not merely that the object has two keys. Measure and record four things the design rests on: whether a select naming a field that does not exist throws or is ignored (a silent ignore turns a typo into a full-row read); whether omitting `id` still yields usable rows; whether a selected relationship still populates at `depth: 1`; and whether `select` composes with the `where` the door AND-s in | [V] FR-030, SC-022, CHK024, CHK037–CHK039 | `apps/web/tests/tenancy/select.test.ts` | T006 |
-| T008 | `publicList` on `perfilMaker`, **and the door refuses a `perfilMaker` read that carries no `select`** (CLR-010). The declaration is collection-wide and the projection is per-call, so without the refusal any later page may `find({ collection: 'perfilMaker' })` and receive the consented fields. Deny-by-default is the shape `assertPubliclyReadable` already uses, one level finer. Record beside it that `overrideAccess: true` bypasses field-level read access, so nobody proposes a field rule as the defence | FR-030, FR-031, FR-036, CHK021, CHK034 | `apps/web/lib/tenancy/scope-registry.ts`, `apps/web/lib/tenancy/public-payload.ts` | T006 |
-| T009 | `readPublicRanking(limit)` — `CAMPOS_DO_RANKING` as the `select`, `ORDENACAO_DO_RANKING` imported rather than retyped, `depth: 1` for `avatarRender` alone | FR-017, FR-021, FR-031 | `apps/web/lib/tenancy/public-payload.ts` | T008 |
-| T009b | The refusal is the **door's**, not the reader's: call the public client directly with `{ collection: 'perfilMaker' }` and no `select`, and assert it is refused with a message naming the reason | [V] FR-036, SC-021 | `apps/web/tests/tenancy/public-ranking.test.ts` | T008 |
-| T010 | **The security assertion.** A fixture maker created **with** `dataNascimento`, `escolaridade`, `curso`, `vinculoUnesp` and `usuario` populated, then `readPublicRanking` asserted to return none of them. A fixture without those values passes on a row that had nothing to leak, which is the sixth occurrence of preamble item 3 | [V] FR-030, FR-031 | `apps/web/tests/tenancy/public-ranking.test.ts` | T009 |
-| T011 | A **backstop**, not the guard: scan the tree for a second caller listing `perfilMaker` through the public client. CHK022 is right that a scan only catches a call written in the form it recognises — T008's refusal is what makes the bound structural, and this row exists to catch the careless case early with a better message | [V] FR-031, CHK022 | `apps/web/tests/tenancy/public-ranking.test.ts` | T009 |
-| T012 | `/ranking` moves onto `readPublicRanking` | FR-017 | `apps/web/app/(frontend)/ranking/page.tsx` | T009 |
-| T013 | **The live defect, asserted**: a signed-out visitor on a lab with makers sees the board, not *"Ainda sem makers no ranking"*. It reads empty today, which is the CLR-004 failure mode shipped | [V] FR-017, US5 | `apps/web/tests/public/ranking-page.test.ts` | T012 |
-| T013b | `docs/lgpd.md` records what an anonymous visitor can now enumerate about a lab's members — the roster as a list, with relative standing — and a test binds it to the **code**, not to a hand-kept list. 005 shipped a list that went stale under a comment explaining why it was correct, and the doc test could not see it because it read that same list | FR-037, CLR-014, CHK030 | `docs/lgpd.md`, `apps/web/tests/accounts/lgpd-doc.test.ts` | T012 |
-| T014 | The whole `apps/web/tests/tenancy/` directory, green, with ↓ markers read as failures — this phase touches the registry and the doors. The `choke-point` and `xp-ledger` mutation layers must still fail when planted, after `select` is threaded through `buildTenantClient.find` | [V] FR-031, CHK035 | `apps/web/tests/tenancy/`, `scripts/isolation-mutation.sh` | T013b |
+| ✅ T006 | `FindArgs` gains `select?: Record<string, boolean>` **and `buildTenantClient.find` threads it**. Measured trap: that method does NOT spread its args — it lists `collection`, `depth`, `limit`, `sort`, `page`, `where` explicitly — so a type-only change typechecks green, drops the select, and fetches the personal columns while D2's bound appears to exist. Conditional spread, like `sort` and `page`, with their reason | FR-030, CHK001 | `apps/web/lib/tenancy/client.ts` | — |
+| ✅ T007 | Prove the `select` **narrows what the database returns**, against a real database — not that it typechecks, and not merely that the object has two keys. Measure and record four things the design rests on: whether a select naming a field that does not exist throws or is ignored (a silent ignore turns a typo into a full-row read); whether omitting `id` still yields usable rows; whether a selected relationship still populates at `depth: 1`; and whether `select` composes with the `where` the door AND-s in | [V] FR-030, SC-022, CHK024, CHK037–CHK039 | `apps/web/tests/tenancy/select.test.ts` | T006 |
+| ✅ T008 | `publicList` on `perfilMaker`, **and the door refuses a `perfilMaker` read that carries no `select`** (CLR-010). The declaration is collection-wide and the projection is per-call, so without the refusal any later page may `find({ collection: 'perfilMaker' })` and receive the consented fields. Deny-by-default is the shape `assertPubliclyReadable` already uses, one level finer. Record beside it that `overrideAccess: true` bypasses field-level read access, so nobody proposes a field rule as the defence | FR-030, FR-031, FR-036, CHK021, CHK034 | `apps/web/lib/tenancy/scope-registry.ts`, `apps/web/lib/tenancy/public-payload.ts` | T006 |
+| ✅ T009 | `readPublicRanking(limit)` — `CAMPOS_DO_RANKING` as the `select`, `ORDENACAO_DO_RANKING` imported rather than retyped, `depth: 1` for `avatarRender` alone | FR-017, FR-021, FR-031 | `apps/web/lib/tenancy/public-payload.ts` | T008 |
+| ✅ T009b | The refusal is the **door's**, not the reader's: call the public client directly with `{ collection: 'perfilMaker' }` and no `select`, and assert it is refused with a message naming the reason | [V] FR-036, SC-021 | `apps/web/tests/tenancy/public-ranking.test.ts` | T008 |
+| ✅ T010 | **The security assertion.** A fixture maker created **with** `dataNascimento`, `escolaridade`, `curso`, `vinculoUnesp` and `usuario` populated, then `readPublicRanking` asserted to return none of them. A fixture without those values passes on a row that had nothing to leak, which is the sixth occurrence of preamble item 3 | [V] FR-030, FR-031 | `apps/web/tests/tenancy/public-ranking.test.ts` | T009 |
+| ✅ T011 | A **backstop**, not the guard: scan the tree for a second caller listing `perfilMaker` through the public client. CHK022 is right that a scan only catches a call written in the form it recognises — T008's refusal is what makes the bound structural, and this row exists to catch the careless case early with a better message | [V] FR-031, CHK022 | `apps/web/tests/tenancy/public-ranking.test.ts` | T009 |
+| ✅ T012 | `/ranking` moves onto `readPublicRanking` | FR-017 | `apps/web/app/(frontend)/ranking/page.tsx` | T009 |
+| ✅ T013 | **The live defect, asserted**: a signed-out visitor on a lab with makers sees the board, not *"Ainda sem makers no ranking"*. It reads empty today, which is the CLR-004 failure mode shipped | [V] FR-017, US5 | `apps/web/tests/public/ranking-page.test.ts` | T012 |
+| ✅ T013b | `docs/lgpd.md` records what an anonymous visitor can now enumerate about a lab's members — the roster as a list, with relative standing — and a test binds it to the **code**, not to a hand-kept list. 005 shipped a list that went stale under a comment explaining why it was correct, and the doc test could not see it because it read that same list | FR-037, CLR-014, CHK030 | `docs/lgpd.md`, `apps/web/tests/accounts/lgpd-doc.test.ts` | T012 |
+| ✅ T014 | The whole `apps/web/tests/tenancy/` directory, green, with ↓ markers read as failures — this phase touches the registry and the doors. The `choke-point` and `xp-ledger` mutation layers must still fail when planted, after `select` is threaded through `buildTenantClient.find` | [V] FR-031, CHK035 | `apps/web/tests/tenancy/`, `scripts/isolation-mutation.sh` | T013b |
+
+### What phase 2 cost — a bound that was real, a test that could not see it, and a leak nobody was looking for
+
+Seven of eleven accepted at the halt. All three rejections were right, and one of them found
+something that outranks this feature.
+
+**1. T007's test could not make the distinction it existed to make.** CHK024 asked for the SQL —
+*"verify against the built SQL, not the returned object"* — and every assertion read `Object.keys`
+off the returned document. The verifier went further than rejecting: they set Postgres
+`log_statement='all'` and proved the projection **is** real. So the code was right and the proof
+was not, which is the harder version of this failure.
+
+The fix captures `payload.db.pool.query` around one read and asserts the statement text. Probed
+with the mutation that matters: a client that drops the `select` and trims the result in
+JavaScript — indistinguishable at the call site, opposite at the database boundary. **Exactly one
+case fails**, the new one, while all eleven key-based cases stay green over a query that fetched
+every consented column. That is CHK024's distinction, demonstrated.
+
+My first attempt at this test reported the projection was NOT reaching the query. It was a
+call-site error of my own — `lerPerfil(PUBLICOS)` where the helper takes `{ select }` — and the
+capture was reading a full-column SQL because no select had been passed at all. Worth recording:
+an instrument sharp enough to find a real defect is sharp enough to manufacture one.
+
+**2. T009 tripped a guard from 004, and it was a true false positive.** `avatar-asset.test.ts` § 6
+scans `app/` and `lib/` for `avatarRender\s*:\s*(...)` and allows only `null`, because SETTING
+that column is one module's alone. `CAMPOS_DO_RANKING`'s `avatarRender: true` is a **projection
+flag**, not a write. The scan now allows `true` with the reason that a relationship column cannot
+hold a boolean, so a value that cannot be stored cannot be a write — widened deliberately rather
+than taught to recognise `select` blocks, which would be a text heuristic about syntax where this
+is a statement about values. Mutating the value to anything else still turns it red.
+
+**3. The finding that outranks the feature.** While probing T008 a verifier read `artigo` through
+the anonymous door at `depth: 1` and got the **whole** `perfilMaker` row. Reproduced here:
+
+```text
+aceiteTermosEm, aceiteTermosVersao, avatarConfig, avatarRender, createdAt, curso,
+dataNascimento, escolaridade, handle, id, nivel, nome, skills, tenant, updatedAt,
+usuario, vinculoUnesp, xpTotal
+```
+
+`dataNascimento`, `vinculoUnesp`, `escolaridade`, `curso` — the consented fields of 004's signup
+step 2 — reachable through `/artigos`, `/projetos`, `/aulas`, `/biblioteca-3d` and
+`evento.responsavel`. **`select` does not cover it**: it bounds the columns of the collection being
+read and says nothing about the rows fetched to populate a relationship on it, and every public
+listing runs at `depth: 1` so an author arrives as art rather than an id.
+
+**It predates 006 and is on `dev` today.** `perfilMaker.read` is `scopedAccess()`, which keeps the
+collection off the REST surface, so it never reached a browser — it was fetched into the server's
+memory on every anonymous page view and discarded unrendered. A data-minimisation failure (LGPD
+art. 6, III) rather than a disclosure, and one client component, one error serialization or one
+`depth` change from being the second thing.
+
+Closed with `POPULACAO_PUBLICA` at the door — `{ perfilMaker: { nome, handle, nivel, avatarRender } }`
+— applied to every anonymous read rather than to six call sites, because six pages populate an
+author today and the seventh is written next week. The same read now returns
+`avatarRender, handle, id, nivel, nome` and nothing else. `public-populate.test.ts` is what stops
+it reopening, with a fixture whose maker carries real values in every one of those fields.
 
 ## Phase 3: The shared mission model, split two ways
 

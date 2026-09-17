@@ -171,20 +171,29 @@ describe('public-list declarations', () => {
     )
   })
 
-  it('declares exactly the four collections a page LISTS, and no more', () => {
+  it('declares exactly the collections a page LISTS, and no more', () => {
     // The assertion above restates the accessor against a direct read of the same field, so it
     // proves the plumbing and not the decision. THIS is the decision, and it is the one with a
     // security consequence: every entry here is a collection an anonymous visitor may enumerate
-    // in full, with no published-only filter.
+    // with no published-only filter.
     //
-    // The four are the ones a page enumerates — the filter vocabularies and the machine select.
-    // Everything else the pages render is reached by POPULATING a published document, which the
-    // gate does not re-check, so it needs no declaration and must not be given one. Declaring
-    // `midiaImagem` here would make every draft's files enumerable; declaring `perfilMaker`
-    // would list the members of the lab. Neither is hypothetical — the 002 leak was exactly
-    // this shape, one collection at a time.
+    // The first four are the ones a page enumerates — the filter vocabularies and the machine
+    // select. Everything else the pages render is reached by POPULATING a published document,
+    // which the gate does not re-check, so it needs no declaration and must not be given one.
+    // Declaring `midiaImagem` here would make every draft's files enumerable. That is not
+    // hypothetical — the 002 leak was exactly this shape, one collection at a time.
+    //
+    // `perfilMaker` is the fifth, added by T008 for the anonymous ranking (FR-017), and this
+    // comment used to name it as the example of what must never be declared. What changed is
+    // not the risk — a whole `perfilMaker` row still carries `dataNascimento`, `escolaridade`,
+    // `curso`, `vinculoUnesp` and `usuario` — but where the bound lives: CLR-010 makes the
+    // public door refuse any read of it that does not carry a `select`, so the declaration
+    // admits the collection while the projection decides, per call, which columns leave. It is
+    // the one entry in this list that is not sufficient on its own, and `public-payload.test.ts`
+    // is where that second half is asserted.
     expect(publicListCollections()).toEqual([
       'categoriaProjeto',
+      'perfilMaker',
       'categoriaArtigo',
       'categoriaModelo',
       'maquina',

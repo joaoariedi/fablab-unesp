@@ -394,3 +394,108 @@ describe('public-list admission (FR-002, SC-003)', () => {
     ).rejects.toBeInstanceOf(PublicReadDeniedError)
   })
 })
+
+/**
+ * The projection-conditional admission (T008, CLR-010, FR-030, FR-036, SC-021).
+ *
+ * `perfilMaker` is the first collection whose `publicList` declaration is **not** enough on its
+ * own. The declaration is collection-wide and the projection is per-call, so admitting the
+ * collection the way `categoriaProjeto` is admitted would mean that the day after this feature
+ * ships any page may write `db.find({ collection: 'perfilMaker' })` and receive
+ * `dataNascimento`, `escolaridade`, `curso`, `vinculoUnesp` and `usuario` — the consented
+ * personal data feature 004 collects. The door therefore refuses the read unless the call names
+ * the columns it wants, which is the same deny-by-default `assertPubliclyReadable` already uses,
+ * one level finer.
+ *
+ * **The refusal has to live in the door, not in the reader.** `readPublicRanking` (T009) passes a
+ * `select` and would look correct either way; a tree scan (T011) only catches a call written in
+ * the form it recognises. Only the gate refuses the call nobody thought to write.
+ *
+ * **And field-level read access cannot stand in for it.** This client runs with
+ * `overrideAccess: true`, and the installed Payload short-circuits on exactly that:
+ * `const canReadField = overrideAccess ? true : await field.access.read({ … })`
+ * (`fields/hooks/afterRead/promise.js`). A field rule would defend `perfilMaker` against
+ * signed-in readers and not against the one caller in question.
+ */
+describe('perfilMaker is admitted by the projection, not by the declaration (CLR-010)', () => {
+  /** What the ranking card asks for — the four public columns, in include mode. */
+  const PROJECAO = { handle: true, nome: true, xpTotal: true, nivel: true }
+
+  it('refuses a find that carries no select, and says the select is what is missing', async () => {
+    const db = await getPublicScopedPayload(world.orgA.host)
+
+    await expect(
+      db.find({ collection: 'perfilMaker', limit: 5 }),
+      'an unprojected perfilMaker listing was served — every row carries the personal columns',
+    ).rejects.toBeInstanceOf(PublicReadDeniedError)
+
+    // SC-021 asks for a message that names the reason: a refusal a caller cannot act on sends
+    // them looking for a missing `publicList` declaration that is in fact already there.
+    await expect(db.find({ collection: 'perfilMaker' })).rejects.toThrow(/select/)
+  })
+
+  it('refuses an exclude-mode select, which names everything it did not mention', async () => {
+    // Measured, not assumed: `getSelectMode` (payload 3.88) returns `'exclude'` the moment any
+    // value is `false`, so `{ dataNascimento: false }` fetches every other column — including
+    // `escolaridade`, `curso`, `vinculoUnesp` and `usuario`. "Carries a select" is satisfied by
+    // it, so presence alone is not the bound; naming the columns that may leave is.
+    const db = await getPublicScopedPayload(world.orgA.host)
+
+    await expect(
+      db.find({ collection: 'perfilMaker', select: { dataNascimento: false } }),
+      'an exclude-mode projection was accepted — it bounds nothing but the one field it names',
+    ).rejects.toBeInstanceOf(PublicReadDeniedError)
+  })
+
+  it('refuses a select that names no column at all', async () => {
+    // `{}` is include mode with nothing included, so it is harmless today — and it is refused
+    // anyway, because "carries a select object" and "says which columns may leave" have to be
+    // the same question. A gate that accepts the empty object is one `Object.keys` away from
+    // accepting whatever a caller builds dynamically and gets wrong.
+    const db = await getPublicScopedPayload(world.orgA.host)
+
+    await expect(db.find({ collection: 'perfilMaker', select: {} })).rejects.toBeInstanceOf(
+      PublicReadDeniedError,
+    )
+  })
+
+  it('refuses findByID outright — ByIDArgs carries no projection to be bounded by', async () => {
+    // The admission is conditional on something `findByID` cannot supply, so the honest answer
+    // is a refusal rather than a full row fetched by id. Guessing an id must not be the way
+    // past the projection, exactly as it is not the way past the status filter.
+    const db = await getPublicScopedPayload(world.orgA.host)
+
+    await expect(
+      db.findByID({ collection: 'perfilMaker', id: world.rows.perfilMaker!.A }),
+      'a whole perfilMaker row was served by id, projection or no projection',
+    ).rejects.toBeInstanceOf(PublicReadDeniedError)
+  })
+
+  it('serves the read that names its columns, with the projection and the tenant intact', async () => {
+    // Asserted on the query the client issued rather than on the rows: the two things that must
+    // both survive the new gate are the projection (which columns) and the tenant clause (whose
+    // rows), and a row count cannot tell either of them apart from a lucky fixture.
+    const spy = vi.spyOn(world.payload, 'find').mockResolvedValue({
+      docs: [],
+      totalDocs: 0,
+    } as never)
+
+    const db = await getPublicScopedPayload(world.orgA.host, {
+      lookup: stubHostLookup(world.orgA.id),
+    })
+    await db.find({ collection: 'perfilMaker', select: PROJECAO, limit: 5 })
+
+    const call = spy.mock.calls.at(-1)?.[0]
+    expect(call?.select, 'the projection never reached the query').toEqual(PROJECAO)
+    expect(
+      JSON.stringify(call?.where ?? {}),
+      'the tenant constraint was dropped once the collection was admitted',
+    ).toContain(world.orgA.id)
+    // `perfilMaker` has no `status` column, so a defensive clause would make Payload reject the
+    // whole query ("The following path cannot be queried: status") rather than return nothing.
+    expect(
+      JSON.stringify(call?.where ?? {}),
+      'a published-only filter was built for a collection with no status column',
+    ).not.toContain('publicado')
+  })
+})
