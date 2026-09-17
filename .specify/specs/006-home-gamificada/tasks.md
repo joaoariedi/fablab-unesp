@@ -193,11 +193,46 @@ it reopening, with a fixture whose maker carries real values in every one of tho
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T015 | The **pure** half: `ETAPAS_DA_MISSAO`, `ETAPAS_POR_ESTADO`, `estadoDe`, `StatusSubmissao`, `EstadoPessoal`. No `next/headers`, no database — `lib/content/`'s convention is a module you can test with a fake | FR-007 | `apps/web/lib/content/missoes.ts` | — |
-| T016 | Its unit tests, with no database at all: each review state maps to its step count, and an unknown state is treated as no submission rather than indexed into a record that has no such key | [V] FR-007 | `apps/web/tests/content/missoes-model.test.ts` | T015 |
-| T017 | The **RSC** half: `estadoPessoal` and `submissoesDoMaker` move to `lib/public/`, beside `listing.ts`, which is where this codebase keeps page-facing readers | FR-008, FR-010 | `apps/web/lib/public/missoes.ts` | T015 |
-| T018 | `/missoes` imports both and keeps its own rendering. Its **whole** suite green, not the one file | FR-007 | `apps/web/app/(frontend)/missoes/page.tsx` | T017 |
-| T019 | Neither page imports the other, asserted rather than assumed — two pages importing each other's module is what this split exists to prevent | [V] FR-007 | `apps/web/tests/content/missoes-model.test.ts` | T018 |
+| ✅ T015 | The **pure** half: `ETAPAS_DA_MISSAO`, `ETAPAS_POR_ESTADO`, `estadoDe`, `StatusSubmissao`, `EstadoPessoal`. No `next/headers`, no database — `lib/content/`'s convention is a module you can test with a fake | FR-007 | `apps/web/lib/content/missoes.ts` | — |
+| ✅ T016 | Its unit tests, with no database at all: each review state maps to its step count, and an unknown state is treated as no submission rather than indexed into a record that has no such key | [V] FR-007 | `apps/web/tests/content/missoes-model.test.ts` | T015 |
+| ✅ T017 | The **RSC** half: `estadoPessoal` and `submissoesDoMaker` move to `lib/public/`, beside `listing.ts`, which is where this codebase keeps page-facing readers | FR-008, FR-010 | `apps/web/lib/public/missoes.ts` | T015 |
+| ✅ T018 | `/missoes` imports both and keeps its own rendering. Its **whole** suite green, not the one file | FR-007 | `apps/web/app/(frontend)/missoes/page.tsx` | T017 |
+| ✅ T019 | Neither page imports the other, asserted rather than assumed — two pages importing each other's module is what this split exists to prevent | [V] FR-007 | `apps/web/tests/content/missoes-model.test.ts` | T018 |
+
+### What phase 3 cost — a guard defeated by a quotation mark
+
+Three of five accepted at the halt, and the two rejections were about the same file from opposite
+directions.
+
+**T016 was the eighth "moment, not the tree".** A mutation probe planted an RSC door import in
+`lib/content/missoes.ts` and the restore had not landed when the verifier looked: line 1 read
+`import { getTenantScopedPayloadForRSC } from '../tenancy/scoped-payload'`, unused, and the two
+purity assertions were red. The verifier's forensics were exactly right — a dead import is the
+shape of a leftover mutation, and the RED they cited matched the tree they saw. By the halt the
+only occurrence of that symbol was a docblock mention and all eleven tests passed.
+
+**T015 found something that does not change with time, and it is the interesting one.** The purity
+guard parsed import specifiers with `/from\s+'([^']+)'/g` — **single quotes only**. Nothing in the
+repository normalises quote style: there is no prettier config and `eslint.config.mjs` declares no
+`quotes` rule. So `import { getTenantScopedPayloadForRSC } from "../tenancy"` defeats it, and the
+verifier proved that by adding exactly that line and watching all eleven tests pass, purity guards
+included.
+
+That is the eighth occurrence of *a guard written against its own test's cases*, in a costume the
+previous seven did not wear: not a missing case in the fixture, but the **formatting the author
+happened to use**. The implementer's own mutation probe used single quotes too, so the cycle meant
+to find the gap reproduced it.
+
+It matters more than it looks. This guard is the only enforcement of plan § D3's pure/RSC split —
+there is no `no-restricted-imports` block fencing `lib/content/**` from `lib/tenancy` or
+`next/headers` — and phases 4 and 5 add readers next door. A guard a contributor defeats with a
+double quote reports green while the split it was made for is gone: *"a green `pnpm lint` and no
+diff anywhere near the code it stopped guarding"*, which is the failure `eslint.config.mjs` warns
+about in its own header.
+
+Fixed by matching either quote and, while there, the side-effect form `import '…'` — which pulls a
+door in without naming a binding, so the `from` pattern would never have seen it. Both probed: a
+double-quoted `../tenancy` and a bare `import '../tenancy'` each turn both assertions red.
 
 ## Phase 4: The panels
 
