@@ -3,7 +3,7 @@ import { cache } from 'react'
 
 // `/ranking` declares the order (FR-013) and this reader honours it — see `readPublicRanking`.
 // The import is of a constant, so no component is evaluated by it.
-import { ORDENACAO_DO_RANKING } from '../../app/(frontend)/ranking/page'
+import { ORDENACAO_DO_RANKING } from '../content/ranking'
 
 import {
   buildTenantClient,

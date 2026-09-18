@@ -3,7 +3,7 @@ import { join } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
-import { ORDENACAO_DO_RANKING } from '../../app/(frontend)/ranking/page'
+import { ORDENACAO_DO_RANKING } from '../../lib/content/ranking'
 import { PerfilMaker } from '../../collections/content/PerfilMaker'
 import { Users } from '../../collections/Users'
 import { COLECOES_COM_AUTOR } from '../../lib/accounts/deletion'
@@ -47,7 +47,10 @@ const RECORD = join(ROOT, 'docs', 'lgpd.md')
 const BACKLOG = join(ROOT, 'docs', 'backlog.md')
 const STEP_TWO = join(ROOT, 'apps', 'web', 'app', '(frontend)', 'criar-conta', 'dados', 'page.tsx')
 const DELETION_PAGE = join(ROOT, 'apps', 'web', 'app', '(frontend)', 'minha-conta', 'excluir', 'page.tsx')
-const RANKING_PAGE = join(ROOT, 'apps', 'web', 'app', '(frontend)', 'ranking', 'page.tsx')
+// `RANKING_PATH` and `ORDENACAO_DO_RANKING` moved off the page in 006: two surfaces needed them
+// — the Home's footer link and `readPublicRanking`'s order — and a library importing a route
+// module inverts the tenancy layer's dependency direction (T019).
+const RANKING_PAGE = join(ROOT, 'apps', 'web', 'lib', 'content', 'ranking.ts')
 
 /**
  * The record, or the empty string when it is absent.
@@ -314,7 +317,13 @@ describe('docs/lgpd.md records what the code actually collects (FR-030)', () => 
 const RANKING_PATH = fromSource(RANKING_PAGE, /export const RANKING_PATH = '([^']+)'/, 'RANKING_PATH')
 
 /** How many places that page draws — the size of the roster a single anonymous request returns. */
-const LIMITE_DO_RANKING = fromSource(RANKING_PAGE, /const LIMITE_DO_RANKING = (\d+)/, 'LIMITE_DO_RANKING')
+// Still on the page, and deliberately: it is how many places the FULL BOARD draws, which is that
+// route's own decision. The two constants above moved because a second surface needed them.
+const LIMITE_DO_RANKING = fromSource(
+  join(ROOT, 'apps', 'web', 'app', '(frontend)', 'ranking', 'page.tsx'),
+  /const LIMITE_DO_RANKING = (\d+)/,
+  'LIMITE_DO_RANKING',
+)
 
 /**
  * The declared order, spelled as `/ranking` spells it.

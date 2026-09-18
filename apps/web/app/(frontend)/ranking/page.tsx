@@ -59,25 +59,14 @@ export const metadata = { title: 'RANKING — Fab Lab CITe Bauru' }
 
 /** This page's own path. Every link here — 006's Home card included — is built from this, so
  *  the route moves in one edit and no href is left pointing at the old one. */
-export const RANKING_PATH = '/ranking'
+// `RANKING_PATH` and `ORDENACAO_DO_RANKING` moved to `lib/content/ranking.ts` in feature 006.
+// Two surfaces needed them — the Home's footer link and `readPublicRanking`'s order — and a
+// LIBRARY importing a route module inverts the dependency the tenancy layer is built on. Re-
+// exported here so this page stays the place a reader looks for what the board is.
+import { ORDENACAO_DO_RANKING, RANKING_PATH } from '../../../lib/content/ranking'
 
-/**
- * The declared order (FR-013). Named, because it is the requirement — a literal retyped at a
- * second call site is a second ranking free to disagree with this one.
- *
- * **An array, and the comma-joined string it replaced was not a multi-key sort at all.** Payload
- * splits on `,` only in `sanitizeSortParams`, which is wired into the REST layer; the local API
- * an RSC reaches calls `sanitizeSortQuery`, which does not split. `@payloadcms/drizzle`'s
- * `buildOrderBy` then wraps the whole string in an array, fails to resolve a column named
- * `xpTotal,handle`, swallows the failure in a bare `catch (_) { continue }`, and leaves the
- * `-createdAt` it pushes before the loop. The board listed the **newest profile first** — not
- * by XP, and with no tie-break — and FR-013 was met in no part.
- *
- * It passed its own test because the fake in `ranking-page.test.ts` split the comma. The witness
- * is now `tests/public/ranking-ordem.test.ts`, which asks a real Postgres, on a fixture built so
- * the `-createdAt` fallback returns the exact opposite of the right answer.
- */
-export const ORDENACAO_DO_RANKING = ['-xpTotal', 'handle']
+export { ORDENACAO_DO_RANKING, RANKING_PATH }
+
 
 /** How many places the board draws. A guard against an unbounded read, not a paging strategy —
  *  and emphatically not Payload's default of 10, which would drop a lab's eleventh maker from

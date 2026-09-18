@@ -241,20 +241,77 @@ the suite is red between two commits for a reason nobody can interpret.
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T020 | `lerMissoesEmDestaque` — the public door, `where` carrying **only** `destaqueHome` (the door adds the status filter), `sort: ['ordemDestaque', 'titulo']` as an **array**, `limit` at three | FR-004, FR-005, FR-011 | `apps/web/app/(frontend)/page.tsx` | T005 |
-| T021 | The band: icon, title, description, the bar, and `VER TODAS ›` → `/missoes` — the link that closes the gap that page reported against itself | FR-006, FR-011, US6 | `apps/web/app/(frontend)/page.tsx` | T020 |
-| T022 | The personal overlay: the signed-in maker's own percentage through `lib/public/missoes.ts`, **no percentage at all** when there is no session (CLR-002), and and a failed personal read costing the percentages rather than the band — **with wording that says so** (CLR-013), because silence there is character-for-character the signed-out card and a signed-in maker reads it as having been logged out | FR-008, FR-009, FR-010, SC-023, CHK053 | `apps/web/app/(frontend)/page.tsx` | T021, T017 |
+| ✅ T020 | `lerMissoesEmDestaque` — the public door, `where` carrying **only** `destaqueHome` (the door adds the status filter), `sort: ['ordemDestaque', 'titulo']` as an **array**, `limit` at three | FR-004, FR-005, FR-011 | `apps/web/app/(frontend)/page.tsx` | T005 |
+| ✅ T021 | The band: icon, title, description, the bar, and `VER TODAS ›` → `/missoes` — the link that closes the gap that page reported against itself | FR-006, FR-011, US6 | `apps/web/app/(frontend)/page.tsx` | T020 |
+| ✅ T022 | The personal overlay: the signed-in maker's own percentage through `lib/public/missoes.ts`, **no percentage at all** when there is no session (CLR-002), and and a failed personal read costing the percentages rather than the band — **with wording that says so** (CLR-013), because silence there is character-for-character the signed-out card and a signed-in maker reads it as having been logged out | FR-008, FR-009, FR-010, SC-023, CHK053 | `apps/web/app/(frontend)/page.tsx` | T021, T017 |
 | T023 | `lerNivelDoLab` — **catching**, because `nivelDoLab` throws for a lab with no `regrasXp` — and the card: level, and the bar from `progresso`. No `Próxima recompensa`, and never the mockup's `1250 / 2000`. **Two outcomes, not three** (CLR-011): a value or a failure. Level 0 on an empty lab is a value and renders as the card | FR-012, FR-013, FR-014, FR-015, CHK005 | `apps/web/app/(frontend)/page.tsx` | — |
-| T024 | The ranking card: five rows through `readPublicRanking`, two-digit positions, name, `@handle`, XP, the placeholder for a null avatar, and `VER RANKING COMPLETO` → `/ranking` | FR-017, FR-018, FR-019, FR-020 | `apps/web/app/(frontend)/page.tsx` | T009 |
-| T025 | The rows are **not** links, and the card authorship is not either — CLR-007 defers the destination, and an anchor pointing nowhere is the failure that records | [V] FR-035 | `apps/web/tests/public/home-paineis.test.ts` | T024 |
-| T026 | The four reads in **one `Promise.all`**, every reader rethrowing `TenantUnresolvedError` into `notFound()`. The personal overlay is awaited after, because it needs the mission ids and a signed-out visitor never makes it — it is a **fifth** read and deliberately outside the four SC-012 counts (CLR-012), so that "four" never quietly means "four of five" | FR-026, CLR-006, CLR-012, CHK006 | `apps/web/app/(frontend)/page.tsx` | T020, T023, T024 |
-| T027 | Each block's three outcomes wired: data, `[]` empty with its own wording, `null` failed with *"Não foi possível carregar"* and `Tentar novamente` | FR-022, FR-023, FR-024 | `apps/web/app/(frontend)/page.tsx` | T026 |
-| T028 | **`home.test.ts` § 3 inverted, in this change.** The three sections must now be present and `ProgressBar` must mount; **`SkillPips` stays at zero** — the Home draws no skills. And the page's docblock § *"What Home v1 does NOT have"* is rewritten to say what it now has | FR-027, FR-028, US10 | `apps/web/tests/public/home.test.ts`, `apps/web/app/(frontend)/page.tsx` | T027 |
-| T029 | Each of the four blocks, failed in isolation, leaves the other three rendering — four cases, one per block | [V] FR-023, US7 | `apps/web/tests/public/home-paineis.test.ts` | T027 |
-| T030 | An unresolved host 404s the page rather than rendering four error cards | [V] FR-025, US7 | `apps/web/tests/public/home-paineis.test.ts` | T026 |
-| T031 | The empty states, per block, in the wording `home.md` gives each | [V] FR-024, US8 | `apps/web/tests/public/home-paineis.test.ts` | T027 |
-| T032 | Signed out: three panels present, **no percentage anywhere** in the band. Signed in: the maker's own percentages, and nobody else's readable | [V] FR-008, FR-009, US1, US2 | `apps/web/tests/public/home-paineis.test.ts` | T022 |
-| T033 | The reads overlap, proven by **event order** and never by a clock: all four issued before the first resolves | [V] FR-026, SC-012 | `apps/web/tests/public/home-concorrencia.test.ts` | T026 |
+| ✅ T024 | The ranking card: five rows through `readPublicRanking`, two-digit positions, name, `@handle`, XP, the placeholder for a null avatar, and `VER RANKING COMPLETO` → `/ranking` | FR-017, FR-018, FR-019, FR-020 | `apps/web/app/(frontend)/page.tsx` | T009 |
+| ✅ T025 | The rows are **not** links, and the card authorship is not either — CLR-007 defers the destination, and an anchor pointing nowhere is the failure that records | [V] FR-035 | `apps/web/tests/public/home-paineis.test.ts` | T024 |
+| ✅ T026 | The four reads in **one `Promise.all`**, every reader rethrowing `TenantUnresolvedError` into `notFound()`. The personal overlay is awaited after, because it needs the mission ids and a signed-out visitor never makes it — it is a **fifth** read and deliberately outside the four SC-012 counts (CLR-012), so that "four" never quietly means "four of five" | FR-026, CLR-006, CLR-012, CHK006 | `apps/web/app/(frontend)/page.tsx` | T020, T023, T024 |
+| ✅ T027 | Each block's three outcomes wired: data, `[]` empty with its own wording, `null` failed with *"Não foi possível carregar"* and `Tentar novamente` | FR-022, FR-023, FR-024 | `apps/web/app/(frontend)/page.tsx` | T026 |
+| ✅ T028 | **`home.test.ts` § 3 inverted, in this change.** The three sections must now be present and `ProgressBar` must mount; **`SkillPips` stays at zero** — the Home draws no skills. And the page's docblock § *"What Home v1 does NOT have"* is rewritten to say what it now has | FR-027, FR-028, US10 | `apps/web/tests/public/home.test.ts`, `apps/web/app/(frontend)/page.tsx` | T027 |
+| ✅ T029 | Each of the four blocks, failed in isolation, leaves the other three rendering — four cases, one per block | [V] FR-023, US7 | `apps/web/tests/public/home-paineis.test.ts` | T027 |
+| ✅ T030 | An unresolved host 404s the page rather than rendering four error cards | [V] FR-025, US7 | `apps/web/tests/public/home-paineis.test.ts` | T026 |
+| ✅ T031 | The empty states, per block, in the wording `home.md` gives each | [V] FR-024, US8 | `apps/web/tests/public/home-paineis.test.ts` | T027 |
+| ✅ T032 | Signed out: three panels present, **no percentage anywhere** in the band. Signed in: the maker's own percentages, and nobody else's readable | [V] FR-008, FR-009, US1, US2 | `apps/web/tests/public/home-paineis.test.ts` | T022 |
+| ✅ T033 | The reads overlap, proven by **event order** and never by a clock: all four issued before the first resolves | [V] FR-026, SC-012 | `apps/web/tests/public/home-concorrencia.test.ts` | T026 |
+
+### What phase 4 cost — three left-behind artifacts, a borrowed sentence, and a requirement nobody's test reached
+
+Thirteen of fifteen rows land here. **T023 does not**, and the reason is a requirement rather than a
+defect in its code — see the open item below.
+
+**Three artifacts were left on the tree**, and two of them manufactured failures a verifier then
+reported as real. `page.mutcheck.tsx` and `home-ranking.mutcheck.test.ts` were mutation-check
+scratch files; the first sits under `app/(frontend)` and so tripped T019's cross-page import scan,
+which is a guard about routes and was reading a file that is not one. A `<SkillPips skills={[]} />`
+was left inside the lab card by a third probe — it did not even typecheck, and it is the exact
+thing T028's surviving assertion exists to forbid. Rule A of the launch note now has a second
+clause because of this: **restore, then re-read the file and confirm, before reporting done.**
+
+**A page module was two surfaces' dependency.** `app/(frontend)/page.tsx` imported `RANKING_PATH`
+from `./ranking/page`, and — worse — `lib/tenancy/public-payload.ts` imported
+`ORDENACAO_DO_RANKING` from it too. A **library** importing a Next **route module** drags the
+page's metadata export and its whole import graph into the tenancy door and inverts the dependency
+the layer is built on. T019's scan caught the first; the second was only visible once the first was
+read. Both constants now live in `lib/content/ranking.ts`, re-exported from the page so a reader
+still finds them where they look. `LIMITE_DO_RANKING` deliberately stayed: it is how many places
+the full board draws, which is that route's own decision.
+
+**The missions band showed the ranking's sentence.** *"Ainda sem makers no ranking."* on the empty
+missions band — a neighbour's copy, which is exactly what FR-024's *"each block names its own
+emptiness"* is about and exactly what `home-desfechos.test.ts` § 1 was written to catch. It caught
+it. `home.md` gives the band *"Nenhuma missão ativa no momento"*.
+
+**The verifier's accounting was itself wrong, and worth recording.** T023's report claimed
+`home.test.ts` § 3 *"was already red from T021"*. Measured by removing one line: with
+`{nivelDoLabSecao(lab)}` gone and T020–T022 still in the tree, that file is 14/14 green. T023 was
+the sole cause of both failures, one of which — § 2's FR-017 empty-state assertion — **no task
+owned**: the lab card renders before `ÚLTIMOS PROJETOS`, so its `variant="erro"` EmptyState became
+`findAll(tree, EmptyState)[0]` and the projects' `vazio` one moved to second place. An ordering
+change in a page is an ordering change in every positional assertion about it.
+
+### Open: FR-016 — the lab card errors for every signed-out visitor
+
+`lerNivelDoLab` reads through `getTenantScopedPayloadForRSC`, which is `overrideAccess: false` with
+the session user, and `scopedAccess()` opens with `if (!user) return false`. So on the page whose
+primary audience has no account, the `NÍVEL DO LAB` card renders its error state — and **FR-016 and
+CLR-001 both say the card is visible to everyone**.
+
+None of T023's six tests sees it: all inject a store that answers, so the card passes its own suite
+while missing the stated behaviour. FR-016 appears **nowhere else in this file**, so no later task
+closes it either.
+
+It is the same shape as the ranking card's problem in phase 2, and it does **not** have the same
+answer. `readPublicRanking` works because `perfilMaker` rows can be projected to five harmless
+columns. The lab level needs `regrasXp` — three tunable numbers, harmless — and a **sum over
+`xpLedger`**, whose rows are the lab's whole XP history: who earned what, for which action, when. A
+`publicList` on that collection would serve those rows unfiltered, which is more than the ranking
+discloses and more than any decision in this spec authorises.
+
+**So this is a decision, not a fix**, and it is recorded here rather than taken at the end of a
+phase: either a named reader that returns only the aggregate and never rows, or a narrower
+statement of FR-016 for v1. It is the one row of phase 4 that does not carry ✅.
 
 ## Phase 5: The gates
 
