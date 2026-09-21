@@ -177,6 +177,7 @@ const mocks = vi.hoisted(() => {
      *  mocks its doors rather than driving them. */
     getPublicScopedPayloadForRSC: vi.fn(),
     getTenantScopedPayloadForRSC: vi.fn(),
+    getPublicLabLevelStoreForRSC: vi.fn(),
     readPublicRanking: vi.fn(),
     /** 005's pure rule, mocked rather than fed a ledger: *how* the level is computed is
      *  `xp-nivel-do-lab.test.ts`'s assertion and *that the card draws what it returns* is
@@ -199,6 +200,9 @@ vi.mock('../../lib/tenancy/public-payload', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../lib/tenancy/public-payload')>()),
   getPublicScopedPayloadForRSC: mocks.getPublicScopedPayloadForRSC,
   readPublicRanking: mocks.readPublicRanking,
+  // The lab level's door since T023 — `nivelDoLab` itself is faked below, so this only has to
+  // resolve: what this file measures is the page's composition, not the store's bound.
+  getPublicLabLevelStoreForRSC: mocks.getPublicLabLevelStoreForRSC,
 }))
 
 vi.mock('../../lib/tenancy', async (importOriginal) => ({
@@ -294,7 +298,7 @@ beforeEach(() => {
   // the state in which all four blocks have something to draw; the failed and empty outcomes
   // are `home-paineis.test.ts`'s, block by block.
   mocks.getPublicScopedPayloadForRSC.mockResolvedValue(new FakePublicDoor())
-  mocks.getTenantScopedPayloadForRSC.mockResolvedValue(LOJA_NUNCA_LIDA)
+  mocks.getPublicLabLevelStoreForRSC.mockResolvedValue(LOJA_NUNCA_LIDA)
   mocks.readPublicRanking.mockResolvedValue(RANKING)
   mocks.nivelDoLab.mockResolvedValue(NIVEL_DO_LAB)
   mocks.estadoPessoal.mockResolvedValue({ tipo: 'anonimo' })

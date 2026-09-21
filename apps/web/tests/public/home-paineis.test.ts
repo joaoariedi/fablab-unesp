@@ -141,6 +141,9 @@ vi.mock('../../lib/tenancy/public-payload', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../lib/tenancy/public-payload')>()),
   getPublicScopedPayloadForRSC: mocks.getPublicScopedPayloadForRSC,
   readPublicRanking: mocks.readPublicRanking,
+  // The lab level's door since T023 — declared beside the others because this file may carry
+  // exactly one `vi.mock` for this path. See `portaDoNivel` further down for what it injects.
+  getPublicLabLevelStoreForRSC: portaDoNivel.getPublicLabLevelStoreForRSC,
 }))
 
 /** The RSC half of the mission model (T017). Mocked rather than driven through a fake session,
@@ -654,13 +657,20 @@ describe('§4 — CLR-007: neither card links a maker (T025, FR-035, SC-019)', (
  * fewer edit landing in a region someone else is rewriting.
  */
 
-/** The session door, mocked as `home-nivel-lab.test.ts` mocks it and for the same reason. */
-const portaDaSessao = vi.hoisted(() => ({ getTenantScopedPayloadForRSC: vi.fn() }))
+/**
+ * The lab level's own door, mocked as `home-nivel-lab.test.ts` mocks it and for the same reason.
+ *
+ * It was the **session** door until T023. `scopedAccess()` refuses a caller with no user, so the
+ * card errored for every signed-out visitor while FR-016 and CLR-001 call it public; the read now
+ * goes through `getPublicLabLevelStore`, whose reach is two collections and a forced projection.
+ * What is injected is unchanged — a ledger store — so every case below still measures the card.
+ */
+const portaDoNivel = vi.hoisted(() => ({ getPublicLabLevelStoreForRSC: vi.fn() }))
 
-vi.mock('../../lib/tenancy', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../lib/tenancy')>()),
-  getTenantScopedPayloadForRSC: portaDaSessao.getTenantScopedPayloadForRSC,
-}))
+// The mock itself is folded into the ONE `vi.mock` for this path at the top of the file.
+// A second `vi.mock` of a module REPLACES the first rather than merging with it — measured
+// here: a separate block for this door alone silently unmocked the band's anonymous door and
+// `readPublicRanking`, and thirty cases in §1–§4 went red for a reason none of them named.
 
 /** This lab retuned its economy: nothing here is the CITe seed `{ 1, 5, 10 }`, so a card that
  *  carried the curve in its own source could not produce the level and the bar below. */
@@ -736,7 +746,7 @@ describe('§5 — one block down, three still standing (T029, FR-023, US7)', () 
     mocks.getPublicScopedPayloadForRSC.mockResolvedValue(
       quebrado === 'missoes' ? new FakePortaQuebrada() : new FakePublicClient(),
     )
-    portaDaSessao.getTenantScopedPayloadForRSC.mockResolvedValue(
+    portaDoNivel.getPublicLabLevelStoreForRSC.mockResolvedValue(
       new FakeLedgerStore(quebrado === 'nivel' ? null : REGRAS_DO_LAB),
     )
     mocks.readPublicRanking.mockResolvedValue(quebrado === 'ranking' ? null : [...BOARD])
@@ -900,7 +910,7 @@ function hostSemLabEm(quebrada: Bloco | 'todas'): void {
   mocks.getPublicScopedPayloadForRSC.mockImplementation(async () =>
     semLab('missoes') ? recusa() : new FakePublicClient(),
   )
-  portaDaSessao.getTenantScopedPayloadForRSC.mockImplementation(async () =>
+  portaDoNivel.getPublicLabLevelStoreForRSC.mockImplementation(async () =>
     semLab('nivel') ? recusa() : new FakeLedgerStore(),
   )
   mocks.readPublicRanking.mockImplementation(async () =>
@@ -1084,7 +1094,7 @@ describe('§7 — a lab with nothing yet: each block names its own emptiness (T0
     // Every read SUCCEEDS and returns nothing. Not one of the four is in its failed state, so
     // anything this page says about a failure it is saying about a lab that is merely new.
     mocks.getPublicScopedPayloadForRSC.mockResolvedValue(new FakePublicClient([]))
-    portaDaSessao.getTenantScopedPayloadForRSC.mockResolvedValue(new FakeLabSemXp())
+    portaDoNivel.getPublicLabLevelStoreForRSC.mockResolvedValue(new FakeLabSemXp())
     mocks.readPublicRanking.mockResolvedValue([])
     mocks.listPublic.mockResolvedValue(semProjetos)
   })
@@ -1297,7 +1307,7 @@ describe('§8 — signed out and signed in: whose percentage the band draws (T03
     porta = new FakePublicClient(MISSOES_COM_ISCA)
     sessao = new FakeDoorDaSessao()
     mocks.getPublicScopedPayloadForRSC.mockResolvedValue(porta)
-    portaDaSessao.getTenantScopedPayloadForRSC.mockResolvedValue(sessao)
+    portaDoNivel.getPublicLabLevelStoreForRSC.mockResolvedValue(sessao)
     mocks.readPublicRanking.mockResolvedValue([...BOARD])
     mocks.listPublic.mockResolvedValue(UM_PROJETO)
   })
@@ -1337,7 +1347,7 @@ describe('§8 — signed out and signed in: whose percentage the band draws (T03
     // `regrasXp.read` are both `scopedAccess()`, and page.tsx reports that as an open gap
     // against FR-016. The panel is still owed: T032 asks for three panels PRESENT, and a card
     // in its error state is present. A panel that vanished would say the lab has no level.
-    portaDaSessao.getTenantScopedPayloadForRSC.mockRejectedValue(
+    portaDoNivel.getPublicLabLevelStoreForRSC.mockRejectedValue(
       new Error('scopedAccess() refuses a reader with no session'),
     )
 

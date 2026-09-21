@@ -124,6 +124,7 @@ const mocks = vi.hoisted(() => {
     }),
     listPublic: vi.fn(),
     getPublicScopedPayloadForRSC: vi.fn(),
+    getPublicLabLevelStoreForRSC: vi.fn(),
     getTenantScopedPayloadForRSC: vi.fn(),
     estadoPessoal: vi.fn<(missoes: readonly MissaoIdentificada[]) => Promise<EstadoPessoal>>(
       async () => ({ tipo: 'anonimo' }),
@@ -141,10 +142,17 @@ vi.mock('../../lib/public/listing', async (importOriginal) => ({
 vi.mock('../../lib/tenancy/public-payload', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../lib/tenancy/public-payload')>()),
   getPublicScopedPayloadForRSC: mocks.getPublicScopedPayloadForRSC,
+  // The card's own door since T023. `getPublicLabLevelStore` is what bounds an anonymous read of
+  // the ledger to a forced `{ quantidade: true }`; what this file measures is the card drawn on
+  // top of it, so the store is faked and the bound is `tests/tenancy/public-nivel-lab.test.ts`'s
+  // to prove against a real Postgres.
+  getPublicLabLevelStoreForRSC: mocks.getPublicLabLevelStoreForRSC,
 }))
 
-/** The session door. Mocked rather than driven through `next/headers`, which throws outside a
- *  Next request scope — the reason every page suite here mocks its doors. */
+/** The **session** door, mocked so this file can watch it stay untouched (§7, FR-016). Mocking
+ *  rather than driving through `next/headers`, which throws outside a Next request scope, is
+ *  what every page suite here does — and it is why the six original cases passed while the card
+ *  errored for every signed-out visitor: each injected a store that answers. */
 vi.mock('../../lib/tenancy', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../lib/tenancy')>()),
   getTenantScopedPayloadForRSC: mocks.getTenantScopedPayloadForRSC,
@@ -191,13 +199,20 @@ describe('§ NÍVEL DO LAB — the card (T023, FR-012 … FR-015, CLR-011)', () 
     mocks.listPublic.mockResolvedValue(semProjetos)
     mocks.getPublicScopedPayloadForRSC.mockResolvedValue(new FakePublicClient())
     mocks.estadoPessoal.mockResolvedValue({ tipo: 'anonimo' })
+    // Nothing on this page may reach the session door now. Left rejecting rather than
+    // unconfigured: an unconfigured `vi.fn()` resolves `undefined`, and a card that read through
+    // it would fail on the shape rather than on the door, which is a different message and a
+    // weaker test.
+    mocks.getTenantScopedPayloadForRSC.mockRejectedValue(
+      new Error('the Home must not open the session door for the lab level (FR-016, T023)'),
+    )
   })
 
   /** The Home, rendered against a lab with this ledger and this economy. */
   async function home(
     mundo: { ledger: LinhaLedger[]; regras?: typeof REGRAS | null } = { ledger: LEDGER },
   ): Promise<ReactNode> {
-    mocks.getTenantScopedPayloadForRSC.mockResolvedValue(new FakeLedgerStore(mundo))
+    mocks.getPublicLabLevelStoreForRSC.mockResolvedValue(new FakeLedgerStore(mundo))
     return (await HomePage()) as unknown as ReactNode
   }
 
@@ -284,11 +299,55 @@ describe('§ NÍVEL DO LAB — the card (T023, FR-012 … FR-015, CLR-011)', () 
 
   it('404s the whole site on an unresolved host rather than drawing an error card (FR-025)', async () => {
     const { TenantUnresolvedError } = await import('../../lib/tenancy/errors')
-    mocks.getTenantScopedPayloadForRSC.mockRejectedValue(new TenantUnresolvedError('nao.existe'))
+    mocks.getPublicLabLevelStoreForRSC.mockRejectedValue(new TenantUnresolvedError('nao.existe'))
 
     // `notFound()` throws Next's control-flow error. A reader that catches broadly swallows its
     // own 404 and the page renders an error card on a host that resolves to no organization.
     await expect(HomePage()).rejects.toBe(mocks.NOT_FOUND)
     expect(mocks.notFound).toHaveBeenCalled()
+  })
+
+  /**
+   * § The case the six above could not see (T023, FR-016, CLR-001).
+   *
+   * Every one of them injects a store that answers, so the card drew its level whichever door
+   * the page had opened. Phase 4 opened the **session** door — `getTenantScopedPayloadForRSC`,
+   * `overrideAccess: false` with the session user — and `scopedAccess()` begins
+   * `if (!user) return false`. On the page whose primary audience has no account, the card
+   * therefore rendered *"Não foi possível carregar"*, and FR-016 says it is visible to everyone.
+   *
+   * So the assertion here is not about what the card shows — the cases above cover that — but
+   * about **which door it opened**, which is the only thing a fake store cannot fake. The
+   * session door is armed to reject in `beforeEach`; these two cases say that out loud.
+   */
+  describe('§7 — the card a signed-out visitor sees (FR-016, CLR-001)', () => {
+    it('never opens the session door, which refuses a caller with no user', async () => {
+      const texto = textoDe(await home())
+
+      expect(
+        mocks.getTenantScopedPayloadForRSC,
+        'the Home opened the session door for the lab level. `scopedAccess()` returns false ' +
+          'for a caller with no user, so every signed-out visitor gets the card’s error state ' +
+          'while FR-016 and CLR-001 both say the card is theirs to see.',
+      ).not.toHaveBeenCalled()
+      expect(mocks.getPublicLabLevelStoreForRSC).toHaveBeenCalled()
+      expect(texto).toContain('NÍVEL 02')
+    })
+
+    it('draws the level itself, not the error state, with no session anywhere on the page', async () => {
+      const secao = await cartao()
+
+      // Asserted on the ELEMENT, never on `textoDe`. `textoDe` walks `children`, and
+      // `EmptyState` carries its failure text in the `titulo` **prop** — so a `not.toContain`
+      // over the rendered text passes against a card showing nothing but its error, which this
+      // case was written as and the probe caught (preamble item 3, in its ninth costume).
+      expect(
+        findAll(secao, EmptyState).find((e) => e.props.variant === 'erro'),
+        'the NÍVEL DO LAB card rendered its error state for a visitor with no account. FR-016 ' +
+          'and CLR-001 both say the card is theirs to see.',
+      ).toBeUndefined()
+      expect(findAll(secao, ProgressBar)).toHaveLength(1)
+      expect(textoDe(secao)).toMatch(/NÍVEL\s*0?\d/)
+    })
   })
 })

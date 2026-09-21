@@ -244,7 +244,7 @@ the suite is red between two commits for a reason nobody can interpret.
 | ✅ T020 | `lerMissoesEmDestaque` — the public door, `where` carrying **only** `destaqueHome` (the door adds the status filter), `sort: ['ordemDestaque', 'titulo']` as an **array**, `limit` at three | FR-004, FR-005, FR-011 | `apps/web/app/(frontend)/page.tsx` | T005 |
 | ✅ T021 | The band: icon, title, description, the bar, and `VER TODAS ›` → `/missoes` — the link that closes the gap that page reported against itself | FR-006, FR-011, US6 | `apps/web/app/(frontend)/page.tsx` | T020 |
 | ✅ T022 | The personal overlay: the signed-in maker's own percentage through `lib/public/missoes.ts`, **no percentage at all** when there is no session (CLR-002), and and a failed personal read costing the percentages rather than the band — **with wording that says so** (CLR-013), because silence there is character-for-character the signed-out card and a signed-in maker reads it as having been logged out | FR-008, FR-009, FR-010, SC-023, CHK053 | `apps/web/app/(frontend)/page.tsx` | T021, T017 |
-| T023 | `lerNivelDoLab` — **catching**, because `nivelDoLab` throws for a lab with no `regrasXp` — and the card: level, and the bar from `progresso`. No `Próxima recompensa`, and never the mockup's `1250 / 2000`. **Two outcomes, not three** (CLR-011): a value or a failure. Level 0 on an empty lab is a value and renders as the card | FR-012, FR-013, FR-014, FR-015, CHK005 | `apps/web/app/(frontend)/page.tsx` | — |
+| ✅ T023 | `lerNivelDoLab` — **catching**, because `nivelDoLab` throws for a lab with no `regrasXp` — and the card: level, and the bar from `progresso`. No `Próxima recompensa`, and never the mockup's `1250 / 2000`. **Two outcomes, not three** (CLR-011): a value or a failure. Level 0 on an empty lab is a value and renders as the card. **Reads through the anonymous door for every visitor** (FR-016, decided 2026-09-21) | FR-012, FR-013, FR-014, FR-015, FR-016, CHK005 | `apps/web/app/(frontend)/page.tsx`, `apps/web/lib/public/nivel-lab.ts`, `apps/web/lib/tenancy/public-payload.ts` | — |
 | ✅ T024 | The ranking card: five rows through `readPublicRanking`, two-digit positions, name, `@handle`, XP, the placeholder for a null avatar, and `VER RANKING COMPLETO` → `/ranking` | FR-017, FR-018, FR-019, FR-020 | `apps/web/app/(frontend)/page.tsx` | T009 |
 | ✅ T025 | The rows are **not** links, and the card authorship is not either — CLR-007 defers the destination, and an anchor pointing nowhere is the failure that records | [V] FR-035 | `apps/web/tests/public/home-paineis.test.ts` | T024 |
 | ✅ T026 | The four reads in **one `Promise.all`**, every reader rethrowing `TenantUnresolvedError` into `notFound()`. The personal overlay is awaited after, because it needs the mission ids and a signed-out visitor never makes it — it is a **fifth** read and deliberately outside the four SC-012 counts (CLR-012), so that "four" never quietly means "four of five" | FR-026, CLR-006, CLR-012, CHK006 | `apps/web/app/(frontend)/page.tsx` | T020, T023, T024 |
@@ -291,35 +291,105 @@ owned**: the lab card renders before `ÚLTIMOS PROJETOS`, so its `variant="erro"
 `findAll(tree, EmptyState)[0]` and the projects' `vazio` one moved to second place. An ordering
 change in a page is an ordering change in every positional assertion about it.
 
-### Open: FR-016 — the lab card errors for every signed-out visitor
+### Decided: FR-016 — a sixth named exemption, returning the aggregate and never rows
 
-`lerNivelDoLab` reads through `getTenantScopedPayloadForRSC`, which is `overrideAccess: false` with
-the session user, and `scopedAccess()` opens with `if (!user) return false`. So on the page whose
-primary audience has no account, the `NÍVEL DO LAB` card renders its error state — and **FR-016 and
-CLR-001 both say the card is visible to everyone**.
+Phase 4 ended with this row open on purpose. `lerNivelDoLab` read through
+`getTenantScopedPayloadForRSC` — `overrideAccess: false` with the session user — and
+`scopedAccess()` opens `if (!user) return false`, so on the page whose primary audience has no
+account the card rendered *"Não foi possível carregar"*, while **FR-016 and CLR-001 both say it is
+visible to everyone**. None of T023's six tests saw it: every one injected a store that answers, so
+the card drew its level whichever door the page had opened. The defect was in the door, and nothing
+in that file was looking at the door.
 
-None of T023's six tests sees it: all inject a store that answers, so the card passes its own suite
-while missing the stated behaviour. FR-016 appears **nowhere else in this file**, so no later task
-closes it either.
+It was recorded rather than fixed because the ranking's answer does not transfer. `perfilMaker`
+projects to five harmless columns; this card needs a **sum over `xpLedger`**, whose entries are *who
+earned what, for which action, when*. A `publicList` there serves those rows collection-wide and
+unfiltered to every anonymous page read.
 
-It is the same shape as the ranking card's problem in phase 2, and it does **not** have the same
-answer. `readPublicRanking` works because `perfilMaker` rows can be projected to five harmless
-columns. The lab level needs `regrasXp` — three tunable numbers, harmless — and a **sum over
-`xpLedger`**, whose rows are the lab's whole XP history: who earned what, for which action, when. A
-`publicList` on that collection would serve those rows unfiltered, which is more than the ranking
-discloses and more than any decision in this spec authorises.
+**The decision (2026-09-21): a named aggregate reader.** The alternative — narrowing FR-016 so the
+card is signed-in only — was rejected because CLR-001 came from the PO.
 
-**So this is a decision, not a fix**, and it is recorded here rather than taken at the end of a
-phase: either a named reader that returns only the aggregate and never rows, or a narrower
-statement of FR-016 for v1. It is the one row of phase 4 that does not carry ✅.
+What shipped, and where the bound actually is:
+
+- **`getPublicLabLevelStore(host)`** in `lib/tenancy/public-payload.ts` — the sixth named exemption
+  and the narrowest. It serves **two collections** (`regrasXp`, `xpLedger`), **forces** its
+  projection and `depth: 0` rather than asserting the caller passed one, and **refuses a `where`**.
+- **The projection is forced, not asserted**, and the distinction is the whole of it. `find` is
+  reached from `sumLedger` and `rulesForTenant` in `lib/content/xp.ts` — shared functions with
+  signed-in callers — so an edit there that asked for one more column would silently widen an
+  anonymous read. `assertProjected` on the general door *refuses* instead, because there the columns
+  are a property of the call; here there is one question, so the store names them itself.
+- **A `where` is refused** because a filter is how a sum becomes a question about a person: `perfil`
+  would return one maker's total, `createdAt` would date a lab's activity a page at a time. The lab
+  level sums with no filter, so no legitimate call carries one.
+- **`lib/public/nivel-lab.ts`** is the reader, keeping `lib/tenancy` free of a function import from
+  `lib/content` — the split D3 established.
+- **One path for everyone.** The level is collective and the number identical either way; a branch
+  on the session would be two behaviours to keep in agreement, and the signed-in one is the one
+  whose tests passed while the requirement failed.
+
+Four violations were planted and watched red before the row was marked done: the projection merged
+with the caller's, the `where` refusal removed, the allow-list opened, and the card put back on the
+session door. **The fourth caught one of the new assertions being vacuous** — `textoDe` walks
+`children` and `EmptyState` carries its failure text in the `titulo` *prop*, so a `not.toContain`
+over rendered text passed against a card showing nothing but its error. Item 3 of the preamble, in
+its ninth costume, this time inside a test written to close item 3.
+
+A fifth thing the phase cost: **two `vi.mock` calls on one module path REPLACE rather than merge.**
+Declaring the new door in its own block in `home-paineis.test.ts` silently unmocked the band's
+anonymous door and `readPublicRanking`, and thirty cases went red for a reason none of them named.
 
 ## Phase 5: The gates
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T034 | The island count is unchanged — the panels compose server components and add none | [V] FR-029, SC-014 | `packages/ui/tests/islands.test.ts` | T028 |
-| T035 | The whole suite twice, lint, markdownlint, and typecheck **both ways** — with and without the gitignored `payload-types.ts` | [V] — | — | T033, T034 |
-| T036 | Drive the actual app: HTTP status codes from real requests against `/`, `/missoes` and `/ranking`, **signed in and signed out**, and the Home's markup asserted to carry the three panels. Not a green suite | [V] SC-018 | — | T035 |
+| ✅ T034 | The island count is unchanged — the panels compose server components and add none | [V] FR-029, SC-014 | `packages/ui/tests/islands.test.ts` | T028 |
+| ✅ T035 | The whole suite twice, lint, markdownlint, and typecheck **both ways** — with and without the gitignored `payload-types.ts` | [V] — | — | T033, T034 |
+| ✅ T036 | Drive the actual app: HTTP status codes from real requests against `/`, `/missoes` and `/ranking`, **signed in and signed out**, and the Home's markup asserted to carry the three panels. Not a green suite | [V] SC-018 | — | T035 |
+
+### What phase 5 cost — the app disagreed with 3,276 green tests
+
+**T036 is the row that earned its place.** With every gate green — 185 files and 3,276 tests in
+`apps/web`, 45 and 958 in `packages/ui`, lint, markdownlint, typecheck with *and* without the
+gitignored `payload-types.ts` — the running application rendered *"Não foi possível carregar"* in
+the NÍVEL DO LAB card for a signed-out visitor, which is the exact requirement phase 4 left open and
+this phase had just closed.
+
+**It was not the code.** `getPublicLabLevelStore('localhost')` driven outside Next resolved tenant
+34533, read its one `regrasXp` row and returned `{ xp: 7, nivel: 1, progresso: { atual: 2, de: 5 } }`.
+Inside the server the same call read **0 rows** — and so did the ranking, and so did every other
+anonymous read, all of them rendering empty states rather than errors, which is why five of six
+checks looked fine.
+
+**The cause was a stale `unstable_cache` entry in `.next/cache/fetch-cache`.** `resolveTenant`
+caches a *definite* host match, `next build` ran before `pnpm seed`, and the cache survives a
+restart — so the production server held a host→organization resolution from a database state the
+test suite had since rewritten. Deleting `.next/cache/fetch-cache` and restarting fixed it with no
+code change.
+
+This is the shape `lcp-budget.sh` warns about in its own preamble — *a gate that skips the seed
+passes hardest exactly when the content is missing* — arriving one layer lower down. **A build
+artifact can pin a tenant resolution that no longer exists.** Anything that builds and then changes
+the database must clear `.next/cache/fetch-cache`, or it is measuring a lab that has nothing in it.
+
+Two smaller things the drive found, neither a defect in this feature:
+
+1. **The production build cannot load the workspace `.env`.** `lib/env.ts` resolves it as
+   `path.dirname(fileURLToPath(import.meta.url)) + '/../../..'`, and the bundle relocates that
+   module into `.next/server/chunks/`, so `process.loadEnvFile` throws and is swallowed by the
+   catch its own docstring describes as *"expected in production and in CI"*. `next start` therefore
+   runs with whatever the shell exports — correct for a deployment, surprising on a laptop.
+2. **A lab seeded before 005 has no `regrasXp` row.** `seedRegrasXp` is a hook on organization
+   *creation*, and re-running `pnpm seed` reports the organization already-present without firing
+   it. `nivelDoLab` throws for such a lab by design, and the card's error state is the correct
+   answer — but no migration backfills the economy for organizations that predate it.
+
+What the drive actually measured, signed out and signed in, against the running application:
+`/`, `/missoes` and `/ranking` all 200; the three panels present in the markup both ways; the
+NÍVEL DO LAB card drawing `NÍVEL 01` with **no error card anywhere on the page** for a visitor with
+no session; the band drawing three featured missions with **no percentage at all** signed out plus
+the invitation to sign in, and the same three carrying the maker's own `0%` signed in; zero failures
+logged across the whole drive.
 
 ---
 

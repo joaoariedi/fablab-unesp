@@ -611,13 +611,26 @@ export type PublicOrganizationTheme = { theme?: { primaryColor?: unknown } }
 export async function getPublicScopedPayloadForRSC(
   options: PublicPayloadOptions = {},
 ): Promise<PublicScopedPayload> {
+  return getPublicScopedPayload(await hostDoPedido(), options)
+}
+
+/**
+ * The host an anonymous RSC read is confined to — **one statement of the precedence, for every
+ * anonymous door.**
+ *
+ * `x-tenant-host` first, for the same reason the request-scoped client prefers it: `proxy.ts`
+ * sets it and strips any client-supplied `x-tenant`, so it is the one header a visitor cannot
+ * choose. Falling back to `host` is what makes a direct hit on the origin resolve at all.
+ *
+ * Extracted when {@link getPublicLabLevelStoreForRSC} became the second door needing it (T023).
+ * A second copy of these two lines would be a second place for the precedence to be got wrong,
+ * and getting it wrong is a visitor naming their own tenant — the failure this file exists to
+ * make impossible, not one it should spread a copy of.
+ */
+const hostDoPedido = async (): Promise<string> => {
   const { headers } = await import('next/headers')
   const incoming = await headers()
-
-  // `x-tenant-host` first, for the same reason the request-scoped client prefers it:
-  // proxy.ts sets it and strips any client-supplied `x-tenant`.
-  const host = incoming.get('x-tenant-host') ?? incoming.get('host') ?? ''
-  return getPublicScopedPayload(host, options)
+  return incoming.get('x-tenant-host') ?? incoming.get('host') ?? ''
 }
 
 /**
@@ -773,6 +786,181 @@ export async function readPublicRanking(limit: number): Promise<RankingRow[] | n
     console.warn('[ranking] a leitura pública dos perfis falhou; quem chamou reporta em lugar.', erro)
     return null
   }
+}
+
+/**
+ * The three tunables the lab's curve is drawn on (FR-016, CLR-001).
+ *
+ * `regrasXp` carries nothing else a visitor could want and nothing personal at all — an
+ * organization's XP rate, the width of a level and the cap. They are named here anyway, for the
+ * reason {@link CAMPOS_DO_RANKING} is named: the row is read through a client running
+ * `overrideAccess: true` on behalf of nobody, so a column added to `regrasXp` next year would
+ * become anonymously readable by the mere act of being declared. Include mode, every value
+ * `true` — an exclude-mode projection serves exactly those unforeseen columns.
+ */
+export const CAMPOS_DA_ECONOMIA = {
+  xpPorAcao: true,
+  xpPorNivel: true,
+  nivelMaximo: true,
+} as const
+
+/**
+ * The **one column** of `xpLedger` this store may fetch, and the whole of why FR-016 can be
+ * closed without disclosing a lab's XP history.
+ *
+ * An entry also carries `perfil`, `skill`, `acao`, `chaveIdempotencia` and `createdAt`. Together
+ * those are *who earned what, for which action, when* — a per-person activity log, and more than
+ * the ranking's five public columns disclose. `quantidade` alone is an amount attached to
+ * nobody: the sum of a page of them is a number about the lab, and the individual values are
+ * indistinguishable from one another because every entry at a given rate carries the same one.
+ *
+ * Payload returns `id` alongside any projection and there is no way to ask it not to. An id
+ * names a row, not a person: it joins to nothing this store will read.
+ */
+export const CAMPOS_DA_SOMA = { quantidade: true } as const
+
+/**
+ * The two collections {@link getPublicLabLevelStore} serves, each with the projection it is
+ * served under. A collection absent from this map is refused — deny by default, as everywhere
+ * else on this path.
+ */
+const LEITURAS_DO_NIVEL: Readonly<Record<string, Readonly<Record<string, boolean>>>> = {
+  regrasXp: CAMPOS_DA_ECONOMIA,
+  xpLedger: CAMPOS_DA_SOMA,
+}
+
+/**
+ * Deliberately a `Pick` of the tenant client rather than a new shape, for the reason
+ * {@link PublicCounterStore} gives: `LedgerReader` in `lib/content/xp.ts` is `find` alone, so
+ * this satisfies it structurally without `lib/tenancy` importing anything from `lib/content`.
+ */
+export type PublicLabLevelStore = Pick<TenantScopedPayload, 'find'> & {
+  /** The organization the host resolved to. Every read is confined to it. */
+  tenantId: string
+}
+
+export type PublicLabLevelOptions = {
+  /** Injectable so tests can resolve without `next/cache` (spike S8), as everywhere else. */
+  lookup?: HostLookup
+}
+
+/**
+ * The **aggregate** behind the NÍVEL DO LAB card, for a visitor with no session (FR-016,
+ * CLR-001) — the sixth named exemption in `lib/tenancy`, and the narrowest of them.
+ *
+ * ── Why it is a store and not a `readPublicX` like the ranking ──────────────────────────────
+ *
+ * `readPublicRanking` returns rows because rows are what the board draws. This card draws a
+ * level and a bar: **three integers about the organization, naming nobody**. The rows behind
+ * them must never leave, and the way to guarantee that is not to promise it in a return type —
+ * a return type erases at runtime, which is the argument D2 already lost once. It is to hand
+ * `nivelDoLab` a client that *cannot fetch* them, and let the arithmetic stay where 005 put it.
+ * `lib/public/nivel-lab.ts` is the reader; this is the reach it is given.
+ *
+ * ── Why the general public door could not be widened instead ────────────────────────────────
+ *
+ * `assertPubliclyReadable` admits a collection by a queryable `status` or a `publicList`
+ * declaration, and `xpLedger` and `regrasXp` have neither. Writing `publicList` on `xpLedger`
+ * would admit it **collection-wide and unfiltered** — the door's own docstring says a
+ * `publicList` collection gets no status clause and no projection — so every anonymous page read
+ * would hold a client able to enumerate the lab's whole XP history. That is strictly more than
+ * this card needs and more than any decision in spec.md authorises, which is why FR-016 was left
+ * open at the end of phase 4 rather than closed by a declaration.
+ *
+ * ── The projection is FORCED, not asserted ──────────────────────────────────────────────────
+ *
+ * `assertProjected` on the general door *refuses* a `perfilMaker` call that names no columns,
+ * because there the columns are a property of the call: two callers want different ones. Here
+ * there is exactly one question this store may answer, so the store names the columns itself and
+ * overwrites whatever the caller passed. The difference matters in one direction only: `find` is
+ * reached from `sumLedger` and `rulesForTenant` in `lib/content/xp.ts`, shared functions with
+ * other callers, and a later edit there that asked for one more column would silently widen an
+ * anonymous read. Forced, it cannot.
+ *
+ * `depth: 0` is forced for the same reason and is not redundant with the projection: a `select`
+ * does **not** reach into a populated relationship (`tests/tenancy/select.test.ts`), so a
+ * populated `perfil` would arrive whole. Neither relationship is in the projection today; depth
+ * is what keeps that true if one ever is.
+ *
+ * ── And a `where` is refused outright ───────────────────────────────────────────────────────
+ *
+ * The lab level sums the ledger with no filter (`nivelDoLab` — *"every entry counts, including
+ * the ones that name nobody"*), so no legitimate call through this store carries one. Refusing
+ * it closes the one remaining way to ask a *question about a person* with amounts alone: a
+ * `where` on `perfil` would turn a sum over the lab into that maker's total, and a binary search
+ * over `createdAt` would date their activity. The store answers one question or throws.
+ *
+ * The cross-tenant answer stays `buildTenantClient`'s: both collections are `scoped`, so the
+ * tenant clause is AND-ed onto every read and the broadest thing expressible here is one lab.
+ *
+ * @example
+ *   const store = await getPublicLabLevelStore('bauru.localhost')
+ *   const nivel = await nivelDoLab(SEM_PEDIDO, { getStore: async () => store })
+ */
+export async function getPublicLabLevelStore(
+  host: string,
+  options: PublicLabLevelOptions = {},
+): Promise<PublicLabLevelStore> {
+  const organization = await resolveTenantOnce(host ?? '', options.lookup)
+
+  // Same asymmetry as every door here: an unresolved host is an error, never "any tenant".
+  if (!organization) throw new TenantUnresolvedError(host)
+
+  const payload = await getPayload({ config: (await import('../../payload.config')).default })
+  const base = buildTenantClient({
+    payload,
+    tenantId: String(organization.id),
+    overrideAccess: true,
+  })
+
+  return {
+    tenantId: base.tenantId,
+
+    find: async <T>(args: FindArgs): Promise<PaginatedResult<T>> => {
+      const projecao = LEITURAS_DO_NIVEL[args.collection]
+      if (projecao === undefined) {
+        throw new PublicReadDeniedError(
+          args.collection,
+          'this store was opened for the lab level alone, which is the sum of `xpLedger` on the ' +
+            'curve `regrasXp` declares. It serves those two collections and no other — every ' +
+            'read it makes is anonymous and answers to no access control, so its reach is the ' +
+            'question it was opened for and nothing adjacent to it',
+        )
+      }
+
+      if (args.where !== undefined) {
+        throw new PublicReadDeniedError(
+          args.collection,
+          'it carries a `where`, and the lab level is the organization\'s WHOLE ledger on its ' +
+            'whole economy — no legitimate read through this store filters. A filter is how a ' +
+            'sum over the lab becomes a question about a person: `perfil` would return one ' +
+            'maker\'s total and `createdAt` would date their activity, both out of amounts this ' +
+            'store is allowed to hand out precisely because they name nobody',
+        )
+      }
+
+      return base.find<T>({
+        ...args,
+        // Last, and deliberately after the spread: the caller's projection and depth are
+        // OVERWRITTEN rather than merged. `sumLedger` and `rulesForTenant` are shared functions
+        // in `lib/content/xp.ts` with signed-in callers of their own, and an edit there must not
+        // be able to widen what an anonymous visitor reads.
+        select: { ...projecao },
+        depth: 0,
+      })
+    },
+  }
+}
+
+/**
+ * {@link getPublicLabLevelStore}'s calling convention for React Server Components — the host
+ * comes from the request, exactly as {@link getPublicScopedPayloadForRSC} takes it, through the
+ * one {@link hostDoPedido} that states the precedence.
+ */
+export async function getPublicLabLevelStoreForRSC(
+  options: PublicLabLevelOptions = {},
+): Promise<PublicLabLevelStore> {
+  return getPublicLabLevelStore(await hostDoPedido(), options)
 }
 
 /**

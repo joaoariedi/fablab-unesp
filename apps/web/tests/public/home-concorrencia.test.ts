@@ -120,6 +120,7 @@ const mocks = vi.hoisted(() => {
     listPublic: vi.fn(),
     getPublicScopedPayloadForRSC: vi.fn(),
     getTenantScopedPayloadForRSC: vi.fn(),
+    getPublicLabLevelStoreForRSC: vi.fn(),
     nivelDoLab: vi.fn(),
     readPublicRanking: vi.fn<(limite: number) => Promise<unknown[] | null>>(),
     estadoPessoal: vi.fn<(missoes: readonly MissaoIdentificada[]) => Promise<EstadoPessoal>>(),
@@ -137,6 +138,9 @@ vi.mock('../../lib/tenancy/public-payload', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../lib/tenancy/public-payload')>()),
   getPublicScopedPayloadForRSC: mocks.getPublicScopedPayloadForRSC,
   readPublicRanking: mocks.readPublicRanking,
+  // The lab level's door since T023. `nivelDoLab` is replaced below, so the store is never
+  // read — it only has to resolve, or `next/headers` throws outside a Next request scope.
+  getPublicLabLevelStoreForRSC: mocks.getPublicLabLevelStoreForRSC,
 }))
 
 vi.mock('../../lib/tenancy', async (importOriginal) => ({
@@ -173,7 +177,7 @@ describe('§1 — the four block reads are issued together (T033, FR-026, SC-012
     eventos.length = 0
     mocks.listPublic.mockImplementation(async () => leituraLenta('projetos', semProjetos))
     mocks.getPublicScopedPayloadForRSC.mockResolvedValue(new FakePublicClient())
-    mocks.getTenantScopedPayloadForRSC.mockResolvedValue(new FakeLedgerStore())
+    mocks.getPublicLabLevelStoreForRSC.mockResolvedValue(new FakeLedgerStore())
     mocks.nivelDoLab.mockImplementation(async () => leituraLenta('nivel', NIVEL))
     mocks.readPublicRanking.mockImplementation(async () => leituraLenta('ranking', []))
     mocks.estadoPessoal.mockImplementation(async () => {
@@ -221,7 +225,7 @@ describe('§2 — the personal overlay is a FIFTH read, outside the four (T026, 
     eventos.length = 0
     mocks.listPublic.mockImplementation(async () => leituraLenta('projetos', semProjetos))
     mocks.getPublicScopedPayloadForRSC.mockResolvedValue(new FakePublicClient())
-    mocks.getTenantScopedPayloadForRSC.mockResolvedValue(new FakeLedgerStore())
+    mocks.getPublicLabLevelStoreForRSC.mockResolvedValue(new FakeLedgerStore())
     mocks.nivelDoLab.mockImplementation(async () => leituraLenta('nivel', NIVEL))
     mocks.readPublicRanking.mockImplementation(async () => leituraLenta('ranking', []))
     mocks.estadoPessoal.mockImplementation(async () => {
@@ -286,7 +290,7 @@ describe('§3 — every reader turns `TenantUnresolvedError` into `notFound()` (
     vi.spyOn(console, 'warn').mockImplementation(() => {})
     mocks.listPublic.mockResolvedValue(semProjetos)
     mocks.getPublicScopedPayloadForRSC.mockResolvedValue(new FakePublicClient())
-    mocks.getTenantScopedPayloadForRSC.mockResolvedValue(new FakeLedgerStore())
+    mocks.getPublicLabLevelStoreForRSC.mockResolvedValue(new FakeLedgerStore())
     mocks.nivelDoLab.mockResolvedValue(NIVEL)
     mocks.readPublicRanking.mockResolvedValue([])
     mocks.estadoPessoal.mockResolvedValue({ tipo: 'anonimo' })

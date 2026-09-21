@@ -96,11 +96,11 @@ import {
   type EstadoPessoal,
   estadoDe,
 } from '../../lib/content/missoes'
-import { type NivelDoLab, nivelDoLab } from '../../lib/content/xp'
+import type { NivelDoLab } from '../../lib/content/xp'
 import { listPublic } from '../../lib/public/listing'
 import { estadoPessoal } from '../../lib/public/missoes'
+import { readPublicLabLevel } from '../../lib/public/nivel-lab'
 import { ALL_CATEGORIES } from '../../lib/public/params'
-import { getTenantScopedPayloadForRSC } from '../../lib/tenancy'
 import { TenantUnresolvedError } from '../../lib/tenancy/errors'
 import {
   getPublicScopedPayloadForRSC,
@@ -833,27 +833,17 @@ function missoesEmDestaque(missoes: MissaoDoc[] | null, visitante: EstadoPessoal
 }
 
 /**
- * `nivelDoLab` takes a `PayloadRequest` for ONE purpose — building the store it reads through —
- * and {@link lerNivelDoLab} supplies that store itself, so nothing on this object is ever
- * touched.
- *
- * `as never` rather than a plausible-looking request, for the reason `/minha-conta/excluir`
- * records at its own injected call: a fabricated `req` carrying headers would look like the
- * default path works, and the default path is precisely what cannot work from a server
- * component — it authenticates nobody, so `scopedAccess()` refuses the first read.
- */
-const SEM_PEDIDO = {} as never
-
-/**
  * The lab's own level, for the card `home.md` draws as the collective achievement (FR-012).
  *
- * **`nivelDoLab`'s first caller** — it has had none since 005 shipped it — and it arrives with
- * the two obligations plan § D1 names:
+ * **`nivelDoLab` reaches a page at last** — it had no caller at all between 005 shipping it and
+ * this feature — and it arrives with the two obligations plan § D1 names, both now discharged one
+ * module down, in {@link readPublicLabLevel}:
  *
  *   1. **It catches.** `nivelDoLab` is documented to *throw* when the organization has no
  *      `regrasXp` row: inventing a curve would render a level nobody's economy produced. So a
  *      lab with a broken economy renders this card's error state and nothing else on the page
- *      moves (FR-023).
+ *      moves (FR-023). That catch is {@link readPublicLabLevel}'s; this one answers the single
+ *      failure that reader deliberately does not contain.
  *   2. **`TenantUnresolvedError` is rethrown into `notFound()`**, exactly as the readers above
  *      do it. Catching it broadly would swallow the page's own 404 and draw an error card on a
  *      host that resolves to no organization at all (FR-025).
@@ -864,27 +854,22 @@ const SEM_PEDIDO = {} as never
  * a *value* — `[]`'s question, *"is this lab empty enough?"*, is one no card should be inventing
  * an answer to.
  *
- * ⚠ **A visitor with no session reaches the error state, and that is a REPORTED GAP rather than
- * a decision this task made.** `xpLedger.read` and `regrasXp.read` are both `scopedAccess()`,
- * which refuses an anonymous reader outright, and the anonymous door has no route to either
- * collection: `assertPubliclyReadable` admits one only through a queryable `status` or a
- * `publicList` declaration, and the ledger and the economy carry neither. FR-016 — *"the card is
- * visible to a signed-out visitor: the lab's level is collective and public"* — therefore has no
- * path in this tree. Closing it means a projected public reader of the same shape as
- * `readPublicRanking` and a **sixth** named exemption in `lib/tenancy`, which is a change to the
- * anonymous security surface and gets its own written argument (plan § D2) rather than being
- * widened from a page. FR-031's instruction for a path with no route is to report it; this is
- * the report.
+ * **It reads through the anonymous door, for every visitor** (T023, FR-016). Phase 4 shipped it
+ * on `getTenantScopedPayloadForRSC`, and `scopedAccess()` refuses a caller with no user — so the
+ * card errored for every signed-out visitor while FR-016 and CLR-001 both say it is visible to
+ * everyone, and all six of this card's tests missed it by injecting a store that answers. The
+ * fix is `lib/public/nivel-lab.ts` over `getPublicLabLevelStore`, a sixth named exemption whose
+ * reach is two collections, a forced projection to `quantidade`, and no `where`. One path rather
+ * than a branch on the session: the level is collective, the number is the same either way, and
+ * the branch would be two behaviours to keep in agreement.
  */
 async function lerNivelDoLab(): Promise<NivelDoLab | null> {
   try {
-    const db = await getTenantScopedPayloadForRSC()
-    // Awaited INSIDE the try: a returned promise would reject outside this catch, and the throw
-    // this function exists to contain is the one `rulesForTenant` raises during the read.
-    return await nivelDoLab(SEM_PEDIDO, { getStore: async () => db })
+    return await readPublicLabLevel()
   } catch (erro) {
+    // The ONLY thing that reaches here: `readPublicLabLevel` contains every other failure as
+    // `null` and rethrows this one alone, so the page can answer it as a 404 rather than a card.
     if (erro instanceof TenantUnresolvedError) notFound()
-    // Loud in the log, contained on the page — the same split every block here makes.
     console.warn('[home] the nível do lab read failed; rendering the card error state.', erro)
     return null
   }
