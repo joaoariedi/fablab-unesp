@@ -113,6 +113,21 @@ export const SCOPE_REGISTRY = {
   perfilMaker: {
     scope: 'scoped',
     why: 'A person who makes at two labs has one login and two profiles; level and XP are per-lab (CLR-002, FR-003b)',
+    // The only declaration here that is **not sufficient on its own**, and the comment is the
+    // record of why (CLR-010). Every other `publicList` collection is a vocabulary whose whole
+    // row is safe to serve; this one carries `dataNascimento`, `escolaridade`, `curso`,
+    // `vinculoUnesp` and `usuario` — consented personal data (004) — beside the four columns a
+    // ranking shows. So the declaration admits the COLLECTION and `public-payload.ts` refuses
+    // any call that does not name the columns it wants: the admission is collection-wide, the
+    // projection is per-call, and only the second one can be the bound.
+    //
+    // ⚠ A field-level `read` rule is NOT an alternative to that. The public door runs with
+    // `overrideAccess: true`, and the installed Payload short-circuits on exactly that —
+    // `const canReadField = overrideAccess ? true : await field.access.read({ … })` in
+    // `fields/hooks/afterRead/promise.js` — so field access would defend this collection
+    // against signed-in readers and not against the one caller in question.
+    publicList:
+      'The anonymous ranking (FR-017) enumerates this organization\'s makers by XP, on the Home card and on /ranking — a board read with no session and no document to hang the rows on, so no populated read can carry it in. The declaration admits the collection; what may LEAVE it is decided per call by the `select` the public door requires for it (CLR-010, FR-036), because the row also carries the consented personal columns a ranking never shows',
   },
   categoriaArtigo: {
     scope: 'scoped',

@@ -54,6 +54,29 @@ export type FindArgs = {
   sort?: string | string[]
   /** 1-based, as Payload counts pages. */
   page?: number
+  /**
+   * The **projection**: which columns the query returns, `{ field: true }` per field.
+   *
+   * Added for `perfilMaker` (T006/T008, FR-030): that row carries consented personal data —
+   * `dataNascimento`, `escolaridade`, `curso`, `vinculoUnesp`, `usuario` — and the anonymous
+   * ranking needs four public fields off it. A `where` cannot express that: it decides *which
+   * rows*, never which columns, and `overrideAccess: true` bypasses field-level read access,
+   * so a field rule is not the defence either. The projection is.
+   *
+   * Like `where`, it cannot widen what a caller may see: it only narrows the column list of a
+   * result set the tenant clause has already confined.
+   */
+  select?: Record<string, boolean>
+  /**
+   * What a **populated relationship** may return — the bound `select` does not cover.
+   *
+   * `select` narrows the columns of the collection being read; `populate` narrows the rows
+   * Payload fetches to fill a relationship on it. A public listing at `depth: 1` returns the
+   * whole related row without it, which is how `perfilMaker`'s consented fields reached every
+   * anonymous page read. See `POPULACAO_PUBLICA` in `public-payload.ts`, which is the only
+   * caller today and applies it to every anonymous read rather than per call site.
+   */
+  populate?: Record<string, Record<string, boolean>>
 }
 export type ByIDArgs = { collection: string; id: string | number; depth?: number }
 export type CreateArgs = { collection: string; data: Record<string, unknown>; depth?: number }
@@ -107,6 +130,19 @@ export function buildTenantClient(opts: ClientOptions): TenantScopedPayload {
         // goes through.
         ...(args.sort !== undefined ? { sort: args.sort } : {}),
         ...(args.page !== undefined ? { page: args.page } : {}),
+        // Conditionally spread for the same reason, and for one more that was measured: this
+        // method does NOT spread `args`, it lists every key by hand. Adding `select` to
+        // `FindArgs` without this line type-checks green at every call site and silently drops
+        // the projection — `perfilMaker`'s personal columns come back in full while the bound
+        // appears to exist. Asserted in `tests/tenancy/find-select-threading.test.ts`.
+        // `as never` for the same reason `collection` carries one: the slug is erased to
+        // `never` here, which collapses Payload's `SelectFromCollectionSlug<TSlug>` to
+        // `undefined` and rejects any projection at all. The cast restores the field, not the
+        // caller's freedom — `FindArgs.select` above is the type a caller is held to.
+        ...(args.select !== undefined ? { select: args.select as never } : {}),
+        // Same conditional spread, same reason: an explicit `undefined` is a value a future
+        // Payload may validate, and this is the method every read in the product goes through.
+        ...(args.populate !== undefined ? { populate: args.populate as never } : {}),
         // The caller's `where` is merged with the tenant constraint, never replaced by it —
         // and the merge is an AND, so a caller cannot widen the scope by supplying its own.
         where: and(args.where, byTenant(args.collection)),

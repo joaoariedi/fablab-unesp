@@ -3,9 +3,11 @@ import { join } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
+import { ORDENACAO_DO_RANKING } from '../../lib/content/ranking'
 import { PerfilMaker } from '../../collections/content/PerfilMaker'
 import { Users } from '../../collections/Users'
 import { COLECOES_COM_AUTOR } from '../../lib/accounts/deletion'
+import { CAMPOS_DO_RANKING } from '../../lib/tenancy/public-payload'
 
 /**
  * T040 / FR-030, US8 — **the LGPD record, held to the code it describes.**
@@ -45,6 +47,10 @@ const RECORD = join(ROOT, 'docs', 'lgpd.md')
 const BACKLOG = join(ROOT, 'docs', 'backlog.md')
 const STEP_TWO = join(ROOT, 'apps', 'web', 'app', '(frontend)', 'criar-conta', 'dados', 'page.tsx')
 const DELETION_PAGE = join(ROOT, 'apps', 'web', 'app', '(frontend)', 'minha-conta', 'excluir', 'page.tsx')
+// `RANKING_PATH` and `ORDENACAO_DO_RANKING` moved off the page in 006: two surfaces needed them
+// — the Home's footer link and `readPublicRanking`'s order — and a library importing a route
+// module inverts the tenancy layer's dependency direction (T019).
+const RANKING_PAGE = join(ROOT, 'apps', 'web', 'lib', 'content', 'ranking.ts')
 
 /**
  * The record, or the empty string when it is absent.
@@ -104,8 +110,19 @@ const nomeia = (identificador: string): boolean => DOC.includes(`\`${identificad
  * A row is a table line whose FIRST cell names the field, which is what "recorded" means here.
  */
 function linhaColetada(campo: string): string[] | null {
-  const coletados = secao(/Dados coletados/i)
-  for (const linha of coletados.split('\n')) {
+  return linhaComCampo(secao(/Dados coletados/i), campo)
+}
+
+/**
+ * A row of any markdown table in `corpo` whose FIRST cell is the code span `campo`, or `null`.
+ *
+ * Extracted from `linhaColetada` so § "O que um visitante sem conta enumera" is read by the same
+ * rule, and for the same measured reason: a whole-document search cannot tell a row that records
+ * a disclosure from a mention of the field in the prose beside it — and that section's prose
+ * names the columns that are deliberately NOT disclosed.
+ */
+function linhaComCampo(corpo: string, campo: string): string[] | null {
+  for (const linha of corpo.split('\n')) {
     if (!linha.trim().startsWith('|')) continue
     const celulas = linha.split('|').slice(1, -1).map((c) => c.trim())
     if (celulas[0] === `\`${campo}\``) return celulas
@@ -268,6 +285,124 @@ describe('docs/lgpd.md records what the code actually collects (FR-030)', () => 
       DOC.includes('CLR-008'),
       'the record does not carry CLR-008: LGPD\'s right of access stands whether or not this ' +
         'feature implements it, and the spec makes this document where it is recorded as open',
+    ).toBe(true)
+  })
+})
+
+/**
+ * T013b / FR-037, CLR-014 — **what a visitor with no account can enumerate.**
+ *
+ * `readPublicRanking` (T009) serves this lab's makers to a request carrying no session. The
+ * columns it discloses are not new — `nome`, `handle`, the avatar and the level already ride on
+ * the authorship strip of every published item — but the **shape** of the disclosure is: the
+ * roster as a *list*, and each maker's *relative standing* within it. CLR-014 records that the PO
+ * took that decision; FR-037 requires this document to carry it, *"bound to the code by a test
+ * the way the erasure list already is"*.
+ *
+ * ── Why this is bound to `CAMPOS_DO_RANKING` and not to a list typed in here ─────────────────
+ *
+ * CLR-014 names the precedent it exists to avoid: 005 shipped `COLECOES_COM_AUTOR` and
+ * `lgpd-doc.test.ts` asserted the document against **that same list**, under a comment explaining
+ * why it was correct. Two copies of a claim that move together prove nothing about the third copy
+ * — the code — which is the one a visitor actually experiences. So every assertion below reads
+ * `CAMPOS_DO_RANKING`, the `select` the query is issued with, which is the *bound itself* and not
+ * a description of it (`public-payload.ts`: a `RankingRow` return type erases at runtime).
+ *
+ * The consequence is the one that matters: a column added to that `select` — the only way this
+ * disclosure can grow — fails this file until the row is written, and a column removed from it
+ * fails until the row is deleted. Neither direction can be satisfied by editing a list in a test.
+ */
+
+/** The route the roster is enumerable on, read from the page that declares it. */
+const RANKING_PATH = fromSource(RANKING_PAGE, /export const RANKING_PATH = '([^']+)'/, 'RANKING_PATH')
+
+/** How many places that page draws — the size of the roster a single anonymous request returns. */
+// Still on the page, and deliberately: it is how many places the FULL BOARD draws, which is that
+// route's own decision. The two constants above moved because a second surface needed them.
+const LIMITE_DO_RANKING = fromSource(
+  join(ROOT, 'apps', 'web', 'app', '(frontend)', 'ranking', 'page.tsx'),
+  /const LIMITE_DO_RANKING = (\d+)/,
+  'LIMITE_DO_RANKING',
+)
+
+/**
+ * The declared order, spelled as `/ranking` spells it.
+ *
+ * Quoting the whole expression rather than the two keys separately is deliberate: `handle` is
+ * already a row in the disclosure table, so asserting the keys one at a time would be satisfied
+ * by the table alone and would say nothing about the *order*. Relative standing is the increment
+ * CLR-014 weighs, and the tie-break is the half of it that decides who is above whom at equal XP.
+ */
+const ORDEM_DECLARADA = `[${ORDENACAO_DO_RANKING.map((chave) => `'${chave}'`).join(', ')}]`
+
+/** The section title, in one place, so the assertions and their messages cannot drift apart. */
+const SECAO_ANONIMA = /visitante sem conta/i
+
+/** The columns the anonymous query is issued with — the disclosure, exactly. */
+const COLUNAS_DIVULGADAS = Object.keys(CAMPOS_DO_RANKING)
+
+/** Everything `perfilMaker` holds that the anonymous query does **not** ask for. */
+const CAMPOS_RESERVADOS = CAMPOS_DO_PERFIL.filter((campo) => !COLUNAS_DIVULGADAS.includes(campo))
+
+describe('docs/lgpd.md records the anonymous roster, bound to the select (FR-037, CLR-014)', () => {
+  it('has a section on what a visitor with no account enumerates', () => {
+    expect(
+      secao(SECAO_ANONIMA),
+      'there is no § about the visitor with no account. `readPublicRanking` serves this lab\'s ' +
+        'makers as a list, ordered, to a request with no session — CLR-014 records that as a ' +
+        'decision taken and FR-037 makes this document where it is written down.',
+    ).not.toBe('')
+  })
+
+  it.each(COLUNAS_DIVULGADAS)('gives `%s` a row there, because the anonymous select fetches it', (coluna) => {
+    expect(
+      linhaComCampo(secao(SECAO_ANONIMA), coluna),
+      `CAMPOS_DO_RANKING fetches \`${coluna}\` for a visitor with no session, and the section ` +
+        'has no row for it. Adding a column to that select is the only way this disclosure can ' +
+        'grow: record what the visitor reads in the same change, or take the column back out.',
+    ).not.toBeNull()
+  })
+
+  it.each(CAMPOS_RESERVADOS)('does not list `%s` as anonymously readable — the select omits it', (campo) => {
+    expect(
+      linhaComCampo(secao(SECAO_ANONIMA), campo),
+      `\`${campo}\` is not in CAMPOS_DO_RANKING, so no anonymous request ever reads it, yet the ` +
+        'section lists it as disclosed. A record that over-states what is public is a record ' +
+        'nobody can use to answer a titular — and if the select really did narrow, the row is ' +
+        'the stale half.',
+    ).toBeNull()
+  })
+
+  it('records the relative standing, in the order the code actually sorts by', () => {
+    expect(
+      secao(SECAO_ANONIMA).includes(ORDEM_DECLARADA),
+      `the section does not quote the declared order ${ORDEM_DECLARADA}. The roster's increment ` +
+        'over the authorship strip is precisely that it ranks people against each other — a lab ' +
+        'with two makers publishes which of them earned more — and the tie-break is what decides ' +
+        'that at equal XP. A record naming the columns and not the ordering records the smaller half.',
+    ).toBe(true)
+  })
+
+  it('records how many places one anonymous request returns, and on which route', () => {
+    const anonima = secao(SECAO_ANONIMA)
+    expect(
+      anonima.includes(LIMITE_DO_RANKING),
+      `\`/ranking\` returns up to ${LIMITE_DO_RANKING} places to a visitor with no account and ` +
+        'the section does not say so. "The roster as a list" is a claim about size: the whole ' +
+        'lab in one response is a different disclosure from the top few.',
+    ).toBe(true)
+    expect(
+      anonima.includes(RANKING_PATH),
+      `the section does not name ${RANKING_PATH}, which is where the enumeration happens`,
+    ).toBe(true)
+  })
+
+  it('names the reader, so the claim is checkable against one function', () => {
+    expect(
+      secao(SECAO_ANONIMA).includes('readPublicRanking'),
+      'the section does not name `readPublicRanking`. It is the single door this disclosure ' +
+        'goes through — the door refuses a `perfilMaker` read that carries no select (FR-036) — ' +
+        'so naming it is what lets a reader check the paragraph against the code in one hop.',
     ).toBe(true)
   })
 })

@@ -8,8 +8,12 @@ import { scopedListEndpoint } from '../../lib/tenancy/scoped-endpoint'
 /**
  * A challenge **one** lab publishes for its makers (T026, FR-020, FR-028).
  *
- * FR-020 names five things and this file carries exactly those: a title, a description, an
- * icon, **the skill it credits**, and a published state. What a maker *did* about a mission is
+ * FR-020 names five things and this file carries those: a title, a description, an
+ * icon, **the skill it credits**, and a published state — plus the two curation fields FR-001
+ * added in 006: `destaqueHome`, which features a mission on the Home and does **not** publish it
+ * (a second switch on the same row, deliberately separate from `status`), and `ordemDestaque`,
+ * the band's declared order — *menor primeiro, empates pelo título* (FR-003). What a maker *did*
+ * about a mission is
  * not here — that is `missaoSubmissao` (T027), one row per (mission, maker), with the proof
  * photo and the review state. Keeping the two apart is what lets FR-024 show the same mission
  * to a signed-out visitor with no personal percentage at all.
@@ -168,6 +172,59 @@ export const Missao: CollectionConfig = {
       // directly. `required` with a default so no row can answer `undefined` to that filter —
       // invisible to `equals` and to a `not_equals` audit alike, which is how a mission goes
       // missing with nothing to point at.
+    },
+    {
+      name: 'destaqueHome',
+      type: 'checkbox',
+      required: true,
+      defaultValue: false,
+      label: 'Destaque na Home',
+      admin: {
+        description:
+          'Mostra esta missão na faixa MISSÕES EM DESTAQUE da Home. Não publica: uma missão em ' +
+          'rascunho continua invisível para quem não é da equipe.',
+      },
+      // **The curation switch, and the second switch on this row** (FR-001, CLR-004). It decides
+      // *which* published missions the Home features; `status` above decides whether anyone
+      // outside the team sees the mission at all. Keeping them apart is what lets the team line
+      // up a draft for the band without publishing it by accident — and the `admin.description`
+      // is where that separation reaches the person holding the checkbox, because the obvious
+      // reading of "Destaque na Home" is "put this on the Home".
+      //
+      // The band never re-states the published filter: `missao` is publishable, so the anonymous
+      // door adds `status = publicado` itself and the query carries only `destaqueHome` (D4).
+      //
+      // `required: true` **with** a `defaultValue` of `false` — the shape `skill.ativa` already
+      // uses. On a checkbox that pair means *"must carry a boolean"*: required alone would
+      // refuse every mission that predates this field, and a default alone would still let a row
+      // answer `null`, which is invisible to `equals: true` and to a `not_equals` audit alike.
+      // The flag and the migration must agree on that NOT NULL — `push` rebuilds non-production
+      // schemas from this config, so a mismatch reopens as permanent drift.
+    },
+    {
+      name: 'ordemDestaque',
+      type: 'number',
+      label: 'Ordem no destaque',
+      admin: {
+        description: 'Menor primeiro. Empates pelo título.',
+      },
+      // **The band's declared order** (FR-001, FR-003). The read sorts `['ordemDestaque',
+      // 'titulo']` — an ARRAY, because the comma form orders by nothing on the local API: drizzle
+      // wraps the whole string, resolves no column, swallows the failure and falls back to
+      // `-createdAt`. The featured missions would then be the three most recently created, and
+      // nothing on screen would say so.
+      //
+      // **Optional, and with no `defaultValue`.** Both halves are load-bearing. `required` would
+      // demand a position from the team for a band of one, where the number means nothing; a
+      // `defaultValue: 0` would be worse — every row would answer the same position, collapsing
+      // the whole band onto the `titulo` tie-break and silently retiring the field the editor is
+      // being asked to fill in. Absent stays absent, and Postgres sorts NULLs last on ASC, so an
+      // unordered featured mission falls behind the ordered ones (CHK004) rather than jumping to
+      // the front the way a zero default would put it.
+      //
+      // The `admin.description` is where FR-003's *declared* tie-break reaches the person typing
+      // the numbers: two missions sharing an order is the first case they will hit, and without
+      // the sentence it reads as a bug rather than as the documented, stable outcome.
     },
   ],
 }

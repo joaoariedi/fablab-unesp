@@ -14,10 +14,10 @@
 > código é o fato e este arquivo é o defeito.
 >
 > **Verificado por teste.** `apps/web/tests/accounts/lgpd-doc.test.ts` lê as colunas de
-> `perfilMaker`, a constante `TERMS_VERSION`, a rota de exclusão e a lista
-> `COLECOES_COM_AUTOR` **do código** e falha quando este documento para de descrevê-los. Um
-> campo novo no perfil quebra o teste até ter linha na tabela abaixo — porque um dado pessoal
-> coletado sem registro é exatamente a falha que um lint de markdown não enxerga.
+> `perfilMaker`, a constante `TERMS_VERSION`, a rota de exclusão, a lista `COLECOES_COM_AUTOR` e
+> o `select` `CAMPOS_DO_RANKING` **do código** e falha quando este documento para de
+> descrevê-los. Um campo novo no perfil quebra o teste até ter linha na tabela abaixo — porque um
+> dado pessoal coletado sem registro é exatamente a falha que um lint de markdown não enxerga.
 
 ## Dados coletados
 
@@ -192,14 +192,56 @@ alguém escreveu o próprio nome **dentro** de um artigo, essa menção não é 
 ## Quem vê estes dados
 
 - **A própria pessoa**, em Minha Conta.
-- **Qualquer visitante**, quanto a `nome`, `handle`, avatar e nível — são o bloco de autoria que
-  todo card desenha. O resto do perfil **não** é público.
+- **Qualquer visitante**, quanto a `nome`, `handle`, avatar, nível e `xpTotal` — o bloco de
+  autoria que todo card desenha e, desde a feature 006, a lista de makers do lab inteira. O resto
+  do perfil **não** é público. A seção seguinte diz exatamente o que sai e em que ordem.
 - **A equipe do lab**, pelo admin, e só a do próprio lab: a leitura de `perfilMaker` é uma
   restrição por organização, nunca um booleano — um booleano autorizaria a operação e entregaria
   junto a lista de makers do outro lab.
 - **O papel `master`**, único que atravessa organizações. A lista de usuários da plataforma fica
   **escondida** do admin de organização de propósito: saber quais endereços têm conta é a
   enumeração que a especificação proíbe.
+
+## O que um visitante sem conta enumera
+
+**A lista de makers do lab é pública, e isso é uma decisão tomada — feature 006, § CLR-014.**
+Até aqui este documento dizia que um visitante vê `nome`, `handle`, avatar e nível. Era verdade,
+mas **um perfil de cada vez**, pendurado na autoria de um conteúdo publicado. A leitura anônima do
+ranking — `readPublicRanking`, em `apps/web/lib/tenancy/public-payload.ts` — entrega outra coisa: o
+**conjunto** dos membros do lab, numa resposta só, **ordenado**. Os campos quase não mudaram; o que
+mudou é a enumeração e a **posição relativa** — num lab com dois makers, a página publica qual dos
+dois pontuou mais. A § CLR-014 registra que a PO decidiu assim, e que **nenhum tamanho mínimo de
+lab** suprime o quadro.
+
+As colunas que atravessam a porta anônima são exatamente o `select` `CAMPOS_DO_RANKING`, e nenhuma
+outra. Isso não é cuidado de quem chama: a consulta é emitida com essa projeção, o banco devolve só
+essas colunas, e a porta **recusa** uma leitura de `perfilMaker` que chegue sem projeção (006
+§ FR-036). O que a pessoa digitou sobre si — `dataNascimento`, `vinculoUnesp`, `escolaridade`,
+`curso`, `usuario`, `aceiteTermosEm`, `aceiteTermosVersao` — não é lido e depois descartado: não é
+lido.
+
+| Coluna | O que o visitante lê |
+|---|---|
+| `id` | O identificador da linha de perfil, que acompanha cada lugar da lista por ser a chave dele |
+| `nome` | O nome, o mesmo que já assina cada conteúdo publicado |
+| `handle` | O `@nomesobrenome`, o mesmo da autoria |
+| `avatarRender` | O PNG do avatar já composto. Quem ainda não tem render aparece sem imagem — a configuração que o gera (`avatarConfig`) não sai por aqui |
+| `xpTotal` | O XP acumulado no lab, em número. É ele que ordena a lista |
+| `nivel` | O nível derivado desse XP, o mesmo que aparece ao lado do nome nos cards |
+
+**A ordem é `['-xpTotal', 'handle']`**: XP decrescente, empate desfeito pelo handle. O desempate é
+declarado de propósito (004 § FR-013) — sem ele, dois makers com o mesmo XP trocam de lugar entre
+dois carregamentos, e "posição relativa" vira uma afirmação que a página não sustenta.
+
+**O tamanho é de até 100 lugares por requisição** (`LIMITE_DO_RANKING`, declarado em `/ranking`).
+O número entra no registro porque *a lista* é a divulgação: o lab inteiro numa resposta é coisa
+diferente de "os primeiros colocados", e é o que permite a alguém copiar o quadro de membros de um
+lab sem nunca criar conta.
+
+O que **não** sai por esta porta, e vale dizer explicitamente: o `email` e o hash de senha não
+moram no `perfilMaker` (são do `users` global e nenhuma leitura pública os toca), nada aqui diz se
+a pessoa está online ou quando esteve, e o XP aparece como total — não como o histórico do
+`xpLedger`, que diz o que a pessoa fez e quando.
 
 ## Uma coisa que a equipe precisa saber sobre a exatidão destes dados
 

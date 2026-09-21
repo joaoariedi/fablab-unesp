@@ -715,3 +715,108 @@ describe('the tombstone migration: autor survives its author', () => {
     })
   }
 })
+
+/**
+ * The newest committed `.json` snapshot's tables, keyed `public.<table>`.
+ *
+ * Drizzle diffs the next `migrate:create` against the newest snapshot, not against the
+ * database. A migration committed without its `.json` therefore does not merely lose
+ * documentation: the next generated migration re-adds the same columns, and applying it to a
+ * database that already has them fails with 42701. FR-002 names the snapshot for that reason,
+ * and `snapshotColumns` below is what makes the claim checkable from the repo alone.
+ */
+const latestSnapshotTables = (): Record<string, { columns?: Record<string, SnapshotColumn> }> => {
+  const snapshots = readdirSync(MIGRATIONS_DIR)
+    .filter((f) => f.endsWith('.json'))
+    .sort()
+  const newest = snapshots.at(-1)
+  expect(newest, `no .json snapshot in ${MIGRATIONS_DIR}`).toBeDefined()
+  const parsed: unknown = JSON.parse(readFileSync(join(MIGRATIONS_DIR, newest as string), 'utf8'))
+  return (parsed as { tables?: Record<string, { columns?: Record<string, SnapshotColumn> }> })
+    .tables ?? {}
+}
+
+type SnapshotColumn = { notNull?: boolean; default?: unknown }
+
+const snapshotColumn = (table: string, column: string): SnapshotColumn | undefined =>
+  latestSnapshotTables()[`public.${table}`]?.columns?.[column]
+
+/**
+ * The two curation columns feature 006 adds to a table that already has rows (T003, FR-002).
+ *
+ * The trap this guards is `required: true` on an EXISTING table. On `missao.destaqueHome` that
+ * is a NOT NULL added to rows that already exist, and Postgres refuses it outright unless the
+ * column arrives with a default — the first lab that already has missions is where a migration
+ * without one stops, in production, halfway through a deploy. `Missao.ts` pairs `required: true`
+ * with `defaultValue: false` precisely so the generated DDL carries `DEFAULT false`, and this
+ * is the assertion that keeps the pair together: dropping the default from the field config
+ * still type-checks, still passes every config-shape test, and only fails here.
+ */
+describe('the curation columns feature 006 adds to "missao" (T003, FR-002)', () => {
+  it('adds "missao"."destaque_home" NOT NULL and WITH A DEFAULT, so existing rows backfill', () => {
+    const statement = addColumnStatement('missao', 'destaque_home')
+    expect(
+      statement,
+      'no committed migration gives "missao" a "destaque_home" column, so FR-001\'s curation ' +
+        'switch exists in the field config and nowhere in the database — the Home band queries ' +
+        'a column that is not there',
+    ).not.toBeNull()
+    expect(
+      statement,
+      '"missao"."destaque_home" arrives without NOT NULL while the field is `required: true`. ' +
+        'Non-production schemas are rebuilt by `push` from that config, so the column comes ' +
+        'back constrained and the two disagree permanently — which is the drift gate\'s whole ' +
+        'subject.',
+    ).toContain('NOT NULL')
+    expect(
+      statement,
+      '"missao"."destaque_home" is NOT NULL with no DEFAULT. Postgres refuses to add such a ' +
+        'column to a table that already has rows, so this migration stops on the first lab ' +
+        'that already has missions.',
+    ).toMatch(/DEFAULT\s+false/i)
+  })
+
+  it('adds "missao"."ordem_destaque" NULLABLE, because an order is optional', () => {
+    const statement = addColumnStatement('missao', 'ordem_destaque')
+    expect(
+      statement,
+      'no committed migration gives "missao" an "ordem_destaque" column, so FR-003\'s declared ' +
+        'order has nowhere to be written and the band sorts on nothing',
+    ).not.toBeNull()
+    expect(
+      statement,
+      '"missao"."ordem_destaque" is NOT NULL. The field is optional (a featured mission need ' +
+        'not carry an order, and absent sorts last), so a NOT NULL here is a constraint the ' +
+        'config does not describe and `push` will drop straight back out.',
+    ).not.toContain('NOT NULL')
+  })
+
+  it('records both columns in the newest snapshot, or the next generation repeats them', () => {
+    const destaque = snapshotColumn('missao', 'destaque_home')
+    expect(
+      destaque,
+      'the newest .json snapshot does not carry "public.missao"."destaque_home". The migration ' +
+        'was committed without its snapshot (FR-002), so the next `migrate:create` diffs ' +
+        'against a schema that predates it and emits the same ADD COLUMN a second time.',
+    ).toBeDefined()
+    expect(destaque?.notNull).toBe(true)
+    expect(String(destaque?.default)).toMatch(/false/i)
+
+    const ordem = snapshotColumn('missao', 'ordem_destaque')
+    expect(
+      ordem,
+      'the newest .json snapshot does not carry "public.missao"."ordem_destaque"',
+    ).toBeDefined()
+    expect(ordem?.notNull).toBe(false)
+  })
+
+  it('drops both columns in down(), so the migration is reversible', () => {
+    for (const column of ['destaque_home', 'ordem_destaque'] as const) {
+      expect(
+        new RegExp(`ALTER TABLE "missao" DROP COLUMN "${column}"`).test(committedDownSql()),
+        `down() does not drop "missao"."${column}", so rolling this migration back leaves the ` +
+          'database ahead of the schema the collections declare',
+      ).toBe(true)
+    }
+  })
+})

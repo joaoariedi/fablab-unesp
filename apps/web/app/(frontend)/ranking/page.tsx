@@ -1,9 +1,8 @@
 import type { CSSProperties, ReactElement, ReactNode } from 'react'
 
-import { CARD_TITLE_STYLE, EmptyState, PRIMARY_BUTTON_STYLE, PixelImage, cardStyle, formatHandle } from '@fablab/ui'
+import { CARD_TITLE_STYLE, EmptyState, PixelImage, cardStyle, formatHandle } from '@fablab/ui'
 
-import { getTenantScopedPayloadForRSC } from '../../../lib/tenancy'
-import { currentUser } from '../../../lib/tenancy/session'
+import { type RankingRow, readPublicRanking } from '../../../lib/tenancy/public-payload'
 
 /**
  * T043 / FR-013, FR-037, US6 — **`/ranking`**: this organization's makers, by XP total.
@@ -29,18 +28,24 @@ import { currentUser } from '../../../lib/tenancy/session'
  * the one the Home card's read uses. The order arrives ordered; this file renders what it is
  * given, top to bottom.
  *
- * ── Why it reads through the SIGNED-IN door (SC-018) ────────────────────────────────────────
+ * ── T012 / FR-017: the board is PUBLIC, and the read is a projected one ─────────────────────
  *
- * `perfilMaker` carries **no `publicList` declaration** in the scope registry — its entry
- * records only why it is scoped — so the anonymous client refuses to list it by construction,
- * and rightly: a lab's roster of makers and handles is not published content. SC-018 is written
- * about the answer this page gives *a signed-in maker*, and D6 says so: *"the `/ranking` read
- * crosses profiles within one organization, which is ordinary scoped reading"*. A signed-out
- * visitor is therefore invited in, the way `/missoes` invites them — not shown an empty board,
- * which would read as "this lab has no makers".
+ * It read through the signed-in choke point and showed a visitor with no session an invitation
+ * to log in. That was correct while `perfilMaker` carried no public declaration — but 006 puts
+ * this lab's top five on the Home, where the same visitor reads it without an account, and a
+ * page that then refuses them the full board publishes a link to a wall.
  *
- * Adding `publicList` here to make the page anonymous is not this task's to do: it is a change
- * to what the platform publishes about people, and it belongs to whoever argues for it.
+ * So the read is `readPublicRanking` (`lib/tenancy/public-payload.ts`), the fifth named
+ * exemption in `lib/tenancy` and the one that reads a table holding consented personal data.
+ * **The bound is the `select` it passes, not the type it returns**: `dataNascimento`,
+ * `escolaridade`, `curso`, `vinculoUnesp` and `usuario` are never fetched at all, rather than
+ * fetched into an elevated anonymous context and dropped by convention. The reasoning lives
+ * beside that function, where the anonymous surface is reviewed; this page is one of its two
+ * callers and states no scope of its own.
+ *
+ * There is therefore **no session branch left here**. A page that asked who is reading would be
+ * asking a question whose answer changes nothing on the screen — and the Home card, reading the
+ * same function, would disagree with it for exactly the visitors 006 is about.
  *
  * ── It displays; it never awards (FR-022) ───────────────────────────────────────────────────
  *
@@ -54,33 +59,14 @@ export const metadata = { title: 'RANKING — Fab Lab CITe Bauru' }
 
 /** This page's own path. Every link here — 006's Home card included — is built from this, so
  *  the route moves in one edit and no href is left pointing at the old one. */
-export const RANKING_PATH = '/ranking'
+// `RANKING_PATH` and `ORDENACAO_DO_RANKING` moved to `lib/content/ranking.ts` in feature 006.
+// Two surfaces needed them — the Home's footer link and `readPublicRanking`'s order — and a
+// LIBRARY importing a route module inverts the dependency the tenancy layer is built on. Re-
+// exported here so this page stays the place a reader looks for what the board is.
+import { ORDENACAO_DO_RANKING, RANKING_PATH } from '../../../lib/content/ranking'
 
-const LOGIN_PATH = '/login'
+export { ORDENACAO_DO_RANKING, RANKING_PATH }
 
-/** The query parameter `/login` reads its destination from (`login/page.tsx`). */
-const PARAM_DESTINO = 'de'
-
-/** Where the invitation sends a signed-out visitor, and where login brings them back to. */
-const CONVITE_HREF = `${LOGIN_PATH}?${PARAM_DESTINO}=${encodeURIComponent(RANKING_PATH)}`
-
-/**
- * The declared order (FR-013). Named, because it is the requirement — a literal retyped at a
- * second call site is a second ranking free to disagree with this one.
- *
- * **An array, and the comma-joined string it replaced was not a multi-key sort at all.** Payload
- * splits on `,` only in `sanitizeSortParams`, which is wired into the REST layer; the local API
- * an RSC reaches calls `sanitizeSortQuery`, which does not split. `@payloadcms/drizzle`'s
- * `buildOrderBy` then wraps the whole string in an array, fails to resolve a column named
- * `xpTotal,handle`, swallows the failure in a bare `catch (_) { continue }`, and leaves the
- * `-createdAt` it pushes before the loop. The board listed the **newest profile first** — not
- * by XP, and with no tie-break — and FR-013 was met in no part.
- *
- * It passed its own test because the fake in `ranking-page.test.ts` split the comma. The witness
- * is now `tests/public/ranking-ordem.test.ts`, which asks a real Postgres, on a fixture built so
- * the `-createdAt` fallback returns the exact opposite of the right answer.
- */
-export const ORDENACAO_DO_RANKING = ['-xpTotal', 'handle']
 
 /** How many places the board draws. A guard against an unbounded read, not a paging strategy —
  *  and emphatically not Payload's default of 10, which would drop a lab's eleventh maker from
@@ -96,50 +82,13 @@ const LARGURA_DO_QUADRO = 32
  *  a request and never a stretch. */
 const LARGURA_NA_LINHA = LARGURA_DO_QUADRO * 2
 
-/** One populated `midiaImagem`, reduced to the only field a sprite needs. Structural rather
- *  than imported from `payload-types.ts`, which is gitignored: a page that imported a generated
- *  type would compile locally and fail CI (tasks.md § "Read before starting"). */
-type MidiaDoc = { readonly url?: string | null }
-
-/** One profile as the ranking read returns it at `depth: 1`. */
-type PerfilDoc = {
-  readonly id?: string | number
-  readonly nome?: string
-  readonly handle?: string
-  readonly xpTotal?: number
-  readonly avatarRender?: MidiaDoc | string | number | null
-}
-
-/**
- * This lab's makers, already ordered — or `null` when the read failed, which is a different
- * screen from "this lab has no makers", the same split every 003 listing makes.
- */
-async function lerRanking(): Promise<PerfilDoc[] | null> {
-  try {
-    const db = await getTenantScopedPayloadForRSC()
-    const { docs } = await db.find<PerfilDoc>({
-      collection: 'perfilMaker',
-      // No `where`: the tenant is the door's, and a second opinion here is a second place to
-      // get it wrong (FR-028).
-      sort: ORDENACAO_DO_RANKING,
-      limit: LIMITE_DO_RANKING,
-      // `avatarRender` is a relationship. At depth 0 it is an id, which is not art.
-      depth: 1,
-    })
-    return docs
-  } catch (erro) {
-    console.warn('[ranking] a leitura dos perfis falhou; a página reporta em lugar.', erro)
-    return null
-  }
-}
-
 /** A populated render's URL. An unpopulated relationship is an id, and an id is not a picture. */
-const urlDoAvatar = (avatar: PerfilDoc['avatarRender']): string | undefined =>
+const urlDoAvatar = (avatar: RankingRow['avatarRender']): string | undefined =>
   typeof avatar === 'object' && avatar !== null && typeof avatar.url === 'string' ? avatar.url : undefined
 
 /** The XP a profile carries. FR-043 leaves the total **uncapped**, so this is printed as it is
  *  stored; only `nivel` stops at the curve's ceiling. */
-const xpDe = (perfil: PerfilDoc): number =>
+const xpDe = (perfil: RankingRow): number =>
   typeof perfil.xpTotal === 'number' && Number.isFinite(perfil.xpTotal) ? perfil.xpTotal : 0
 
 /**
@@ -149,7 +98,7 @@ const xpDe = (perfil: PerfilDoc): number =>
  * A profile whose render has not been composed yet draws **no** `<img>` rather than an empty
  * frame: FR-007's rule about missing avatar art, applied to the page that lists everyone.
  */
-function linha(perfil: PerfilDoc, posicao: number): ReactElement {
+function linha(perfil: RankingRow, posicao: number): ReactElement {
   const avatar = urlDoAvatar(perfil.avatarRender)
   const handle = formatHandle(perfil.handle ?? '')
 
@@ -174,7 +123,7 @@ function linha(perfil: PerfilDoc, posicao: number): ReactElement {
 }
 
 /** The board, the empty body or the error body — exactly one of the three. */
-function resultado(perfis: PerfilDoc[] | null): ReactNode {
+function resultado(perfis: RankingRow[] | null): ReactNode {
   if (perfis === null) {
     return (
       <EmptyState
@@ -201,31 +150,17 @@ function resultado(perfis: PerfilDoc[] | null): ReactNode {
   return <ol style={ESTILO.lista}>{perfis.map((perfil, indice) => linha(perfil, indice + 1))}</ol>
 }
 
-/** The signed-out screen: the invitation, and no roster — see the docstring. */
-function convite(): ReactElement {
-  return (
-    <section style={ESTILO.convite}>
-      <p style={ESTILO.conviteTexto}>
-        Entre na sua conta para ver o ranking de makers deste lab e a sua posição nele.
-      </p>
-      <a href={CONVITE_HREF} style={ESTILO.acao}>
-        Entrar
-      </a>
-    </section>
-  )
-}
-
 /**
- * `/ranking` — this lab's makers by XP, highest first, ties broken by handle.
+ * `/ranking` — this lab's makers by XP, highest first, ties broken by handle. Read by anyone.
+ *
+ * The reader answers `null` for a failed read and `[]` for a lab with no makers (FR-022), and
+ * those are two different screens. `TenantUnresolvedError` it rethrows, and so does this page by
+ * not catching it: a host that belongs to no lab is the **site's** 404, never an error card.
  *
  * @example /ranking
  */
 export default async function Page(): Promise<ReactElement> {
-  const usuario = await currentUser()
-  // Asked before the read and not after: a signed-out visitor is refused by `perfilMaker.read`
-  // anyway, and reaching for the door only to catch its refusal would report an outage on a
-  // screen whose real answer is "sign in".
-  const perfis = usuario ? await lerRanking() : null
+  const perfis = await readPublicRanking(LIMITE_DO_RANKING)
 
   return (
     <main style={ESTILO.pagina}>
@@ -236,7 +171,7 @@ export default async function Page(): Promise<ReactElement> {
           ordem seja sempre a mesma.
         </p>
       </section>
-      {usuario === null ? convite() : <section style={ESTILO.conteudo}>{resultado(perfis)}</section>}
+      <section style={ESTILO.conteudo}>{resultado(perfis)}</section>
     </main>
   )
 }
@@ -281,18 +216,4 @@ const ESTILO: Record<string, CSSProperties> = {
   identidade: { display: 'flex', flexDirection: 'column', gap: 'var(--space-1)', flex: 1 },
   handle: { fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'var(--color-claro)' },
   xp: { fontFamily: 'var(--font-display)', fontSize: 'var(--text-lg)' },
-  convite: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: 'var(--space-4)',
-    padding: 'var(--space-5)',
-  },
-  conviteTexto: {
-    fontFamily: 'var(--font-body)',
-    fontSize: 'var(--text-base)',
-    color: 'var(--color-claro)',
-    margin: 0,
-  },
-  acao: { ...PRIMARY_BUTTON_STYLE, display: 'inline-block', textDecoration: 'none' },
 }

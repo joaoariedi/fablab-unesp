@@ -6,28 +6,34 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { EmptyState, PixelImage, formatHandle } from '@fablab/ui'
 
-import type { FindArgs } from '../../lib/tenancy/client'
 import { publicListReason } from '../../lib/tenancy/scope-registry'
 
 /**
  * T043 / FR-013, FR-037, US6 — `/ranking`: this lab's makers by XP, **with the tie-break
  * declared**.
  *
+ * ── T012: the page moved onto `readPublicRanking`, and the board became public ──────────────
+ *
+ * It read `perfilMaker` through the signed-in choke point and showed a visitor with no session
+ * an invitation instead of a board. FR-017 publishes the ranking — the Home card shows its top
+ * five to exactly that visitor — so the page now reads through `readPublicRanking`, whose bound
+ * is the `select` the anonymous door demands (CLR-010). §4 asserts the inversion, §1 asserts the
+ * old door is not reached at all, and §9 asks the registry whether the roster really is
+ * published rather than repeating the sentence.
+ *
  * ── Why the fake SORTS instead of returning its rows in fixture order ───────────────────────
  *
  * FR-013's whole content is the *order*, and a fake that answered every read with the same
- * array would make it unfalsifiable: a page that passed no `sort` at all would render exactly
- * what a page that passed `-xpTotal,handle` renders, and this suite would be green over a
- * screen whose order is whatever Postgres felt like returning. So `FakeLabClient` applies the
- * `sort` string it is given — and applies **nothing** when none is given, which is the database's
- * actual behaviour and the failure this task exists to prevent.
+ * array would make the rendering unfalsifiable: a page that rendered an unsorted copy would look
+ * exactly like one that rendered the ranked rows. So `FakeRankingReader` applies the DECLARED
+ * order, which is what the real reader asks Postgres for (`sort: ORDENACAO_DO_RANKING`, measured
+ * against a real database in `tests/tenancy/public-ranking.test.ts` §2). Sorting here models the
+ * reader's contract; what these sections still catch is the half of FR-021 that is this page's —
+ * a page that re-sorts what it was handed, or renders from an unsorted copy of it.
  *
  * The fixture is therefore stored in an order that is *not* the ranked one, and the two makers
  * tied at 12 XP are stored with the alphabetically **later** handle first — `carladias` ahead of
- * `brunoalves`. A page sorting by `-xpTotal` alone still passes §2's "highest first" and fails
- * on the tie, because a stable sort leaves that pair exactly as it found it. Which is precisely
- * the defect tasks.md names: *"sorting by XP alone leaves ties in whatever order Postgres
- * returns, which differs between runs and makes SC-013 unprovable"*.
+ * `brunoalves`, so the rendered order can never be the stored one by accident.
  *
  * ── Why the order is read out of the rendered TEXT ──────────────────────────────────────────
  *
@@ -152,56 +158,63 @@ function ordenar(
 }
 
 /**
- * The signed-in maker's own client — the door D6 says serves this page, because `perfilMaker`
- * carries no `publicList` declaration and the anonymous client refuses to list it.
+ * `readPublicRanking` (T009), standing in for the database behind it.
  *
- * The write methods are spies that exist: a client missing them would let §5 pass by
- * `TypeError` rather than by the page not writing, which is the same green for the opposite
- * reason.
+ * It answers with the DECLARED order because the real reader asks for it, and it makes the
+ * FR-022 split the real reader makes: `null` is a **failed** read and `[]` is a lab with no
+ * makers — two different screens, which §6 asserts.
+ *
+ * The limits it was asked for are recorded rather than the whole argument list: after T012 the
+ * tenant, the sort, the projection and the depth all belong to the reader (and are measured
+ * against a real Postgres in `tests/tenancy/public-ranking.test.ts`), and the only thing the
+ * page still decides is how many places the board draws.
  */
-class FakeLabClient {
-  readonly calls: FindArgs[] = []
-  readonly tenantId = 'org-fake'
-  readonly create = vi.fn(async () => ({}))
-  readonly update = vi.fn(async () => ({}))
-  readonly delete = vi.fn(async () => ({}))
+class FakeRankingReader {
+  readonly limites: number[] = []
 
   constructor(
     private readonly perfis: readonly PerfilFixture[] = PERFIS,
     private readonly falha = false,
   ) {}
 
-  find = async <T>(args: FindArgs): Promise<{ docs: T[]; totalDocs: number }> => {
-    this.calls.push(args)
-    if (this.falha) throw new Error(`leitura de ${args.collection} falhou`)
-    if (args.collection !== 'perfilMaker') return { docs: [] as T[], totalDocs: 0 }
-    const ordenados = ordenar(this.perfis, args.sort)
-    const docs = ordenados.slice(0, args.limit ?? ordenados.length) as unknown as T[]
-    return { docs, totalDocs: this.perfis.length }
-  }
-
-  findByID = async <T>(): Promise<T | null> => null
-
-  paraColecao(collection: string): FindArgs[] {
-    return this.calls.filter((call) => call.collection === collection)
+  ler = async (limit: number): Promise<PerfilFixture[] | null> => {
+    this.limites.push(limit)
+    if (this.falha) return null
+    return ordenar(this.perfis, ORDENACAO_DECLARADA).slice(0, limit)
   }
 }
 
 const mocks = vi.hoisted(() => ({
   currentUser: vi.fn(async (): Promise<{ id: string | number } | null> => null),
   getTenantScopedPayloadForRSC: vi.fn(),
+  readPublicRanking: vi.fn<(limite: number) => Promise<unknown[] | null>>(),
 }))
 
+// The signed-in door stays mocked even though the page no longer reaches it: §1 asserts it is
+// never called, and a spy that was never installed would report `not.toHaveBeenCalled()` as a
+// pass on a page that called the real thing.
 vi.mock('../../lib/tenancy/session', () => ({ currentUser: mocks.currentUser }))
 vi.mock('../../lib/tenancy', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../lib/tenancy')>()),
   getTenantScopedPayloadForRSC: mocks.getTenantScopedPayloadForRSC,
 }))
 
+/**
+ * The anonymous reader, replaced whole rather than spread over the original.
+ *
+ * `public-payload.ts` imports `ORDENACAO_DO_RANKING` from this very page, so spreading the real
+ * module would pull the module under test back through its own mock; and that module's top level
+ * reaches `payload` itself, which no page suite needs loaded. The page imports exactly one thing
+ * from it, and this factory is that one thing — so a page that started importing a second would
+ * fail loudly here rather than read through an unfaked door.
+ */
+vi.mock('../../lib/tenancy/public-payload', () => ({ readPublicRanking: mocks.readPublicRanking }))
+
 const pagina = await import('../../app/(frontend)/ranking/page')
-const { default: Page, RANKING_PATH, metadata } = pagina as {
+const { default: Page, RANKING_PATH, ORDENACAO_DO_RANKING, metadata } = pagina as {
   default: () => Promise<ReactElement>
   RANKING_PATH: string
+  ORDENACAO_DO_RANKING: readonly string[]
   metadata: { title?: string }
 }
 
@@ -262,62 +275,75 @@ function linhaDe(tree: ReactNode, handle: string): AnyElement {
   return linha
 }
 
-type Render = { tree: ReactNode; lab: FakeLabClient }
+type Render = { tree: ReactNode; leitor: FakeRankingReader }
 
 type OpcoesDeRender = {
-  /** `null` is the signed-out visitor. The default is a signed-in maker, because SC-018 is
-   *  written about the answer `/ranking` gives one. */
+  /** `null` is the signed-out visitor. The default is a signed-in maker — and after T012 the
+   *  two must receive the SAME board (FR-017), which is what §4 asserts. */
   readonly sessao?: { id: string | number } | null
   readonly perfis?: readonly PerfilFixture[]
   readonly falha?: boolean
 }
 
 async function renderizar(opcoes: OpcoesDeRender = {}): Promise<Render> {
-  const lab = new FakeLabClient(opcoes.perfis ?? PERFIS, opcoes.falha ?? false)
+  const leitor = new FakeRankingReader(opcoes.perfis ?? PERFIS, opcoes.falha ?? false)
   mocks.currentUser.mockResolvedValue(opcoes.sessao === undefined ? { id: 7 } : opcoes.sessao)
-  mocks.getTenantScopedPayloadForRSC.mockResolvedValue(lab)
+  mocks.readPublicRanking.mockImplementation(leitor.ler)
   const tree = (await Page()) as ReactNode
-  return { tree, lab }
+  return { tree, leitor }
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
 })
 
-describe('§1 — the read, and the tie-break it declares (FR-013, FR-028)', () => {
-  it('reads this lab\'s profiles through the scoped choke point', async () => {
-    const { lab } = await renderizar()
-
-    const leitura = lab.paraColecao('perfilMaker')[0]
-    expect(leitura, 'the page never read `perfilMaker`, so there is no ranking on it').toBeDefined()
-    expect(mocks.getTenantScopedPayloadForRSC).toHaveBeenCalled()
-  })
-
-  it('names the declared tie-break, and not the XP alone', async () => {
-    const { lab } = await renderizar()
+describe('§1 — the read: the anonymous reader, and one call through it (FR-017, FR-021)', () => {
+  it('reads the board through `readPublicRanking`, and not through the signed-in door', async () => {
+    const { leitor } = await renderizar()
 
     expect(
-      lab.paraColecao('perfilMaker')[0]?.sort,
-      'FR-013 asks for a DECLARED tie-break. `-xpTotal` alone leaves two makers at equal XP in ' +
-        'whatever order Postgres returns, which differs between runs and makes SC-013 unprovable.',
+      leitor.limites,
+      'T012 moves this page onto `readPublicRanking`. A page that never calls it has no board to ' +
+        'show a visitor with no session, which is the whole of FR-017 here.',
+    ).toHaveLength(1)
+    expect(
+      mocks.getTenantScopedPayloadForRSC,
+      'the signed-in choke point served this page until T012. Reaching it now puts the roster ' +
+        'back behind a session and leaves the Home card publishing what the page refuses to.',
+    ).not.toHaveBeenCalled()
+  })
+
+  it('hands the reader a limit and nothing else', async () => {
+    await renderizar()
+
+    // The tenant, the sort, the projection and the depth are the READER's — measured against a
+    // real Postgres in tests/tenancy/public-ranking.test.ts. A page passing any of them again
+    // would be a second opinion on the anonymous surface, which is the one place D2 says there
+    // must be exactly one.
+    expect(mocks.readPublicRanking.mock.calls[0]).toEqual([expect.any(Number)])
+  })
+
+  it('declares the order once and sorts nothing of its own (FR-021)', async () => {
+    await renderizar()
+
+    expect(
+      ORDENACAO_DO_RANKING,
+      'the page still DECLARES the order — `public-payload.ts` imports this constant, so a page ' +
+        'that stopped exporting it would take the reader\'s sort with it.',
     ).toEqual(ORDENACAO_DECLARADA)
+    expect(
+      PAGE_SOURCE,
+      'the order arrives ordered. A sort here is a second ranking, free to disagree with the one ' +
+        'the Home card reads through the same function (FR-021).',
+    ).not.toMatch(/\.sort\(/)
   })
 
-  it('names no tenant of its own — the door owns the scope', async () => {
-    const { lab } = await renderizar()
-
-    expect(JSON.stringify(lab.paraColecao('perfilMaker')[0]?.where ?? {})).not.toContain('tenant')
-  })
-
-  it('asks for more than Payload\'s default page, and for the avatar to arrive drawable', async () => {
-    const { lab } = await renderizar()
-    const leitura = lab.paraColecao('perfilMaker')[0]
+  it('asks for more than Payload\'s default page', async () => {
+    const { leitor } = await renderizar()
 
     // Payload's own default is 10. A lab with an eleventh maker would silently lose them from
     // the bottom of the ranking, which is the one place a maker looks for themselves.
-    expect(Number(leitura?.limit ?? 10)).toBeGreaterThan(10)
-    // `avatarRender` is a relationship: at depth 0 it is an id, and US6 asks for the avatar.
-    expect(Number(leitura?.depth ?? 0)).toBeGreaterThanOrEqual(1)
+    expect(Number(leitor.limites[0] ?? 10)).toBeGreaterThan(10)
   })
 
   it('never reaches Payload directly', () => {
@@ -411,37 +437,53 @@ describe('§3 — the order is the same on every run (SC-013)', () => {
   })
 })
 
-describe('§4 — the signed-out visitor (SC-018)', () => {
-  it('reads nothing at all, and invites them in', async () => {
-    const { lab } = await renderizar({ sessao: null })
+describe('§4 — the board is public: a visitor with no session reads it (FR-017, T012)', () => {
+  it('serves the signed-out visitor the ranking, not an invitation', async () => {
+    const { tree, leitor } = await renderizar({ sessao: null })
 
-    expect(mocks.getTenantScopedPayloadForRSC).not.toHaveBeenCalled()
-    expect(lab.calls).toEqual([])
+    expect(leitor.limites, 'the signed-out visitor was served no read at all').toHaveLength(1)
+    expect(
+      ordemDosHandles(tree),
+      'until T012 this page refused a visitor with no session and drew an invitation in place of ' +
+        'the board. FR-017 publishes the ranking — the Home card shows its top five to that same ' +
+        'visitor — so a signed-out reader who meets no maker is the shipped CLR-004 failure mode.',
+    ).toEqual(ORDEM_ESPERADA)
   })
 
-  it('sends them to sign in and brings them back here', async () => {
-    const { tree } = await renderizar({ sessao: null })
+  it('shows them the same board it shows a signed-in maker', async () => {
+    const { tree: anonimo } = await renderizar({ sessao: null })
+    const { tree: identificado } = await renderizar({ sessao: { id: 7 } })
 
-    const convite = links(tree).find((link) => link.href.startsWith('/login'))
-    expect(convite, 'an invitation with no link is a sentence').toBeDefined()
-    expect(convite?.href).toContain(`de=${encodeURIComponent('/ranking')}`)
-    expect(convite?.label.length).toBeGreaterThan(0)
+    expect(
+      ordemDosHandles(anonimo),
+      'one board, one order, whoever is reading it. A session that changes the ranking is a ' +
+        'second ranking (FR-021).',
+    ).toEqual(ordemDosHandles(identificado))
   })
 
-  it('shows no maker of this lab to an unidentified visitor', async () => {
+  it('sends nobody to /login from a page that no longer needs one', async () => {
     const { tree } = await renderizar({ sessao: null })
 
-    expect(ordemDosHandles(tree)).toEqual([])
+    expect(
+      links(tree).filter((link) => link.href.startsWith('/login')),
+      'the sign-in invitation was the screen this page gave instead of the board. Leaving it ' +
+        'beside the rendered ranking tells a visitor they are missing something they are reading.',
+    ).toEqual([])
   })
 })
 
 describe('§5 — it displays; it never awards (FR-022)', () => {
-  it('writes nothing, by any door', async () => {
-    const { lab } = await renderizar()
-
-    expect(lab.create).not.toHaveBeenCalled()
-    expect(lab.update).not.toHaveBeenCalled()
-    expect(lab.delete).not.toHaveBeenCalled()
+  it('writes nothing, by any door', () => {
+    // `readPublicRanking` returns rows and the public client exposes no create/update/delete at
+    // all (lib/tenancy/public-payload.ts, asserted in tests/tenancy/public-payload.test.ts), so
+    // after T012 there is no writer left for a spy to watch. What remains possible is a second
+    // door opened by hand in this file, and that is what is looked for.
+    expect(PAGE_SOURCE).not.toMatch(/\.(create|update|delete)\s*\(/)
+    expect(
+      PAGE_SOURCE,
+      'the page reads through `readPublicRanking` and nothing else. Any other client here is a ' +
+        'second scope decision, and the anonymous surface is where D2 allows exactly one.',
+    ).not.toMatch(/getTenantScopedPayload|getSystemScopedPayload|getPublicScopedPayload/)
   })
 })
 
@@ -483,10 +525,11 @@ describe('§6 — the two states a roster can be in', () => {
  *    no `'use client'` to this route at all and still puts a bundle on the page. §8 asks the
  *    tree, not a list: a file is an island when `'use client'` is its **first statement**, the
  *    same authority `packages/ui/tests/islands.test.ts` uses.
- * 3. **SC-018's premise is that the roster is not published.** D6 reasons from `perfilMaker`
- *    carrying no `publicList` declaration; §9 asks the registry instead of repeating the
- *    sentence, so the day someone publishes the roster this page's reasoning goes red where it
- *    is written down rather than silently ceasing to hold.
+ * 3. **T012's premise is that the roster IS published, under a projection.** The page reads with
+ *    no session, which is only possible because T008 declared `publicList` on `perfilMaker` and
+ *    made the anonymous door refuse any read of it that names no columns. §9 asks the registry
+ *    instead of repeating the sentence, so the day that declaration is withdrawn this page goes
+ *    red where its reasoning is written down rather than rendering an error to every visitor.
  */
 
 /** Repo root: `apps/web/tests/public` → four levels up. */
@@ -661,8 +704,8 @@ describe('§8 — the page adds no island, by either route (SC-015)', () => {
   })
 })
 
-describe('§9 — the roster is not published, which is why the door is the signed-in one (SC-018)', () => {
-  it('asks the registry, rather than repeating D6\'s sentence', () => {
+describe('§9 — the roster is published, under a projection (FR-017, FR-030, CLR-010)', () => {
+  it('asks the registry, rather than repeating the sentence', () => {
     // The positive control comes first: without it, a `publicListReason` that answered
     // `undefined` for everything would make the real assertion pass by being broken.
     expect(
@@ -673,20 +716,117 @@ describe('§9 — the roster is not published, which is why the door is the sign
 
     expect(
       publicListReason('perfilMaker'),
-      'a lab\'s roster of makers and handles carries no `publicList` declaration, which is why ' +
-        '/ranking reads through the signed-in door (D6, SC-018). Publishing it is a decision ' +
-        'about what the platform says about people, and it belongs to whoever argues for it — ' +
-        'not to a green test.',
-    ).toBeUndefined()
+      'T008 admitted the roster to the anonymous door so that a visitor with no session can read ' +
+        'this board (FR-017). Withdraw the declaration and `readPublicRanking` is refused for ' +
+        'everyone who is not signed in, and this page renders its error state to them instead — ' +
+        'so the sentence lives in the registry, and this is where the page checks it is still true.',
+    ).toEqual(expect.any(String))
   })
 
-  it('reads perfilMaker once, and reads nothing else at all', async () => {
-    const { lab } = await renderizar()
+  it('reads once, and reads nothing else at all', async () => {
+    const { leitor } = await renderizar()
 
     expect(
-      lab.calls.map((chamada) => chamada.collection),
-      'one read, of one collection, through one door. A second read is a second place for the ' +
-        'scope to be got wrong (FR-028).',
-    ).toEqual(['perfilMaker'])
+      leitor.limites,
+      'one read, through one door. A second read is a second place for the scope to be got ' +
+        'wrong (FR-028).',
+    ).toHaveLength(1)
+  })
+})
+
+/* ───────────────────────────────────────────────────────────────────────────────────────────
+ * T013 / FR-017, US5 — **the shipped defect, named**: the signed-out board that showed no board.
+ *
+ * §4 asks whether the visitor with no session is served the roster in the DECLARED ORDER, and
+ * that is one half of FR-017. The other half is the failure CLR-004 refused to ship and this
+ * page shipped anyway: a visitor on a lab whose roster is full, reading a screen that has no
+ * roster on it. **The two screens differ in SHAPE, not in order** — neither the invitation this
+ * page served until T012 nor an `EmptyState` prints a single handle, so `ordemDosHandles`
+ * compares `[]` against the expected order and §4 reports the same failure for a page that drew
+ * the wrong body as for one that drew the right body in the wrong sequence. Nothing in §4 or §6
+ * ever asks WHICH of the bodies the anonymous visitor received.
+ *
+ * Measured, not assumed: run against the page as it stood at HEAD, the three cases below fail
+ * with "expected [] to have a length of 1", "sem linha para anaprado" and "expected undefined to
+ * be 'vazio'" — the signed-out screen had no `<li>`, no handle and no empty state on it at all.
+ *
+ * So this section asks the question in both directions, because an assertion that no empty body
+ * was drawn is satisfied by a page that can no longer draw one:
+ *
+ *   1. a lab WITH makers, read with no session → the board itself, and no empty body;
+ *   2. that same visitor gets every column US5 names — place, avatar, name, `@handle`, XP —
+ *      and not the handle alone, which is all §4 reads out of the tree;
+ *   3. a lab with NO makers, read with no session → the empty body still, and the sentence that
+ *      says so, so (1) cannot pass by the page having lost the screen rather than having stopped
+ *      showing it to the wrong visitor.
+ */
+
+/** The wording an empty board carries, in both forms this product writes it: the page's own
+ *  (*"Nenhum maker neste lab ainda."*) and the Home card's (*"Ainda sem makers no ranking"*,
+ *  `docs/product/pages/home.md` § ranking, quoted by T013). Matched loosely, so a rewrite of the
+ *  sentence does not turn this into a test of copy — what is asserted is that the screen saying
+ *  *nobody is here* is not the screen a visitor gets on a lab where somebody is. */
+const DIZ_QUE_NAO_HA_MAKERS = /nenhum maker|sem makers/i
+
+/**
+ * Everything an `EmptyState` says, read out of its **props**.
+ *
+ * Measured while writing §10: `titulo` and `descricao` are props, not children, so `texto()`
+ * walks straight past them and a regex over the rendered text finds that copy on no screen at
+ * all — asserting its absence that way passes on the empty screen too, and asserts nothing.
+ */
+function copiaDosVazios(tree: ReactNode): string {
+  return findAll(tree, EmptyState)
+    .map((estado) => `${String(estado.props.titulo ?? '')} ${String(estado.props.descricao ?? '')}`)
+    .join(' ')
+}
+
+describe('§10 — the signed-out visitor gets a BOARD, not a screen without one (T013, FR-017, US5)', () => {
+  it('never answers a visitor with no session as though a lab full of makers had none', async () => {
+    const { tree } = await renderizar({ sessao: null })
+
+    expect(
+      findAll(tree, EmptyState),
+      'the roster held four makers and the anonymous visitor was handed an empty state. That is ' +
+        'the shipped CLR-004 failure mode word for word: a zero that looks like a working product ' +
+        'nobody uses, on a lab that has people in it.',
+    ).toEqual([])
+    expect(
+      ordemDosHandles(tree),
+      'the board is what this visitor came for, and FR-017 publishes it to them. A screen with ' +
+        'no makers on it — the invitation this page served until T012, or an empty state — prints ' +
+        'no handles, and every assertion in §4 reads the same `[]` for both of them.',
+    ).toHaveLength(PERFIS.length)
+  })
+
+  it('gives that visitor the whole row — place, avatar, name, @handle and XP', async () => {
+    const { tree } = await renderizar({ sessao: null })
+    const linha = linhaDe(tree, ANA.handle)
+
+    // §4 reads handles out of the tree and nothing else, so a page that served the anonymous
+    // visitor a stripped row — the right handles in the right order, no name, no total, no art —
+    // satisfies every assertion it makes. US5 names five things, and all five are hers.
+    expect(texto(linha), 'no place number: a board a maker cannot find themselves on').toContain('1')
+    expect(texto(linha), 'the name US5 asks for, beside the handle').toContain(ANA.nome)
+    expect(texto(linha)).toContain(formatHandle(ANA.handle))
+    expect(
+      texto(linha),
+      'the XP total is what the order is BY; a board without it is a list of names',
+    ).toContain(String(ANA.xpTotal))
+    expect(String(findAll(linha, PixelImage)[0]?.props.src)).toBe(ANA.avatarRender?.url)
+  })
+
+  it('still draws the empty screen, and its sentence, for a lab that really has no makers', async () => {
+    const { tree } = await renderizar({ sessao: null, perfis: [] })
+
+    // The control for the first case, and the reason it can mean anything: a page that stopped
+    // rendering `EmptyState` altogether would pass that assertion while losing FR-022's split
+    // between "empty" and "failed" for exactly the visitor this task is about.
+    expect(findAll(tree, EmptyState)[0]?.props.variant).toBe('vazio')
+    expect(
+      copiaDosVazios(tree),
+      'the sentence that says nobody is here belongs on the screen for a lab where nobody is',
+    ).toMatch(DIZ_QUE_NAO_HA_MAKERS)
+    expect(ordemDosHandles(tree), 'an empty lab has no places to draw').toEqual([])
   })
 })

@@ -501,3 +501,99 @@ describe('§6 — the two states a catalogue can be in', () => {
     expect(erro?.props.variant).toBe('erro')
   })
 })
+
+/**
+ * T018 / FR-007 — **the arithmetic is expressed once, and this page is one of the two readers.**
+ *
+ * FR-007: *"The arithmetic is expressed once and shared with `/missoes`, never restated."* Until
+ * T015/T017 this page owned `ETAPAS_DA_MISSAO`, `ETAPAS_POR_ESTADO`, `estadoDe`, `estadoPessoal`
+ * and `submissoesDoMaker` outright, and the Home's band needed the same curve. Two pages
+ * importing each other's page module is not an option, so the shared modules are the only shape
+ * in which "expressed once" is literally true.
+ *
+ * ── Why the first test MOCKS the shared model instead of reading the page's source ───────────
+ *
+ * A source-text assertion proves the import statement is written; it cannot prove the imported
+ * value is the one that reaches `ProgressBar`. A page that imported `ETAPAS_DA_MISSAO` and then
+ * went on using its own local `2` would satisfy every grep and still be a second copy, free to
+ * disagree with the Home the day the model gains a step. So the model is replaced with a
+ * three-of-four scale and the rendered percentage is read back: 75%, which is a number no
+ * literal in this page could produce. That is the difference between "imports it" and "uses it".
+ *
+ * The page is re-imported under `vi.resetModules()` for that one test, and `@fablab/ui` with it,
+ * because `findAll` matches components by **identity** — a `ProgressBar` from the outer module
+ * instance would not match the one the re-imported page renders, and the assertion would pass
+ * vacuously by finding no bar at all.
+ */
+describe('§7 — the two-step model is SHARED, not restated (FR-007, T018)', () => {
+  /** The model, mutated: four steps, and a submission awaiting review worth three of them. No
+   *  literal in this page can produce 75%, which is the whole point of the number. */
+  const MODELO_MUTADO = { ETAPAS_DA_MISSAO: 4, ETAPAS_POR_ESTADO: { enviada: 3, aprovada: 4, recusada: 0 } }
+
+  async function renderizarComModeloMutado(): Promise<{
+    tree: ReactNode
+    ui: typeof import('@fablab/ui')
+  }> {
+    vi.resetModules()
+    vi.doMock('../../lib/content/missoes', async (importOriginal) => ({
+      ...(await importOriginal<typeof import('../../lib/content/missoes')>()),
+      ...MODELO_MUTADO,
+    }))
+    try {
+      // Imported AFTER the reset, so the page and this test walk the same module instances.
+      const ui = await import('@fablab/ui')
+      const { default: PaginaMutada } = (await import('../../app/(frontend)/missoes/page')) as {
+        default: () => Promise<ReactElement>
+      }
+      mocks.currentUser.mockResolvedValue({ id: 7 })
+      mocks.getPublicScopedPayloadForRSC.mockResolvedValue(new FakePublicClient())
+      mocks.getTenantScopedPayloadForRSC.mockResolvedValue(new FakeLabClient())
+      return { tree: (await PaginaMutada()) as ReactNode, ui }
+    } finally {
+      vi.doUnmock('../../lib/content/missoes')
+      vi.resetModules()
+    }
+  }
+
+  it('draws the bar from `lib/content/missoes`, not from a literal of its own', async () => {
+    const { tree, ui } = await renderizarComModeloMutado()
+
+    const barra = findAll(cartaoDe(tree, MISSAO_LASER.titulo), ui.ProgressBar)[0]
+    expect(
+      barra,
+      'the maker\'s own `enviada` submission drew no bar at all — the tree walked here is not ' +
+        'the one the page renders.',
+    ).toBeDefined()
+    expect(
+      ui.percentOf(Number(barra?.props.value), Number(barra?.props.max ?? 100)),
+      'the page still owns its own copy of the arithmetic: the shared model was moved to a ' +
+        'three-of-four scale and this page kept answering 50%. FR-007 asks for one expression ' +
+        'of it, shared with the Home\'s band — a second copy is a second model free to disagree.',
+    ).toBe(75)
+  })
+
+  it('imports the model and the personal reader instead of restating either', () => {
+    expect(PAGE_SOURCE, 'the pure model lives in `lib/content/missoes.ts` (T015)').toMatch(
+      /from '\.\.\/\.\.\/\.\.\/lib\/content\/missoes'/,
+    )
+    expect(PAGE_SOURCE, 'the RSC reader lives in `lib/public/missoes.ts` (T017)').toMatch(
+      /from '\.\.\/\.\.\/\.\.\/lib\/public\/missoes'/,
+    )
+
+    // Anchored at the start of a line so the docblocks may keep NAMING these — the explanation
+    // of where the model went is exactly what a future reader needs, and a guard that can only
+    // be satisfied by deleting the explanation is a guard that gets deleted instead.
+    for (const declaracao of [
+      /^const ETAPAS_DA_MISSAO\b/m,
+      /^const ETAPAS_POR_ESTADO\b/m,
+      /^function estadoDe\b/m,
+      /^async function estadoPessoal\b/m,
+      /^async function submissoesDoMaker\b/m,
+      /^type EstadoPessoal\b/m,
+    ]) {
+      expect(PAGE_SOURCE, `${String(declaracao)} is a second copy of something T015/T017 own`).not.toMatch(
+        declaracao,
+      )
+    }
+  })
+})

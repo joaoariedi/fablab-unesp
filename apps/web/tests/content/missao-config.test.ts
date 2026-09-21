@@ -1,4 +1,12 @@
-import type { Field, RelationshipField, SelectField, TextField, TextareaField } from 'payload'
+import type {
+  CheckboxField,
+  Field,
+  NumberField,
+  RelationshipField,
+  SelectField,
+  TextField,
+  TextareaField,
+} from 'payload'
 import { describe, expect, it } from 'vitest'
 
 import { Missao } from '../../collections/content/Missao'
@@ -95,12 +103,25 @@ describe('missao is one lab\'s catalogue of challenges (T026, FR-020)', () => {
     ).toBeUndefined()
   })
 
-  it('carries exactly what FR-020 names: titulo, descricao, icone, skill, status', () => {
+  it('carries what FR-020 names, plus the curation flag FR-001 added', () => {
+    // This list read `['descricao', 'icone', 'skill', 'status', 'titulo']` until 006. FR-001
+    // adds `destaqueHome` and `ordemDestaque`, so the list grows by exactly those two names —
+    // an exact list is still the assertion, because the point of it is that a column nobody
+    // asked for cannot arrive unnoticed.
     expect(
       Missao.fields.map((f) => (f as { name?: string }).name).sort(),
-      'the columns have drifted from FR-020. A missing one is a mission the card cannot render ' +
-        'or a credit with no skill to land on; an extra one is scope this task did not carry.',
-    ).toEqual(['descricao', 'icone', 'skill', 'status', 'titulo'])
+      'the columns have drifted from FR-020 + FR-001. A missing one is a mission the card ' +
+        'cannot render or a credit with no skill to land on; an extra one is scope no task ' +
+        'carried.',
+    ).toEqual([
+      'descricao',
+      'destaqueHome',
+      'icone',
+      'ordemDestaque',
+      'skill',
+      'status',
+      'titulo',
+    ])
   })
 })
 
@@ -257,5 +278,118 @@ describe('missao\'s published state is what the anonymous path can filter on (FR
         'invisible to a `not equals` audit alike, which is how a mission goes missing with ' +
         'nothing to point at',
     ).toBe(true)
+  })
+})
+
+describe('missao\'s curation flag is a switch that does NOT publish (T001, FR-001, CLR-004)', () => {
+  const destaque = () => fieldNamed('destaqueHome') as CheckboxField | undefined
+
+  it('is a checkbox named destaqueHome — the band queries `destaqueHome: { equals: true }`', () => {
+    // The Home's band filters on this one name and nothing else: `missao` is publishable, so
+    // the public door supplies `status = publicado` itself (D4). A differently-named or
+    // differently-typed field leaves the band matching zero rows with nothing to point at.
+    expect(
+      destaque()?.type,
+      'destaqueHome is missing or is not a checkbox: the team has no curation switch, and the ' +
+        'MISSÕES EM DESTAQUE band has nothing to filter on (FR-001)',
+    ).toBe('checkbox')
+  })
+
+  it('is required AND defaults to false — on a checkbox that means "must carry a boolean"', () => {
+    // The pair is deliberate and is the shape `skill.ativa` already uses. Required alone would
+    // refuse every existing row; a default alone would let a row answer `null`, which is
+    // invisible to `equals: true` and to a `not_equals` audit alike. Together, no mission is
+    // ever ambiguous about whether the team chose to feature it.
+    expect(
+      destaque()?.required,
+      'destaqueHome is optional, so a mission can carry null — a third state between featured ' +
+        'and not, which no query can name',
+    ).toBe(true)
+    expect(
+      destaque()?.defaultValue,
+      'destaqueHome does not default to false: a mission created without an opinion arrives ' +
+        'featured on the Home, which is curation by omission',
+    ).toBe(false)
+  })
+
+  it('is labelled Destaque na Home, because the admin is the lab team\'s surface', () => {
+    expect(destaque()?.label).toBe('Destaque na Home')
+  })
+
+  it('tells the editor, in the admin, that ticking it does not publish (CLR-004)', () => {
+    // CLR-004 is the whole reason this field is separate from `status`. The description is
+    // where that separation reaches the person holding the checkbox: without it, the obvious
+    // reading of "Destaque na Home" is "put this on the Home", and a draft ticked here stays
+    // invisible with no explanation on screen.
+    const descricao = destaque()?.admin?.description
+
+    expect(
+      typeof descricao === 'string' ? descricao : '',
+      'destaqueHome carries no admin description saying it does not publish: the editor ticks ' +
+        'a box labelled "Destaque na Home", nothing appears, and the reason is in a spec they ' +
+        'will never read (CLR-004)',
+    ).toMatch(/n[ãa]o publica/i)
+  })
+})
+
+describe('missao\'s destaque ordering is declared, not inherited from the database (T002, FR-001, FR-003)', () => {
+  const ordem = () => fieldNamed('ordemDestaque') as NumberField | undefined
+
+  it('is a number named ordemDestaque — the band sorts on this exact name', () => {
+    // The band's read is `sort: ['ordemDestaque', 'titulo']` (T020). A sort key drizzle cannot
+    // resolve to a column does not raise: the local API swallows it and falls back to
+    // `-createdAt`, so the three featured missions would be the three most recently created and
+    // nothing on screen would say so.
+    expect(
+      ordem()?.type,
+      'ordemDestaque is missing or is not a number: the band has no key to order by, and the ' +
+        'team cannot say which featured mission comes first (FR-001, FR-003)',
+    ).toBe('number')
+  })
+
+  it('is OPTIONAL — a mission may be featured without the team choosing a position', () => {
+    // `required` here would force a number onto every mission the team ticks, including the
+    // common case of a single featured mission where the position means nothing. The band still
+    // orders deterministically without it: Postgres sorts NULLs last on ASC, so an unordered
+    // mission falls behind the ordered ones and the `titulo` tie-break settles the rest.
+    expect(
+      ordem()?.required,
+      'ordemDestaque is required: ticking Destaque na Home now also demands a number, and the ' +
+        'team must invent a position for a band of one (FR-001)',
+    ).toBeFalsy()
+  })
+
+  it('carries no defaultValue, so "no opinion" stays distinguishable from "first"', () => {
+    // A `defaultValue: 0` would make every row answer the same number, which collapses the
+    // whole band onto the `titulo` tie-break and silently retires the field the team is being
+    // asked to fill in. Absent must stay absent for "menor primeiro" to mean anything.
+    expect(
+      ordem()?.defaultValue,
+      'ordemDestaque carries a defaultValue: every mission arrives sharing one position, so ' +
+        'the order the team sets is indistinguishable from the order it never set',
+    ).toBeUndefined()
+  })
+
+  it('is labelled Ordem no destaque, because the admin is the lab team\'s surface', () => {
+    expect(ordem()?.label).toBe('Ordem no destaque')
+  })
+
+  it('states the rule the band actually applies: menor primeiro, empates pelo título (FR-003)', () => {
+    // FR-003 requires the tie-break to be **declared**, and the only place a declaration reaches
+    // the person typing the numbers is the admin description. Without it, two missions sharing
+    // an order look like a bug to the editor rather than the documented, stable outcome.
+    const descricao = ordem()?.admin?.description
+
+    expect(
+      typeof descricao === 'string' ? descricao : '',
+      'ordemDestaque carries no admin description: the editor is given a bare number box with ' +
+        'no statement of which end is first, nor what happens when two missions share a ' +
+        'position (FR-003)',
+    ).toMatch(/menor primeiro/i)
+    expect(
+      typeof descricao === 'string' ? descricao : '',
+      'ordemDestaque\'s description does not name the tie-break: FR-003 requires it to be ' +
+        'declared, and two missions sharing an order is the case the editor will hit first',
+    ).toMatch(/empates pelo t[íi]tulo/i)
   })
 })

@@ -2,13 +2,19 @@ import type { CSSProperties, ReactElement, ReactNode } from 'react'
 
 import { CARD_TITLE_STYLE, EmptyState, PRIMARY_BUTTON_STYLE, ProgressBar, cardStyle } from '@fablab/ui'
 
-import type { StatusSubmissao } from '../../../collections/content/MissaoSubmissao'
-import { getTenantScopedPayloadForRSC } from '../../../lib/tenancy'
+import {
+  ETAPAS_DA_MISSAO,
+  ETAPAS_POR_ESTADO,
+  estadoDe,
+  type EstadoPessoal,
+  type StatusSubmissao,
+  type SubmissaoDoc,
+} from '../../../lib/content/missoes'
+import { estadoPessoal } from '../../../lib/public/missoes'
 // Deep import, exactly as every listing and Minha Conta do it: the anonymous read path is not
 // re-exported from `lib/tenancy`'s index, because it runs with `overrideAccess: true` and that
 // unexported-ness is one of the two locks the module keeps.
 import { getPublicScopedPayloadForRSC } from '../../../lib/tenancy/public-payload'
-import { currentUser } from '../../../lib/tenancy/session'
 
 /**
  * T032 / FR-024, US3 — **Missões**: the lab's published missions, and the visitor's own state
@@ -31,14 +37,27 @@ import { currentUser } from '../../../lib/tenancy/session'
  * `getTenantScopedPayloadForRSC`, which is the door FR-028 is about, and it is only opened when
  * there is a session to open it for.
  *
- * ── "Their own" is a constraint on the QUERY, not a filter on the render ────────────────────
+ * ── T018 / FR-007: the model and the personal read are IMPORTED, not owned here ─────────────
  *
- * `missaoSubmissao.read` is `scopedAccess()` — scoped to the **lab**, not to the row, which
- * `MissaoSubmissao.ts` records as a known gap that closes in the shared access layer. A page
- * that read the lab's submissions and picked its own out of the result would therefore be
- * *allowed* to, and would be one forgotten `.filter` away from drawing a lab-mate's 100% on
- * this visitor's card. The `maker` constraint is built from the session-resolved profile and
- * named in the `where`, so the rows never arrive in the first place.
+ * They were both written in this file, and until 006 this was their only reader. The Home's
+ * `MISSÕES EM DESTAQUE` band is the second, and FR-007 is explicit that *"the arithmetic is
+ * expressed once and shared with `/missoes`, never restated"* — two pages importing each other's
+ * page module is not an option, so both halves moved out and this page became one of two callers:
+ *
+ *   - `lib/content/missoes.ts` — {@link ETAPAS_DA_MISSAO}, {@link ETAPAS_POR_ESTADO},
+ *     {@link estadoDe} and the types. Pure, so it is unit-tested with no database at all.
+ *   - `lib/public/missoes.ts` — {@link estadoPessoal}, which opens the tenant-scoped door and
+ *     constrains the submissions read to the **session-resolved** profile. That constraint is
+ *     the whole of "their own" and its docstring is where it is argued: `missaoSubmissao.read`
+ *     is `scopedAccess()`, scoped to the lab and not to the row, so a reader that fetched the
+ *     lab's submissions would be *allowed* to and would be one forgotten clause away from
+ *     drawing a lab-mate's 100% on this visitor's card.
+ *
+ * What stayed is this page's own rendering: the hero, the grid, the card, the invitation, the
+ * submit control and the words each review state gets. `§7` of `missoes-page.test.ts` is what
+ * keeps the split honest — it replaces the shared model with a three-of-four scale and reads the
+ * rendered percentage back, so re-introducing a local `2` here fails on a number no literal in
+ * this file can produce.
  *
  * ── Why the percentage is two steps and not a mockup number ─────────────────────────────────
  *
@@ -47,7 +66,7 @@ import { currentUser } from '../../../lib/tenancy/session'
  * validates it (FR-021). That is two steps, so {@link ETAPAS_DA_MISSAO} is 2 and a submission
  * awaiting review is one of them — 50%, arrived at from the model rather than copied from a
  * picture. `ProgressBar` takes value/max in the caller's units precisely so this arithmetic
- * stays here and the rounding stays there.
+ * lives in one module and the rounding stays in the component.
  *
  * `home.md` also says the signed-out card shows *"a barra … em 0% com convite ao login"*. FR-024
  * says **no personal percentage**, and it wins: a bar reading 0% is a claim about a person the
@@ -119,29 +138,6 @@ const SUBMISSAO_BASE = '/admin/collections/missaoSubmissao'
  *  silently hide the eleventh mission a team published. */
 const MISSOES_LIMITE = 50
 
-/**
- * A mission is done in two steps: the maker sends the proof, the team validates it (FR-021).
- *
- * The scale, not a percentage: `ProgressBar` rounds, and `percentOf` is its one rounding.
- */
-const ETAPAS_DA_MISSAO = 2
-
-/**
- * How many of those steps each review state represents.
- *
- * `satisfies Record<StatusSubmissao, number>` against the collection's **own** vocabulary, so a
- * fourth review state added to `MissaoSubmissao.ts` breaks the typecheck here instead of
- * rendering as 0% — a mission silently reported as not started is the failure nobody sees.
- *
- * `recusada` is 0 and not "half": nothing was credited, and CLR-015 reopens the row on the
- * maker's next photo, so the work still ahead of them is the whole of it.
- */
-const ETAPAS_POR_ESTADO = {
-  enviada: 1,
-  aprovada: ETAPAS_DA_MISSAO,
-  recusada: 0,
-} satisfies Record<StatusSubmissao, number>
-
 /** What each state says in words. A bar alone does not tell a maker whether the team has looked
  *  at their photo yet, which is the only question they have on this screen. */
 const MENSAGEM_POR_ESTADO = {
@@ -169,28 +165,6 @@ type MissaoDoc = {
   readonly skill?: SkillDoc | number | string | null
 }
 
-/** This maker's own submission, read at `depth: 0` — `missao` is an id, which is all the
- *  keying below needs. */
-type SubmissaoDoc = {
-  readonly id?: string | number
-  readonly missao?: { readonly id?: string | number } | number | string | null
-  readonly status?: string
-}
-
-/**
- * What the page knows about the person reading it.
- *
- * Four states and not a boolean: "signed out" is the only one that gets the invitation, and
- * `sem-perfil` (a login with no profile in *this* lab — 002 § CLR-002 allows exactly that) and
- * `indisponivel` (the personal read failed) must show no percentage **and** no invitation,
- * because inviting a signed-in person to sign in is a loop they cannot leave.
- */
-type EstadoPessoal =
-  | { readonly tipo: 'anonimo' }
-  | { readonly tipo: 'sem-perfil' }
-  | { readonly tipo: 'indisponivel' }
-  | { readonly tipo: 'maker'; readonly submissoes: ReadonlyMap<string, SubmissaoDoc> }
-
 /** The published catalogue, or `null` when the read failed — which is a different screen from
  *  "there are no missions yet", the same split every 003 listing makes. */
 async function lerMissoes(): Promise<MissaoDoc[] | null> {
@@ -211,74 +185,6 @@ async function lerMissoes(): Promise<MissaoDoc[] | null> {
   }
 }
 
-/** The id a submission's `missao` names, whether it arrived populated or as a bare id. */
-function idDaMissao(submissao: SubmissaoDoc): string {
-  const missao = submissao.missao
-  if (typeof missao === 'object' && missao !== null) return String(missao.id ?? '')
-  return String(missao ?? '')
-}
-
-/**
- * This visitor's own submissions, keyed by mission.
- *
- * The `maker` constraint comes from the profile resolved from the **session** — never from
- * anything the request carries — which is the whole of "their own" (see the docstring). The
- * `missao` constraint is not security, it is scope: the map only has to answer for the missions
- * on screen.
- */
-async function submissoesDoMaker(
-  db: Awaited<ReturnType<typeof getTenantScopedPayloadForRSC>>,
-  perfilId: string | number,
-  missoes: readonly MissaoDoc[],
-): Promise<ReadonlyMap<string, SubmissaoDoc>> {
-  const ids = missoes.map((missao) => missao.id).filter((id): id is string | number => id !== undefined)
-  if (ids.length === 0) return new Map()
-
-  const { docs } = await db.find<SubmissaoDoc>({
-    collection: 'missaoSubmissao',
-    where: { and: [{ maker: { equals: perfilId } }, { missao: { in: ids } }] },
-    depth: 0,
-    // One row per mission per maker, forever (FR-023), so the ceiling is the number of missions
-    // asked about — never Payload's default 10, which would drop a maker's own progress.
-    limit: ids.length,
-  })
-
-  return new Map(docs.map((submissao) => [idDaMissao(submissao), submissao]))
-}
-
-/**
- * Who is reading, and what they have done about these missions.
- *
- * A failed personal read is `indisponivel` rather than an exception: the catalogue is public and
- * still worth showing, and one outage costs the personal layer instead of the whole screen —
- * the same rule Minha Conta applies block by block.
- */
-async function estadoPessoal(missoes: readonly MissaoDoc[]): Promise<EstadoPessoal> {
-  const usuario = await currentUser()
-  if (!usuario) return { tipo: 'anonimo' }
-
-  try {
-    const db = await getTenantScopedPayloadForRSC()
-    const { docs } = await db.find<{ id: string | number }>({
-      collection: 'perfilMaker',
-      where: { usuario: { equals: usuario.id } },
-      limit: 1,
-      depth: 0,
-    })
-
-    const perfil = docs[0]
-    // One login may hold profiles in two labs (002 § CLR-002). No profile *here* means there is
-    // no progress of theirs to show on this lab's missions, and reaching for the other lab's
-    // would be the cross-tenant read FR-007 forbids.
-    if (!perfil) return { tipo: 'sem-perfil' }
-
-    return { tipo: 'maker', submissoes: await submissoesDoMaker(db, perfil.id, missoes) }
-  } catch (erro) {
-    console.warn('[missoes] a leitura do progresso pessoal falhou; o catálogo segue visível.', erro)
-    return { tipo: 'indisponivel' }
-  }
-}
-
 /** A populated relationship's URL. An unpopulated one is an id, which is not art. */
 const urlDe = (midia: MissaoDoc['icone']): string | undefined =>
   typeof midia === 'object' && midia !== null && typeof midia.url === 'string' ? midia.url : undefined
@@ -286,13 +192,6 @@ const urlDe = (midia: MissaoDoc['icone']): string | undefined =>
 /** The skill a mission credits, when it arrived populated. */
 const nomeDaSkill = (skill: MissaoDoc['skill']): string | undefined =>
   typeof skill === 'object' && skill !== null && typeof skill.nome === 'string' ? skill.nome : undefined
-
-/** The review state this row is in, narrowed to the collection's vocabulary — an unknown value
- *  is treated as no submission at all rather than indexed into a record that has no such key. */
-function estadoDe(submissao: SubmissaoDoc | undefined): StatusSubmissao | undefined {
-  const status = submissao?.status
-  return status !== undefined && status in ETAPAS_POR_ESTADO ? (status as StatusSubmissao) : undefined
-}
 
 /** The maker's action for this mission, or none where the review owns the next move. */
 function acaoDe(submissao: SubmissaoDoc | undefined, estado: StatusSubmissao | undefined): ReactNode {

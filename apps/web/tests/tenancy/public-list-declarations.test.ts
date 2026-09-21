@@ -23,12 +23,21 @@ import {
  *     tabs on Projetos (`projetos.md` § Tabs de categoria) and Artigos, the teal sidebar's
  *     `CATEGORIAS` list on Biblioteca 3D (`biblioteca-3d.md` § Sidebar), and the
  *     `Todas as máquinas` select on Calendário (`calendario.md` § Filtros). Each is read
- *     without a document to hang it on, so no populated read can carry it in.
+ *     without a document to hang it on, so no populated read can carry it in. Since T008 a
+ *     fifth: `perfilMaker`, for the anonymous ranking (FR-017), which is a board of makers
+ *     read with no session and no document to hang the rows on either.
  *   - **Not declared**: everything a published document *populates* — the three media
- *     collections behind a cover image, `perfilMaker` behind an author, `local` behind an
- *     event's room. `depth: 1` already carries those in behind a row the published-only
- *     filter has cleared, so a declaration would only widen the anonymous surface for nothing
- *     — and `curtida` and `users` are the shape of the feature-002 leak itself.
+ *     collections behind a cover image, `local` behind an event's room. `depth: 1` already
+ *     carries those in behind a row the published-only filter has cleared, so a declaration
+ *     would only widen the anonymous surface for nothing — and `curtida` and `users` are the
+ *     shape of the feature-002 leak itself.
+ *
+ * **The fifth entry is where this pin did its job.** It was written so that adding one is an
+ * argument somebody has to make; CLR-010 is that argument, and its answer is that a
+ * declaration alone was *not* enough here. `perfilMaker` carries the consented personal
+ * columns (`dataNascimento`, `escolaridade`, `curso`, `vinculoUnesp`, `usuario`), so the door
+ * admits the collection and then refuses any call that does not name the columns it wants —
+ * the assertion for that half lives in `public-payload.test.ts`, on the gate itself.
  *
  * An exact set is the assertion rather than four `toBeDefined()` calls: only equality fails
  * when a fifth collection is added, and "publicList becomes a habit — the 002 leak,
@@ -41,16 +50,14 @@ const DECLARED: Record<string, string> = {
   categoriaArtigo: 'Artigos — the category tabs',
   categoriaModelo: 'Biblioteca 3D — the teal sidebar CATEGORIAS list',
   maquina: 'Calendário — the "Todas as máquinas" filter',
+  // Not a vocabulary, and the only entry whose admission is conditional: the door requires a
+  // `select` on every read of it (CLR-010, FR-036), because the row carries personal data the
+  // other four do not have.
+  perfilMaker: 'Home and /ranking — the XP board, bounded per call by its select',
 }
 
 /** Reached by populating a published document, so a declaration would widen nothing but risk. */
-const POPULATED_ONLY = [
-  'midiaImagem',
-  'midiaModelo3d',
-  'midiaDocumento',
-  'perfilMaker',
-  'local',
-] as const
+const POPULATED_ONLY = ['midiaImagem', 'midiaModelo3d', 'midiaDocumento', 'local'] as const
 
 /** Never public at all: a like ledger and the platform's accounts. */
 const NEVER_PUBLIC = ['curtida', 'users', 'progressoAula', 'pendingInvites'] as const
