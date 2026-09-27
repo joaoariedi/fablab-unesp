@@ -232,8 +232,8 @@ needed eventually; only one is buildable now. See CLR-003.
 | FR-002 | The wizard collects, at minimum: name, slug, at least one domain, LGPD contact, storage quota, and the first organization administrator | P1 | US1 |
 | FR-003 | The slug is validated for shape before creation — a valid DNS label: lowercase, digits and hyphens, no leading or trailing hyphen | P1 | US2 |
 | FR-004 | The slug is validated for uniqueness before creation, case-insensitively and after trimming | P1 | US2 |
-| FR-005 | The wizard displays the **derived host and storage prefix** for the entered slug before it is committed, because neither can be changed afterwards | P1 | US2 |
-| FR-006 | The wizard states, at the point the slug is entered, that it is permanent | P1 | US2 |
+| FR-005 | ~~The wizard displays the **derived host and storage prefix** for the entered slug before it is committed, because neither can be changed afterwards~~ **Superseded 2026-09-27** — there is no per-organization storage prefix to show: the S3 adapter configures none, so every upload shares the bucket root (checklist CHK002, CHK036). **Now:** The wizard displays the **derived host** for the entered slug before it is committed. | P1 | US2 |
+| FR-006 | ~~The wizard states, at the point the slug is entered, that it is permanent~~ **Superseded 2026-09-27** — the reason the code gives for permanence is half false (CHK010). **Now:** The wizard states that the slug is permanent **because the subdomain resolves by it** — not because storage keys derive from it, which they do not. | P1 | US2 |
 | FR-007 | Creation goes through the sanctioned tenancy path so `seedNewOrganization` and `revalidateTenantResolution` both fire | P1 | US1 |
 | FR-008 | A failed creation leaves no organization, no seeded rows and no membership — the slug is free to reuse | P1 | US8 |
 | FR-009 | The wizard refuses every actor who is not a master, without disclosing the route's existence | P1 | US10 |
@@ -244,10 +244,10 @@ needed eventually; only one is buildable now. See CLR-003.
 
 | ID | Requirement | Priority | Scenario |
 |----|-------------|----------|----------|
-| FR-012 | `theme.logoUrl` becomes a real upload relationship rather than a text field — the reason it was text (no upload collection existed) expired when 002 shipped `midiaImagem` | P1 | US3 |
-| FR-013 | `theme.heroImageUrl` likewise | P2 | US3 |
-| FR-014 | The site header renders the organization's logo when it has one | P1 | US3 |
-| FR-015 | The Home hero renders the organization's art when it has one, preserving the existing responsive sources and the LCP budget | P2 | US3 |
+| FR-012 | ~~`theme.logoUrl` becomes a real upload relationship rather than a text field — the reason it was text (no upload collection existed) expired when 002 shipped `midiaImagem`~~ **Superseded 2026-09-27** — plan § Dropped — no consumer, and no organization row carries a value (research F3). **Now:** *Dropped.* | P1 | US3 |
+| FR-013 | ~~`theme.heroImageUrl` likewise~~ **Superseded 2026-09-27** — as FR-012. **Now:** *Dropped.* | P2 | US3 |
+| FR-014 | ~~The site header renders the organization's logo when it has one~~ **Superseded 2026-09-27** — `LogoChip` forbids image substitution by design (001 US4, plan D3); the name it needs is a SHORT one the schema does not yet hold (CHK001); and the name is hardcoded in 17 places, not 2 (CHK019). **Now:** The canonical lockup's second line carries **the lab's short name** from the organization record, and no lab's name is a constant in shared code — **a rule, checked case-insensitively**, not an inventory. | P1 | US3 |
+| FR-015 | ~~The Home hero renders the organization's art when it has one, preserving the existing responsive sources and the LCP budget~~ **Superseded 2026-09-27** — 236 ms of LCP headroom on the page whose hero IS the LCP element (plan D6). **Now:** The Home hero keeps its static, pre-optimised art; per-lab co-branding of the hero is the accent colour and the name. | P2 | US3 |
 | FR-016 | A missing logo or hero renders the platform default; a missing identity value is never a broken page | P1 | US3 |
 | FR-017 | The anonymous path serves exactly the identity values the pages render and no other column of the organization record | P1 | US3 |
 | FR-018 | This feature does **not** widen `organizations` access: it stays `masterOnly()` on all four verbs, and a test asserts an organization admin still cannot read even their own record (CLR-005) | P1 | US4 |
@@ -266,10 +266,11 @@ needed eventually; only one is buildable now. See CLR-003.
 | FR-026 | Enforcement happens at the one path every upload travels, and a test proves no second path bypasses it | P1 | US5 |
 | FR-027 | An upload that exactly reaches the quota is accepted; only exceeding it is refused | P2 | US5 |
 | FR-028 | `storageUsedMb` is maintained by a mechanism that exists in this repository, and the mechanism is named in the plan rather than implied | P1 | US6 |
-| FR-029 | `storageUsedMb` counts **each upload plus its generated derivatives**, and **excludes the quarantine prefix**, because quarantine is transient and reaped — no maker should be refused over somebody else's un-reaped garbage (CLR-006) | P1 | US6 |
+| FR-029 | ~~`storageUsedMb` counts **each upload plus its generated derivatives**, and **excludes the quarantine prefix**, because quarantine is transient and reaped — no maker should be refused over somebody else's un-reaped garbage (CLR-006)~~ **Superseded 2026-09-27** — the quarantine exclusion addresses zero rows — quarantine keys come only from `generateObjectKey`, which has no production caller (CHK003). **Now:** `storageUsedMb` counts **each upload plus its generated derivatives**. | P1 | US6 |
 | FR-030 | Deleting an upload releases its bytes from the organization's used figure | P1 | US6 |
 | FR-031 | The reconciliation gate covers `storageUsedMb`, and **the exemption currently excusing it in `tests/content/counters.test.ts` is deleted in the same change** — a stale exemption is how a gate stops being able to fail | P1 | US6 |
 | FR-032 | Raising the quota takes effect on the next upload with no restart and no code change | P2 | US7 |
+| FR-032b | Lowering the quota below current usage leaves stored data untouched and refuses every upload until usage falls below the quota; the refusal then says the organization is **above** its quota rather than printing a negative allowance (checklist CHK014, CHK015, CHK035) | P2 | US7 |
 | FR-033 | The quota column is **non-null with a default**, and a migration backfills the organizations that predate this feature — so "absent" stops being a state any reader has to interpret | P1 | US5 |
 | FR-033b | **Zero means no uploads**, deliberately: it is the only way to suspend a lab's intake without deleting anything, and reading it as "unlimited" would make the most restrictive value the most permissive one | P1 | US5 |
 | FR-034 | A maker is never shown another organization's usage or quota | P1 | US5 |
@@ -290,7 +291,7 @@ needed eventually; only one is buildable now. See CLR-003.
 | SC-002 | A slug colliding case-insensitively with an existing one is refused before creation | Test creating `Bauru` against an existing `bauru` |
 | SC-003 | An attempt to change a slug after creation is still refused | Test asserting the existing `beforeChange` throw survives this feature |
 | SC-004 | A failed creation leaves zero organizations with that slug | Test forcing a failure mid-creation, then counting rows |
-| SC-005 | The wizard route refuses a maker, an org admin and an anonymous visitor | Route test per actor, asserting the status and that the body discloses nothing |
+| SC-005 | ~~The wizard route refuses a maker, an org admin and an anonymous visitor~~ **Superseded 2026-09-27** — `Users` declares no `access.admin`, so Payload redirects unauthenticated requests before any view renders (CHK006). **Now:** The wizard refuses a **maker** and an **org admin** with a 404 that discloses nothing; an **anonymous** visitor gets the same redirect to `/admin/login` every `/admin/*` path gives. | Route test per actor, asserting the status and that the body discloses nothing |
 | SC-006 | A second organization's Home renders its own logo, hero and accent colour | Page test against two organizations with different identities, asserting no value of one appears on the other |
 | SC-007 | An organization with no logo renders the platform default and the page is whole | Page test with the identity values absent |
 | SC-008 | The anonymous door returns the identity values and no other column of the organization record | Door test against a record with every field populated, asserting the absent ones are absent |
@@ -304,7 +305,7 @@ needed eventually; only one is buildable now. See CLR-003.
 | SC-014 | An upload that exactly reaches the quota succeeds | Boundary test at exactly the limit |
 | SC-015 | `storageUsedMb` equals the figure recomputed from its sources for every organization | The existing whole-database reconciliation gate, with the exemption removed |
 | SC-015b | A raster upload raises the figure by more than its own file size | Integration test on an image with derivatives, so "originals + derivatives" cannot pass while counting originals |
-| SC-015c | A quarantined object is not counted | Test placing an object under the quarantine prefix and asserting the figure is unchanged |
+| SC-015c | ~~A quarantined object is not counted~~ **Superseded 2026-09-27** — CHK003. **Now:** *Dropped with FR-029's exclusion.* | Test placing an object under the quarantine prefix and asserting the figure is unchanged |
 | SC-016 | `tests/content/counters.test.ts` contains no exemption naming `storageUsedMb` | Test or grep asserting the absence, so the gate cannot be re-excused quietly |
 | SC-017 | Deleting an upload lowers the organization's used figure by that file's size | Integration test measuring before and after |
 | SC-018 | Raising the quota admits an upload that was refused a moment earlier | Test refusing, raising, retrying — no restart between |
@@ -395,6 +396,12 @@ rendering half and it is in scope.
 change their own logo without asking a master.
 
 ### CLR-006 (2026-09-22) — `storageUsedMb` counts uploads plus derivatives, never quarantine [data lifecycle]
+
+> **Amended 2026-09-27 (checklist CHK003).** The quarantine half of this
+> decision addresses no rows: no live upload is ever written under the
+> quarantine prefix, because the only constructor that produces such keys,
+> `generateObjectKey`, has no production caller. The exclusion is withdrawn
+> with SC-015c. Counting derivatives stands.
 
 **Decision**: the figure sums each upload **and its generated derivatives** (`miniatura`, `card`),
 and **excludes the quarantine prefix**.
