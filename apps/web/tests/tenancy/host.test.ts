@@ -121,6 +121,75 @@ describe('an unknown host with several organizations is a 404, never a guess', (
   })
 })
 
+/**
+ * A host that two organizations could each claim must resolve by RULE, never by row order.
+ *
+ * Found by feature 007's checklist (security CHK026, CHK027), on the tree as it stood: resolution
+ * OR-ed "the first host label equals a slug" with "the full host equals a declared domain" under
+ * `limit: 1` and no sort, and `organizations_domains.domain` carried no unique index. So two
+ * organizations could both match one host and Postgres picked one — a silent tenant hijack.
+ *
+ * **It is not arbitrary — the NEWEST organization wins, which makes it a reliable hijack.** With no
+ * sort of its own the query takes Payload's `-createdAt` default, the same fallback that made
+ * `/ranking` list newest-first. So a lab declares `cite.unesp.br`, and a master later creates an
+ * organization with the slug `cite`: the newcomer matches the first label, is newer, and takes the
+ * lab's host.
+ *
+ * **The fixtures create the legitimate owner FIRST and the newcomer SECOND, on purpose.** The first
+ * version of this file did the reverse and passed on the unfixed resolver — the owner was the
+ * newer row, so `-createdAt` handed it the right answer by coincidence. That is `/ranking`'s lesson
+ * exactly: a fixture must make the fallback's answer the WRONG one, or it measures nothing.
+ */
+describe('an ambiguous host resolves by rule, never by recency (007 CHK026, CHK027)', () => {
+  it('prefers an exact declared domain over a NEWER organization whose slug matches the first label', async () => {
+    const byDomain = await makeOrg('outro', 'Domínio', { domains: [{ domain: 'ambiguo.example.org' }] })
+    const bySlug = await makeOrg('ambiguo', 'Slug')
+
+    const { organization } = await lookupOrganizationByHost('ambiguo.example.org')
+
+    expect(
+      organization?.id,
+      `host "ambiguo.example.org" resolved to the organization whose SLUG is "ambiguo" ` +
+        `(id ${String(bySlug.id)}) instead of the one that DECLARED that exact domain ` +
+        `(id ${String(byDomain.id)}). A declared domain is a full-host claim; a slug is only ` +
+        'a first-label convention, so the declaration must win.',
+    ).toBe(byDomain.id)
+  })
+
+  it('the control: the slug still resolves its own subdomain when no domain claims the host', async () => {
+    await makeOrg('outro', 'Domínio', { domains: [{ domain: 'ambiguo.example.org' }] })
+    const bySlug = await makeOrg('ambiguo', 'Slug')
+
+    expect((await lookupOrganizationByHost('ambiguo.plataforma.br')).organization?.id).toBe(bySlug.id)
+  })
+
+  it('refuses a domain another organization already declares', async () => {
+    await makeOrg('primeira', 'Primeira', { domains: [{ domain: 'lab.example.org' }] })
+
+    await expect(
+      makeOrg('segunda', 'Segunda', { domains: [{ domain: 'lab.example.org' }] }),
+    ).rejects.toThrow()
+  })
+
+  it('refuses a domain that is not a lowercase bare hostname, naming the value', async () => {
+    // Resolution lowercases the incoming host, so a stored "Lab.Example.org" could never match —
+    // and, spelled differently, it would slip past the unique index beside a lowercase twin.
+    const erro = await makeOrg('maiuscula', 'Maiúscula', {
+      domains: [{ domain: 'Lab.Example.org' }],
+    }).catch((e: unknown) => e)
+
+    // Read from `data.errors`, not `String(erro)`: Payload's ValidationError stringifies as a
+    // generic "The following field is invalid", and the field's own message — the one carrying
+    // the value — lives on the error's data. Asserting the path too proves it was the DOMAIN
+    // field that refused, not some unrelated one the fixture happened to leave invalid.
+    const campos = (erro as { data?: { errors?: { path?: string; message?: string }[] } }).data
+      ?.errors
+    const doDominio = campos?.find((c) => c.path === 'domains.0.domain')
+    expect(doDominio, `no refusal on domains.0.domain; got ${JSON.stringify(campos)}`).toBeDefined()
+    expect(doDominio?.message).toContain('Lab.Example.org')
+  })
+})
+
 describe('tenant cannot be spoofed by a header (SC-012)', () => {
   it('ignores a forged x-tenant and resolves from the host', async () => {
     const a = await makeOrg('org-a', 'A')
