@@ -198,7 +198,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        layer: [access-composition, choke-point, public-path, same-tenant, xp-ledger]
+        layer: [access-composition, choke-point, public-path, same-tenant, xp-ledger, write-guard]
     services:
       postgres:
         image: postgres:16-alpine

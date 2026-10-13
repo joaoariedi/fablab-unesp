@@ -135,6 +135,7 @@ export const scopedAccess = (): Access => ({ req }) => {
  */
 export const tenantMustBeAMembership: Validate = (value, options) => {
   const { overrideAccess, req } = options as { overrideAccess?: boolean; req?: { user?: unknown } }
+  /* @isolation-mutation-point */
   if (overrideAccess) return true
   const user = req?.user as MaybeUser
   if (isMaster(user)) return true
