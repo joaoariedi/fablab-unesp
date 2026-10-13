@@ -181,13 +181,18 @@ case "$LAYER" in
     EXPECT="refuses a row in A pointing at a row in B"
     EVIDENCE="the S4c hole is open"
     ;;
+  write-guard)
+    HARNESS="tests/tenancy/isolation.test.ts"
+    EXPECT="cannot create a row naming organization B"
+    EVIDENCE="CREATED a row in organization B"
+    ;;
   xp-ledger)
     HARNESS="tests/tenancy/xp-isolation.test.ts"
     EXPECT="a credit earned at A moves nothing at B"
     EVIDENCE="moved by -?[1-9][0-9]* while a maker of"
     ;;
   *)
-    echo "usage: $0 <choke-point|access-composition|public-path|same-tenant|xp-ledger>" >&2
+    echo "usage: $0 <choke-point|access-composition|public-path|same-tenant|xp-ledger|write-guard>" >&2
     exit 64
     ;;
 esac
@@ -276,6 +281,22 @@ mutate_same_tenant() {
 
 # The fixture host the mutation pins the credit to. Named here rather than inline so the guard
 # below and the substitution cannot drift apart into two different labs.
+# The WRITE half of tenant isolation: the `tenant` field's own validator, which refuses a write
+# naming a tenant the writer does not belong to. Collection access cannot do this — `create`
+# discards the access result, so a query constraint is a plain yes on an insert. The guard's
+# first statement becomes an unconditional pass, so every write is admitted again.
+#
+# Checked by its own marker text, not by counting MUTATED: the xp-ledger layer applies this AND
+# mutate_access_composition, which writes its own MUTATED into the same file.
+mutate_write_guard() {
+  perl -0pi -e "s/if \(overrideAccess\) return true/return true \/* MUTATED write-guard *\//" \
+    "$WEB/lib/tenancy/access.ts"
+  grep -q "MUTATED write-guard" "$WEB/lib/tenancy/access.ts" || {
+    echo "access.ts write-guard mutation did not apply — tenantMustBeAMembership's first statement moved" >&2
+    exit 1
+  }
+}
+
 XP_LEAK_HOST="org-b.localhost"
 
 mutate_xp_ledger() {
@@ -306,13 +327,20 @@ elif [ "$LAYER" = "same-tenant" ]; then
   # at all. The two expressions this removes are both inside the validator — see the header.
   mutate_same_tenant
 elif [ "$LAYER" = "xp-ledger" ]; then
-  # Three outer layers go FIRST, in the order the credit meets them — see the header. The two
+  # Four outer layers go FIRST, in the order the credit meets them — see the header. The two
   # read layers guard `rulesForTenant`, which `creditXp` reaches before it writes anything; the
   # write guard then refuses the row itself. With either standing the credit is refused rather
   # than misplaced, and no lab's numbers move for the harness to see.
+  #
+  # The fourth is the `tenant` field's own validator (mutate_write_guard), added after this layer
+  # was written. Left standing, it refused the planted credit's ledger row in B — the leak this
+  # layer exists to plant never happened, and the layer failed on PR #20 for want of a leak.
   mutate_access_composition
   mutate_same_tenant
+  mutate_write_guard
   mutate_xp_ledger
+elif [ "$LAYER" = "write-guard" ]; then
+  mutate_write_guard
 elif [ "$LAYER" = "choke-point" ]; then
   # Strip the two OUTER layers as well: with them in place the choke-point filter is
   # redundant, and its removal is invisible. See the note above.

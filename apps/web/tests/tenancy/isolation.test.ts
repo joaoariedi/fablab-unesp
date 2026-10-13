@@ -7,7 +7,7 @@ import configPromise from '../../payload.config'
 import { lookupOrganizationByHost } from '../../lib/tenancy/resolve'
 import { getTenantScopedPayload } from '../../lib/tenancy/scoped-payload'
 import { scopedCollections } from '../../lib/tenancy/scope-registry'
-import { buildWorld, type Fixture } from './fixtures'
+import { buildWorld, seedDataFor, type Fixture } from './fixtures'
 
 /**
  * The cross-tenant isolation harness (FR-019, SC-002).
@@ -472,3 +472,88 @@ const pickerTargets = async (
   for (const collection of config.collections) walk(collection.slug, collection.fields)
   return pairs
 }
+
+/**
+ * WRITES — a user of A cannot CREATE a row in B, on any scoped collection.
+ *
+ * The matrix above drives every READ surface and none that writes, and that is where the hole
+ * was. Measured 2026-10-13 (feature 007's T005): a maker of A named B's id as `tenant` and the row
+ * landed in B — an upload, bytes and all, and a `tenantCanaries` row, the canary this harness
+ * exists for. Cause, read in the installed payload: `create` calls `executeAccess` and DISCARDS the
+ * result, which throws only when falsy — so the `{ tenant: { in: ids } }` constraint `scopedAccess`
+ * returns is truthy, and on an insert, where there is no row for it to constrain, it is a plain
+ * yes. A query constraint cannot constrain an insert.
+ *
+ * **Why the refusal's REASON is asserted, not only its existence.** A create can fail for a dozen
+ * unrelated reasons — a unique key, a required field the fixture left out — and every one of them
+ * would make "refused" pass while the tenant was never checked. So a refusal counts only when it
+ * is access (Forbidden) or the `tenant` field's own validation; anything else fails loudly, naming
+ * what it was, because then this case is not measuring what it says.
+ */
+describe('cross-tenant isolation — writes: a user of A cannot create a row in B', () => {
+  type Tentativa = { criado: { id: string | number } } | { erro: unknown }
+
+  const seededDeB = (): Record<string, string | number> =>
+    Object.fromEntries(Object.entries(world.rows).map(([c, ids]) => [c, ids.B]))
+
+  const contarEmB = async (collection: string): Promise<number> =>
+    (
+      await world.payload.find({
+        collection: collection as never,
+        where: { tenant: { equals: world.orgB.id } } as never,
+        limit: 0,
+        overrideAccess: true,
+      })
+    ).totalDocs
+
+  /** `acesso` and `tenant` are the two refusals this case is about; anything else is reported. */
+  const motivoDe = (erro: unknown): string => {
+    if ((erro as { name?: string }).name === 'Forbidden') return 'acesso'
+    const campos = (erro as { data?: { errors?: { path?: string }[] } }).data?.errors ?? []
+    if (campos.some((c) => c.path === 'tenant')) return 'tenant'
+    return `outro: ${String(erro).slice(0, 240)}`
+  }
+
+  for (const collection of scopedCollections()) {
+    it(`${collection}: a user of A cannot create a row naming organization B`, async () => {
+      const antes = await contarEmB(collection)
+      const data = {
+        ...seedDataFor(collection, 'XB', world.userB.id as string | number, seededDeB()),
+        tenant: world.orgB.id,
+      }
+
+      const tentativa: Tentativa = await world.payload
+        .create({
+          collection: collection as never,
+          data: data as never,
+          user: world.userA,
+          overrideAccess: false,
+          // On A's own site, as the attack actually arrives. Without a host, a collection whose
+          // hook resolves the tenant from the request (`modelo3d`'s formats) throws
+          // TenantUnresolvedError before field validation runs — a refusal that says nothing
+          // about whether the tenant is checked.
+          req: { headers: new Headers({ host: world.orgA.host }) },
+        } as never)
+        .then(
+          (doc) => ({ criado: doc as { id: string | number } }),
+          (erro: unknown) => ({ erro }),
+        )
+      // Never leave the leaked row behind: it would fail every whole-database gate after this one.
+      if ('criado' in tentativa) {
+        await world.payload.delete({ collection: collection as never, id: tentativa.criado.id, overrideAccess: true })
+      }
+
+      expect(
+        'criado' in tentativa,
+        `${collection}: a user of organization A CREATED a row in organization B by naming B's id ` +
+          'as `tenant`. Create access returned a query constraint, which an insert cannot apply.',
+      ).toBe(false)
+      if ('erro' in tentativa) {
+        expect(['acesso', 'tenant'], `${collection}: refused, but not by access or the tenant`).toContain(
+          motivoDe(tentativa.erro),
+        )
+      }
+      expect(await contarEmB(collection)).toBe(antes)
+    })
+  }
+})

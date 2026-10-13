@@ -36,6 +36,7 @@ import { PendingInvites } from './collections/PendingInvites'
 import { TenantCanaries } from './collections/TenantCanaries'
 import { isMaster, Users } from './collections/Users'
 import { readEnv } from './lib/env'
+import { tenantMustBeAMembership } from './lib/tenancy/access'
 import { perfilMakerHandleUnique } from './lib/tenancy/handle-unique-index'
 import { MAX_UPLOAD_CAP_BYTES } from './lib/uploads/limits'
 
@@ -298,6 +299,16 @@ export default buildConfig({
       // the "master is the sole cross-tenant reader" semantics, implemented by the plugin
       // rather than by us.
       userHasAccessToAllTenants: (user) => isMaster(user as { role?: string }),
+
+      // **Every tenant-enabled collection's `tenant` field refuses a tenant the writer does not
+      // belong to** — the write half of tenant isolation, which collection access cannot provide:
+      // a query constraint has no row to constrain on an insert. See `tenantMustBeAMembership`.
+      //
+      // ⚠ Global on purpose, and fragile in one way: the plugin REPLACES this with a collection's
+      // `tenantFieldOverrides` rather than merging (`plugin-multi-tenant/dist/index.js`), so a
+      // collection given its own overrides silently loses the guard. The write matrix in
+      // `tests/tenancy/isolation.test.ts` runs over every scoped collection and would go red.
+      tenantField: { validate: tenantMustBeAMembership },
 
       // Spike S2 verified this exact shape persists as `orgs: [{ organization, role, id }]`.
       // `rowFields` is only available when `includeDefaultField` is true.
