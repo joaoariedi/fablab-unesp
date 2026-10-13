@@ -258,13 +258,28 @@ and adding the parameter with no caller would be preamble item 2 — a capabilit
 
 | ID | Task | Refs | File | Blocked by |
 |---|---|---|---|---|
-| T030 | [V] The island count is unchanged — `LogoChip`'s new prop and the wizard add no client component to `packages/ui` | SC-021 | `packages/ui/tests/islands.test.ts` | every group run |
-| T031 | The whole suite twice, lint, markdownlint, and typecheck **both ways** — with and without the gitignored `payload-types.ts` | — | — | T030 |
-| T032 | Migration drift on a **scratch** database: `DATABASE_URI=<scratch> bash scripts/migration-drift.sh` | FR-033 | — | T031 |
-| T033 | **Drive the actual app**, not the suite. Clear `.next/cache/fetch-cache` after any database change and export `.env` before `next start` (§ Environment facts). Group B: upload past the quota through the admin and see **507** with the full message; raise the quota and see it succeed. Group C: the header carries the organization's own name. Group D: open the wizard as a master and as a maker — the second is a 404. HTTP status codes from real requests | SC-011, SC-013, SC-006, SC-005 | — | T032 |
-| T034 | `sdd-strategy.md` row 007 rewritten to say what shipped and what remains trigger-gated, so the roadmap stops describing a feature that no longer matches the tree | FR-037 | `docs/sdd-strategy.md` | T033 |
+| ✅ T030 | [V] The island count is unchanged — `LogoChip`'s new prop and the wizard add no client component to `packages/ui` | SC-021 | `packages/ui/tests/islands.test.ts` | every group run |
+| ✅ T031 | The whole suite twice, lint, markdownlint, and typecheck **both ways** — with and without the gitignored `payload-types.ts` | — | — | T030 |
+| ✅ T032 | Migration drift on a **scratch** database: `DATABASE_URI=<scratch> bash scripts/migration-drift.sh` | FR-033 | — | T031 |
+| ✅ T033 | **Drive the actual app**, not the suite. Clear `.next/cache/fetch-cache` after any database change and export `.env` before `next start` (§ Environment facts). Group B: upload past the quota through the admin and see **507** with the full message; raise the quota and see it succeed. Group C: the header carries the organization's own name. Group D: open the wizard as a master and as a maker — the second is a 404. HTTP status codes from real requests | SC-011, SC-013, SC-006, SC-005 | — | T032 |
+| ✅ T034 | `sdd-strategy.md` row 007 rewritten to say what shipped and what remains trigger-gated, so the roadmap stops describing a feature that no longer matches the tree | FR-037 | `docs/sdd-strategy.md` | T033 |
 
 ---
+
+### Gates run for group B — 2026-10-13
+
+T030–T034 were run for what shipped, and **must run again if group C or D ships**. T030: no client
+component added; `packages/ui` 958/958 including the island budget. T031: the full suite twice, 194
+files / 3,344 tests both times; lint, markdownlint, typecheck with and without generated types.
+T032: migration drift PASS on a scratch database. T033: driven through the real app into real MinIO —
+a maker hit a full lab and got `507` with *"ocupa 27.7 KB e restam 10.2 KB da cota de 10.2 KB"*,
+nothing stored; after a raise the upload landed (`201`), the figure grew by exactly 28,352 bytes
+(original plus both derivatives), MinIO served the file (`200`); naming another lab got the tenant
+guard's `400`; deletion returned the figure to 0. T034: `sdd-strategy.md` row 007 updated.
+
+One finding outside group B: the cross-tenant refusal is logged and toasted under the plugin's default
+field label, **"Assigned Tenant"** — English in a PT-BR admin. A label override on the global
+`tenantField`, when someone next touches it.
 
 ## Outstanding, and not executable by a run
 
