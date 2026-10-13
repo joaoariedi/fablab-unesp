@@ -607,15 +607,25 @@ leg runs; requiring it is a repository-admin action on both `dev` and `main`, tr
 here, measured rather than assumed — `.github/required-checks.json` carries the live answer of
 the same date.
 
+### The eighteenth context (fix/cross-tenant-create, PR #20)
+
+The cross-tenant create fix added a `write-guard` leg to the same matrix. It proves the new write
+matrix in `tests/tenancy/isolation.test.ts` notices a create into another organization once the
+`tenant` field's validator is removed. Requiring it is the same repository-admin action, and it
+must come **after** the leg exists on `dev`: a required context that a branch's own `ci.yml`
+never runs leaves that branch's pull requests waiting forever.
+
 | Missing context | Advisory since | Closed by |
 |---|---|---|
 | `Isolation harness can fail (xp-ledger)` | feature 005 (T049) | 005 T052 ⛔ |
+| `Isolation harness can fail (write-guard)` | PR #20 (cross-tenant create) | the admin action below ⛔ |
 
 ```sh
 gh api -X POST \
   repos/joaoariedi/fablab-unesp/branches/<branch>/protection/required_status_checks/contexts \
-  -f 'contexts[]=Isolation harness can fail (xp-ledger)'
-# then: scripts/required-checks.sh --write, and delete the row above
+  -f 'contexts[]=Isolation harness can fail (xp-ledger)' \
+  -f 'contexts[]=Isolation harness can fail (write-guard)'
+# then: scripts/required-checks.sh --write, and delete the rows above
 ```
 
 ---

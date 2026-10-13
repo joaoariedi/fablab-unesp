@@ -1,4 +1,4 @@
-import type { Access, FieldAccess, Where } from 'payload'
+import type { Access, FieldAccess, Validate, Where } from 'payload'
 
 /**
  * The shape access control may assume of `req.user` — deliberately all-optional, because it
@@ -105,6 +105,47 @@ export const scopedAccess = (): Access => ({ req }) => {
 
   /* @isolation-mutation-point */
   return { tenant: { in: ids } } as Where
+}
+
+/**
+ * **A write may only name a tenant the writer belongs to** — the WRITE half of `scopedAccess`.
+ *
+ * `scopedAccess` returns a query constraint, and for a read, an update or a delete that is the
+ * whole guarantee: the constraint travels with the query and a foreign row matches nothing. **A
+ * create has no row to match.** payload's `create` calls `executeAccess` and discards its result,
+ * which throws only when falsy (`auth/executeAccess.js`), so the constraint — an object, truthy —
+ * is a plain yes, and the `tenant` the caller wrote is never compared with anything. Measured
+ * 2026-10-13: a user of organization A created rows in B on 19 of 23 scoped collections, invites
+ * and maker profiles among them, by naming B's id. The read-only isolation harness never tried.
+ *
+ * So the check lives on the `tenant` FIELD, registered once for every tenant-enabled collection
+ * through the plugin's global `tenantField` override — a rule, not an inventory of collections.
+ * Field validation runs on create AND update, after the plugin's cookie `defaultValue` has been
+ * applied, so it sees the tenant that will actually be stored, however it arrived.
+ *
+ * **It trusts exactly whom access control trusts**: a call with `overrideAccess` — the named doors
+ * and system code in `lib/tenancy`, which choose the tenant themselves — and a master. Everyone
+ * else, including a request with no user at all, must name one of their own organizations.
+ *
+ * The refusal reads the same whether or not the named organization exists, and it looks nothing
+ * up: a message that differed would turn this guard into an oracle for which ids are labs.
+ *
+ * A missing tenant is not refused here — the plugin's own `required` check runs right after this
+ * one and says so in its own words.
+ */
+export const tenantMustBeAMembership: Validate = (value, options) => {
+  const { overrideAccess, req } = options as { overrideAccess?: boolean; req?: { user?: unknown } }
+  /* @isolation-mutation-point */
+  if (overrideAccess) return true
+  const user = req?.user as MaybeUser
+  if (isMaster(user)) return true
+  const tenant = tenantRefOf(value)
+  if (tenant === null) return true
+  if (tenantIdsOf(user).some((id) => String(id) === tenant)) return true
+  return (
+    `Você não pode gravar este documento na organização "${tenant}": ela não está entre as ` +
+    'organizações das quais você participa.'
+  )
 }
 
 /**
