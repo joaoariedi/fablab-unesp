@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import configPromise from '../../payload.config'
 import { stampApproval } from '../../lib/content/review'
+import { DEFAULT_STORAGE_QUOTA_MB } from '../../collections/Organizations'
 
 /**
  * T033 / SC-004, SC-005 — the review queue driven through **real rows**, not through the
@@ -133,7 +134,7 @@ beforeAll(async () => {
 
   const org = await payload.create({
     collection: 'organizations',
-    data: { name: 'Lab da Fila de Revisão', slug: ORG_SLUG, status: 'active' },
+    data: { storageQuotaMb: DEFAULT_STORAGE_QUOTA_MB, name: 'Lab da Fila de Revisão', slug: ORG_SLUG, status: 'active' },
     overrideAccess: true,
   })
   const categoria = await payload.create({

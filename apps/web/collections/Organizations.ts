@@ -5,6 +5,15 @@ import { masterOnly } from '../lib/tenancy/access'
 import { revalidateTenantResolution, seedNewOrganization } from '../lib/tenancy/seed-on-create'
 
 /**
+ * Every organization's storage quota until a master says otherwise: 20 GiB (007, CLR-004).
+ *
+ * In MB of 1024 × 1024 bytes — `MEGABYTE` in `lib/uploads/limits.ts` — so the quota, the used
+ * figure and the refusal message all speak one unit. Exported so the backfill migration and the
+ * tests read this number rather than retyping it: a second copy is a second quota.
+ */
+export const DEFAULT_STORAGE_QUOTA_MB = 20480
+
+/**
  * The tenant (FR-008). Declared `global` in the scope registry — it *is* the tenant, so
  * scoping it to itself would be circular.
  *
@@ -195,15 +204,32 @@ export const Organizations: CollectionConfig = {
     {
       name: 'storageQuotaMb',
       type: 'number',
+      // Required with a default, so no organization is unbounded by omission (FR-021, FR-033). The
+      // default and the migration that backfilled pre-existing rows read the same constant: `push`
+      // rebuilds every non-production schema from this config, so the two must agree.
+      required: true,
+      defaultValue: DEFAULT_STORAGE_QUOTA_MB,
+      // Zero is a real state — suspension — so the floor is 0, not 1 (FR-033b). A negative quota
+      // would refuse every upload with a nonsensical allowance, so it is refused here instead.
+      min: 0,
       label: 'Cota de storage (MB)',
-      admin: { description: 'Declarada agora; aplicada na feature 002.' },
+      admin: {
+        description:
+          'Limite de armazenamento desta organização, em MB (1 MB = 1024 × 1024 bytes). Padrão: 20480 (20 GiB). 0 suspende novos uploads sem apagar nada.',
+      },
     },
     {
       name: 'storageUsedMb',
       type: 'number',
       defaultValue: 0,
       label: 'Storage usado (MB)',
-      admin: { readOnly: true, description: 'Reconciliado por job periódico (feature 002).' },
+      // `readOnly` is also the marker `tests/content/counters.test.ts` scans for: this column is
+      // derived, and that gate reconciles it (007, FR-031).
+      admin: {
+        readOnly: true,
+        description:
+          'Calculado pelo sistema: cada upload e suas versões geradas. Atualizado a cada upload e exclusão.',
+      },
     },
     {
       name: 'lgpdContact',

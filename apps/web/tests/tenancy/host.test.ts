@@ -6,6 +6,7 @@ import { TenantUnresolvedError } from '../../lib/tenancy/errors'
 import { lookupOrganizationByHost, resolveTenant } from '../../lib/tenancy/resolve'
 import { getTenantScopedPayload } from '../../lib/tenancy/scoped-payload'
 import { resetWorld } from './fixtures'
+import { DEFAULT_STORAGE_QUOTA_MB } from '../../collections/Organizations'
 
 /**
  * Host → organization resolution (FR-011, FR-012, SC-006, SC-012).
@@ -26,7 +27,7 @@ const makeOrg = async (slug: string, name: string, extra: Record<string, unknown
   const payload = await payloadClient()
   return payload.create({
     collection: 'organizations',
-    data: { name, slug, status: 'active', ...extra },
+    data: { storageQuotaMb: DEFAULT_STORAGE_QUOTA_MB, name, slug, status: 'active', ...extra },
     overrideAccess: true,
   })
 }

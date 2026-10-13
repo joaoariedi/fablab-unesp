@@ -6,6 +6,7 @@ import { SEED_ON_CREATE, type SeedFn } from '../../lib/tenancy/seed-on-create'
 import type { SystemScopedPayload } from '../../lib/tenancy/system-payload'
 import { CITE_ORGANIZATION, seed } from '../../seed/index'
 import { resetWorld } from './fixtures'
+import { DEFAULT_STORAGE_QUOTA_MB } from '../../collections/Organizations'
 
 /**
  * Bootstrap guarantees (FR-026, FR-031, CLR-003, US1 edge).
@@ -119,7 +120,7 @@ describe('seed-on-create registry (T057, FR-031)', () => {
     const payload = await getPayload({ config })
     const org = await payload.create({
       collection: 'organizations',
-      data: { name: 'Seed Target', slug: 'seed-target', status: 'active' },
+      data: { storageQuotaMb: DEFAULT_STORAGE_QUOTA_MB, name: 'Seed Target', slug: 'seed-target', status: 'active' },
       overrideAccess: true,
     })
 
@@ -145,7 +146,7 @@ describe('seed-on-create registry (T057, FR-031)', () => {
     const payload = await getPayload({ config })
     const org = await payload.create({
       collection: 'organizations',
-      data: { name: 'No Seeds', slug: 'no-seeds', status: 'active' },
+      data: { storageQuotaMb: DEFAULT_STORAGE_QUOTA_MB, name: 'No Seeds', slug: 'no-seeds', status: 'active' },
       overrideAccess: true,
     })
     expect(org.id).toBeDefined()

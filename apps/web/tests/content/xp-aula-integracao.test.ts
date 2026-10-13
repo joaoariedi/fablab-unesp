@@ -2,6 +2,7 @@ import { getPayload, type Payload } from 'payload'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import config from '../../payload.config'
+import { DEFAULT_STORAGE_QUOTA_MB } from '../../collections/Organizations'
 
 /**
  * T023 / T025, FR-025, FR-027, SC-011, US2 — **the class completion, driven through Payload.**
@@ -129,7 +130,7 @@ beforeAll(async () => {
 
   const organizacao = await payload.create({
     collection: 'organizations',
-    data: { name: 'Lab T023', slug: SLUG_SENTINELA, status: 'active' },
+    data: { storageQuotaMb: DEFAULT_STORAGE_QUOTA_MB, name: 'Lab T023', slug: SLUG_SENTINELA, status: 'active' },
     overrideAccess: true,
   })
   tenant = organizacao.id

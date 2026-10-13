@@ -1,5 +1,5 @@
 # Project Constitution
-<!-- Version: 1.2.0 | Date: 2026-08-25 -->
+<!-- Version: 1.3.0 | Date: 2026-10-13 -->
 <!-- Updated by /speckit.constitution -->
 
 Governing principles for the Fab Lab CITe Bauru platform. Every spec, plan and pull
@@ -95,9 +95,19 @@ amendment shifts every line below it, and stale line citations still read as aut
 - **Uploads:** presigned PUT to object storage, then **post-upload verification**
   (`HeadObject` + magic-byte sniffing of the first kilobytes); files land as
   draft/quarantine until moderated. Browser-reported MIME is never trusted.
-- **Storage keys:** a single constructor, `org/<slug>/…`; organization quota is validated
+  *(Recorded 2026-10-13, not resolved: this describes the presigned path that feature 002's
+  decision D1 retired — `clientUploads: false`, every upload passes through Node — and feature
+  007 measured that no live upload is written under the quarantine prefix. Which parts of the
+  verification still run on the Node path is unverified here and needs its own review.)*
+- **Storage keys:** ~~a single constructor, `org/<slug>/…`; organization quota is validated
   **when the presigned URL is issued**, with a periodic reconciliation job against the
-  bucket prefix.
+  bucket prefix.~~ The storage adapter keys every upload by its filename at the **bucket
+  root**: there is no per-organization prefix, and `generateObjectKey` has no production
+  caller. Organization quota is enforced **before any byte is stored**, in the upload
+  collections' `beforeValidate` (`refuseOverQuota`), against a used figure kept by a
+  per-upload delta in the upload's own transaction and reconciled by the derived-values
+  gate. *(amended 2026-10-13: the app issues no presigned URLs since 002's D1, so the old
+  sentence named an enforcement point no upload passes through — see Amendment 1.3.0.)*
 - **Moderation:** draft → in review → published by the lab team; **XP credits on
   approval**. Human moderation is the accepted antivirus for public downloads; ClamAV
   becomes mandatory before hosting an external tenant.
@@ -110,7 +120,9 @@ amendment shifts every line below it, and stale line citations still read as aut
   its original justifications were measured and found wrong.)*
 - **LGPD:** deletion operates per `(tenant, user)` and purges draft/version history and
   the storage prefix; terms acceptance gates signup; export produces a documented
-  artifact. **No external tenant before a signed legal instrument** (controller/operator,
+  artifact. *(Recorded 2026-10-13, not resolved: "the storage prefix" does not exist — see
+  Storage keys — so a per-organization purge cannot be done by prefix as written. A decision
+  for before any second organization holds data, not for feature 007.)* **No external tenant before a signed legal instrument** (controller/operator,
   DPO, incident notification, explicit no-SLA policy).
 - **v1 exclusions:** no realtime, no canvas game engine, no reward cosmetics, no billing.
   Pre-rendered art plus DOM/CSS with `image-rendering: pixelated`.
@@ -137,5 +149,6 @@ Substantive changes only, newest first. See the **Amendment policy** in the prea
 |---|---|---|
 | 1.1.0 | 2026-08-25 | **Principle 2 — enforcement mechanism.** Linting by **method name** replaced by an **import boundary plus syntax rules covering `req.payload`**. Name matching is defeated by aliasing (`const p = await getPayload(); p.find()`), `req.payload` reaches every hook with no import at all, and raw SQL has no method name. Source: feature 000 plan review, round 2 |
 | 1.1.0 | 2026-08-25 | **Architecture Constraints — routing.** Host→organization resolution moved **out of middleware** to a cached server-side lookup; middleware does header hygiene only. The Edge runtime cannot hold a Postgres connection, and `NextResponse.next()` response headers never reach the server. Source: feature 000 plan, Sketch 4 |
+| 1.3.0 | 2026-10-13 | **Architecture Constraints — storage keys and quota, correction.** The quota was to be validated *"when the presigned URL is issued"*: feature 002's D1 turned `clientUploads` off and the app issues none, so the sentence named an enforcement point no upload passes. And *"a single constructor, `org/<slug>/…`"* does not describe the live system: the S3 adapter configures no prefix, every organization's uploads share the bucket root, and `generateObjectKey` has no production caller. Feature 007 enforces the quota in `beforeValidate`, before any byte is stored, against a figure kept by a per-upload delta and reconciled by the derived-values gate. Two dependent sentences — Uploads and LGPD — are recorded inline and left for their own review. Source: feature 007, checklist CHK002/CHK003/CHK011 and T005 |
 | 1.2.0 | 2026-08-25 | **Architecture Constraints — routing, correction.** Spike S9 measured two claims from 1.1.0 and both were wrong. `NextResponse.next()` response headers **do** reach the server (readable via `headers()` in a Route Handler *and* an RSC) as well as the client — leaky in both directions, not inert. And the Edge-runtime argument no longer binds: Next 16 renames `middleware` to **`proxy`**, which runs on **`nodejs`**. The constraint stands on its own merits — no per-request database round trip in the proxy — and gains a new reason: spike S8 shows the cached path cannot be tested at all without an injected seam. Source: feature 000 spike, S8 + S9 |
 | 1.0.0 | 2026-08-25 | Ratified — five principles, tech stack, architecture constraints |

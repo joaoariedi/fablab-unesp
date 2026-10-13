@@ -5,6 +5,10 @@ import { levelFor, type XpRules } from '@fablab/game'
 
 import configPromise from '../../payload.config'
 import type { CounterField } from '../../lib/content/counters'
+import { DEFAULT_STORAGE_QUOTA_MB } from '../../collections/Organizations'
+import { MEDIA_SLUGS } from '../../collections/Media'
+import { bytesOf, type MediaDoc } from '../../lib/content/storage-usage'
+import { MEGABYTE } from '../../lib/uploads/limits'
 
 /**
  * T031 / FR-020, SC-012 — the **reconciliation gate**: every stored counter is recomputed
@@ -48,7 +52,7 @@ import type { CounterField } from '../../lib/content/counters'
  * reconciliation is **this sweep** rather than a second gate. They arrive here automatically,
  * which is the mechanism working: the map below could not typecheck until each was declared.
  */
-type DerivedField = CounterField | 'formatos' | 'skills'
+type DerivedField = CounterField | 'formatos' | 'skills' | 'storageUsedMb'
 
 /**
  * How the truth is recomputed for each derived value of FR-020.
@@ -117,6 +121,18 @@ type DerivedSource =
         rules: string
       }
     }
+  /**
+   * **Bytes summed over SEVERAL collections, through a NESTED value**: `organizations.storageUsedMb`
+   * (feature 007) is every upload's original plus every size Payload generated from it, across the
+   * three media collections of one organization, in MB of 1024 × 1024 bytes.
+   *
+   * Its own variant because none above can say it: `from` counts rows by one foreign key,
+   * `fromLedger` sums one flat `amount` over one collection, `fromOwnRelationship` reads the row
+   * itself. This needs three collections, the nested `sizes.*.filesize` that `bytesOf` reads, and a
+   * target on a `global` collection whose rows are matched by `tenant` rather than a foreign key.
+   * Like `formatos`, it is derived and NOT a counter: `syncCounter` never maintains it.
+   */
+  | { fromUploads: { collections: readonly string[]; how: string } }
 
 const DERIVED_SOURCES = {
   // `conteudo.value`, not `conteudo`: T043 declares the target as a POLYMORPHIC relationship
@@ -183,6 +199,14 @@ const DERIVED_SOURCES = {
       rules: 'regrasXp',
     },
   },
+  storageUsedMb: {
+    fromUploads: {
+      collections: [MEDIA_SLUGS.image, MEDIA_SLUGS.model3d, MEDIA_SLUGS.document],
+      how:
+        'bytesOf over every upload whose tenant is this organization — the original plus every ' +
+        "generated size (CLR-006), compared in whole bytes so 'exactly' means exactly",
+    },
+  },
 } as const satisfies Record<DerivedField, DerivedSource>
 
 /** Derived from the map, never written twice — the two cannot disagree. */
@@ -199,9 +223,6 @@ const APPROVAL_STAMP =
   'publication and nothing recomputes it (FR-009). Its gate is the review-queue test'
 
 const NOT_AN_FR020_DERIVED: Record<string, string> = {
-  'organizations.storageUsedMb':
-    'not one of FR-020\'s four derived values; its stated strategy is a periodic job ' +
-    '(Organizations.ts:178), not the same-transaction one this gate reconciles',
   'projeto.aprovacaoRegistrada':
     'a record of a transition, not a derivation: stampApproval writes it once at the first ' +
     'publication and nothing recomputes it (T008, FR-009). Its gate is stamp-approval.test.ts',
@@ -559,8 +580,44 @@ const driftInSkillPanel = async (
 }
 
 /** Rows whose stored counter disagrees with a recount of its source rows. */
+/**
+ * `storageUsedMb`, recomputed from the uploads themselves (007 — FR-028, FR-031, SC-015).
+ *
+ * Independent of the production delta it checks, as every recount here is: it shares only
+ * `bytesOf`, the definition of what one upload occupies, which T006 pins against fixed numbers.
+ * Compared in WHOLE BYTES — the stored MB times `MEGABYTE`, rounded — so a drift of one byte is a
+ * drift, and `stored`/`recomputed` in the report are bytes.
+ */
+const driftInStorage = async (
+  column: DerivedColumn,
+  declared: { collections: readonly string[] },
+  known: Set<string>,
+): Promise<Drift[]> => {
+  const drifts: Drift[] = []
+  for (const doc of await rowsOf(column.collection)) {
+    const stored = Math.round(Number(doc[column.field] ?? 0) * MEGABYTE)
+    let recomputed = 0
+    for (const collection of declared.collections) {
+      if (!known.has(collection)) continue
+      for (const upload of await rowsOf(collection, { tenant: { equals: doc.id } } as Where)) {
+        recomputed += bytesOf(upload as MediaDoc)
+      }
+    }
+    if (stored !== recomputed) {
+      drifts.push({
+        where: `${column.collection}.${column.field} (bytes)`,
+        id: doc.id as string | number,
+        stored,
+        recomputed,
+      })
+    }
+  }
+  return drifts
+}
+
 const driftIn = async (column: DerivedColumn, known: Set<string>): Promise<Drift[]> => {
   const declared: DerivedSource = DERIVED_SOURCES[column.field]
+  if ('fromUploads' in declared) return driftInStorage(column, declared.fromUploads, known)
   // Nothing to recompute from: no rows are persisted (`downloads`), or the collection that
   // would hold them is not in this config yet (`formatos`). Neither is silent — the matrix
   // tests below demand a stated reason, and the rot guard refuses a placeholder whose
@@ -911,7 +968,7 @@ beforeAll(async () => {
 
   const org = await payload.create({
     collection: 'organizations',
-    data: { name: 'Lab da Reconciliação', slug: 'reconciliacao', status: 'active' },
+    data: { storageQuotaMb: DEFAULT_STORAGE_QUOTA_MB, name: 'Lab da Reconciliação', slug: 'reconciliacao', status: 'active' },
     overrideAccess: true,
   })
   const categoria = await payload.create({
@@ -1032,6 +1089,38 @@ describe('the gate catches drift rather than merely running (T031, FR-020)', () 
 
     expect(await reconcileEveryCounter()).toEqual([])
   })
+
+  it('reports a storage figure desynced from the uploads, in bytes, then clears once repaired (007, FR-031)', async () => {
+    // The same plant, for the column feature 007 brought under this gate. The seeded
+    // organization's upload carries no file, so its bytes recompute to zero, and a figure written
+    // by hand is a drift of exactly that many bytes. Without this case the storage recount could
+    // be broken and every green run above would still pass: no fixture here uploads real bytes.
+    await payload.update({
+      collection: 'organizations',
+      id: seeded.org,
+      data: { storageUsedMb: 5 },
+      overrideAccess: true,
+    })
+
+    try {
+      expect(
+        await reconcileEveryCounter(),
+        'a storage figure was desynced by hand and the reconciliation reported nothing — the ' +
+          'storage recount is inert',
+      ).toEqual([
+        { where: 'organizations.storageUsedMb (bytes)', id: seeded.org, stored: 5 * MEGABYTE, recomputed: 0 },
+      ])
+    } finally {
+      await payload.update({
+        collection: 'organizations',
+        id: seeded.org,
+        data: { storageUsedMb: 0 },
+        overrideAccess: true,
+      })
+    }
+
+    expect(await reconcileEveryCounter()).toEqual([])
+  })
 })
 
 describe('the reconciliation matrix cannot rot (T031, SC-012)', () => {
@@ -1087,6 +1176,12 @@ describe('the reconciliation matrix cannot rot (T031, SC-012)', () => {
         const { field: source, how } = declared.fromOwnRelationship
         expect(source, `${field} names no field to derive itself from`).toBeTruthy()
         expect(how.length, `${field} does not say how it is derived`).toBeGreaterThan(20)
+      } else if ('fromUploads' in declared) {
+        // A sum over several collections names every one of them, and says how a row counts —
+        // the nested `sizes` is exactly the part a reader would otherwise get wrong.
+        const { collections, how } = declared.fromUploads
+        expect(collections.length, `${field} names no collection of uploads to sum`).toBeGreaterThan(0)
+        expect(how.length, `${field} does not say how one upload counts`).toBeGreaterThan(20)
       } else {
         expect(declared.from.collection, `${field} names no source collection`).toBeTruthy()
         expect(declared.from.foreignKey, `${field} names no foreign key`).toBeTruthy()
@@ -1172,12 +1267,17 @@ describe('the guard sees derived values that are not numbers (T031, FR-020)', ()
     // T021 added the third XP projection: `skills`, the per-skill `{ xp, nivel }` pair of the
     // SUAS SKILLS panel (US9). It is one key standing for as many projections as a maker holds
     // skills, which is why its declaration is a `fromLedgerRows` rather than a second column.
+    //
+    // Feature 007 added `storageUsedMb` (FR-031): an organization's bytes across its uploads, which
+    // this gate had EXCUSED until then on the strength of a periodic job that never existed. The
+    // excuse is deleted from NOT_AN_FR020_DERIVED in the same change that adds it here.
     expect(Object.keys(DERIVED_SOURCES).sort()).toEqual([
       'curtidas',
       'downloads',
       'formatos',
       'nivel',
       'skills',
+      'storageUsedMb',
       'totalModelos',
       'xpTotal',
     ])

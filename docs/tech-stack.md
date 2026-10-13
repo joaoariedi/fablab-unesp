@@ -113,10 +113,22 @@ Incorporar à spec da feature correspondente — não são opcionais:
   (cookies, isolamento, percepção de site próprio); custom domain como upgrade. TLS:
   `on_demand_tls` do Caddy (HTTP-01 por subdomínio, sem imagem custom nem chave de DNS);
   wildcard DNS-01 apenas como otimização futura.
-- **Storage**: bucket único com prefixo `org/<slug>/…` e **um único construtor de chave**;
+- **Storage**: ~~bucket único com prefixo `org/<slug>/…` e **um único construtor de chave**;
   quota por org validada **na emissão da URL pré-assinada**, com job periódico de
   reconciliação contra o prefixo (contador denormalizado sofre drift). O **número** da
-  quota por org ainda não existe — decidir (os 10/100/200 MB são limites por arquivo).
+  quota por org ainda não existe — decidir (os 10/100/200 MB são limites por arquivo).~~
+  **Superado em 2026-10-13 (feature 007).** O número foi decidido: **20 GiB por org**
+  (CLR-004), `0` suspende uploads. A quota é aplicada **antes de qualquer byte ser
+  gravado**, no `beforeValidate` das coleções de upload — não há URL pré-assinada desde a
+  decisão D1 da feature 002. O espaço usado é mantido por um delta a cada upload, na
+  transação do próprio upload, e reconciliado contra o **banco** pelo gate de valores
+  derivados (`tests/content/counters.test.ts`).
+  **Lacuna registrada, não resolvida:** o drift que o job periódico deveria pegar era contra
+  o **bucket**, que é o que se paga — e essa reconciliação **não é possível hoje**, não só
+  por falta de job: o adaptador S3 grava todo upload na **raiz do bucket**, pelo nome do
+  arquivo, sem prefixo por org. O uso de uma org só é derivável das linhas do banco, nunca
+  do bucket. Resolver isso exige um prefixo por org — uma decisão de arquitetura que toca a
+  exclusão LGPD por prefixo e a migração dos objetos existentes.
 - **Gamificação por org**: ledger, ranking, nível do lab, `regrasXp` **e o catálogo de
   `skills`** escopados — **PO (2026-08-24):** o admin da organização **adiciona/remove
   skills**; remover é **desativar** (`ativa: false`): o ledger é **imutável** e o

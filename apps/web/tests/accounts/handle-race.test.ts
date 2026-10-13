@@ -5,6 +5,7 @@ import { createWithHandle, foldToHandle, MAX_HANDLE_ATTEMPTS } from '../../lib/a
 import { getSystemScopedPayload } from '../../lib/tenancy/system-payload'
 import type { TenantScopedPayload } from '../../lib/tenancy'
 import config from '../../payload.config'
+import { DEFAULT_STORAGE_QUOTA_MB } from '../../collections/Organizations'
 
 /**
  * T021 / SC-009 — **two concurrent creates of the same name get two handles**.
@@ -133,7 +134,7 @@ beforeAll(async () => {
 
   const org = await payload.create({
     collection: 'organizations',
-    data: { name: 'Lab da corrida', slug: SLUG, status: 'active' },
+    data: { storageQuotaMb: DEFAULT_STORAGE_QUOTA_MB, name: 'Lab da corrida', slug: SLUG, status: 'active' },
     overrideAccess: true,
   })
   if (typeof org.id !== 'number') {

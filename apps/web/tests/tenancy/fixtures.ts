@@ -5,6 +5,7 @@ import config from '../../payload.config'
 import { REGRAS_XP_CITE } from '../../collections/content/RegrasXp'
 import { SEED_ON_CREATE } from '../../lib/tenancy/seed-on-create'
 import { scopedCollections } from '../../lib/tenancy/scope-registry'
+import { DEFAULT_STORAGE_QUOTA_MB } from '../../collections/Organizations'
 
 /**
  * Two organizations, their users, and a row of every scoped collection in each.
@@ -445,7 +446,7 @@ export async function buildWorld(): Promise<Fixture> {
   const mk = async (slug: string, name: string) =>
     payload.create({
       collection: 'organizations',
-      data: { name, slug, status: 'active' },
+      data: { storageQuotaMb: DEFAULT_STORAGE_QUOTA_MB, name, slug, status: 'active' },
       overrideAccess: true,
     })
 

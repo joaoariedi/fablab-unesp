@@ -14,6 +14,8 @@ import * as migration_20260915_190424_missoes_005 from './20260915_190424_missoe
 import * as migration_20260916_005202_projeto_autor_005 from './20260916_005202_projeto_autor_005';
 import * as migration_20260916_230621_destaque_home_006 from './20260916_230621_destaque_home_006';
 import * as migration_20260927_204617_dominio_unico from './20260927_204617_dominio_unico';
+import * as migration_20261013_113401_cota_storage from './20261013_113401_cota_storage';
+import * as migration_20261013_141340_espaco_usado from './20261013_141340_espaco_usado';
 
 export const migrations = [
   {
@@ -94,6 +96,16 @@ export const migrations = [
   {
     up: migration_20260927_204617_dominio_unico.up,
     down: migration_20260927_204617_dominio_unico.down,
-    name: '20260927_204617_dominio_unico'
+    name: '20260927_204617_dominio_unico',
+  },
+  {
+    up: migration_20261013_113401_cota_storage.up,
+    down: migration_20261013_113401_cota_storage.down,
+    name: '20261013_113401_cota_storage',
+  },
+  {
+    up: migration_20261013_141340_espaco_usado.up,
+    down: migration_20261013_141340_espaco_usado.down,
+    name: '20261013_141340_espaco_usado'
   },
 ];

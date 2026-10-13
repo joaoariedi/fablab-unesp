@@ -2,6 +2,7 @@ import { getPayload, type Payload } from 'payload'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import config from '../../payload.config'
+import { DEFAULT_STORAGE_QUOTA_MB } from '../../collections/Organizations'
 
 /**
  * T027 / FR-021, FR-023, FR-022 — **the submission belongs to whoever sent it.**
@@ -112,7 +113,7 @@ beforeAll(async () => {
 
   const organizacao = await payload.create({
     collection: 'organizations',
-    data: { name: 'Lab T027', slug: SLUG_SENTINELA, status: 'active' },
+    data: { storageQuotaMb: DEFAULT_STORAGE_QUOTA_MB, name: 'Lab T027', slug: SLUG_SENTINELA, status: 'active' },
     overrideAccess: true,
   })
   tenant = organizacao.id

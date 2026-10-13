@@ -2,6 +2,7 @@ import { getPayload } from 'payload'
 
 import config from '../payload.config'
 import { readEnv } from '../lib/env'
+import { DEFAULT_STORAGE_QUOTA_MB } from '../collections/Organizations'
 
 /**
  * Bootstrap for a fresh database (FR-026, CLR-003, US1).
@@ -79,7 +80,7 @@ export async function seed(): Promise<SeedReport> {
   } else {
     const created = await payload.create({
       collection: 'organizations',
-      data: {
+      data: { storageQuotaMb: DEFAULT_STORAGE_QUOTA_MB,
         name: CITE_ORGANIZATION.name,
         slug: CITE_ORGANIZATION.slug,
         status: 'active',

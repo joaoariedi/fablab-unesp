@@ -6,6 +6,7 @@ import { getPayload, type Payload } from 'payload'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import config from '../../payload.config'
+import { DEFAULT_STORAGE_QUOTA_MB } from '../../collections/Organizations'
 
 /**
  * T019 / FR-010, SC-009 — **the unique index on `(tenant, handle)`, in the database**.
@@ -136,7 +137,7 @@ beforeAll(async () => {
   const org = async (slug: string, name: string) =>
     payload.create({
       collection: 'organizations',
-      data: { name, slug, status: 'active' },
+      data: { storageQuotaMb: DEFAULT_STORAGE_QUOTA_MB, name, slug, status: 'active' },
       overrideAccess: true,
     })
 

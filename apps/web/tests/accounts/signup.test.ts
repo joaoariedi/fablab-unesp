@@ -8,6 +8,7 @@ import type { FindArgs } from '../../lib/tenancy'
 import { getSystemScopedPayload, type SystemScopedPayload } from '../../lib/tenancy/system-payload'
 import { signIn } from '../../lib/tenancy/session'
 import config from '../../payload.config'
+import { DEFAULT_STORAGE_QUOTA_MB } from '../../collections/Organizations'
 
 /**
  * T028 / US1, SC-001 — **the whole signup, from the avatar to the signed-in maker**, against a
@@ -344,7 +345,7 @@ beforeAll(async () => {
 
   const org = await payload.create({
     collection: 'organizations',
-    data: { name: 'Lab do cadastro', slug: SLUG, status: 'active' },
+    data: { storageQuotaMb: DEFAULT_STORAGE_QUOTA_MB, name: 'Lab do cadastro', slug: SLUG, status: 'active' },
     overrideAccess: true,
   })
   if (typeof org.id !== 'number') {

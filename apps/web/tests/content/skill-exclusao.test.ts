@@ -2,6 +2,7 @@ import { getPayload, type Payload } from 'payload'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import config from '../../payload.config'
+import { DEFAULT_STORAGE_QUOTA_MB } from '../../collections/Organizations'
 
 /**
  * T037 / FR-018, US4 — **a skill the ledger names cannot be hard-deleted, and the refusal says
@@ -208,7 +209,7 @@ beforeAll(async () => {
 
   const organizacao = await payload.create({
     collection: 'organizations',
-    data: { name: 'Lab T037', slug: SLUG, status: 'active' },
+    data: { storageQuotaMb: DEFAULT_STORAGE_QUOTA_MB, name: 'Lab T037', slug: SLUG, status: 'active' },
     overrideAccess: true,
   })
   tenant = organizacao.id
@@ -219,7 +220,7 @@ beforeAll(async () => {
   // role, and `userHasAccessToAllTenants: isMaster` in payload.config.ts is what grants it.
   const vizinha = await payload.create({
     collection: 'organizations',
-    data: { name: 'Lab T037 vizinho', slug: SLUG_VIZINHO, status: 'active' },
+    data: { storageQuotaMb: DEFAULT_STORAGE_QUOTA_MB, name: 'Lab T037 vizinho', slug: SLUG_VIZINHO, status: 'active' },
     overrideAccess: true,
   })
   tenantVizinho = vizinha.id

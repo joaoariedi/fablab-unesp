@@ -2,6 +2,7 @@ import { getPayload, type Payload } from 'payload'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import config from '../../payload.config'
+import { DEFAULT_STORAGE_QUOTA_MB } from '../../collections/Organizations'
 
 /**
  * T033 / FR-015, SC-007, US4 — **deactivating a skill moves no XP.**
@@ -265,7 +266,7 @@ beforeAll(async () => {
 
   const organizacao = await payload.create({
     collection: 'organizations',
-    data: { name: 'Lab T033', slug: SLUG_SENTINELA, status: 'active' },
+    data: { storageQuotaMb: DEFAULT_STORAGE_QUOTA_MB, name: 'Lab T033', slug: SLUG_SENTINELA, status: 'active' },
     overrideAccess: true,
   })
   tenant = organizacao.id

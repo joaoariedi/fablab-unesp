@@ -13,6 +13,7 @@ import {
 import config from '../../payload.config'
 import type { CreateArgs, FindArgs, UpdateArgs } from '../../lib/tenancy'
 import type { PaginatedResult } from '../../lib/tenancy/client'
+import { DEFAULT_STORAGE_QUOTA_MB } from '../../collections/Organizations'
 
 /**
  * T015 / FR-003, FR-004 — **the duplicate is the SUCCESS path of idempotency, and everything
@@ -346,7 +347,7 @@ describe('§2 — what a real duplicate looks like to the catch (T020, FR-003)',
     payload = await getPayload({ config })
     const org = await payload.create({
       collection: 'organizations',
-      data: { name: 'Lab T015', slug: SLUG_SENTINELA, status: 'active' },
+      data: { storageQuotaMb: DEFAULT_STORAGE_QUOTA_MB, name: 'Lab T015', slug: SLUG_SENTINELA, status: 'active' },
       overrideAccess: true,
     })
     tenant = org.id

@@ -30,7 +30,7 @@ export type MediaGroup = (typeof MEDIA_GROUPS)[number]
  * resulting failure — a file that passes signature checking and is refused by the proxy — is
  * the least debuggable of the two.
  */
-const MEGABYTE = 1024 * 1024
+export const MEGABYTE = 1024 * 1024
 
 /**
  * Maximum object size per group, in bytes — `tech-stack.md` § Storage: images 10 MB, 3D

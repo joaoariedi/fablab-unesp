@@ -2,6 +2,7 @@ import { getPayload, type Payload } from 'payload'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import config from '../../payload.config'
+import { DEFAULT_STORAGE_QUOTA_MB } from '../../collections/Organizations'
 
 /**
  * T031 / FR-036, SC-017, CLR-006 — **the security review of the mission upload surface**
@@ -247,13 +248,13 @@ beforeAll(async () => {
 
   const lab = await payload.create({
     collection: 'organizations',
-    data: { name: 'Lab T031', slug: SLUG_LAB, status: 'active' },
+    data: { storageQuotaMb: DEFAULT_STORAGE_QUOTA_MB, name: 'Lab T031', slug: SLUG_LAB, status: 'active' },
     overrideAccess: true,
   })
   tenant = lab.id
   const outroLab = await payload.create({
     collection: 'organizations',
-    data: { name: 'Outro lab T031', slug: SLUG_OUTRO_LAB, status: 'active' },
+    data: { storageQuotaMb: DEFAULT_STORAGE_QUOTA_MB, name: 'Outro lab T031', slug: SLUG_OUTRO_LAB, status: 'active' },
     overrideAccess: true,
   })
   outroTenant = outroLab.id

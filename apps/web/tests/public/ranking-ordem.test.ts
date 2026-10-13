@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { ORDENACAO_DO_RANKING } from '../../app/(frontend)/ranking/page'
 import config from '../../payload.config'
+import { DEFAULT_STORAGE_QUOTA_MB } from '../../collections/Organizations'
 
 /**
  * T043 / FR-013, SC-013 — **the ranking's order, asked of the database rather than of a fake.**
@@ -99,7 +100,7 @@ beforeAll(async () => {
 
   const organizacao = await payload.create({
     collection: 'organizations',
-    data: { name: 'Lab T043', slug: SLUG, status: 'active' },
+    data: { storageQuotaMb: DEFAULT_STORAGE_QUOTA_MB, name: 'Lab T043', slug: SLUG, status: 'active' },
     overrideAccess: true,
   })
   tenant = organizacao.id

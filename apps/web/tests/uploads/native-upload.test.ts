@@ -8,6 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { ALLOWED_EXTENSIONS, UPLOAD_CAP_BYTES } from '../../lib/uploads/limits'
 import { DERIVATIVE_WIDTHS } from '../../lib/uploads/verify'
+import { DEFAULT_STORAGE_QUOTA_MB } from '../../collections/Organizations'
 
 /**
  * T034 / FR-011, FR-014, SC-006 — the upload path **driven**, not described.
@@ -234,7 +235,7 @@ beforeAll(async () => {
   })
   const created = await payload.create({
     collection: 'organizations',
-    data: { name: 'Lab do Upload Nativo', slug: ORG_SLUG, status: 'active' },
+    data: { storageQuotaMb: DEFAULT_STORAGE_QUOTA_MB, name: 'Lab do Upload Nativo', slug: ORG_SLUG, status: 'active' },
     overrideAccess: true,
   })
   org = created.id as number

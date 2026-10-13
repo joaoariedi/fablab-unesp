@@ -3,6 +3,11 @@ import { extname } from 'node:path'
 import type { CollectionBeforeOperationHook, CollectionConfig, ImageSize } from 'payload'
 import { APIError } from 'payload'
 
+import {
+  refuseOverQuota,
+  storageUsageAfterChange,
+  storageUsageAfterDelete,
+} from '../lib/content/storage-usage'
 import { scopedAccess, teamOnly } from '../lib/tenancy/access'
 import { scopedListEndpoint } from '../lib/tenancy/scoped-endpoint'
 import {
@@ -238,6 +243,13 @@ export function mediaCollection(group: MediaGroup): CollectionConfig {
       // The per-group cap and the extension allowlist. See `refuseOffPolicyUpload` for why
       // neither can be expressed through `upload` itself in payload 3.88.
       beforeOperation: [refuseOffPolicyUpload(group)],
+      // The organization's storage quota (007 — FR-022). `beforeValidate`, where the tenant is
+      // final and the derivatives are already sized — measured in T005; see `refuseOverQuota`.
+      beforeValidate: [refuseOverQuota],
+      // The organization's used-storage figure (007 — FR-028, FR-030). Declared here, so they run
+      // BEFORE the storage plugin's own `afterChange` — see `storageUsageAfterChange`.
+      afterChange: [storageUsageAfterChange],
+      afterDelete: [storageUsageAfterDelete],
     },
   }
 }

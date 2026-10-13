@@ -4,6 +4,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import config from '../../payload.config'
 import { REGRAS_XP_CITE } from '../../collections/content/RegrasXp'
 import { resetWorld } from './fixtures'
+import { DEFAULT_STORAGE_QUOTA_MB } from '../../collections/Organizations'
 
 /**
  * T013 / FR-009 — a **new** organization starts with the CITe economy, as its own data.
@@ -45,7 +46,7 @@ const economyOf = async (payload: Payload, organizationId: string | number) =>
 const newOrganization = async (payload: Payload, slug: string) =>
   payload.create({
     collection: 'organizations',
-    data: { name: `Lab ${slug}`, slug, status: 'active' },
+    data: { storageQuotaMb: DEFAULT_STORAGE_QUOTA_MB, name: `Lab ${slug}`, slug, status: 'active' },
     overrideAccess: true,
   })
 

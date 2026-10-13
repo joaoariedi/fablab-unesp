@@ -5,6 +5,7 @@ import { ACOES_XP, REF_TIPOS_XP } from '../../collections/content/XpLedger'
 import { creditXp } from '../../lib/content/xp'
 import config from '../../payload.config'
 import { buildWorld } from '../tenancy/fixtures'
+import { DEFAULT_STORAGE_QUOTA_MB } from '../../collections/Organizations'
 
 /** A `refId` no other case uses, so the count below is this case's own. */
 const REF_DA_CORRIDA = 777_777
@@ -191,7 +192,7 @@ beforeAll(async () => {
 
   const organizacao = await payload.create({
     collection: 'organizations',
-    data: { name: 'Lab T017b', slug: SLUG_SENTINELA, status: 'active' },
+    data: { storageQuotaMb: DEFAULT_STORAGE_QUOTA_MB, name: 'Lab T017b', slug: SLUG_SENTINELA, status: 'active' },
     overrideAccess: true,
   })
   tenant = organizacao.id
