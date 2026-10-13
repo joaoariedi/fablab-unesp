@@ -91,7 +91,35 @@ export const Organizations: CollectionConfig = {
       admin: {
         description: 'Hostnames além de <slug>.<domínio>. Consultado na resolução por host.',
       },
-      fields: [{ name: 'domain', type: 'text', required: true, label: 'Domínio' }],
+      fields: [
+        {
+          name: 'domain',
+          type: 'text',
+          required: true,
+          // **Unique across ALL organizations**, not within one. Two organizations declaring the
+          // same host made resolution pick one — the newer, by Payload's `-createdAt` default —
+          // so the index is what makes "a declared domain is a claim on the whole host" true
+          // (007 checklist CHK027; `lib/tenancy/resolve.ts` relies on it). Every row of every
+          // organization's `domains` lives in one table, so a column index spans them all.
+          unique: true,
+          label: 'Domínio',
+          // Refused rather than normalised, as `theme.primaryColor` is: resolution lowercases the
+          // incoming host, so a stored "Lab.Example.org" could never match anything — and,
+          // spelled differently from a lowercase twin, it would slip past the unique index above.
+          validate: (value: unknown) => {
+            if (typeof value !== 'string' || value.length === 0) return 'Informe o domínio.'
+            const rotulo = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/
+            const rotulos = value.split('.')
+            if (value.length > 253 || !rotulos.every((r) => r.length <= 63 && rotulo.test(r))) {
+              return (
+                `Domínio inválido: "${value}". Use só o nome do host, em minúsculas — sem ` +
+                '"https://", sem porta e sem caminho (ex.: "fablab.unesp.br" ou "127.0.0.1").'
+              )
+            }
+            return true
+          },
+        },
+      ],
     },
     {
       name: 'status',

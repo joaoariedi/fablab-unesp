@@ -13,6 +13,7 @@ import * as migration_20260914_194612_publicacao_skill_005 from './20260914_1946
 import * as migration_20260915_190424_missoes_005 from './20260915_190424_missoes_005';
 import * as migration_20260916_005202_projeto_autor_005 from './20260916_005202_projeto_autor_005';
 import * as migration_20260916_230621_destaque_home_006 from './20260916_230621_destaque_home_006';
+import * as migration_20260927_204617_dominio_unico from './20260927_204617_dominio_unico';
 
 export const migrations = [
   {
@@ -88,6 +89,11 @@ export const migrations = [
   {
     up: migration_20260916_230621_destaque_home_006.up,
     down: migration_20260916_230621_destaque_home_006.down,
-    name: '20260916_230621_destaque_home_006'
+    name: '20260916_230621_destaque_home_006',
+  },
+  {
+    up: migration_20260927_204617_dominio_unico.up,
+    down: migration_20260927_204617_dominio_unico.down,
+    name: '20260927_204617_dominio_unico'
   },
 ];

@@ -1,4 +1,4 @@
-import { getPayload } from 'payload'
+import { getPayload, type Payload, type Where } from 'payload'
 
 /**
  * Host → organization resolution.
@@ -60,11 +60,31 @@ const asResolved = (doc: OrganizationDoc): ResolvedOrganization => ({
 })
 
 /**
+ * The one ACTIVE organization matching `clause`, or `undefined`.
+ *
+ * `limit: 1` is a lookup, not a choice: each caller's clause names a unique column (`slug`, or
+ * `domains.domain`), so at most one row can match. Were that ever untrue, Payload's `-createdAt`
+ * default would hand the host to whichever organization was created last — the hijack
+ * `lookupOrganizationByHost` documents — which is why both columns carry a unique index.
+ */
+const firstActive = async (payload: Payload, clause: Where): Promise<OrganizationDoc | undefined> => {
+  const { docs } = await payload.find({
+    collection: 'organizations',
+    depth: 0,
+    limit: 1,
+    pagination: false,
+    overrideAccess: true, // an anonymous visitor has no tenant yet — this is the bypass
+    where: { and: [{ status: { equals: 'active' } }, clause] },
+  })
+  return docs[0] as OrganizationDoc | undefined
+}
+
+/**
  * The pure half: no `next/cache`, so it runs anywhere — including Vitest.
  *
  * Resolution order, and only `active` organizations match at any step:
- *   1. `<slug>.<domain>` — the first host label against `organizations.slug`
- *   2. the full host against `organizations.domains[]`
+ *   1. the full host against `organizations.domains[]` — an explicit claim on this exact host
+ *   2. `<slug>.<domain>` — the first host label against `organizations.slug`
  *   3. sovereign fallback — when exactly one organization exists, any host resolves to it
  *   4. otherwise `null`, which the caller turns into a 404, never "the first organization"
  *
@@ -78,24 +98,20 @@ export async function lookupOrganizationByHost(host: string): Promise<HostResolu
   const hostname = cleaned.split(':')[0] ?? ''
   const payload = await client()
 
-  // 1 + 2: a definite match on slug or a declared domain. Both are cacheable because they
-  // are keyed to data that, when it changes, revalidates the tag.
+  // 1 + 2: a definite match — a declared domain FIRST, then a slug. Both are cacheable because
+  // they are keyed to data that, when it changes, revalidates the tag.
+  //
+  // **Two queries, in precedence order, never one OR.** They used to be OR-ed under `limit: 1`
+  // with no sort, so when an organization's slug equalled another's first domain label, both
+  // matched and Payload's `-createdAt` default picked the NEWER one: a master creating slug
+  // `cite` took `cite.unesp.br` from the lab that declared it (007 checklist, CHK026 — measured
+  // in `tests/tenancy/host.test.ts`). A declared domain is a claim on the whole host; a slug is
+  // only a first-label convention, so the declaration wins. Each query can now match at most one
+  // row: `slug` is unique, and so is `domains.domain` (CHK027).
   const label = hostname.split('.')[0] ?? ''
-  const definite = await payload.find({
-    collection: 'organizations',
-    depth: 0,
-    limit: 1,
-    pagination: false,
-    overrideAccess: true, // an anonymous visitor has no tenant yet — this is the bypass
-    where: {
-      and: [
-        { status: { equals: 'active' } },
-        { or: [{ slug: { equals: label } }, { 'domains.domain': { equals: hostname } }] },
-      ],
-    },
-  })
-
-  const found = definite.docs[0]
+  const found =
+    (await firstActive(payload, { 'domains.domain': { equals: hostname } })) ??
+    (await firstActive(payload, { slug: { equals: label } }))
   if (found) return { organization: asResolved(found), cacheable: true }
 
   // 3: sovereign fallback — a self-hosted lab is a normal deploy with one organization,
