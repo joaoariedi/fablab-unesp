@@ -20,3 +20,17 @@ check because these tools are not installed. Without lizard, the complexity delt
 
 Done when `semgrep scan --config auto`, `lizard` and `jscpd` run in `/hef.quality`, and
 their current findings on `dev` are recorded as a baseline.
+
+## FAB-3 — Let docs-only pull requests skip the heavy CI jobs while still reporting the required checks
+
+`.github/workflows/ci.yml` runs every job on every pull request, so a markdown-only PR (#22)
+waits on `Tests`, the isolation harness, `Build` and the two Lighthouse performance jobs (up
+to 45 minutes each). A plain `paths-ignore` is not the fix: the job names are the required
+status checks on `dev` and `main` (`ci.yml:9`), and a skipped workflow never reports them, so
+the PR would stay blocked.
+
+Approach: a first job detects whether only docs paths changed; the heavy jobs depend on it
+and finish green without running when nothing but docs changed. Job names stay unchanged.
+
+Done when a docs-only PR gets every required check green in a few minutes, and a PR that
+touches code still runs the full set.
