@@ -46,8 +46,10 @@ set exactly as today.
 
 - **Docs-only change**: a pull request whose changed files (base branch → pull-request head) are
   all Markdown (`*.md`, any directory), **and** none of which is a Markdown file the repository's
-  tests or CI scripts read. Anything else — including `.mdx`, `ci.yml`, `.github/**`, lockfiles,
-  images and JSON — is a **code change**.
+  tests or CI scripts read. Anything else — including `.mdx`, `ci.yml`, every non-Markdown file
+  under `.github/**` (workflows, `required-checks.json`), lockfiles, images and JSON — is a
+  **code change**. `.github/**` is not special-cased: a Markdown file there (none is tracked
+  today) is classified by the same FR-002 rule as any other `.md`.
 - **Docs-stage jobs**: `Secret scan`, `Markdown lint`, `Link integrity`. They always run.
 - **Code-stage jobs**: every other job in `ci.yml` — `Lint`, `Colour tokens`, `Type check`,
   `Tests`, `Cross-tenant isolation`, `Isolation harness can fail (<layer>)` × every matrix
@@ -62,10 +64,16 @@ set exactly as today.
 - **Then** every one of the 16 required contexts in `.github/required-checks.json` reports
   success, the docs-stage jobs run their real checks, no code-stage job migrates, builds, mutates
   or runs Lighthouse, and `Tests` runs only the tests that read the whole tree (FR-014)
-- **Edge**: a docs-only pull request that edits a `plan.md`, `research.md` or checklist under
-  `.specify/specs/` that no test reads → still docs-only. Any `spec.md` or `tasks.md` under
-  `.specify/specs/*` is code, by construction: tests read those basenames as quoted `join()`
-  segments, and the classifier does not resolve which feature directory a segment belongs to
+- **Edge**: a docs-only pull request that edits a `plan.md`, `research.md`, `data-model.md`,
+  `contracts/*` or `spikes/*` file under `.specify/specs/` that no test reads → still docs-only.
+  Any `spec.md` or `tasks.md` under `.specify/specs/*` is code, by construction: tests read those
+  basenames as quoted `join()` segments, and the classifier does not resolve which feature
+  directory a segment belongs to. The same holds for every checklist named `requirements.md`,
+  `api.md`, `security.md` or `ux.md` under `.specify/specs/*/checklists/` — every checklist in the
+  tree today — because `apps/web/tests/checklists-adjudicated.test.ts` quotes those four
+  basenames; only a checklist with another name stays docs
+- **Edge**: a docs-only pull request whose Markdown file name carries non-ASCII characters (an
+  accented PT-BR name) → still docs-only; it is not demoted to code by git's path quoting
 - **Error**: a docs-only pull request with a broken relative link → `Link integrity` goes red
   and blocks, exactly as today
 
@@ -122,7 +130,7 @@ set exactly as today.
 | FR-011 | `pnpm test` stays green without weakening any assertion in `required-checks.test.ts`, `lcp-ci-jobs.test.ts` or `isolation-mutation-layers.test.ts`. | P1 | US6 |
 | FR-012 | The classifier is a script under `scripts/` with a documented exit/output contract, exercised by a test with docs-only, code, test-read-Markdown and failure inputs. | P2 | US3, US4, US6 |
 | FR-013 | A test pins the wiring: every code-stage job is gated by the classification, no docs-stage job is, and the matrix job is gated per step rather than at job level. | P2 | US6 |
-| FR-014 | On a docs-only run, `Tests` still runs every test that reads the whole tracked tree (today `packages/ui/tests/fonts.test.ts`, which scans every tracked Markdown file outside `.specify/`), without a database; a test asserts that every test file making an unscoped `git ls-files` call is in that set, and that every pathspec-scoped caller lists only directories holding no tracked `.md`. | P1 | US1, US3 |
+| FR-014 | On a docs-only run, `Tests` still runs every test that reads the whole tracked tree (today `packages/ui/tests/fonts.test.ts`, which scans every tracked Markdown file outside `.specify/`), without a database; a test asserts that every test file making an unscoped `git ls-files` call (`ls-files` anywhere inside a single- or double-quoted string literal) is in that set, and that every pathspec-scoped caller lists only directories holding no tracked `.md`. | P1 | US1, US3 |
 
 ## Success Criteria
 
@@ -185,3 +193,18 @@ rest.
   scope step's command, with a matching risk row. Applied as plan Revision 4.
 - Q: Extend the no-quoted-`.md` header constraint to the wiring test? → A: Apply: extend the
   no-quoted-`.md` rule to `apps/web/tests/ci-docs-only-wiring.test.ts`. Applied as plan Revision 4.
+
+### Session 2026-10-23 (plan review round 4, answered by the item's owner)
+
+- Q: Apply round 4's three changes, then generate tasks? → A: Apply all three, then generate
+  tasks. Applied as plan Revision 5:
+  1. Checklists are code, not docs: `checklists-adjudicated.test.ts` quotes the basenames
+     `requirements.md`, `api.md`, `security.md`, `ux.md`, so every such checklist under
+     `.specify/specs/*` is code — US1 edge, research.md § Markdown the tests read and plan
+     decision 3 corrected; § Definitions states that `.github/**` is not special-cased (its
+     non-Markdown files are code, a Markdown file there follows FR-002).
+  2. The classifier diffs with `git -c core.quotePath=false`, so an accented Markdown file name
+     classifies as docs (US1 edge), with a test case; `"`, `\` and control characters stay
+     C-quoted and fall to code.
+  3. The FR-014 check treats `ls-files` anywhere inside a single- or double-quoted string literal as
+     a call, so `execSync('git ls-files …')` is caught as well as the `'ls-files'` argument form.

@@ -52,8 +52,11 @@ and `packages/game/src/index.ts:13`, and as a substring of `'docs/product/fonts/
 also name `.md` files in **backticks** (`packages/ui/tests/footer.test.ts:14`).
 
 Consequence of the basename shape: `'tasks.md'` and `'spec.md'` are quoted segments, so **every**
-`spec.md` and `tasks.md` under `.specify/specs/*` classifies as code; `plan.md`, `research.md` and
-checklists not read by a test remain docs.
+`spec.md` and `tasks.md` under `.specify/specs/*` classifies as code. The same holds for
+checklists: `checklists-adjudicated.test.ts:52` quotes `'requirements.md'`, `'api.md'`,
+`'security.md'` and `'ux.md'`, so every checklist under `.specify/specs/*/checklists/` with one of
+those names — all of them today — is code. Only `plan.md`, `research.md`, `data-model.md`,
+`contracts/*`, `spikes/*` and checklists with another name remain docs when no test reads them.
 
 ## Tests that read the WHOLE tree (corrects the first draft of this file)
 
@@ -62,7 +65,8 @@ checklists not read by a test remain docs.
   and itself (`:106`) for SquareFont usage shapes (`USAGE_RULES:117-138`). So `README.md`,
   `CHANGELOG.md`, `docs/**/*.md` and `tasks/*.md` are all inputs of `Tests` through this one file;
   `.specify/**` is not. It needs no database. It is the only **unscoped** `ls-files` call.
-- Four test files contain the string `ls-files`; only two call it:
+- Four test files contain the string `ls-files`; only two call it — the two where `ls-files`
+  sits inside a single- or double-quoted string literal (comments name it in backticks):
   - `packages/ui/tests/fonts.test.ts:160` — unscoped, above.
   - `apps/web/tests/theme.test.ts:450` — `git ls-files -z -- ...SOURCE_PATHS`, pathspec-scoped to
     `SOURCE_PATHS` (`:438`: `apps/web/app`, `apps/web/collections`, `apps/web/lib`,

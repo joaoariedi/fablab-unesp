@@ -9,6 +9,9 @@
 <!-- Revision 4 (2026-10-23): plan review round 3 (REVISE_PLAN), all three changes applied on the
      owner's answer — cwd-relative root via git rev-parse, the scope step's command pinned, the
      no-quoted-.md rule extended to the wiring test. -->
+<!-- Revision 5 (2026-10-23): plan review round 4 (REVISE_PLAN), all three changes applied on the
+     owner's answer — checklists are code by construction, core.quotePath=false for non-ASCII
+     names, the FR-014 call shape is ls-files inside any quoted string. -->
 
 ## Research Notes
 
@@ -42,24 +45,31 @@ Truth map: [research.md](research.md). The decisions it forces:
    root `README.md` code through `apps/web/lib/env.ts:68` and the substring in
    `'docs/product/fonts/README.md'` (`fonts.test.ts:92`). Every literal read in research.md is one
    of the four shapes. Accepted consequence: every `spec.md`/`tasks.md` under `.specify/specs/*` is
-   code (quoted `'spec.md'`/`'tasks.md'` `join()` segments) — over-matching, the safe direction,
-   and stated in the spec's US1 edge. The classifier test derives the expected read set from the
+   code (quoted `'spec.md'`/`'tasks.md'` `join()` segments), and so is every checklist named
+   `requirements.md`, `api.md`, `security.md` or `ux.md` — all checklists in the tree today —
+   because `checklists-adjudicated.test.ts:52` quotes those four basenames. Only `plan.md`,
+   `research.md`, `data-model.md`, `contracts/*`, `spikes/*` and checklists with another name stay
+   docs when unread. Over-matching, the safe direction, and stated in the spec's US1 edge. The classifier test derives the expected read set from the
    tree, it does not hand-count it.
 4. **The whole-tree scanner still runs on docs-only (FR-014).** `packages/ui/tests/fonts.test.ts`
    reads every tracked file outside `.specify/` through `git ls-files` (`:159-173`), so a doc that
    adds a SquareFont usage shape would break `Tests` on `dev`. On a docs-only verdict `Tests`
    installs dependencies (cached) and runs exactly the whole-tree tests — no Postgres use, no
    migrate. The set is a single list in `ci.yml`; a test asserts that every test file making an
-   **unscoped** `ls-files` call is in it (today only `fonts.test.ts:160`), and that every
+   **unscoped** `ls-files` call — `ls-files` anywhere inside a single- or double-quoted string
+   literal, so `execSync('git ls-files …')` counts too — is in it (today only `fonts.test.ts:160`), and that every
    pathspec-scoped caller lists only directories holding no tracked `.md` (today
    `theme.test.ts:450`, whose `SOURCE_PATHS:438` hold none). Comment-only mentions
    (`purity-boundary.test.ts`, `purity-fence.test.ts:61`) are not calls and are ignored — the
-   pin matches a call shape (`'ls-files'` as an argument), not the bare word. So a second
+   pin matches a call shape (`ls-files` inside a quoted string literal; comments use backticks),
+   not the bare word — today exactly `fonts.test.ts:160` and `theme.test.ts:450`. So a second
    scanner cannot join the suite without joining the docs-only path. Residual: a test that
    builds a Markdown path from variables or walks a directory without `ls-files` — none today;
    the `push` run on `dev` is the backstop.
 5. **The pull-request diff is `HEAD^1..HEAD` of the merge ref**, with `fetch-depth: 2` on the gated
-   jobs' checkout and `--no-renames`, so a rename reports both paths.
+   jobs' checkout and `--no-renames`, so a rename reports both paths, and
+   `-c core.quotePath=false`, so a non-ASCII file name (an accented PT-BR name) is listed raw and
+   classifies on its merits instead of falling to `code`.
 
 ## Affected Files
 
@@ -145,8 +155,9 @@ makes the `github`-mode fixture test unreachable: the script would diff the real
 mkdtemp fixture, so the `docs_only=true` case could not pass and the `false` cases would pass for
 the wrong reason. A `CHANGE_SCOPE_ROOT` setting was rejected in favour of this: no extra input,
 and CI already runs every step from the checkout root. Every pattern goes through `-e`, so a path starting with
-`-` is never read as an option; `-F` makes a space or quote in a path literal. `git diff` C-quotes
-a path holding `"`, `\` or a control character, so such a path ends in `"`, not `.md`, and
+`-` is never read as an option; `-F` makes a space or quote in a path literal. With
+`core.quotePath=false` (Sketch 2) `git diff` lists non-ASCII names raw, but it still C-quotes a
+path holding `"`, `\` or a control character, so such a path ends in `"`, not `.md`, and
 classifies as `code` — the safe direction, covered by Sketch 5's adversarial cases.
 
 **Header constraint (FR-002):** this script, `ci.yml` and `apps/web/tests/ci-docs-only-wiring.test.ts`
@@ -163,7 +174,8 @@ none: it names jobs and steps, and its FR-014 check reads pathspecs from the tes
 github() {
   local verdict=code files=''
   if [ "${GITHUB_EVENT_NAME-}" = pull_request ] && enter_repo &&
-     files="$(git diff --name-only --no-renames "${CHANGE_SCOPE_BASE:-HEAD^1}" HEAD 2>/dev/null)"; then
+     files="$(git -c core.quotePath=false diff --name-only --no-renames \
+                "${CHANGE_SCOPE_BASE:-HEAD^1}" HEAD 2>/dev/null)"; then
     verdict="$(classify <<< "$files")"
   fi
   echo "change scope: $verdict"; printf '%s\n' "$files" | sed '/^$/d;s/^/  /'
@@ -174,7 +186,8 @@ github() {
 ```
 
 **Why this shape:** FR-007/FR-008 in one branch: anything but a successful pull-request diff
-leaves `verdict=code`.
+leaves `verdict=code`. `core.quotePath=false` is set per command (`-c`), not in the runner's
+config, so an accented Markdown name reaches `classify` as written (decision 5).
 
 ### Sketch 3: a gated job, and the `Tests` docs-only step
 **File:** `.github/workflows/ci.yml` (modify each code-stage job; `test:113` shown)
@@ -231,8 +244,11 @@ for (const job of jobs()) {            // same indentation splitter as lcp-ci-jo
 ```
 
 Plus (FR-014): in `Tests`, the `== 'true'` steps run exactly the files of `WHOLE_TREE_TESTS`;
-that list equals the test files under `apps/`/`packages/` with an **unscoped** `ls-files` call
-(the `'ls-files'` argument not followed by a `'--'` pathspec); every scoped caller's pathspec
+that list equals the test files under `apps/`/`packages/` with an **unscoped** `ls-files` call.
+A call is `ls-files` anywhere inside a single- or double-quoted string literal
+(`/(['"])[^'"\n]*\bls-files\b[^'"\n]*\1/`), so both the `'ls-files'` argument form and an
+`execSync('git ls-files …')` string are caught, while backtick comment mentions are not; it is
+scoped when a `'--'` pathspec separator (or ` -- ` inside the same string) follows it; every scoped caller's pathspec
 literals resolve, through `git ls-files`, to no `.md`; in every other job no step uses
 `== 'true'`.
 
@@ -255,6 +271,9 @@ it.each(quotedMarkdownReads())('%s is read by a test, so it is code', (p) =>   /
 // + '.mdx', a .ts path, empty input → code
 // + adversarial: '-e.md', 'docs/a b.md' → docs (no option injection, space literal);
 //   "docs/it's.md" → docs; '"docs/q\"x.md"' (git's C-quoted form) → code; exit 0 on each
+// + accented: 'docs/instalação.md' → docs (classify); in github mode a fixture commit adding
+//   only that file → docs_only=true (proves core.quotePath=false reaches the diff)
+// + checklists: '.specify/specs/002-cms-conteudo/checklists/ux.md' → code (quoted basename)
 // + github mode with cwd = a mkdtemp git repo holding two commits (SCRIPT stays the absolute path):
 //   docs-only commit → docs_only=true in GITHUB_OUTPUT; ts commit, push event, bad CHANGE_SCOPE_BASE → false;
 //   GITHUB_OUTPUT unset → exit 0
@@ -294,6 +313,8 @@ so the script excludes it (`SELF_TEST`) — and the repo's run-the-script test s
 | `HEAD^1` is not the base (GitHub changes the merge-ref shape) | Wrong file list | `git diff` failure → `code`; a wrong-but-valid list is bounded by the push backstop; file list printed per job |
 | A mistyped step `if:` | Silent skip on code PRs | Wiring test matches the exact expressions; SC-002 checked on the implementing PR's logs |
 | `lcp-ci-jobs.test.ts:83` flags new text in the performance jobs | Pin test red | New lines there contain neither `vitest` nor `pnpm … test` |
+| A changed file name holds non-ASCII characters, or `"`, `\` or a control character | Without `core.quotePath=false` git C-quotes an accented name, it no longer ends in `.md`, and a docs-only PR silently takes the full path | `-c core.quotePath=false` on the diff; accented `classify` and `github`-mode cases. `"`, `\` and control characters stay C-quoted and still fall to `code` — the safe direction, pinned by the C-quoted adversarial case |
+| A future test shells out as `execSync('git ls-files …')` | A whole-tree scanner escapes the FR-014 set | The pin's call shape is `ls-files` anywhere inside a quoted string literal, not only the `'ls-files'` argument |
 | Strict branch protection makes the base move after the run | Verdict computed against an older base | Strict protection forces an update-and-rerun; the rerun reclassifies |
 
 ## Quick Start
@@ -344,11 +365,11 @@ reachable:
 3. *(Optional)* Extend the no-quoted-`.md` header constraint to
    `apps/web/tests/ci-docs-only-wiring.test.ts`, a tracked non-Markdown file FR-002 does not exclude.
 
-## Plan review — open (round 4: REVISE_PLAN, 2026-10-23)
-
-Round 4, by a fresh `code-reviewer` on Revision 4, found the design, sketches and test strategy
-sound (Revision 4's three changes accepted) and asked for a text-only revision. The pipeline stops
-for a human after a repeated REVISE_PLAN, so these are recorded here, not applied:
+Round 4 (REVISE_PLAN, 2026-10-23), by a fresh `code-reviewer` on Revision 4, found the design,
+sketches and test strategy sound (Revision 4's three changes accepted) and asked for the
+text-only revision below. The pipeline stopped for a human; the item's owner answered (spec
+§ Clarifications, round 4): apply all three, then generate tasks. Applied as Revision 5 — decision
+3, 4 and 5, Sketches 1, 2, 4, 5, the risk table, spec US1/§ Definitions/FR-014 and research.md:
 
 1. **Checklists are code by construction, not docs.** `apps/web/tests/checklists-adjudicated.test.ts:52`
    quotes four checklist basenames (requirements, api, security, ux), so under FR-002's basename
@@ -364,3 +385,8 @@ for a human after a repeated REVISE_PLAN, so these are recorded here, not applie
 3. *(Optional)* Sketch 4 / FR-014: define the call shape as `ls-files` inside a single- or
    double-quoted string literal, so an `execSync('git ls-files …')` string form is caught; today it
    matches exactly `fonts.test.ts:160` and `theme.test.ts:450` and no comment.
+
+## Reviewed 2026-10-23 — approved by the person
+
+The item's owner approved the plan with round 4's three changes applied (Revision 5) and asked
+for tasks; no further review round was run.
