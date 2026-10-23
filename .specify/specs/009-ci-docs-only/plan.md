@@ -293,3 +293,20 @@ table, FR-002/FR-014 and research.md § whole tree:
    deviation; constrain the `ci.yml` and script headers never to quote `.md` paths, with Sketch 5's
    `README.md`/`CHANGELOG.md`/`tasks/TODO.md` → docs cases as the guard.
 4. *(Optional)* An adversarial `classify` case (leading `-`, space or quote in a path).
+
+## Plan review — open (round 3: REVISE_PLAN, 2026-10-23)
+
+Round 3, by a fresh `code-reviewer` on Revision 3, found every dimension OK except these; the
+pipeline stops for a human after a repeated REVISE_PLAN, so they are recorded here, not applied:
+
+1. **Which tree the classifier operates on.** Sketch 1's `cd "$ROOT"` (script-relative) makes
+   Sketch 5's `github`-mode fixture test unreachable: the script diffs the real repo, not the
+   mkdtemp fixture, so the `docs_only=true` positive case cannot pass and the `false` cases pass for
+   the wrong reason. Choose `cd "$(git rev-parse --show-toplevel)"` (cwd-relative; fixture cases run
+   with `cwd: fixture`) or a `CHANGE_SCOPE_ROOT` env seam; make Sketch 1, § API Contracts and
+   Sketch 5 agree, and record the deviation from the `ROOT` convention with its reason.
+2. **Pin the scope step's command** in Sketch 4 (`run:\s*bash scripts/ci-change-scope\.sh github`),
+   with a matching risk row — a changed invocation leaves `docs_only` unset on every PR, a silent
+   no-op the wiring test does not catch today.
+3. *(Optional)* Extend the no-quoted-`.md` header constraint to
+   `apps/web/tests/ci-docs-only-wiring.test.ts`, a tracked non-Markdown file FR-002 does not exclude.
