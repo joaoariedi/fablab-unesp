@@ -174,3 +174,14 @@ rest.
   3. FR-002 amended to exclude the classifier's own test; `ci.yml` and script headers never quote
      a `.md` path, guarded by the `README.md`/`CHANGELOG.md`/`tasks/TODO.md` → docs cases.
   4. `classify` gets adversarial path cases (leading `-`, space, quote).
+
+### Session 2026-10-23 (plan review round 3, answered by the item's owner)
+
+- Q: Which tree does the classifier operate on — a script-relative root, a `CHANGE_SCOPE_ROOT`
+  setting, or the current folder? → A: Run git in the current folder
+  (`git rev-parse --show-toplevel`), not a `CHANGE_SCOPE_ROOT` setting; make Sketch 1, the API
+  contract and Sketch 5 agree. Applied as plan Revision 4.
+- Q: Pin the scope step's command in the wiring test? → A: Apply: the wiring test also checks the
+  scope step's command, with a matching risk row. Applied as plan Revision 4.
+- Q: Extend the no-quoted-`.md` header constraint to the wiring test? → A: Apply: extend the
+  no-quoted-`.md` rule to `apps/web/tests/ci-docs-only-wiring.test.ts`. Applied as plan Revision 4.

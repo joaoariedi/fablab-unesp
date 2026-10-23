@@ -6,6 +6,9 @@
 <!-- Revision 3 (2026-10-23): plan review round 2 (REVISE_PLAN), all four changes applied on the
      owner's answer — unscoped-ls-files FR-014 pin, the named Tests-only ungated steps, FR-002's
      SELF_TEST exclusion and no-quoted-.md headers, adversarial classify paths. -->
+<!-- Revision 4 (2026-10-23): plan review round 3 (REVISE_PLAN), all three changes applied on the
+     owner's answer — cwd-relative root via git rev-parse, the scope step's command pinned, the
+     no-quoted-.md rule extended to the wiring test. -->
 
 ## Research Notes
 
@@ -82,7 +85,13 @@ scripts/ci-change-scope.sh github                  → stdout: verdict + file li
                                                      $GITHUB_OUTPUT (if set): docs_only=true|false   exit 0
 anything else                                      → usage on stderr            exit 64
 env CHANGE_SCOPE_BASE (default HEAD^1) — test seam for the base revision
+tree: the git repository containing the current folder (git rev-parse --show-toplevel);
+      outside a repository, or on any git error, the verdict is code
 ```
+
+The script has no root setting: it classifies the repository it is run in. CI runs it from the
+checkout root; the test runs `classify` with `cwd` = the real repo and `github` mode with `cwd` =
+a mkdtemp fixture repo (Sketch 5).
 
 Exit 0 on every verdict, **including failure → `code`**: a non-zero exit would fail the job red
 (fail-closed, but it blocks a code PR for a classifier bug); `continue-on-error` is the second net.
@@ -105,14 +114,18 @@ Exit 0 on every verdict, **including failure → `code`**: a non-zero exit would
 **Intent:** one verdict function, every doubt resolves to `code`.
 
 ```bash
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"; cd "$ROOT"   # git grep is cwd-scoped
 SELF_TEST='apps/web/tests/ci-change-scope.test.ts'  # its fixtures quote docs paths on purpose
-is_test_read() {  # $1 = repo-relative .md path
-  local base="${1##*/}"
-  git grep -qF -e "'$1'" -e "\"$1\"" -e "'$base'" -e "\"$base\"" -- ':!*.md' ":!$SELF_TEST"
+enter_repo() {   # the repo of the CURRENT folder, not of this script — see "Why" below
+  local top; top="$(git rev-parse --show-toplevel 2>/dev/null)" && [ -n "$top" ] && cd "$top"
+}
+is_test_read() {  # $1 = repo-relative .md path; a git error (rc >= 2) counts as a read
+  local base="${1##*/}" rc=0
+  git grep -qF -e "'$1'" -e "\"$1\"" -e "'$base'" -e "\"$base\"" -- ':!*.md' ":!$SELF_TEST" || rc=$?
+  [ "$rc" -ne 1 ]
 }
 classify() {
   local path seen=0
+  enter_repo || { echo code; return; }   # no repository → no evidence of docs
   while IFS= read -r path; do
     [ -n "$path" ] || continue; seen=1
     if [[ "$path" != *.md ]] || is_test_read "$path"; then echo code; return; fi
@@ -122,15 +135,25 @@ classify() {
 ```
 
 **Why this shape:** decision 3; `-F` avoids escaping dots; `':!*.md'` stops a doc that mentions
-another doc from counting as a read; the `ROOT` line is the convention of every script in
-`scripts/` (`required-checks.sh:37-38`). Every pattern goes through `-e`, so a path starting with
+another doc from counting as a read. `git grep -q` exits 1 for "no match" and 128 for an error,
+so only rc 1 means "not read" — an error fails to `code` (FR-007).
+
+**Deviation from the `ROOT` convention, recorded (owner's answer, round 3).** Every script in
+`scripts/` derives its root from its own location (`required-checks.sh:37-38`). This one runs git
+in the current folder (`git rev-parse --show-toplevel`) instead, because a script-relative root
+makes the `github`-mode fixture test unreachable: the script would diff the real repo, not the
+mkdtemp fixture, so the `docs_only=true` case could not pass and the `false` cases would pass for
+the wrong reason. A `CHANGE_SCOPE_ROOT` setting was rejected in favour of this: no extra input,
+and CI already runs every step from the checkout root. Every pattern goes through `-e`, so a path starting with
 `-` is never read as an option; `-F` makes a space or quote in a path literal. `git diff` C-quotes
 a path holding `"`, `\` or a control character, so such a path ends in `"`, not `.md`, and
 classifies as `code` — the safe direction, covered by Sketch 5's adversarial cases.
 
-**Header constraint (FR-002):** the headers of this script and of `ci.yml` describe the rule in
-words and never quote a `.md` path or basename — a quoted one would make that doc code for every
-PR. Sketch 5's `README.md`/`CHANGELOG.md`/`tasks/TODO.md` → `docs` cases are the guard.
+**Header constraint (FR-002):** this script, `ci.yml` and `apps/web/tests/ci-docs-only-wiring.test.ts`
+(a tracked non-Markdown file FR-002 does not exclude) describe the rule in words and never quote a
+`.md` path or basename — a quoted one would make that doc code for every PR. The wiring test needs
+none: it names jobs and steps, and its FR-014 check reads pathspecs from the test files and asks
+`git ls-files` whether they hold Markdown, rather than spelling a Markdown path. Sketch 5's `README.md`/`CHANGELOG.md`/`tasks/TODO.md` → `docs` cases are the guard.
 
 ### Sketch 2: the CI entry point
 **File:** `scripts/ci-change-scope.sh` (new)
@@ -139,7 +162,7 @@ PR. Sketch 5's `README.md`/`CHANGELOG.md`/`tasks/TODO.md` → `docs` cases are t
 ```bash
 github() {
   local verdict=code files=''
-  if [ "${GITHUB_EVENT_NAME-}" = pull_request ] &&
+  if [ "${GITHUB_EVENT_NAME-}" = pull_request ] && enter_repo &&
      files="$(git diff --name-only --no-renames "${CHANGE_SCOPE_BASE:-HEAD^1}" HEAD 2>/dev/null)"; then
     verdict="$(classify <<< "$files")"
   fi
@@ -196,6 +219,7 @@ for (const job of jobs()) {            // same indentation splitter as lcp-ci-jo
   const [checkout, scope, ...rest] = steps(job)
   expect(checkout).toMatch(/fetch-depth:\s*2/)                     // FR-001
   expect(scope).toMatch(/id:\s*scope/); expect(scope).toMatch(/continue-on-error:\s*true/)  // FR-007
+  expect(scope).toMatch(/run:\s*bash scripts\/ci-change-scope\.sh github\s*$/m)              // FR-001
   expect(scope).not.toMatch(/uses:/)                               // FR-010
   for (const step of rest) {
     if (job.name === 'Tests' && TESTS_UNGATED.some((re) => re.test(step))) continue
@@ -222,8 +246,8 @@ The splitter is copied with a source comment rather than extracted, so the pinne
 **Intent:** run the script, never re-implement it; derive the read set from the tree.
 
 ```ts
-const run = (args: string[], input = '', env = {}) =>
-  execFileSync('bash', [SCRIPT, ...args], { cwd: ROOT, input, env: { ...process.env, ...env }, encoding: 'utf8' })
+const run = (args: string[], input = '', env = {}, cwd = ROOT) =>   // the script classifies cwd's repo
+  execFileSync('bash', [SCRIPT, ...args], { cwd, input, env: { ...process.env, ...env }, encoding: 'utf8' })
 it.each(['README.md', 'CHANGELOG.md', 'tasks/TODO.md'])('%s alone is docs', (p) =>
   expect(run(['classify'], p).trim()).toBe('docs'))
 it.each(quotedMarkdownReads())('%s is read by a test, so it is code', (p) =>   // derived via git grep
@@ -231,10 +255,14 @@ it.each(quotedMarkdownReads())('%s is read by a test, so it is code', (p) =>   /
 // + '.mdx', a .ts path, empty input → code
 // + adversarial: '-e.md', 'docs/a b.md' → docs (no option injection, space literal);
 //   "docs/it's.md" → docs; '"docs/q\"x.md"' (git's C-quoted form) → code; exit 0 on each
-// + github mode in a mkdtemp git repo with two commits:
+// + github mode with cwd = a mkdtemp git repo holding two commits (SCRIPT stays the absolute path):
 //   docs-only commit → docs_only=true in GITHUB_OUTPUT; ts commit, push event, bad CHANGE_SCOPE_BASE → false;
 //   GITHUB_OUTPUT unset → exit 0
+// + cwd = a mkdtemp dir that is NOT a repo: classify → code, github → docs_only=false, exit 0
 ```
+
+The positive `docs_only=true` case is the one that proves the script reads the fixture and not the
+real repo: under a script-relative root it could not pass.
 
 `quotedMarkdownReads()` lists tracked `.md` paths whose quoted path or basename appears in a
 tracked non-`.md` file other than this test — and asserts it contains at least the reads named in
@@ -258,8 +286,10 @@ so the script excludes it (`SELF_TEST`) — and the repo's run-the-script test s
 |------|--------|------------|
 | A future test reads a `.md` through a path built from variables, or walks a directory without `ls-files` | A docs-only PR skips that test, `dev` goes red after merge | `push` run is full and fails immediately; the classifier test's derived set and the FR-014 pin cover the two forms that exist today; the script header names the supported shapes |
 | A future step is added to a gated job without an `if:` | Docs-only PRs run part of the job, or a step fails on missing deps | Wiring test fails on any step after `scope` without the gate, except — in `Tests` only — the three named prerequisite steps (`pnpm/action-setup`, `actions/setup-node`, `pnpm install --frozen-lockfile`), each matched exactly once |
-| A header comment quotes a `.md` path | That doc becomes code for every PR; the feature narrows silently | Header constraint (Sketch 1); the `README.md`/`CHANGELOG.md`/`tasks/TODO.md` → `docs` cases fail |
+| A header comment (script, `ci.yml`) or the wiring test quotes a `.md` path | That doc becomes code for every PR; the feature narrows silently | Header constraint (Sketch 1), extended to the wiring test; the `README.md`/`CHANGELOG.md`/`tasks/TODO.md` → `docs` cases fail |
 | `fetch-depth: 2` lost from a checkout | `git diff` fails → every PR takes the full path; the feature becomes a silent no-op | Wiring test pins `fetch-depth: 2` per gated job; the verdict is printed in every job log |
+| The scope step's command changed (a renamed script, a dropped `github` argument, a different interpreter) | `docs_only` is never written, every PR takes the full path; the feature becomes a silent no-op | Wiring test pins the exact `run: bash scripts/ci-change-scope.sh github` line in every gated job's scope step |
+| The script run from a folder outside the checkout | It classifies the wrong tree, or none | No repository → `code`; CI steps run from the checkout root; the non-repo test case pins the fallback |
 | `continue-on-error` lost from the scope step | A classifier crash turns a code PR red | Wiring test pins it; the script itself exits 0 on every verdict |
 | `HEAD^1` is not the base (GitHub changes the merge-ref shape) | Wrong file list | `git diff` failure → `code`; a wrong-but-valid list is bounded by the push backstop; file list printed per job |
 | A mistyped step `if:` | Silent skip on code PRs | Wiring test matches the exact expressions; SC-002 checked on the implementing PR's logs |
@@ -294,10 +324,13 @@ table, FR-002/FR-014 and research.md § whole tree:
    `README.md`/`CHANGELOG.md`/`tasks/TODO.md` → docs cases as the guard.
 4. *(Optional)* An adversarial `classify` case (leading `-`, space or quote in a path).
 
-## Plan review — open (round 3: REVISE_PLAN, 2026-10-23)
-
-Round 3, by a fresh `code-reviewer` on Revision 3, found every dimension OK except these; the
-pipeline stops for a human after a repeated REVISE_PLAN, so they are recorded here, not applied:
+Round 3 (REVISE_PLAN, 2026-10-23), by a fresh `code-reviewer` on Revision 3, found every
+dimension OK except the three below. The pipeline stopped for a human; the item's owner answered
+(spec § Clarifications, round 3): current-folder root via `git rev-parse --show-toplevel`, not a
+`CHANGE_SCOPE_ROOT` setting; pin the scope command; extend the header rule. Applied as Revision 4
+— § API Contracts, Sketches 1, 2, 4, 5 and the risk table. Revision 4 also makes a `git grep`
+error (rc ≥ 2) and a missing repository fail to `code`, which the cwd-relative root makes
+reachable:
 
 1. **Which tree the classifier operates on.** Sketch 1's `cd "$ROOT"` (script-relative) makes
    Sketch 5's `github`-mode fixture test unreachable: the script diffs the real repo, not the
