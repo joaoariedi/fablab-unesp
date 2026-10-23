@@ -110,7 +110,7 @@ set exactly as today.
 | ID | Requirement | Priority | Scenario |
 |----|-------------|----------|----------|
 | FR-001 | CI classifies each `pull_request` run as docs-only or code from the full list of files changed between the pull request's base and head. | P1 | US1, US2 |
-| FR-002 | A run is docs-only iff every changed path ends in `.md` and no changed path is quoted — as its full repo-relative path or as its basename — in a tracked non-Markdown file; every other run is code. | P1 | US1, US2, US3 |
+| FR-002 | A run is docs-only iff every changed path ends in `.md` and no changed path is quoted — as its full repo-relative path or as its basename — in a tracked non-Markdown file other than the classifier's own test (`apps/web/tests/ci-change-scope.test.ts`, whose fixtures quote docs paths on purpose); every other run is code. | P1 | US1, US2, US3 |
 | FR-003 | On a docs-only run every code-stage job still starts and reports its unchanged job name with a success conclusion, and performs none of its work (no migration, build, mutation or Lighthouse run; no dependency install except where FR-014 needs it). | P1 | US1 |
 | FR-004 | The matrix job `isolation-mutation` reports one success context per layer on a docs-only run (`Isolation harness can fail (<layer>)`), i.e. it is never skipped at job level. | P1 | US1 |
 | FR-005 | Docs-stage jobs (`Secret scan`, `Markdown lint`, `Link integrity`) run their full checks on every run, docs-only or not. | P1 | US1 |
@@ -122,7 +122,7 @@ set exactly as today.
 | FR-011 | `pnpm test` stays green without weakening any assertion in `required-checks.test.ts`, `lcp-ci-jobs.test.ts` or `isolation-mutation-layers.test.ts`. | P1 | US6 |
 | FR-012 | The classifier is a script under `scripts/` with a documented exit/output contract, exercised by a test with docs-only, code, test-read-Markdown and failure inputs. | P2 | US3, US4, US6 |
 | FR-013 | A test pins the wiring: every code-stage job is gated by the classification, no docs-stage job is, and the matrix job is gated per step rather than at job level. | P2 | US6 |
-| FR-014 | On a docs-only run, `Tests` still runs every test that reads the whole tracked tree (today `packages/ui/tests/fonts.test.ts`, which scans every tracked Markdown file outside `.specify/`), without a database; a test asserts that every test file listing the tree is in that set. | P1 | US1, US3 |
+| FR-014 | On a docs-only run, `Tests` still runs every test that reads the whole tracked tree (today `packages/ui/tests/fonts.test.ts`, which scans every tracked Markdown file outside `.specify/`), without a database; a test asserts that every test file making an unscoped `git ls-files` call is in that set, and that every pathspec-scoped caller lists only directories holding no tracked `.md`. | P1 | US1, US3 |
 
 ## Success Criteria
 
@@ -163,4 +163,14 @@ rest.
 
 ## Clarifications
 
-_None yet._
+### Session 2026-10-23 (plan review round 2, answered by the item's owner)
+
+- Q: Apply round 2's four REVISE_PLAN changes? → A: Apply all four, including the optional
+  adversarial-path `classify` test, then run plan review and tasks. Applied as plan Revision 3:
+  1. FR-014 pin derives the whole-tree set from unscoped `ls-files` calls; pathspec-scoped callers
+     must list only `.md`-free dirs; research.md corrected (FR-014 amended).
+  2. The `Tests`-only ungated exception is named: exactly `pnpm/action-setup`,
+     `actions/setup-node` and `pnpm install --frozen-lockfile`.
+  3. FR-002 amended to exclude the classifier's own test; `ci.yml` and script headers never quote
+     a `.md` path, guarded by the `README.md`/`CHANGELOG.md`/`tasks/TODO.md` → docs cases.
+  4. `classify` gets adversarial path cases (leading `-`, space, quote).

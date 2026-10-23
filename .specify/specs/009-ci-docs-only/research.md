@@ -61,7 +61,15 @@ checklists not read by a test remain docs.
   non-binary file (`isScanned:168-173`) except `.specify/**` (`:98`), four provenance paths (`:90-95`)
   and itself (`:106`) for SquareFont usage shapes (`USAGE_RULES:117-138`). So `README.md`,
   `CHANGELOG.md`, `docs/**/*.md` and `tasks/*.md` are all inputs of `Tests` through this one file;
-  `.specify/**` is not. It needs no database.
+  `.specify/**` is not. It needs no database. It is the only **unscoped** `ls-files` call.
+- Four test files contain the string `ls-files`; only two call it:
+  - `packages/ui/tests/fonts.test.ts:160` — unscoped, above.
+  - `apps/web/tests/theme.test.ts:450` — `git ls-files -z -- ...SOURCE_PATHS`, pathspec-scoped to
+    `SOURCE_PATHS` (`:438`: `apps/web/app`, `apps/web/collections`, `apps/web/lib`,
+    `packages/ui/src`), none of which holds a tracked `.md` today. It reads no Markdown, and the
+    file is DB-backed, so it is not a whole-tree test and stays off the docs-only path.
+  - `packages/ui/tests/purity-boundary.test.ts:22,660,672,715` and
+    `packages/game/tests/purity-fence.test.ts:61` — mentions in comments only, no call.
 - The `readdirSync` users read component and test directories, not Markdown
   (`packages/ui/tests/component-barrel.test.ts:28`, `vitest-config.test.ts:56`,
   `palette-tokens.test.ts:137`).

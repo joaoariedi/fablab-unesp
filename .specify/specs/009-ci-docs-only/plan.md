@@ -3,6 +3,9 @@
 <!-- Date: 2026-10-23 -->
 <!-- Revision 2 (2026-10-23): plan review round 1 (REVISE_PLAN) — quoted-literal rule, whole-tree
      tests on docs-only (FR-014), job count, stronger wiring pins, github-mode positive test. -->
+<!-- Revision 3 (2026-10-23): plan review round 2 (REVISE_PLAN), all four changes applied on the
+     owner's answer — unscoped-ls-files FR-014 pin, the named Tests-only ungated steps, FR-002's
+     SELF_TEST exclusion and no-quoted-.md headers, adversarial classify paths. -->
 
 ## Research Notes
 
@@ -43,10 +46,15 @@ Truth map: [research.md](research.md). The decisions it forces:
    reads every tracked file outside `.specify/` through `git ls-files` (`:159-173`), so a doc that
    adds a SquareFont usage shape would break `Tests` on `dev`. On a docs-only verdict `Tests`
    installs dependencies (cached) and runs exactly the whole-tree tests — no Postgres use, no
-   migrate. The set is a single list in `ci.yml`; a test asserts that every test file calling
-   `ls-files` is in it, so a second scanner cannot join the suite without joining the docs-only
-   path. Residual: a test that builds a Markdown path from variables or walks a directory
-   without `ls-files` — none today; the `push` run on `dev` is the backstop.
+   migrate. The set is a single list in `ci.yml`; a test asserts that every test file making an
+   **unscoped** `ls-files` call is in it (today only `fonts.test.ts:160`), and that every
+   pathspec-scoped caller lists only directories holding no tracked `.md` (today
+   `theme.test.ts:450`, whose `SOURCE_PATHS:438` hold none). Comment-only mentions
+   (`purity-boundary.test.ts`, `purity-fence.test.ts:61`) are not calls and are ignored — the
+   pin matches a call shape (`'ls-files'` as an argument), not the bare word. So a second
+   scanner cannot join the suite without joining the docs-only path. Residual: a test that
+   builds a Markdown path from variables or walks a directory without `ls-files` — none today;
+   the `push` run on `dev` is the backstop.
 5. **The pull-request diff is `HEAD^1..HEAD` of the merge ref**, with `fetch-depth: 2` on the gated
    jobs' checkout and `--no-renames`, so a rename reports both paths.
 
@@ -115,7 +123,14 @@ classify() {
 
 **Why this shape:** decision 3; `-F` avoids escaping dots; `':!*.md'` stops a doc that mentions
 another doc from counting as a read; the `ROOT` line is the convention of every script in
-`scripts/` (`required-checks.sh:37-38`).
+`scripts/` (`required-checks.sh:37-38`). Every pattern goes through `-e`, so a path starting with
+`-` is never read as an option; `-F` makes a space or quote in a path literal. `git diff` C-quotes
+a path holding `"`, `\` or a control character, so such a path ends in `"`, not `.md`, and
+classifies as `code` — the safe direction, covered by Sketch 5's adversarial cases.
+
+**Header constraint (FR-002):** the headers of this script and of `ci.yml` describe the rule in
+words and never quote a `.md` path or basename — a quoted one would make that doc code for every
+PR. Sketch 5's `README.md`/`CHANGELOG.md`/`tasks/TODO.md` → `docs` cases are the guard.
 
 ### Sketch 2: the CI entry point
 **File:** `scripts/ci-change-scope.sh` (new)
@@ -158,8 +173,10 @@ leaves `verdict=code`.
         run: pnpm --filter @fablab/ui exec vitest run tests/fonts.test.ts
 ```
 
-In `test`, the pnpm/Node/install steps run on both verdicts (they are the docs-only step's
-prerequisites); migrate and `pnpm test` carry the `!= 'true'` gate. The matrix job (`:167`) gets
+In `test`, exactly three steps run ungated on both verdicts — `pnpm/action-setup`,
+`actions/setup-node` and `pnpm install --frozen-lockfile` (the docs-only step's prerequisites);
+every other step after `scope`, migrate and `pnpm test` included, carries `!= 'true'`, and the
+whole-tree step carries `== 'true'`. The matrix job (`:167`) gets
 the plain pattern, so each leg reports `Isolation harness can fail (<layer>)` (FR-004). No
 job-level `if:` anywhere. The performance jobs' new lines avoid the words `RUNS_THE_SUITE`
 matches (`lcp-ci-jobs.test.ts:83`).
@@ -180,13 +197,20 @@ for (const job of jobs()) {            // same indentation splitter as lcp-ci-jo
   expect(checkout).toMatch(/fetch-depth:\s*2/)                     // FR-001
   expect(scope).toMatch(/id:\s*scope/); expect(scope).toMatch(/continue-on-error:\s*true/)  // FR-007
   expect(scope).not.toMatch(/uses:/)                               // FR-010
-  for (const step of rest) expect(step).toMatch(GATED)             // != 'true', or == 'true' in Tests
+  for (const step of rest) {
+    if (job.name === 'Tests' && TESTS_UNGATED.some((re) => re.test(step))) continue
+    expect(step).toMatch(GATED)                                    // != 'true', or == 'true' in Tests
+  }
 }
+// TESTS_UNGATED = [/uses:\s*pnpm\/action-setup/, /uses:\s*actions\/setup-node/,
+//                  /run:\s*pnpm install --frozen-lockfile/]; each must match exactly one Tests step
 ```
 
-Plus: in `Tests`, the `== 'true'` steps run exactly the files of `WHOLE_TREE_TESTS`, and that list
-equals the test files under `apps/`/`packages/` containing `ls-files` (FR-014); in every other job
-no step uses `== 'true'`.
+Plus (FR-014): in `Tests`, the `== 'true'` steps run exactly the files of `WHOLE_TREE_TESTS`;
+that list equals the test files under `apps/`/`packages/` with an **unscoped** `ls-files` call
+(the `'ls-files'` argument not followed by a `'--'` pathspec); every scoped caller's pathspec
+literals resolve, through `git ls-files`, to no `.md`; in every other job no step uses
+`== 'true'`.
 
 **Why this shape:** an allow-list of the three docs jobs means a job added later is gated by
 default or fails here — the same "a gate cannot quietly join" stance as `required-checks.test.ts`.
@@ -204,7 +228,10 @@ it.each(['README.md', 'CHANGELOG.md', 'tasks/TODO.md'])('%s alone is docs', (p) 
   expect(run(['classify'], p).trim()).toBe('docs'))
 it.each(quotedMarkdownReads())('%s is read by a test, so it is code', (p) =>   // derived via git grep
   expect(run(['classify'], p).trim()).toBe('code'))
-// + '.mdx', a .ts path, empty input → code; github mode in a mkdtemp git repo with two commits:
+// + '.mdx', a .ts path, empty input → code
+// + adversarial: '-e.md', 'docs/a b.md' → docs (no option injection, space literal);
+//   "docs/it's.md" → docs; '"docs/q\"x.md"' (git's C-quoted form) → code; exit 0 on each
+// + github mode in a mkdtemp git repo with two commits:
 //   docs-only commit → docs_only=true in GITHUB_OUTPUT; ts commit, push event, bad CHANGE_SCOPE_BASE → false;
 //   GITHUB_OUTPUT unset → exit 0
 ```
@@ -230,7 +257,8 @@ so the script excludes it (`SELF_TEST`) — and the repo's run-the-script test s
 | Risk | Impact | Mitigation |
 |------|--------|------------|
 | A future test reads a `.md` through a path built from variables, or walks a directory without `ls-files` | A docs-only PR skips that test, `dev` goes red after merge | `push` run is full and fails immediately; the classifier test's derived set and the FR-014 pin cover the two forms that exist today; the script header names the supported shapes |
-| A future step is added to a gated job without an `if:` | Docs-only PRs run part of the job, or a step fails on missing deps | Wiring test fails on any ungated step after `scope` |
+| A future step is added to a gated job without an `if:` | Docs-only PRs run part of the job, or a step fails on missing deps | Wiring test fails on any step after `scope` without the gate, except — in `Tests` only — the three named prerequisite steps (`pnpm/action-setup`, `actions/setup-node`, `pnpm install --frozen-lockfile`), each matched exactly once |
+| A header comment quotes a `.md` path | That doc becomes code for every PR; the feature narrows silently | Header constraint (Sketch 1); the `README.md`/`CHANGELOG.md`/`tasks/TODO.md` → `docs` cases fail |
 | `fetch-depth: 2` lost from a checkout | `git diff` fails → every PR takes the full path; the feature becomes a silent no-op | Wiring test pins `fetch-depth: 2` per gated job; the verdict is printed in every job log |
 | `continue-on-error` lost from the scope step | A classifier crash turns a code PR red | Wiring test pins it; the script itself exits 0 on every verdict |
 | `HEAD^1` is not the base (GitHub changes the merge-ref shape) | Wrong file list | `git diff` failure → `code`; a wrong-but-valid list is bounded by the push backstop; file list printed per job |
@@ -244,11 +272,12 @@ so the script excludes it (`SELF_TEST`) — and the repo's run-the-script test s
 2. Wire the 10 code-stage jobs in `ci.yml`; write `apps/web/tests/ci-docs-only-wiring.test.ts`.
 3. `pnpm test && pnpm lint`; open the PR; after merge, open a docs-only probe PR for SC-001.
 
-## Plan review — open (round 2: REVISE_PLAN, 2026-10-23)
+## Plan review history
 
-Round 1 (REVISE_PLAN) was applied as Revision 2 above. Round 2, by a fresh `code-reviewer`,
-asks for these changes; the pipeline stops for a human after a second REVISE_PLAN, so they are
-recorded here, not yet applied:
+Round 1 (REVISE_PLAN) was applied as Revision 2. Round 2 (REVISE_PLAN, fresh `code-reviewer`)
+asked for the four changes below; the item's owner answered "apply all four" (spec
+§ Clarifications) and they are applied as Revision 3 — decision 4, Sketches 1, 3, 4, 5, the risk
+table, FR-002/FR-014 and research.md § whole tree:
 
 1. **FR-014 pin and research.md.** Four test files contain `ls-files`, not one:
    `packages/ui/tests/fonts.test.ts` (the unscoped whole-tree scan), `apps/web/tests/theme.test.ts:450`
