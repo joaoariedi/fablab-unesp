@@ -343,3 +343,24 @@ reachable:
    no-op the wiring test does not catch today.
 3. *(Optional)* Extend the no-quoted-`.md` header constraint to
    `apps/web/tests/ci-docs-only-wiring.test.ts`, a tracked non-Markdown file FR-002 does not exclude.
+
+## Plan review — open (round 4: REVISE_PLAN, 2026-10-23)
+
+Round 4, by a fresh `code-reviewer` on Revision 4, found the design, sketches and test strategy
+sound (Revision 4's three changes accepted) and asked for a text-only revision. The pipeline stops
+for a human after a repeated REVISE_PLAN, so these are recorded here, not applied:
+
+1. **Checklists are code by construction, not docs.** `apps/web/tests/checklists-adjudicated.test.ts:52`
+   quotes four checklist basenames (requirements, api, security, ux), so under FR-002's basename
+   rule every such checklist under `.specify/specs/*` is code, like `spec.md`/`tasks.md`. Spec US1
+   edge, `research.md:54-56` and decision 3's "Accepted consequence" say untested checklists stay
+   docs; correct all three (only `plan.md`, `research.md`, `data-model.md`, `contracts/*`, `spikes/*`
+   and unusually named checklists remain docs). Optionally clarify the `.github/**` wording in spec
+   § Definitions (a Markdown file there is docs under FR-002).
+2. *(Optional)* Sketch 2: `git -c core.quotePath=false diff …` so non-ASCII Markdown names (e.g. an
+   accented PT-BR file name) classify instead of falling to `code`; one `classify` and one
+   `github`-mode case with an accented path; a risk row noting `"`, `\` and control characters stay
+   C-quoted and still fall to `code`.
+3. *(Optional)* Sketch 4 / FR-014: define the call shape as `ls-files` inside a single- or
+   double-quoted string literal, so an `execSync('git ls-files …')` string form is caught; today it
+   matches exactly `fonts.test.ts:160` and `theme.test.ts:450` and no comment.
