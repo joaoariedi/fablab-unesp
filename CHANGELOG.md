@@ -140,6 +140,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) �
 - **Constitution v1.2.0** — two amendments, each because a claim was measured and found
   wrong: linting by method name replaced by an import boundary, and host resolution moved
   out of the proxy layer to a cached server-side lookup.
+- **CI: a docs-only pull request finishes in minutes** (feature 009). When every changed file
+  is Markdown that no test or script reads, each code-stage job still reports its required
+  context green but skips its work after `scripts/ci-change-scope.sh` says so; `Tests` still
+  runs the whole-tree scanner. Gated per step, never per job, and every doubt — a classifier
+  failure, a push, a test-read doc — takes the full run.
 
 ### Fixed
 
