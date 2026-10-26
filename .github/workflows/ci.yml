@@ -8,6 +8,15 @@ name: CI
 #
 # Job NAMES are the required-status-check contexts on `dev` and `main`. Renaming one silently
 # un-protects the branch, so treat these strings as an interface.
+#
+# The docs-only path (feature 009). A pull request that changes only Markdown no test or script
+# reads still reports every context above, green, without the code-stage work: each code-stage
+# job checks out two commits deep, asks scripts/ci-change-scope.sh (step `scope`), and skips its
+# remaining steps when the answer is docs. It is gated per STEP, never per job — a skipped job is
+# a required check that passes without running, and a job-level `if:` on the matrix job reports
+# one unexpanded context instead of one per layer. Every doubt is code: a classifier crash leaves
+# its output unset, which every `!= 'true'` reads as "run", and a push always runs in full. The
+# docs-stage jobs are never gated. apps/web/tests/ci-docs-only-wiring.test.ts pins all of this.
 
 on:
   pull_request:
@@ -68,15 +77,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+        with:
+          fetch-depth: 2 # HEAD^1 of the merge ref is the base the classifier diffs against
+      - id: scope
+        continue-on-error: true # a crash leaves docs_only unset, which reads as "run"
+        run: bash scripts/ci-change-scope.sh github
+      - if: steps.scope.outputs.docs_only != 'true'
+        uses: pnpm/action-setup@v4
+      - if: steps.scope.outputs.docs_only != 'true'
+        uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - if: steps.scope.outputs.docs_only != 'true'
+        run: pnpm install --frozen-lockfile
       # This is a SECURITY gate, not style: it is the import boundary that keeps unscoped
       # Payload clients out of application code (FR-014).
-      - run: pnpm lint
+      - if: steps.scope.outputs.docs_only != 'true'
+        run: pnpm lint
 
   colour-tokens:
     name: Colour tokens
@@ -95,20 +113,35 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: bash scripts/check-colour-tokens.sh
+        with:
+          fetch-depth: 2 # HEAD^1 of the merge ref is the base the classifier diffs against
+      - id: scope
+        continue-on-error: true # a crash leaves docs_only unset, which reads as "run"
+        run: bash scripts/ci-change-scope.sh github
+      - if: steps.scope.outputs.docs_only != 'true'
+        run: bash scripts/check-colour-tokens.sh
 
   typecheck:
     name: Type check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+        with:
+          fetch-depth: 2 # HEAD^1 of the merge ref is the base the classifier diffs against
+      - id: scope
+        continue-on-error: true # a crash leaves docs_only unset, which reads as "run"
+        run: bash scripts/ci-change-scope.sh github
+      - if: steps.scope.outputs.docs_only != 'true'
+        uses: pnpm/action-setup@v4
+      - if: steps.scope.outputs.docs_only != 'true'
+        uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm typecheck
+      - if: steps.scope.outputs.docs_only != 'true'
+        run: pnpm install --frozen-lockfile
+      - if: steps.scope.outputs.docs_only != 'true'
+        run: pnpm typecheck
 
   test:
     name: Tests
@@ -126,6 +159,12 @@ jobs:
           --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2 # HEAD^1 of the merge ref is the base the classifier diffs against
+      - id: scope
+        continue-on-error: true # a crash leaves docs_only unset, which reads as "run"
+        run: bash scripts/ci-change-scope.sh github
+      # These three run on both verdicts: the docs-only step below needs installed dependencies.
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -133,8 +172,16 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Apply committed migrations
+        if: steps.scope.outputs.docs_only != 'true'
         run: pnpm --filter @fablab/web migrate
-      - run: pnpm test
+      - if: steps.scope.outputs.docs_only != 'true'
+        run: pnpm test
+      # A docs-only change skips the suite, but not the tests that scan the WHOLE tracked tree:
+      # they read every Markdown file, so a doc can turn them red. No database, no migrate.
+      # apps/web/tests/ci-docs-only-wiring.test.ts keeps this list equal to those tests (FR-014).
+      - name: Whole-tree tests (docs-only)
+        if: steps.scope.outputs.docs_only == 'true'
+        run: pnpm --filter @fablab/ui exec vitest run tests/fonts.test.ts
 
   isolation:
     name: Cross-tenant isolation
@@ -155,14 +202,24 @@ jobs:
           --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+        with:
+          fetch-depth: 2 # HEAD^1 of the merge ref is the base the classifier diffs against
+      - id: scope
+        continue-on-error: true # a crash leaves docs_only unset, which reads as "run"
+        run: bash scripts/ci-change-scope.sh github
+      - if: steps.scope.outputs.docs_only != 'true'
+        uses: pnpm/action-setup@v4
+      - if: steps.scope.outputs.docs_only != 'true'
+        uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @fablab/web migrate
-      - run: pnpm --filter @fablab/web exec vitest run tests/tenancy/isolation.test.ts
+      - if: steps.scope.outputs.docs_only != 'true'
+        run: pnpm install --frozen-lockfile
+      - if: steps.scope.outputs.docs_only != 'true'
+        run: pnpm --filter @fablab/web migrate
+      - if: steps.scope.outputs.docs_only != 'true'
+        run: pnpm --filter @fablab/web exec vitest run tests/tenancy/isolation.test.ts
 
   isolation-mutation:
     # The name is interpolated per matrix value ON PURPOSE. Left implicit, GitHub derives the
@@ -212,14 +269,24 @@ jobs:
           --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+        with:
+          fetch-depth: 2 # HEAD^1 of the merge ref is the base the classifier diffs against
+      - id: scope
+        continue-on-error: true # a crash leaves docs_only unset, which reads as "run"
+        run: bash scripts/ci-change-scope.sh github
+      - if: steps.scope.outputs.docs_only != 'true'
+        uses: pnpm/action-setup@v4
+      - if: steps.scope.outputs.docs_only != 'true'
+        uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @fablab/web migrate
+      - if: steps.scope.outputs.docs_only != 'true'
+        run: pnpm install --frozen-lockfile
+      - if: steps.scope.outputs.docs_only != 'true'
+        run: pnpm --filter @fablab/web migrate
       - name: Break the ${{ matrix.layer }} layer and require the harness to notice
+        if: steps.scope.outputs.docs_only != 'true'
         run: bash scripts/isolation-mutation.sh ${{ matrix.layer }}
 
   drift:
@@ -240,13 +307,22 @@ jobs:
           --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+        with:
+          fetch-depth: 2 # HEAD^1 of the merge ref is the base the classifier diffs against
+      - id: scope
+        continue-on-error: true # a crash leaves docs_only unset, which reads as "run"
+        run: bash scripts/ci-change-scope.sh github
+      - if: steps.scope.outputs.docs_only != 'true'
+        uses: pnpm/action-setup@v4
+      - if: steps.scope.outputs.docs_only != 'true'
+        uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: bash scripts/migration-drift.sh
+      - if: steps.scope.outputs.docs_only != 'true'
+        run: pnpm install --frozen-lockfile
+      - if: steps.scope.outputs.docs_only != 'true'
+        run: bash scripts/migration-drift.sh
 
   performance:
     name: Performance budget
@@ -280,15 +356,24 @@ jobs:
           --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+        with:
+          fetch-depth: 2 # HEAD^1 of the merge ref is the base the classifier diffs against
+      - id: scope
+        continue-on-error: true # a crash leaves docs_only unset, which reads as "run"
+        run: bash scripts/ci-change-scope.sh github
+      - if: steps.scope.outputs.docs_only != 'true'
+        uses: pnpm/action-setup@v4
+      - if: steps.scope.outputs.docs_only != 'true'
+        uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - if: steps.scope.outputs.docs_only != 'true'
+        run: pnpm install --frozen-lockfile
       # The script owns migrate, seed, build, start and the readiness probe — they are steps of
       # the gate, not preconditions someone remembers to arrange.
-      - run: bash scripts/lcp-budget.sh
+      - if: steps.scope.outputs.docs_only != 'true'
+        run: bash scripts/lcp-budget.sh
 
   performance-mutation:
     name: Performance budget can fail
@@ -315,13 +400,22 @@ jobs:
           --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+        with:
+          fetch-depth: 2 # HEAD^1 of the merge ref is the base the classifier diffs against
+      - id: scope
+        continue-on-error: true # a crash leaves docs_only unset, which reads as "run"
+        run: bash scripts/ci-change-scope.sh github
+      - if: steps.scope.outputs.docs_only != 'true'
+        uses: pnpm/action-setup@v4
+      - if: steps.scope.outputs.docs_only != 'true'
+        uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - if: steps.scope.outputs.docs_only != 'true'
+        run: pnpm install --frozen-lockfile
       - name: Plant an oversized hero and require the budget to notice
+        if: steps.scope.outputs.docs_only != 'true'
         run: bash scripts/lcp-mutation.sh
 
   build:
@@ -340,13 +434,23 @@ jobs:
           --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+        with:
+          fetch-depth: 2 # HEAD^1 of the merge ref is the base the classifier diffs against
+      - id: scope
+        continue-on-error: true # a crash leaves docs_only unset, which reads as "run"
+        run: bash scripts/ci-change-scope.sh github
+      - if: steps.scope.outputs.docs_only != 'true'
+        uses: pnpm/action-setup@v4
+      - if: steps.scope.outputs.docs_only != 'true'
+        uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @fablab/web migrate
+      - if: steps.scope.outputs.docs_only != 'true'
+        run: pnpm install --frozen-lockfile
+      - if: steps.scope.outputs.docs_only != 'true'
+        run: pnpm --filter @fablab/web migrate
       # payload.config reads the environment at load, and `next build` loads it — so the
       # build needs a reachable database, not just the variables.
-      - run: pnpm build
+      - if: steps.scope.outputs.docs_only != 'true'
+        run: pnpm build
