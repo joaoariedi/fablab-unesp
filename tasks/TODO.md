@@ -1,16 +1,22 @@
 # TODO
 
-## 🛡 FAB-1 — Upgrade dependencies to clear the pnpm audit advisories (10 critical)
+## 🛡 FAB-4 — Finish the dependency upgrade on branch worktree-FAB-1 and open its PR
 
-`pnpm audit` on `dev` (2026-10-22) reports 76 advisories: 9 low, 28 moderate, 29 high,
-10 critical. The critical ones include Next.js RCE (next/og ImageResponse, Image
-Optimization SVG, `use cache` typed arrays), Payload field access-control bypass on
-auth collections, unauthorized document update and auth token handling, Vitest UI
-arbitrary file read/exec, Tinypool prototype-pollution RCE (two), and a DOMPurify
-SAFE_FOR_TEMPLATES bypass.
+Split from FAB-1, which stalled. Branch `worktree-FAB-1` already holds the bumps: Vitest
+3.2.4 → 4.1.12, Next 16.3.3 → 16.4.1, Payload and every `@payloadcms/*` 3.88.0 → 3.91.0
+in lockstep, sharp 0.35.5, the `monaco-editor>dompurify` override, refreshed transitives,
+and `apps/web/tests/dependency-pins.test.ts`. Spec, plan and tasks are in
+`.specify/specs/009-auditoria-dependencias/` on that branch (T001–T006 and T010 done).
 
-Done when `pnpm audit --audit-level critical` and `--audit-level high` exit 0, and lint,
-typecheck and the full test suite still pass.
+Build on that branch, not on a fresh one from `dev`. What is left: the Payload 3.88 → 3.91
+auth/access release-note check (T009), the `CHANGELOG.md` Security entry (T012), the
+`docs/backlog.md` notes for the merge-blocking audit job (T011) and for braces
+GHSA-vfj7-8cjw-p6xm, the final gate without the database (T013 minus migration drift and
+the DB-backed tests, which are FAB-5), and `/security-review` over the diff (T014).
+
+Done when `pnpm audit --audit-level critical` exits 0, `--audit-level high` exits 0 except
+braces GHSA-vfj7-8cjw-p6xm (no patched release; tracked as FAB-6), lint, typecheck and the
+non-DB tests pass, and the PR is open against `dev`.
 
 ## FAB-2 — Install semgrep, lizard and jscpd so the SAST and complexity gates run
 
